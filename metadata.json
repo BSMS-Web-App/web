@@ -1,0 +1,7 @@
+{
+  "name": "BSMS Web",
+  "description": "The central digital hub for Boiling Springs Middle School.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
