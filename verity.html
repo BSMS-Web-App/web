@@ -41,6 +41,9 @@ canvas{border-color:#ffffff4d;box-shadow:0 0 0 4px #ffffff0d,0 18px 60px #000a}
   <button id="restartBtn">↻ Restart</button>
   <button id="soundBtn">🔊 Sound on</button>
   <button id="fsBtn">⛶ Fullscreen</button>
+  <button id="musicBtn">🎵 Music on</button>
+  <button id="songBtn">📁 Songs</button>
+  <input type="file" id="songFile" accept="audio/*" multiple hidden>
  </div>
 </header>
 <canvas id="game" width="960" height="540" aria-label="Verity Quest platform game"></canvas>
@@ -51,8 +54,13 @@ canvas{border-color:#ffffff4d;box-shadow:0 0 0 4px #ffffff0d,0 18px 60px #000a}
 </div>
 <div class="mobile"><button id="leftBtn">◀</button><button id="jumpBtn">⬆ Jump</button><button id="rightBtn">▶</button></div>
 </div>
+<audio id="bgm1" src="sunset-of-seven-suns.mp3" loop preload="auto"></audio>
+<audio id="bgm2" src="deal-gone-wrong.mp3" loop preload="auto"></audio>
 <script>
 (()=>{
+// Compatibility: older browsers lack roundRect, which would stop the whole game from drawing.
+if(!CanvasRenderingContext2D.prototype.roundRect)CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h){this.rect(x,y,w,h)};
+window.addEventListener('error',e=>{const m=document.getElementById('message');if(m)m.textContent='Error: '+e.message});
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const W=960,H=540,groundY=490;
 const themes=[
@@ -149,6 +157,7 @@ const rects=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 
 function update(){
  T++;
+ musicTick();
  if(shake>0)shake--;
  if(banner>0)banner--;
  if(level===19&&!won&&T%240===0){shake=20;beep(60,.4,'sawtooth')}
@@ -228,79 +237,4 @@ function drawBg(t){
    ctx.beginPath();ctx.arc(x-26,y+6,20,0,7);ctx.arc(x,y-4,28,0,7);ctx.arc(x+28,y+6,20,0,7);ctx.rect(x-26,y+6,54,20);ctx.fill()}
  }
  ctx.fillStyle=t.accent;
- for(let i=0;i<34;i++){
-  const x=((i*97+level*53+Math.sin(T*.01+i)*30)%W+W)%W,y=H-((T*(.25+i%4*.15)+i*61)%H);
-  ctx.globalAlpha=.15+.3*Math.abs(Math.sin(T*.03+i));ctx.beginPath();ctx.arc(x,y,1.5+i%3,0,7);ctx.fill();
- }
- ctx.globalAlpha=1;
- const v=ctx.createRadialGradient(W/2,H/2,H*.45,W/2,H/2,H*.95);v.addColorStop(0,'#0000');v.addColorStop(1,'#0007');
- ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
- if(level===19){
-  const p=.5+.5*Math.sin(T*.05);
-  ctx.fillStyle='#150000';
-  for(let i=0;i<9;i++){const x=i*125+((i*53)%40);ctx.beginPath();ctx.moveTo(x,H);ctx.lineTo(x+40,H-120-(i*37)%90);ctx.lineTo(x+80,H);ctx.fill()}
-  const lg=ctx.createLinearGradient(0,H-170,0,H);lg.addColorStop(0,'#ff3b0000');lg.addColorStop(1,'#ff3b00'+Math.round(90+p*80).toString(16));
-  ctx.fillStyle=lg;ctx.fillRect(0,H-170,W,170);
-  ctx.fillStyle='#ff2200';ctx.globalAlpha=.05+.05*p;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
- }
-}
-function drawDemon(e){
- ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(T*.08+e.ph)*.15);
- ctx.shadowBlur=18;ctx.shadowColor='#ff3b00';ctx.fillStyle='#2b0000';
- ctx.beginPath();ctx.moveTo(-12,-8);ctx.quadraticCurveTo(-21,-20,-10,-27);ctx.quadraticCurveTo(-12,-16,-6,-12);ctx.fill();
- ctx.beginPath();ctx.moveTo(12,-8);ctx.quadraticCurveTo(21,-20,10,-27);ctx.quadraticCurveTo(12,-16,6,-12);ctx.fill();
- ctx.fillStyle='#c4120a';ctx.beginPath();ctx.moveTo(-13,-6);ctx.quadraticCurveTo(-14,12,0,17);ctx.quadraticCurveTo(14,12,13,-6);ctx.quadraticCurveTo(0,-16,-13,-6);ctx.fill();
- ctx.shadowBlur=0;ctx.fillStyle='#ffe14a';
- ctx.beginPath();ctx.moveTo(-9,-3);ctx.lineTo(-2,-1);ctx.lineTo(-4,3);ctx.closePath();ctx.fill();
- ctx.beginPath();ctx.moveTo(9,-3);ctx.lineTo(2,-1);ctx.lineTo(4,3);ctx.closePath();ctx.fill();
- ctx.strokeStyle='#2b0000';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-11,-6);ctx.lineTo(-2,-2);ctx.moveTo(11,-6);ctx.lineTo(2,-2);ctx.stroke();
- ctx.fillStyle='#2b0000';ctx.beginPath();ctx.moveTo(-7,8);ctx.quadraticCurveTo(0,14,7,8);ctx.quadraticCurveTo(0,5,-7,8);ctx.fill();
- ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(-5,8);ctx.lineTo(-3,12);ctx.lineTo(-2,8);ctx.moveTo(5,8);ctx.lineTo(3,12);ctx.lineTo(2,8);ctx.fill();
- ctx.restore();
-}
-function drawSmiley(){
- const sx=1+Math.min(.15,Math.abs(player.vy)*.012),sy=1/sx,R=17;
- ctx.save();
- ctx.translate(player.x+15,player.y+30-R*sy);
- ctx.rotate(clamp(player.vx*.025,-.18,.18));ctx.scale(sx,sy);
- ctx.shadowBlur=16;ctx.shadowColor='#ffe55c';ctx.fillStyle='#f3c90a';
- ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();ctx.shadowBlur=0;
- ctx.fillStyle='#fff3';ctx.beginPath();ctx.ellipse(-6,-9,5,3,-.6,0,7);ctx.fill();
- ctx.fillStyle='#000';
- ctx.beginPath();ctx.ellipse(-R*.3,-R*.25,1.9,3.5,0,0,7);ctx.ellipse(R*.3,-R*.25,1.9,3.5,0,0,7);ctx.fill();
- // wide tapered smile like the reference image
- ctx.beginPath();
- ctx.moveTo(-R*.8,R*.1);
- ctx.quadraticCurveTo(0,R*1.0,R*.8,R*.1);
- ctx.quadraticCurveTo(R*.84,R*.04,R*.8,R*.02);
- ctx.quadraticCurveTo(0,R*.7,-R*.8,R*.02);
- ctx.quadraticCurveTo(-R*.84,R*.04,-R*.8,R*.1);
- ctx.fill();
- ctx.restore();
-}
-
-function draw(){
- const t=themes[level];
- ctx.save();
- if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
- drawBg(t);
- for(const p of platforms){
-  if(p.gone)continue;
-  ctx.save();
-  if(p.cr&&p.ct>0)ctx.translate((Math.random()-.5)*3,0);
-  const g=ctx.createLinearGradient(0,p.y,0,p.y+p.h);g.addColorStop(0,t.ground);g.addColorStop(1,'#0007');
-  ctx.fillStyle='#0005';ctx.beginPath();ctx.roundRect(p.x+3,p.y+4,p.w,p.h,7);ctx.fill();
-  ctx.fillStyle=t.ground;ctx.beginPath();ctx.roundRect(p.x,p.y,p.w,p.h,7);ctx.fill();
-  ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(p.x,p.y,p.w,p.h,7);ctx.fill();
-  ctx.fillStyle=t.accent;ctx.beginPath();ctx.roundRect(p.x,p.y,p.w,5,3);ctx.fill();
-  ctx.globalAlpha=.25;ctx.fillStyle='#fff';
-  for(let k=0;k<p.w;k+=24)ctx.fillRect(p.x+k+6,p.y+10,8,2);
-  ctx.globalAlpha=1;
-  if(p.amp){ctx.fillStyle='#fff';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('◀ ▶',p.x+p.w/2,p.y+15);ctx.textAlign='left'}
-  if(p.cr){ctx.strokeStyle='#0008';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(p.x+p.w*.3,p.y+5);ctx.lineTo(p.x+p.w*.38,p.y+11);ctx.lineTo(p.x+p.w*.33,p.y+18);ctx.moveTo(p.x+p.w*.7,p.y+5);ctx.lineTo(p.x+p.w*.62,p.y+12);ctx.stroke()}
-  ctx.restore();
- }
- for(const h of hazards){
-  ctx.fillStyle='#ff536b';ctx.strokeStyle='#8a1030';ctx.lineWidth=1.5;ctx.beginPath();
-  for(let x=h.x;x<=h.x+h.w;x+=14){ctx.lineTo(x,h.y+h.h);ctx.lineTo(x+7,h.y)}
-  ctx.lineTo(h.x+h.w,h.y+h.h);ctx.closePath();ctx.fill();ctx.stroke(
+ for(let
