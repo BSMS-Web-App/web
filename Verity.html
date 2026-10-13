@@ -1,1 +1,367 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smiley Quest — 20-Level Platformer</title>
+<style>
+:root{color-scheme:dark;--ink:#fff8dc;--panel:rgba(12,18,35,.82)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#101426;color:var(--ink);font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;padding:18px}
+.game-wrap{width:min(100%,1000px)}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+h1{margin:0;font-size:clamp(1.25rem,3vw,2rem)}
+.hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill,button{border:1px solid #ffffff35;background:var(--panel);color:var(--ink);padding:9px 13px;border-radius:12px;font:inherit}
+button{cursor:pointer;transition:transform .12s,background .12s}
+button:hover{background:#35415e;transform:translateY(-1px)}
+canvas{display:block;width:100%;aspect-ratio:16/9;background:#1a2541;border:2px solid #ffffff35;border-radius:16px;box-shadow:0 18px 60px #0006}
+.under{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.help{color:#c9d4f0;font-size:.92rem;line-height:1.5}
+.help kbd{background:#ffffff18;border:1px solid #ffffff35;padding:2px 6px;border-radius:5px;color:#fff}
+.message{color:#ffe68b;min-height:1.5em;font-weight:650}
+.mobile{display:none;gap:10px;justify-content:space-between;margin-top:12px}
+.mobile button{flex:1;font-size:1.2rem;touch-action:none;user-select:none}
+@media(max-width:650px){body{padding:10px}.mobile{display:flex}.help{font-size:.82rem}}
+</style>
+</head>
+<body>
+<div class="game-wrap">
+<header>
+<h1>🌟 Smiley Quest</h1>
+<div class="hud">
+<span class="pill" id="levelLabel">Level 1 / 20</span>
+<span class="pill" id="objective">Reach the flag!</span>
+<button id="restartBtn" title="Restart this level (R)">↻ Restart</button>
+<button id="soundBtn" title="Toggle sound effects">🔊 Sound on</button>
+</div>
+</header>
+<canvas id="game" width="960" height="540" aria-label="Smiley platform game"></canvas>
+<div class="under">
+<div class="help">Move <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> · Jump <kbd>Space</kbd>/<kbd>↑</kbd>/<kbd>W</kbd> · Restart <kbd>R</kbd><br>Find the glowing puzzle orb on marked levels, then touch the flag!</div>
+<div class="message" id="message" aria-live="polite">Ready, little smiley? Let's go!</div>
+</div>
+<div class="mobile">
+<button id="leftBtn">◀</button><button id="jumpBtn">⬆ Jump</button><button id="rightBtn">▶</button>
+</div>
+</div>
+
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=960,H=540,groundY=490;
+
+const themes=[
+{name:'Candy Meadow',sky:'#80dcff',far:'#65c5aa',ground:'#4fbd72',accent:'#ff75ad'},
+{name:'Moonlit Ruins',sky:'#111b45',far:'#293b70',ground:'#555c89',accent:'#b9a4ff'},
+{name:'Volcano Run',sky:'#351b35',far:'#733b45',ground:'#8c4240',accent:'#ffb34f'},
+{name:'Crystal Cavern',sky:'#172b55',far:'#2f6d91',ground:'#347f91',accent:'#76fff1'},
+{name:'Cloud Kingdom',sky:'#b6e7ff',far:'#9eb6f6',ground:'#f5f0ff',accent:'#ffb9ef'},
+{name:'Jungle Temple',sky:'#164b4a',far:'#24715a',ground:'#5b8a48',accent:'#f5d65f'},
+{name:'Neon City',sky:'#160f38',far:'#38256c',ground:'#292c63',accent:'#ff57d6'},
+{name:'Frozen Lake',sky:'#bdeaff',far:'#79bad9',ground:'#e5fbff',accent:'#4c83ff'},
+{name:'Desert Mirage',sky:'#ffc77f',far:'#e99b66',ground:'#bc824c',accent:'#fff06a'},
+{name:'Clockwork',sky:'#29334a',far:'#56617a',ground:'#9c875d',accent:'#ffce72'},
+{name:'Star Garden',sky:'#10172f',far:'#25375b',ground:'#385f70',accent:'#c6ff8e'},
+{name:'Mushroom Woods',sky:'#a5d8ff',far:'#6d9c8c',ground:'#668d59',accent:'#ff8f9b'},
+{name:'Deep Sea',sky:'#052e54',far:'#075b7c',ground:'#13839a',accent:'#6cf4f2'},
+{name:'Autumn Ridge',sky:'#eaa16c',far:'#a65b54',ground:'#845647',accent:'#ffd27a'},
+{name:'Paper World',sky:'#fff1c9',far:'#e9c7a0',ground:'#a5c7a4',accent:'#ef8a9b'},
+{name:'Storm Peaks',sky:'#343d59',far:'#555e77',ground:'#778397',accent:'#fff1a0'},
+{name:'Honey Hive',sky:'#ffd66c',far:'#f0a944',ground:'#bd8532',accent:'#fff7b3'},
+{name:'Dreamscape',sky:'#6f6bdc',far:'#a27fe0',ground:'#5d70bd',accent:'#ffb4ed'},
+{name:'Final Galaxy',sky:'#080b27',far:'#25215c',ground:'#403d80',accent:'#7cf7ff'},
+{name:'Sunrise Summit',sky:'#ff9b9b',far:'#d97eae',ground:'#5b8e8a',accent:'#fff3a6'}
+];
+
+const levelLabel=document.getElementById('levelLabel');
+const objective=document.getElementById('objective');
+const message=document.getElementById('message');
+
+let level=0,platforms=[],hazards=[],orb=null,flag=null;
+let hasOrb=false,particles=[],keys={},won=false,sound=true,audioCtx=null;
+
+const player={x:50,y:430,w:30,h:30,vx:0,vy:0,onGround:false,face:1};
+
+const levelData=[
+[[0,490,960,50],[130,420,125,18],[310,350,120,18],[500,405,110,18],[680,325,130,18],[820,420,90,18]],
+[[0,490,960,50],[90,405,110,18],[250,340,100,18],[405,415,105,18],[560,330,100,18],[720,260,130,18],[840,390,90,18]],
+[[0,490,960,50],[100,420,100,18],[250,360,90,18],[390,300,100,18],[540,370,90,18],[680,300,110,18],[810,390,100,18]],
+[[0,490,960,50],[70,410,120,18],[235,350,100,18],[385,410,100,18],[530,330,110,18],[690,270,100,18],[820,390,100,18]],
+[[0,490,960,50],[120,410,130,18],[300,350,110,18],[470,290,120,18],[650,350,110,18],[810,280,100,18]],
+[[0,490,960,50],[80,420,110,18],[220,350,110,18],[365,400,100,18],[500,315,110,18],[655,365,100,18],[800,290,110,18]],
+[[0,490,960,50],[90,400,90,18],[225,325,95,18],[370,390,90,18],[510,285,100,18],[660,345,95,18],[810,250,100,18]],
+[[0,490,960,50],[100,410,130,18],[280,355,110,18],[455,300,110,18],[630,360,100,18],[790,290,100,18]],
+[[0,490,960,50],[80,415,100,18],[220,360,100,18],[360,405,100,18],[500,330,110,18],[660,270,110,18],[820,380,100,18]],
+[[0,490,960,50],[110,420,110,18],[270,360,90,18],[405,300,90,18],[550,380,100,18],[700,320,90,18],[830,250,100,18]],
+[[0,490,960,50],[70,420,110,18],[220,365,100,18],[370,310,100,18],[520,365,100,18],[670,300,100,18],[820,350,90,18]],
+[[0,490,960,50],[100,410,110,18],[260,340,100,18],[410,390,100,18],[560,315,100,18],[720,350,110,18],[850,275,80,18]],
+[[0,490,960,50],[80,415,120,18],[250,350,100,18],[400,290,100,18],[555,355,100,18],[710,280,110,18],[850,390,80,18]],
+[[0,490,960,50],[100,420,100,18],[240,360,100,18],[380,400,100,18],[520,320,100,18],[670,360,100,18],[810,280,110,18]],
+[[0,490,960,50],[100,410,120,18],[270,350,100,18],[430,290,100,18],[590,350,100,18],[750,290,110,18]],
+[[0,490,960,50],[80,420,110,18],[230,355,100,18],[380,300,100,18],[540,360,100,18],[690,300,100,18],[830,385,90,18]],
+[[0,490,960,50],[100,410,100,18],[245,350,100,18],[390,400,100,18],[535,320,100,18],[680,360,100,18],[820,275,100,18]],
+[[0,490,960,50],[80,420,110,18],[235,360,100,18],[390,300,100,18],[550,350,100,18],[705,280,100,18],[840,380,80,18]],
+[[0,490,960,50],[80,415,100,18],[220,350,100,18],[365,290,100,18],[515,350,100,18],[665,275,100,18],[815,345,100,18]],
+[[0,490,960,50],[80,415,120,18],[250,350,100,18],[410,295,110,18],[580,350,100,18],[740,280,110,18],[850,390,80,18]]
+];
+
+function beep(freq=520,duration=.07,type='sine'){
+ if(!sound)return;
+ try{
+  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(.055,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+duration);
+ }catch(e){}
+}
+
+function loadLevel(n){
+ level=n;
+ platforms=levelData[n].map(p=>({x:p[0],y:p[1],w:p[2],h:p[3]}));
+ hazards=[];particles=[];hasOrb=false;won=false;
+
+ if((n+1)%3===0||n===19){
+  const p=platforms[Math.max(1,Math.floor(platforms.length*.55))];
+  orb={x:Math.min(W-50,p.x+p.w*.55),y:p.y-28,r:11};
+ }else orb=null;
+
+ flag={x:900,y:groundY-58,w:24,h:58};
+
+ if(n%2===1)hazards.push({x:420+(n*17)%190,y:groundY-22,w:42,h:22});
+ if(n%4===2)hazards.push({x:platforms[2].x+35,y:platforms[2].y-18,w:34,h:18});
+
+ player.x=38;player.y=groundY-player.h;player.vx=0;player.vy=0;
+ levelLabel.textContent=`Level ${n+1} / 20 · ${themes[n].name}`;
+ objective.textContent=orb?'Puzzle: collect the glow-orb':'Reach the flag!';
+ message.textContent=orb?'The flag is sealed! Find the glowing orb.':'Find a path to the flag!';
+}
+
+function reset(){loadLevel(level)}
+
+function rects(a,b){
+ return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+}
+
+function burst(x,y,color,count=12){
+ for(let i=0;i<count;i++){
+  particles.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.8)*5,life:35,color,size:2+Math.random()*4});
+ }
+}
+
+function update(){
+ if(won){
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
+  particles=particles.filter(p=>p.life>0);
+  return;
+ }
+
+ const left=keys.ArrowLeft||keys.a||keys.A;
+ const right=keys.ArrowRight||keys.d||keys.D;
+ const jump=keys[' ']||keys.ArrowUp||keys.w||keys.W;
+
+ player.vx=left?-4.2:right?4.2:player.vx*.78;
+ if(left)player.face=-1;
+ if(right)player.face=1;
+
+ if(jump&&player.onGround){
+  player.vy=-11.6;player.onGround=false;beep(380,.06);
+ }
+
+ player.vy=Math.min(player.vy+.48,13);
+ player.x+=player.vx;
+ player.x=Math.max(0,Math.min(W-player.w,player.x));
+ player.y+=player.vy;
+ player.onGround=false;
+
+ for(const p of platforms){
+  if(player.vy>=0&&player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>=p.y&&player.y+player.h-player.vy<=p.y+4){
+   player.y=p.y-player.h;player.vy=0;player.onGround=true;
+  }
+ }
+
+ for(const h of hazards){
+  if(rects(player,h)){
+   player.x=38;player.y=groundY-player.h;player.vx=player.vy=0;
+   message.textContent='Ouch! Try that jump again!';
+   beep(130,.16,'sawtooth');
+  }
+ }
+
+ if(player.y>H+60){
+  player.x=38;player.y=groundY-player.h;player.vx=player.vy=0;
+  message.textContent='Whoops! Back to the start.';
+ }
+
+ if(orb&&!hasOrb&&Math.hypot(player.x+15-orb.x,player.y+15-orb.y)<29){
+  hasOrb=true;
+  burst(orb.x,orb.y,themes[level].accent,22);
+  message.textContent='Orb collected! The flag is unlocked!';
+  objective.textContent='Puzzle solved ✓';
+  beep(760,.18);
+ }
+
+ if(rects(player,flag)){
+  if(orb&&!hasOrb){
+   message.textContent='The flag is locked — find the glowing orb!';
+  }else{
+   won=true;
+   burst(flag.x,flag.y,themes[level].accent,45);
+   beep(680,.1);
+   setTimeout(()=>beep(900,.16),100);
+   message.textContent=level===19?'YOU DID IT! All 20 levels conquered! 🎉':'Level cleared! On to the next world! ✨';
+   objective.textContent='Level complete ✓';
+  }
+ }
+
+ particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.08;p.life--});
+ particles=particles.filter(p=>p.life>0);
+}
+
+function drawBackground(t){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,t.sky);g.addColorStop(1,t.far);
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+ ctx.fillStyle=t.far;ctx.beginPath();ctx.moveTo(0,groundY);
+ for(let x=0;x<=W;x+=80){
+  ctx.quadraticCurveTo(x+20,260+Math.sin(x*.017+level)*65,x+80,groundY);
+ }
+ ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+
+ for(let i=0;i<38;i++){
+  let x=(i*137+level*41)%W,y=(i*71+level*29)%370;
+  ctx.globalAlpha=.25+(i%4)*.12;
+  ctx.fillStyle=i%3===0?t.accent:'#fff';
+  ctx.beginPath();ctx.arc(x,y,1.5+i%3,0,Math.PI*2);ctx.fill();
+ }
+ ctx.globalAlpha=1;
+
+ if([1,6,10,18].includes(level)){
+  for(let i=0;i<8;i++){
+   ctx.fillStyle='#fff9';ctx.beginPath();
+   ctx.arc((i*131+47)%W,60+(i*47)%260,1.5,0,Math.PI*2);ctx.fill();
+  }
+ }
+
+ if([0,11,16].includes(level)){
+  for(let i=0;i<7;i++){
+   ctx.fillStyle=t.accent;ctx.beginPath();
+   ctx.arc((i*151+50)%W,90+(i*29)%190,5,0,Math.PI*2);ctx.fill();
+  }
+ }
+}
+
+function draw(){
+ const t=themes[level];
+ drawBackground(t);
+
+ for(const p of platforms){
+  ctx.fillStyle=t.ground;ctx.fillRect(p.x,p.y,p.w,p.h);
+  ctx.fillStyle=t.accent;ctx.fillRect(p.x,p.y,p.w,4);
+  ctx.globalAlpha=.22;ctx.fillStyle='#fff';
+  for(let k=0;k<p.w;k+=24)ctx.fillRect(p.x+k+5,p.y+8,8,2);
+  ctx.globalAlpha=1;
+ }
+
+ for(const h of hazards){
+  ctx.fillStyle='#ff536b';ctx.beginPath();
+  for(let x=h.x;x<=h.x+h.w;x+=14){
+   ctx.lineTo(x,h.y+h.h);ctx.lineTo(x+7,h.y);
+  }
+  ctx.lineTo(h.x+h.w,h.y+h.h);ctx.closePath();ctx.fill();
+ }
+
+ if(orb&&!hasOrb){
+  const pulse=1+Math.sin(Date.now()/130)*.12;
+  ctx.save();ctx.shadowBlur=24;ctx.shadowColor=t.accent;
+  ctx.fillStyle=t.accent;ctx.beginPath();
+  ctx.arc(orb.x,orb.y,orb.r*pulse,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.beginPath();
+  ctx.arc(orb.x-3,orb.y-4,3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+ }
+
+ ctx.fillStyle='#f6f3dc';ctx.fillRect(flag.x+2,flag.y,5,flag.h);
+ ctx.fillStyle=orb&&!hasOrb?'#8d91a7':t.accent;
+ ctx.beginPath();ctx.moveTo(flag.x+7,flag.y+3);
+ ctx.lineTo(flag.x+44,flag.y+15);ctx.lineTo(flag.x+7,flag.y+28);
+ ctx.closePath();ctx.fill();
+ ctx.fillStyle='#fff';ctx.font='bold 16px system-ui';
+ ctx.fillText('★',flag.x+15,flag.y+18);
+
+ // Yellow smiley character
+ ctx.save();
+ ctx.translate(player.x+player.w/2,player.y+player.h/2);
+ ctx.rotate(Math.max(-.18,Math.min(.18,player.vx*.025)));
+ ctx.shadowBlur=14;ctx.shadowColor='#ffe55c';
+ ctx.fillStyle='#ffdf38';ctx.beginPath();
+ ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();
+ ctx.shadowBlur=0;ctx.strokeStyle='#9a6b00';ctx.lineWidth=1.7;
+ ctx.beginPath();ctx.arc(0,1,7,.15,Math.PI-.15);ctx.stroke();
+ ctx.fillStyle='#49391c';ctx.beginPath();
+ ctx.arc(-5,-4,2,0,Math.PI*2);ctx.arc(5,-4,2,0,Math.PI*2);
+ ctx.fill();ctx.restore();
+
+ for(const p of particles){
+  ctx.globalAlpha=Math.max(0,p.life/35);
+  ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);
+ }
+ ctx.globalAlpha=1;
+
+ if(won){
+  ctx.fillStyle='#080d20aa';ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center';ctx.fillStyle='#fff';
+  ctx.font='bold 40px system-ui';
+  ctx.fillText(level===19?'QUEST COMPLETE!':'LEVEL COMPLETE!',W/2,H/2-16);
+  ctx.font='20px system-ui';ctx.fillStyle='#ffe68b';
+  ctx.fillText(level===19?'You conquered all 20 worlds!':'Press Space or Enter for the next level',W/2,H/2+28);
+  ctx.textAlign='left';
+ }
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+
+window.addEventListener('keydown',e=>{
+ if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();
+ keys[e.key]=true;
+ if((e.key===' '||e.key==='Enter')&&won){
+  if(level<19)loadLevel(level+1);
+  else loadLevel(0);
+ }
+ if(e.key==='r'||e.key==='R')reset();
+});
+
+window.addEventListener('keyup',e=>keys[e.key]=false);
+document.getElementById('restartBtn').onclick=reset;
+
+document.getElementById('soundBtn').onclick=()=>{
+ sound=!sound;
+ document.getElementById('soundBtn').textContent=sound?'🔊 Sound on':'🔇 Sound off';
+ if(sound)beep();
+};
+
+function holdButton(id,key){
+ const el=document.getElementById(id);
+ const down=e=>{e.preventDefault();keys[key]=true};
+ const up=e=>{e.preventDefault();keys[key]=false};
+ el.addEventListener('pointerdown',down);
+ el.addEventListener('pointerup',up);
+ el.addEventListener('pointercancel',up);
+ el.addEventListener('pointerleave',up);
+}
+
+holdButton('leftBtn','ArrowLeft');
+holdButton('rightBtn','ArrowRight');
+holdButton('jumpBtn',' ');
+
+loadLevel(0);
+loop();
+})();
+</script>
+</body>
+</html>
