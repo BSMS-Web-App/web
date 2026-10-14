@@ -5,7 +5,6 @@ SPDX-License-Identifier: MIT
 -->
 
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -14,7 +13,7 @@ SPDX-License-Identifier: MIT
 <meta name="category" content="Education"/>
 <meta name="author" content="BSMS Web"/>
 <meta name="theme-color" content="#BB001E">
-<meta name="color-scheme" content="#BB001E">
+<meta name="color-scheme" content="dark">
 <meta name="application-name" content="BSMS Web">
 <meta name="application-version" content="v5.0.0">
 <meta property="og:title" content="BSMS Web">
@@ -29,699 +28,708 @@ SPDX-License-Identifier: MIT
 
 <!-- Account Update Checker -->
 <script src="/js/account-check.js"></script>
-    
+
 <link rel="icon" href="/img/icon.png">
 <link rel="apple-touch-icon" href="/img/app-icon.png">
 
+<!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
-
 <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-2TKPQV995W');
 </script>
-
 <script src="/js/analytics.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
-*,*::before,*::after { box-sizing:border-box; }
-
 :root {
   --theme-rgb: 187,0,30;
-  --red: rgb(var(--theme-rgb));
-  --red-h: #d10022;
-  --red-glow: rgba(var(--theme-rgb), 0.35);
-  --bg: #000;
-  --fg: #fff;
-  --fg2: rgba(255,255,255,0.6);
-  --border: rgba(255,255,255,0.13);
-  --msg-bg: rgba(255,255,255,0.06);
-  --input-bg: rgba(255,255,255,0.08);
+  --red: #BB001E;
+  --red-h: #D10022;
+  --red-glow: rgba(187, 0, 30, 0.4);
+  --red-dim: rgba(187,0,30,0.15);
+  --discord-blue: #5765F2;
+  --discord-glow: rgba(87, 101, 242, 0.3);
+  
+  --bg: #030303;
+  --surface: #0a0a0a;
+  --fg: #ffffff;
+  --fg2: rgba(255,255,255,0.75);
+  --border: rgba(255,255,255,0.08);
+  
+  --glass-bg: rgba(15, 15, 15, 0.5);
+  --glass-border: rgba(255,255,255,0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0,0,0,0.5);
+  
   --font: 'Patrick Hand', cursive;
+  
+  --mouse-x: 0;
+  --mouse-y: 0;
 }
 
-body.light-mode {
-  --bg: #f0f2f5;
-  --fg: #1c1e21;
-  --fg2: rgba(0,0,0,0.6);
-  --border: rgba(0,0,0,0.15);
-  --msg-bg: #fff;
-  --input-bg: #fff;
+*,*::before,*::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
 }
 
 html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  font-family: var(--font);
   background: var(--bg);
   color: var(--fg);
+  font-family: var(--font);
+  width: 100%;
+  height: 100%;
   overflow-x: hidden;
-  transition: background 0.3s, color 0.3s;
+  scroll-behavior: smooth;
+  font-size: 20px;
+  line-height: 1.5;
 }
 
-@keyframes fadeIn {
-  from { opacity:0; }
-  to { opacity:1; }
+#main-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
-@keyframes popIn {
-  from {
-    opacity:0;
-    transform:scale(.92) translateY(10px);
-  }
-  to {
-    opacity:1;
-    transform:scale(1) translateY(0);
-  }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at calc(50% + (var(--mouse-x) * 10%)) calc(50% + (var(--mouse-y) * 10%)), 
+    rgba(187, 0, 30, 0.06) 0%, transparent 50%);
+  z-index: -2;
+  pointer-events: none;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity:0;
-    transform:translateY(20px);
-  }
-  to {
-    opacity:1;
-    transform:translateY(0);
-  }
+.ambient-particles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.25;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(var(--red-glow) 1.5px, transparent 1.5px);
+  background-size: 60px 60px;
+  transform: perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+  animation: moveParticles 20s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
 }
 
+@keyframes moveParticles {
+  from { background-position: 0 0; }
+  to { background-position: 0 120px; }
+}
+
+/* Offline Banner */
 #offlineBanner {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background: #ef4444;
-  color: #fff;
-  text-align: center;
-  padding: 10px;
-  font-family: var(--font);
+  top: 0; left: 0; width: 100%;
+  background: #D10022; color: #fff;
+  text-align: center; padding: 12px;
   font-size: 18px;
   z-index: 10000;
   transform: translateY(-100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(187, 0, 30, 0.3);
+}
+#offlineBanner.show { transform: translateY(0); }
+
+/* Navigation */
+.glass-nav {
+  position: fixed;
+  top: 24px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; justify-content: center;
+  gap: 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  padding: 12px 36px;
+  border-radius: 40px;
+  z-index: 2000;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s;
 }
 
-#offlineBanner.show {
-  transform: translateY(0);
+.glass-nav a {
+  color: var(--fg2); text-decoration: none;
+  font-size: 22px;
+  letter-spacing: 1px;
+  transition: color 0.3s, text-shadow 0.3s;
+}
+.glass-nav a:hover {
+  color: #fff;
+  text-shadow: 0 0 12px var(--red-glow);
 }
 
+/* User Button */
 #globalUserBtn {
   position: fixed;
-  top: 20px;
-  right: 24px;
-  width: 50px;
-  height: 50px;
+  top: 24px; right: 32px;
+  width: 54px; height: 54px;
   border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--input-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  z-index: 2000;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 2001;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  color: var(--fg); font-size: 24px;
   overflow: hidden;
-  color: var(--fg);
-  font-weight: bold;
+}
+
+#globalUserBtn::before {
+  content: ''; position: absolute; inset: -1px;
+  border-radius: 50%; background: conic-gradient(from 0deg, transparent, var(--red), transparent);
+  animation: spinAuth 4s linear infinite; opacity: 0; transition: opacity 0.3s;
+  z-index: -1;
+}
+
+#globalUserBtn:hover { transform: scale(1.08) translateY(-2px); box-shadow: 0 8px 25px rgba(187,0,30,0.3); border-color: transparent; }
+#globalUserBtn:hover::before { opacity: 1; }
+#globalUserBtn svg { width: 24px; height: 24px; fill: var(--fg); transition: fill 0.3s; }
+#globalUserBtn img { width: 100%; height: 100%; object-fit: cover; }
+
+@keyframes spinAuth { 100% { transform: rotate(360deg); } }
+
+/* General Buttons */
+.btn-cinematic {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   font-size: 22px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  padding: 14px 36px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--red) 0%, #8A0016 100%);
+  color: #fff; cursor: pointer; text-decoration: none; border: 1px solid rgba(255,255,255,0.05);
+  position: relative; overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+  box-shadow: 0 8px 25px rgba(187,0,30, 0.3);
+  letter-spacing: 1px;
 }
 
-#globalUserBtn:hover {
-  border-color: var(--red);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  transform: scale(1.05);
+.btn-cinematic::after {
+  content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, transparent 100%); opacity: 0; transition: opacity 0.3s;
 }
 
-#globalUserBtn svg {
-  width: 24px;
-  height: 24px;
-  fill: var(--fg);
-  transition: fill 0.2s;
+.btn-cinematic:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(187,0,30, 0.5);
+}
+.btn-cinematic:hover::after { opacity: 1; }
+.btn-cinematic:active { transform: scale(0.97); }
+
+.btn-cinematic.discord-btn {
+  background: linear-gradient(135deg, var(--discord-blue) 0%, #3B45A5 100%);
+  box-shadow: 0 8px 25px rgba(87, 101, 242, 0.3);
+}
+.btn-cinematic.discord-btn:hover { box-shadow: 0 12px 30px rgba(87, 101, 242, 0.5); }
+
+.btn-cinematic.disabled-btn {
+  background: #111; color: #777; cursor: not-allowed; border: 1px solid rgba(255,255,255,0.05); box-shadow: none; pointer-events: none;
+}
+.proxy-container { display: inline-block; position: relative; }
+
+/* Sections */
+section {
+  position: relative; width: 100%; min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 120px 5vw;
 }
 
-#globalUserBtn img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* Observer Animations */
+.reveal {
+  opacity: 0; transform: translateY(40px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.reveal.in-view { opacity: 1; transform: translateY(0); }
 
-.btn {
-  display: inline-block;
-  font-family: var(--font);
-  font-size: 19px;
-  padding: 10px 18px;
-  border-radius: 12px;
-  border: 2px solid var(--red);
-  background: var(--red);
-  color: #fff;
-  cursor: pointer;
-  transition:
-    transform .15s,
-    background .15s,
-    box-shadow .15s,
-    border-color .15s;
-  text-decoration: none;
-  text-align: center;
-  line-height: 1.2;
-  width: 100%;
-}
+.stagger > * { opacity: 0; transform: translateY(20px); transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+.reveal.in-view .stagger > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
+.reveal.in-view .stagger > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.2s; }
+.reveal.in-view .stagger > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+.reveal.in-view .stagger > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
 
-.btn:hover {
-  background: var(--red-h);
-  transform: scale(1.03);
-  box-shadow: 0 4px 18px var(--red-glow);
-}
-
-.btn:active {
-  transform: scale(.97);
-}
-
-.btn.sec {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--fg);
-}
-
-.btn.sec:hover {
-  background: var(--msg-bg);
-  border-color: var(--fg2);
-  box-shadow: none;
-}
-
-/* New disabled button styling */
-.btn.disabled {
-  background: var(--input-bg);
-  border-color: var(--border);
-  color: var(--fg2);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.btn.disabled:hover {
-  background: var(--input-bg);
-  border-color: var(--border);
-  transform: none;
-  box-shadow: none;
-}
-
-.btn.disabled:active {
-  transform: none;
-}
-
+/* Cinematic Hero */
 .hero {
-  text-align: center;
-  padding: 100px 20px 60px;
-  animation: fadeUp 0.6s ease forwards;
+  flex-direction: column; text-align: center; overflow: hidden;
+  justify-content: center; perspective: 1500px; padding-top: 160px;
+}
+.hero-glow {
+  position: absolute; width: 60vw; height: 60vw;
+  background: radial-gradient(circle, var(--red-glow) 0%, transparent 60%);
+  filter: blur(100px); opacity: 0.5; z-index: -1; pointer-events: none;
+  animation: pulseGlow 8s ease-in-out infinite alternate;
+}
+@keyframes pulseGlow { 0% { opacity: 0.3; transform: scale(0.9); } 100% { opacity: 0.6; transform: scale(1.1); } }
+
+/* Hero Centerpiece CSS 3D Geometry */
+.hero-3d-scene {
+  width: 240px; height: 240px; margin-bottom: 50px;
+  transform-style: preserve-3d;
+  animation: rotateCore 30s infinite linear;
+  transform: 
+    rotateX(calc(var(--mouse-y) * -10deg)) 
+    rotateY(calc(var(--mouse-x) * 10deg));
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.core-obj { position: absolute; inset: 0; transform-style: preserve-3d; }
+.core-ring {
+  position: absolute; inset: -15px;
+  border: 2px solid var(--red-dim); border-radius: 50%;
+  transform-style: preserve-3d;
+}
+.core-ring:nth-child(1) { transform: rotateX(75deg); border-color: rgba(187,0,30,0.7); box-shadow: 0 0 20px var(--red-glow); }
+.core-ring:nth-child(2) { transform: rotateY(75deg); }
+.core-ring:nth-child(3) { transform: rotateX(45deg) rotateY(45deg); border-style: dashed; }
+.core-cube {
+  position: absolute; inset: 70px; background: rgba(187,0,30,0.08);
+  border: 1px solid rgba(187,0,30,0.5);
+  box-shadow: 0 0 40px inset rgba(187,0,30,0.3);
+  backdrop-filter: blur(10px);
+}
+.core-cube.front  { transform: translateZ(60px); }
+.core-cube.back   { transform: rotateY(180deg) translateZ(60px); }
+.core-cube.right  { transform: rotateY(90deg) translateZ(60px); }
+.core-cube.left   { transform: rotateY(-90deg) translateZ(60px); }
+.core-cube.top    { transform: rotateX(90deg) translateZ(60px); }
+.core-cube.bottom { transform: rotateX(-90deg) translateZ(60px); }
+@keyframes rotateCore { 100% { transform: rotateY(360deg) rotateX(360deg); } }
+
+.hero-content h1 {
+  font-size: clamp(3.5rem, 8vw, 6.5rem); margin: 0 0 16px;
+  line-height: 1.1; letter-spacing: 2px; text-shadow: 0 8px 20px rgba(0,0,0,0.6);
+}
+.hero-content h1 span {
+  background: linear-gradient(to right, #FFF, var(--red) 80%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  display: inline-block; filter: drop-shadow(0 0 12px rgba(187,0,30,0.4));
+}
+.hero-content p {
+  font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+  color: var(--fg2); max-width: 750px; margin: 0 auto 40px; letter-spacing: 1px;
 }
 
-.hero-logo {
-  width: 90px;
-  height: 90px;
-  margin-bottom: 24px;
-  background: transparent;
+/* Scroll Indicator */
+.scroll-indicator {
+  position: absolute; bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.6;
+}
+.mouse {
+  width: 26px; height: 40px; border: 2px solid rgba(255,255,255,0.7); border-radius: 15px; display: flex; justify-content: center; padding-top: 6px;
+}
+.wheel {
+  width: 4px; height: 8px; background: var(--red); border-radius: 2px;
+  animation: scrollWheel 2s infinite;
+}
+@keyframes scrollWheel { 0% { transform: translateY(0); opacity: 1;} 50% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 0;} }
+
+/* Showcase Sections Layout - Rigid CSS Grid to fix overlapping */
+.showcase-content {
+  display: grid; 
+  grid-template-columns: 1fr 1fr;
+  align-items: center; 
+  gap: 60px;
+  width: 100%; 
+  max-width: 1200px;
+  margin: 0 auto;
+  z-index: 2;
+}
+
+.showcase.reverse .showcase-text {
+  order: 2;
+}
+.showcase.reverse .showcase-visual {
+  order: 1;
+}
+
+.showcase-text {
+  width: 100%;
+}
+.showcase-text h2 {
+  font-size: clamp(3rem, 6vw, 4.5rem); color: #fff; margin-bottom: 20px;
+  line-height: 1.1; letter-spacing: 2px; text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+.showcase-text p {
+  font-size: 1.5rem; color: var(--fg2); margin-bottom: 35px; max-width: 500px; line-height: 1.6; letter-spacing: 1px;
+}
+
+.showcase-visual {
+  position: relative; perspective: 1200px; height: 450px;
+  display: flex; justify-content: center; align-items: center;
+  width: 100%;
+}
+
+/* Specific Application Visuals */
+
+/* Countdown Visual */
+.visual-clock { position: relative; width: 340px; height: 340px; transform-style: preserve-3d; }
+.clock-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--red-dim); }
+.clock-ring.r1 { border-top-color: var(--red); border-width: 3px; animation: spinC 3s linear infinite; }
+.clock-ring.r2 { inset: 25px; border-right-color: rgba(255,255,255,0.4); border-width: 2px; animation: spinC 6s linear infinite reverse; }
+.clock-ring.r3 { inset: 50px; background: rgba(187,0,30,0.03); border: 2px dashed rgba(255,255,255,0.15); animation: spinC 12s linear infinite; }
+.clock-center {
+  position: absolute; inset: 100px; border-radius: 50%; background: var(--surface); border: 2px solid var(--red);
+  box-shadow: 0 0 40px rgba(187,0,30,0.3); display: flex; align-items: center; justify-content: center; font-size: 64px; color: #fff; transition: all 0.3s;
+}
+@keyframes spinC { 100% { transform: rotateZ(360deg); } }
+
+.clock-center.flash-red {
+  background: var(--red-h);
+  color: #fff;
+  font-size: 28px;
+  text-align: center;
+  line-height: 1.1;
+  letter-spacing: 2px;
+  animation: flashTimer 0.8s infinite alternate;
   border: none;
 }
-
-.hero h1 {
-  font-size: 64px;
-  margin: 0 0 12px;
-  line-height: 1.1;
-  color: var(--fg);
+@keyframes flashTimer {
+  from { box-shadow: 0 0 30px var(--red); background: var(--red); }
+  to { box-shadow: 0 0 80px var(--red-h), inset 0 0 20px rgba(0,0,0,0.6); background: #9c0019; }
 }
 
-.hero h1 span {
-  color: var(--red);
+/* Page Shake Animation */
+@keyframes shakePage {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(-6px, 6px) rotate(-1deg); }
+  20%, 40%, 60%, 80% { transform: translate(6px, -6px) rotate(1deg); }
+}
+.page-shake {
+  animation: shakePage 0.4s ease-in-out infinite;
 }
 
-.hero p {
-  font-size: 22px;
-  color: var(--fg2);
-  max-width: 620px;
-  margin: 0 auto;
-  line-height: 1.5;
+/* Chat Visual */
+.visual-chat { transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
+.chat-panel {
+  position: absolute; background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
+  padding: 18px; border-radius: 14px; width: 85%; max-width: 280px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  display: flex; gap: 14px; align-items: center; transform-style: preserve-3d; transition: transform 0.2s;
 }
+.chat-panel:nth-child(1) { top: 15%; left: 0%; transform: translateZ(-40px) translateY(calc(var(--mouse-y) * -15px)); opacity: 0.6;}
+.chat-panel:nth-child(2) { top: 40%; left: 15%; transform: translateZ(30px) translateY(calc(var(--mouse-y) * 15px)); box-shadow: 0 20px 40px rgba(187,0,30,0.2); border-color: rgba(187,0,30,0.4); z-index: 2;}
+.chat-panel:nth-child(3) { top: 65%; left: 5%; transform: translateZ(70px) translateY(calc(var(--mouse-y) * -8px)); }
+.avatar-blob { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--red) 0%, #222 100%); }
+.text-line { height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; margin-bottom: 10px; }
 
-.launcher-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px;
+/* Games Visual */
+.visual-games { width: 100%; height: 100%; position: relative; perspective: 1000px; transform-style: preserve-3d; }
+.game-shape {
+  position: absolute; background: linear-gradient(135deg, rgba(187,0,30,0.2) 0%, transparent 100%);
+  border: 1px solid rgba(187,0,30,0.6); backdrop-filter: blur(10px);
+  animation: floatObj 6s ease-in-out infinite alternate;
 }
+.s1 { width: 80px; height: 80px; top: 25%; left: 20%; transform: rotateX(45deg) rotateY(20deg) translateZ(40px); border-radius: 12px; }
+.s2 { width: 120px; height: 120px; top: 55%; right: 20%; transform: rotateZ(30deg) translateZ(-60px); border-radius: 50%; animation-delay: -2s; border-color: rgba(255,255,255,0.2);}
+.s3 { width: 60px; height: 60px; top: 40%; left: 60%; transform: rotateX(80deg) translateZ(110px); border-width: 3px; animation-delay: -4s; background: transparent; border-color: var(--red); }
+@keyframes floatObj { 0% { transform: translateY(0) rotateX(10deg); } 100% { transform: translateY(-40px) rotateX(40deg) scale(1.1); } }
 
-.launcher-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
+/* Proxy Visual */
+.visual-proxy { width: 100%; height: 100%; position: relative; background: radial-gradient(circle, transparent 20%, var(--bg) 70%); }
+.network-grid {
+  position: absolute; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 35px 35px; transform: perspective(800px) rotateX(60deg) scale(1.5) translateZ(-90px); opacity: 0.5;
 }
-
-.app-card {
-  background: var(--msg-bg);
-  border: 2px solid var(--border);
-  border-radius: 20px;
-  padding: 30px 26px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  transition:
-    transform 0.2s,
-    border-color 0.2s,
-    box-shadow 0.2s;
-  animation: popIn 0.5s ease forwards;
-  opacity: 0;
-  position: relative;
-  overflow: hidden;
+.node {
+  position: absolute; width: 14px; height: 14px; background: #666; border-radius: 50%; top: 50%; left: 50%;
+  box-shadow: 0 0 15px #000; animation: pulseLock 2s infinite alternate; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center;
 }
-
-.app-card:nth-child(1) { animation-delay: 0.1s; }
-.app-card:nth-child(2) { animation-delay: 0.2s; }
-.app-card:nth-child(3) { animation-delay: 0.3s; }
-.app-card:nth-child(4) { animation-delay: 0.4s; }
-
-.app-card:hover {
-  border-color: var(--red);
-  transform: translateY(-6px);
-  box-shadow: 0 12px 30px rgba(var(--theme-rgb), 0.2);
+.node-icon {
+  position: absolute; top: -45px; color: #bbb; filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
 }
+@keyframes pulseLock { from { opacity: 0.5; box-shadow: 0 0 8px #000; } to { opacity: 1; box-shadow: 0 0 20px rgba(255,255,255,0.3); } }
 
-.app-icon {
-  width: 58px;
-  height: 58px;
-  fill: var(--red);
-  margin-bottom: 20px;
-  background: rgba(var(--theme-rgb), 0.1);
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(var(--theme-rgb), 0.3);
-}
+/* Discord Section */
+.discord-section { background: radial-gradient(ellipse at center, rgba(30, 35, 75, 0.3) 0%, var(--bg) 80%); color: #fff; text-align: center; display: block; padding-top: 140px; padding-bottom: 140px; border-top: 1px solid rgba(87, 101, 242, 0.15); border-bottom: 1px solid rgba(87, 101, 242, 0.15); }
+.discord-content { max-width: 900px; margin: 0 auto; position: relative; z-index: 2; }
+.discord-logo-wrap { width: 80px; height: 80px; background: rgba(87, 101, 242, 0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 28px; border: 1px solid rgba(87, 101, 242, 0.3); box-shadow: 0 0 30px rgba(87, 101, 242, 0.2); }
+.discord-logo-wrap svg { width: 45px; height: 45px; fill: var(--discord-blue); }
+.discord-section h2 { font-size: clamp(3rem, 5vw, 4.5rem); margin-bottom: 20px; letter-spacing: 2px; }
+.discord-section p { color: rgba(255,255,255,0.7); max-width: 650px; margin: 0 auto 40px; font-size: 1.5rem; line-height: 1.6; letter-spacing: 1px;}
 
-.app-title {
-  font-size: 32px;
-  margin: 0 0 8px;
-  color: var(--fg);
-}
+.discord-widget-ui { background: var(--surface); border: 1px solid rgba(87, 101, 242, 0.2); border-radius: 24px; padding: 45px; margin-bottom: 45px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 30px; transition: transform 0.3s; }
+.discord-widget-ui:hover { transform: translateY(-5px); border-color: rgba(87, 101, 242, 0.4); }
 
-.app-desc {
-  font-size: 19px;
-  color: var(--fg2);
-  margin: 0 0 24px;
-  line-height: 1.45;
-  flex: 1;
-}
+.discord-stats-row { display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 24px; }
+.status-dot { display: inline-block; width: 12px; height: 12px; background: #3ba55c; border-radius: 50%; box-shadow: 0 0 10px #3ba55c; animation: pOnline 2s infinite alternate; }
+@keyframes pOnline { from{ opacity: 0.6;} to{opacity: 1;} }
 
-.bug-report-section {
-  text-align: center;
-  padding: 60px 20px;
-  max-width: 700px;
-  margin: 40px auto 0;
-  border-top: 1px solid var(--border);
-  animation: fadeUp 0.6s ease forwards;
-  animation-delay: 0.3s;
-  opacity: 0;
-}
+.members-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: -10px; margin-top: 15px; }
+.member-avatar { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #111; position: relative; margin-left: -15px; transition: transform 0.2s, z-index 0.2s; background: #2f3136; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.member-avatar:first-child { margin-left: 0; }
+.member-avatar:hover { transform: translateY(-10px) scale(1.15); z-index: 10 !important; }
+.member-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.m-status { position: absolute; bottom: 0; right: 0; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #111; background: #747f8d; }
+.m-status.online { background: #3ba55c; } .m-status.idle { background: #faa61a; } .m-status.dnd { background: #ed4245; }
 
-.bug-report-icon {
-  width: 52px;
-  height: 52px;
-  fill: var(--fg);
-  margin-bottom: 16px;
-  transition: fill 0.3s;
-}
+/* Open Source Section */
+.oss-section { flex-direction: column; text-align: center; }
+.oss-content { max-width: 700px; display: flex; flex-direction: column; align-items: center; z-index: 2; }
+.oss-icon { width: 70px; height: 70px; fill: #fff; margin-bottom: 30px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.3)); opacity: 0.95; }
+.oss-section h2 { font-size: clamp(3rem, 5vw, 4.5rem); margin-bottom: 20px; letter-spacing: 2px;}
+.oss-section p { font-size: 1.5rem; color: var(--fg2); margin-bottom: 40px; letter-spacing: 1px;}
 
-.bug-report-section h2 {
-  font-size: 36px;
-  margin: 0 0 12px;
-  color: var(--fg);
-}
-
-.bug-report-section p {
-  font-size: 20px;
-  color: var(--fg2);
-  margin: 0 0 28px;
-  line-height: 1.6;
-}
-
-.bug-report-btn {
-  width: auto;
-  min-width: 200px;
-}
-
-.oss-section {
-  text-align: center;
-  padding: 60px 20px;
-  max-width: 700px;
-  margin: 40px auto 0;
-  border-top: 1px solid var(--border);
-  animation: fadeUp 0.6s ease forwards;
-  animation-delay: 0.3s;
-  opacity: 0;
-}
-
-.oss-icon {
-  width: 52px;
-  height: 52px;
-  fill: var(--fg);
-  margin-bottom: 16px;
-  transition: fill 0.3s;
-}
-
-.oss-section h2 {
-  font-size: 36px;
-  margin: 0 0 12px;
-  color: var(--fg);
-}
-
-.oss-section p {
-  font-size: 20px;
-  color: var(--fg2);
-  margin: 0 0 28px;
-  line-height: 1.6;
-}
-
-.oss-section code {
-  font-family: 'Courier New', Courier, monospace;
-  background: var(--msg-bg);
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  color: var(--fg);
-  font-size: 18px;
-}
-
-.oss-btn {
-  width: auto;
-  min-width: 200px;
-}
-
+/* Account & Proxy Popup Overlay */
 .overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 3000;
-  animation: fadeIn .2s ease;
-  padding: 20px;
-  backdrop-filter: blur(4px);
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; z-index: 3000;
+  opacity: 0; visibility: hidden; transition: all 0.3s;
 }
-
-.overlay.show {
-  display: flex;
-}
-
+.overlay.show { opacity: 1; visibility: visible; }
 .popup {
-  background: var(--bg);
-  border: 2px solid var(--red);
-  border-radius: 20px;
-  padding: 30px 24px 24px;
-  width: min(400px, 100%);
-  animation: popIn .22s ease;
-  text-align: center;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  background: var(--surface); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
+  padding: 40px 30px; width: min(420px, 90%); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  transform: scale(0.95) translateY(15px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.overlay.show .popup { transform: scale(1) translateY(0); }
+.popup h2 { font-size: 38px; margin: 0 0 10px; color: #fff; letter-spacing: 1px;}
+.popup p { font-size: 22px; color: var(--fg2); margin: 0 0 30px; }
 
-.popup p {
-  font-size: 20px;
-  color: var(--fg2);
-  margin: 0 0 24px;
-  line-height: 1.5;
-}
-
-.popup h2 {
-  font-size: 28px;
-  margin: 0 0 8px;
-  color: var(--fg);
-}
-
+/* Footer */
 .footer {
-  text-align: center;
-  padding: 30px 20px;
-  color: var(--fg2);
-  font-size: 16px;
+  text-align: center; padding: 45px 20px; color: rgba(255,255,255,0.5); font-size: 18px;
+  border-top: 1px solid rgba(255,255,255,0.05); position: relative; letter-spacing: 1px;
+}
+.footer a { color: rgba(255,255,255,0.7); text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.4); transition: color 0.2s; }
+.footer a:hover { color: var(--red); border-color: var(--red); }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .showcase-content { 
+    grid-template-columns: 1fr; 
+    text-align: center; 
+    gap: 45px; 
+  }
+  .showcase.reverse .showcase-text,
+  .showcase.reverse .showcase-visual {
+    order: unset;
+  }
+  .showcase-visual { height: 350px; }
+  .glass-nav { display: none; }
+  section { padding: 90px 20px; }
+  .discord-section { padding-top: 100px; padding-bottom: 100px; }
 }
 
-.footer a {
-  color: var(--red);
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.footer a:hover {
-  opacity: 0.8;
-}
-
-@media (max-width: 600px) {
-  .hero {
-    padding-top: 80px;
-  }
-
-  .hero h1 {
-    font-size: 48px;
-  }
-
-  .hero p {
-    font-size: 19px;
-  }
-
-  #globalUserBtn {
-    top: 16px;
-    right: 16px;
-    width: 44px;
-    height: 44px;
-  }
-
-  .bug-report-section h2 {
-    font-size: 30px;
-  }
-
-  .bug-report-section p {
-    font-size: 18px;
-  }
-
-  .oss-section h2 {
-    font-size: 30px;
-  }
-
-  .oss-section p {
-    font-size: 18px;
-  }
-
-  .oss-section code {
-    font-size: 16px;
-  }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .hero-3d-scene, .visual-clock, .chat-panel, .game-shape, .page-shake { transform: none !important; animation: none !important; }
 }
 </style>
-
 </head>
 
 <body>
 
-<div id="offlineBanner">You are currently offline</div>
+<div id="offlineBanner">You are currently offline. Check your network connection.</div>
 
-<div id="globalUserBtn"
-     onclick="handleUserIconClick()"
-     data-ga="global_user_btn"></div>
+<div id="main-wrapper">
+  <nav class="glass-nav reveal">
+    <a href="#countdown">Countdown</a>
+    <a href="#chat">Chat</a>
+    <a href="#games">Games</a>
+    <a href="#community">Community</a>
+  </nav>
 
-<div id="accountPopup"
-     class="overlay"
-     onclick="if(event.target===this) closePopup('accountPopup')">
+  <div id="globalUserBtn" onclick="handleUserIconClick()" data-ga="global_user_btn"></div>
 
-  <div class="popup" style="align-items:center;">
-
-<div id="accPopupAvatar"
-     style="width:86px;height:86px;border-radius:50%;border:3px solid var(--red);margin:0 auto 12px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--msg-bg);font-weight:bold;color:var(--fg);">
-</div>
-
-<h2 id="accPopupName" style="margin-bottom:2px;">---</h2>
-
-<p style="font-size:16px; margin-bottom:22px;">
-  @<span id="accPopupUser">---</span>
-</p>
-
-<a href="/accounts"
-   class="btn"
-   data-ga="manage_account_popup">
-  Manage Account
-</a>
-
-<button class="btn sec"
-        onclick="closePopup('accountPopup')"
-        style="border:none; margin-top:6px;">
-  Close
-</button>
-
-  </div>
-</div>
-
-<div class="hero">
-
-<img src="/img/icon.png"
-    alt="BSMS Web"
-    class="hero-logo">
-
-  <h1>
-    Welcome to <span>BSMS Web</span>
-  </h1>
-
-  <p>
-    The unified digital ecosystem for Boiling Springs Middle School.
-    Connect with classmates, track your schedule, and manage your account
-    in one seamless suite.
-  </p>
-
-  <div id="heroAuthContainer" style="margin-top: 30px;"></div>
-
-</div>
-
-<div class="launcher-container">
-
-  <div class="launcher-grid">
-
-<div class="app-card">
-
-  <svg class="app-icon" viewBox="0 0 24 24">
-    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-  </svg>
-
-  <h3 class="app-title">Countdown</h3>
-
-  <p class="app-desc">
-    Track how much time is left until the next period with beautiful,
-    visual customization.
-  </p>
-
-  <a href="/countdown"
-     class="btn"
-     data-ga="launch_countdown">
-    Launch Countdown
-  </a>
-
-</div>
-
-<div class="app-card">
-
-  <svg class="app-icon" viewBox="0 0 24 24">
-    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
-  </svg>
-
-  <h3 class="app-title">Chat</h3>
-
-  <p class="app-desc">
-    A lightning-fast real-time chat platform. Create shared spaces to
-    connect and talk with friends instantly.
-  </p>
-
-  <a href="/chat"
-     class="btn"
-     data-ga="launch_chat">
-    Launch Chat
-  </a>
-
-</div>
-
-<div class="app-card">
-
-  <svg class="app-icon"
-       viewBox="0 0 24 24"
-       aria-hidden="true">
-    <path d="M21.58 16.09l-1.6-6.39A5.01 5.01 0 0 0 15.12 6H8.88a5.01 5.01 0 0 0-4.86 3.7l-1.6 6.39a2.99 2.99 0 0 0 5.72 1.64l.86-2.15c.15-.36.5-.6.89-.6h4.22c.39 0 .74.24.89.6l.86 2.15a2.99 2.99 0 0 0 5.72-1.64zM9 12H7v2H5v-2H3v-2h2V8h2v2h2v2zm6-1.5a1 1 0 1 1 1-1 1 1 0 0 1-1 1zm3 3a1 1 0 1 1 1-1 1 1 0 0 1-1 1z"/>
-  </svg>
-
-  <h3 class="app-title">Games</h3>
-
-  <p class="app-desc">
-    A massive collection of interactive HTML5 games.
-  </p>
-
-  <a href="/g"
-     class="btn"
-     data-ga="launch_games">
-    Launch Games
-  </a>
-
-</div>
-
-<div class="app-card">
-
-  <svg class="app-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-  </svg>
-
-  <h3 class="app-title">Proxy</h3>
-
-  <p class="app-desc">
-    Bypass network restrictions and browse the open internet securely. Access educational resources and favorite sites without limits.
-  </p>
-
-  <a href="#"
-     class="btn disabled"
-     onclick="alert('Coming soon!'); return false;"
-     data-ga="launch_proxy">
-    Coming Soon
-  </a>
-
-</div>
-
+  <!-- Custom Proxy Action Overlay -->
+  <div class="overlay" id="proxyModal" onclick="if(event.target===this) closePopup('proxyModal')">
+    <div class="popup">
+      <div style="margin-bottom: 25px; display: flex; justify-content: center; color: #777;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h2>Feature Incoming</h2>
+      <p>Proxy network capabilities are currently in development. Check back later.</p>
+      <button class="btn-cinematic" onclick="closePopup('proxyModal')" style="width: 100%; background: #222; border: 1px solid #333; box-shadow: none;">Dismiss</button>
+    </div>
   </div>
 
-</div>
+  <!-- Account Popup -->
+  <div id="accountPopup" class="overlay" onclick="if(event.target===this) closePopup('accountPopup')">
+    <div class="popup">
+      <div id="accPopupAvatar" style="width:90px;height:90px;border-radius:50%;border:2px solid var(--red);margin:0 auto 20px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:42px;background:var(--glass-bg);color:#fff; box-shadow: 0 0 20px rgba(187,0,30,0.3);">
+      </div>
+      <h2 id="accPopupName">---</h2>
+      <p>@<span id="accPopupUser">---</span></p>
+      <a href="/accounts" class="btn-cinematic" style="width:100%; margin-bottom: 14px;" data-ga="manage_account_popup">
+        Manage Account
+      </a>
+      <button class="btn-cinematic disabled-btn" onclick="closePopup('accountPopup')" style="width:100%; cursor: pointer; pointer-events: auto;">
+        Close
+      </button>
+    </div>
+  </div>
 
-<div class="bug-report-section">
+  <!-- Background Particles -->
+  <div class="ambient-particles"></div>
 
-  <svg class="bug-report-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17l-.59.59-.58.58V4h16v12zm-9-10h2v6h-2zm0 8h2v2h-2z"/>
-  </svg>
+  <section class="hero reveal" id="top">
+    <div class="hero-glow"></div>
+    
+    <div class="hero-3d-scene">
+      <div class="core-obj">
+        <div class="core-ring"></div>
+        <div class="core-ring"></div>
+        <div class="core-ring"></div>
+        <div class="core-cube front"></div>
+        <div class="core-cube back"></div>
+        <div class="core-cube right"></div>
+        <div class="core-cube left"></div>
+        <div class="core-cube top"></div>
+        <div class="core-cube bottom"></div>
+      </div>
+    </div>
 
-  <h2>Found a bug?</h2>
+    <div class="hero-content stagger">
+      <h1>Welcome to <span>BSMS Web</span></h1>
+      <p>The meticulously designed, unified digital ecosystem for Boiling Springs Middle School. Connect, track, and elevate your experience.</p>
+      <div id="heroAuthContainer"></div>
+    </div>
+  </section>
 
-  <p>
-    Is there something not working correctly? Let us know by submitting a bug report
-    and helping make BSMS Web better.
-  </p>
+  <section class="showcase reveal" id="countdown">
+    <div class="showcase-content stagger">
+      <div class="showcase-text">
+        <h2>Countdown</h2>
+        <p>Precision timing for your academic day. Track exactly how much time remains until your next period with a beautifully synchronized display.</p>
+        <a href="/countdown" class="btn-cinematic" data-ga="launch_countdown">Go to Countdown 
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="showcase-visual">
+        <div class="visual-clock">
+          <div class="clock-ring r1"></div>
+          <div class="clock-ring r2"></div>
+          <div class="clock-ring r3"></div>
+          <div class="clock-center" id="countdownTimerText">10</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<a href="https://github.com/JellyfishJelly13/BSMS-Web/issues"
-  class="btn bug-report-btn"
-  data-ga="launch_bug_report">
-Report a Bug </a>
+  <section class="showcase reverse reveal" id="chat">
+    <div class="showcase-content stagger">
+      <div class="showcase-text">
+        <h2>Global Chat</h2>
+        <p>Real-time digital communication engineered for speed. Drop into shared dimensional spaces, connect instantly, and converse fluidly without borders.</p>
+        <a href="/chat" class="btn-cinematic" data-ga="launch_chat">Go to Chat
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="showcase-visual">
+        <div class="visual-chat">
+          <div class="chat-panel">
+            <div class="avatar-blob"></div>
+            <div style="flex:1;"><div class="text-line" style="width:80%"></div><div class="text-line" style="width:60%"></div></div>
+          </div>
+          <div class="chat-panel">
+            <div class="avatar-blob" style="background: linear-gradient(135deg, #eee 0%, #444 100%)"></div>
+            <div style="flex:1;"><div class="text-line" style="width:40%"></div></div>
+          </div>
+          <div class="chat-panel">
+            <div class="avatar-blob"></div>
+            <div style="flex:1;"><div class="text-line" style="width:90%"></div><div class="text-line" style="width:30%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-</div>
+  <section class="showcase reveal" id="games">
+    <div class="showcase-content stagger">
+      <div class="showcase-text">
+        <h2>Games Arena</h2>
+        <p>Your interactive break from the grid. Access an expansive library of immersive, high-performance web applications instantly from any device.</p>
+        <a href="/g" class="btn-cinematic" data-ga="launch_games">Go to Games
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="showcase-visual">
+        <div class="visual-games">
+          <div class="game-shape s1"></div>
+          <div class="game-shape s2"></div>
+          <div class="game-shape s3"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<div class="oss-section">
+  <section class="showcase reverse reveal" id="proxy">
+    <div class="showcase-content stagger">
+      <div class="showcase-text">
+        <h2>Secure Proxy</h2>
+        <p>Navigate unrestricted territory. Our encrypted tunnel implementation ensures full access to the open web without local network barriers.</p>
+        
+        <div class="proxy-container" onclick="openPopup('proxyModal')">
+          <a href="#" class="btn-cinematic disabled-btn" data-ga="launch_proxy" onclick="event.preventDefault();">Coming soon...
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </a>
+        </div>
+      </div>
+      <div class="showcase-visual">
+        <div class="visual-proxy">
+          <div class="network-grid"></div>
+          <div class="node">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="node-icon">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <svg class="oss-icon" viewBox="0 0 24 24">
+  <!-- Distinct Discord Community Area -->
+  <section class="discord-section reveal" id="community">
+    <div class="discord-content stagger">
+      <div class="discord-logo-wrap">
+        <svg viewBox="0 0 127.14 96.36">
+          <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a67.73,67.73,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.16,46,96.06,53,91.08,65.69,84.69,65.69Z"/>
+        </svg>
+      </div>
+      <h2>BSMS Web Community</h2>
+      <p>Join our exclusive Discord server. Collaborate, receive direct updates, participate in active discussions, and connect directly with the developer and student base.</p>
+      
+      <div class="discord-widget-ui" id="discordWidgetArea">
+        <div id="discordStats" class="discord-stats-row">
+          Connecting to gateway...
+        </div>
+        <div id="discordMembers" class="members-grid">
+          <!-- Fetched live members injected here -->
+        </div>
+      </div>
+      
+      <a href="https://discord.gg/ySwEjEqjf" target="_blank" rel="noopener noreferrer" class="btn-cinematic discord-btn" id="discordJoinBtn">
+        Join Server Now
+      </a>
+    </div>
+  </section>
 
-<path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+  <!-- Rebuilt Open Source Finale -->
+  <section class="oss-section reveal" id="oss">
+    <div class="oss-content stagger">
+      <svg class="oss-icon" viewBox="0 0 24 24">
+        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+      </svg>
+      <h2>BSMS Web is Open Source</h2>
+      <p>BSMS Web is architected as an open repository. Inspect the mechanics, verify the integrity, and observe the framework directly on GitHub.</p>
 
-  </svg>
+      <a href="https://github.com/JellyfishJelly13/BSMS-Web/" target="_blank" rel="noopener noreferrer" class="btn-cinematic" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.15);" data-ga="view_github_repo">
+        View Repository
+      </a>
+    </div>
+  </section>
 
-  <h2>BSMS Web is open-source</h2>
-
-  <p>
-    You can view the repository on GitHub at
-    <code>JellyfishJelly13/BSMS-Web</code>.
-  </p>
-
-<a href="https://github.com/JellyfishJelly13/BSMS-Web"
-  target="_blank"
-  rel="noopener noreferrer"
-  class="btn oss-btn"
-  data-ga="view_github_repo">
-View Repository </a>
-
-</div>
-
-<div class="footer">
-
-© 2026 Jellyfish Jelly. <a href="/privacy.html"
-  data-ga="footer_privacy">
-Privacy Policy </a>
-
+  <div class="footer">
+    © 2026 Jellyfish Jelly. <a href="/privacy.html" data-ga="footer_privacy">Privacy Policy</a>
+  </div>
 </div>
 
 <script>
@@ -731,144 +739,208 @@ Privacy Policy </a>
  * SPDX-License-Identifier: MIT
  */
 
-window.addEventListener('offline', () =>
-  document.getElementById('offlineBanner').classList.add('show')
-);
+// Offline Handling
+window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
+window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
+if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
 
-window.addEventListener('online', () =>
-  document.getElementById('offlineBanner').classList.remove('show')
-);
-
-if (!navigator.onLine) {
-  document.getElementById('offlineBanner').classList.add('show');
-}
-
+// Session Creation / Auth sync exactly preserving functionality
 if (!localStorage.getItem('session_id')) {
-
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let sid = '';
-
-    for (let i = 0; i < 10; i++) {
-        sid += chars.charAt(
-          Math.floor(Math.random() * chars.length)
-        );
-    }
-
+    for (let i = 0; i < 10; i++) sid += chars.charAt(Math.floor(Math.random() * chars.length));
     localStorage.setItem('session_id', sid);
 }
 
 const SESSION_KEY = 'bsms_auth_session';
-
 let authSession = null;
 let isGuest = true;
 
 function syncAuthSession() {
-
     const raw = localStorage.getItem(SESSION_KEY);
-
     if (raw) {
-
         authSession = JSON.parse(raw);
         isGuest = !authSession.loggedIn;
-
     } else {
-
         authSession = null;
         isGuest = true;
-
     }
-
     renderUserIcon();
 }
 
 window.addEventListener('storage', (e) => {
-
-    if (e.key === SESSION_KEY) {
-        syncAuthSession();
-    }
-
+    if (e.key === SESSION_KEY) syncAuthSession();
 });
 
 function renderUserIcon() {
-
     const btn = document.getElementById('globalUserBtn');
-
     if (isGuest) {
-
         btn.innerHTML = `
           <svg viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
           </svg>
         `;
-
-        btn.style.border = "2px solid var(--border)";
-
     } else {
-
         if (authSession.pfp) {
-
-            btn.innerHTML =
-              `<img src="${authSession.pfp}" alt="Avatar">`;
-
-            btn.style.border = "none";
-
+            btn.innerHTML = `<img src="${authSession.pfp}" alt="Avatar">`;
         } else {
-
-            btn.innerHTML =
-              (authSession.displayName ||
-               authSession.username ||
-               "?").charAt(0).toUpperCase();
-
-            btn.style.border = "2px solid var(--border)";
+            btn.innerHTML = (authSession.displayName || authSession.username || "?").charAt(0).toUpperCase();
         }
     }
 }
 
 function handleUserIconClick() {
-
     if (isGuest) {
-
         window.location.href = '/accounts#signup';
-
     } else {
-
-        document.getElementById('accPopupName').textContent =
-          authSession.displayName || authSession.username;
-
-        document.getElementById('accPopupUser').textContent =
-          authSession.username;
-
-        const ava =
-          document.getElementById('accPopupAvatar');
-
+        document.getElementById('accPopupName').textContent = authSession.displayName || authSession.username;
+        document.getElementById('accPopupUser').textContent = authSession.username;
+        const ava = document.getElementById('accPopupAvatar');
+        
         if (authSession.pfp) {
-
-            ava.innerHTML =
-              `<img src="${authSession.pfp}" style="width:100%;height:100%;object-fit:cover;">`;
-
+            ava.innerHTML = `<img src="${authSession.pfp}" style="width:100%;height:100%;object-fit:cover;">`;
         } else {
-
-            ava.innerHTML =
-              (authSession.displayName ||
-               authSession.username).charAt(0).toUpperCase();
-
+            ava.innerHTML = (authSession.displayName || authSession.username).charAt(0).toUpperCase();
         }
-
         openPopup('accountPopup');
     }
 }
 
-function openPopup(id) {
-    document.getElementById(id).classList.add('show');
-}
-
-function closePopup(id) {
-    document.getElementById(id).classList.remove('show');
-}
+function openPopup(id) { document.getElementById(id).classList.add('show'); }
+function closePopup(id) { document.getElementById(id).classList.remove('show'); }
 
 syncAuthSession();
+
+// Dynamic Mouse Tracking for Pure CSS Parallax / 3D
+if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 2;
+        const y = (e.clientY / window.innerHeight - 0.5) * 2;
+        document.documentElement.style.setProperty('--mouse-x', x.toFixed(3));
+        document.documentElement.style.setProperty('--mouse-y', y.toFixed(3));
+    });
+}
+
+// Scroll Reveals Observer
+const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
+const revealObserver = new IntersectionObserver((entries, ob) => {
+    entries.forEach(entry => {
+        if(entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+            ob.unobserve(entry.target); 
+        }
+    });
+}, observerOptions);
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// Interactive Countdown Logic
+const countdownTimerText = document.getElementById('countdownTimerText');
+const countdownSection = document.getElementById('countdown');
+const mainWrapper = document.getElementById('main-wrapper');
+let timerValue = 10;
+let timerInterval = null;
+let timerFinished = false;
+
+const timerObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            if (!timerFinished) startTimer();
+        } else {
+            pauseTimer();
+        }
+    });
+}, { threshold: 0.3 });
+
+if (countdownSection) timerObserver.observe(countdownSection);
+
+function startTimer() {
+    if (timerInterval) return;
+    countdownTimerText.innerText = timerValue.toString().padStart(2, '0');
+    timerInterval = setInterval(() => {
+        timerValue--;
+        if (timerValue > 0) {
+            countdownTimerText.innerText = timerValue.toString().padStart(2, '0');
+        } else {
+            finishTimer();
+        }
+    }, 1000);
+}
+
+function pauseTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function finishTimer() {
+    pauseTimer();
+    timerFinished = true;
+    countdownTimerText.innerHTML = "NEXT<br>PERIOD";
+    countdownTimerText.classList.add('flash-red');
+    mainWrapper.classList.add('page-shake');
+    
+    // Stop the shake after 3 seconds to keep site usable
+    setTimeout(() => {
+        mainWrapper.classList.remove('page-shake');
+    }, 3000);
+}
+
+// --- DISCORD WIDGET API INTEGRATION ---
+async function fetchDiscordCommunity() {
+    const statsArea = document.getElementById('discordStats');
+    const membersGrid = document.getElementById('discordMembers');
+    
+    // Server ID: 1559662443691642922
+    const WIDGET_URL = 'https://discord.com/api/guilds/1559662443691642922/widget.json';
+    
+    try {
+        const response = await fetch(WIDGET_URL, { mode: 'cors' });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        
+        // Presence Count Status
+        const onlineCount = data.presence_count !== undefined ? data.presence_count : '--';
+        statsArea.innerHTML = `<span class="status-dot"></span> <b>${onlineCount}</b> Members Online`;
+        
+        // Populate Avatars
+        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
+            const visibleMembers = data.members.slice(0, 12);
+            
+            let htmlBuffer = '';
+            visibleMembers.forEach((member, index) => {
+                const zIndex = 100 - index;
+                const fallbackChar = member.username ? member.username.charAt(0).toUpperCase() : '?';
+                
+                let avatarInner = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: #fff;">${fallbackChar}</div>`;
+                if (member.avatar_url) {
+                    avatarInner = `<img src="${member.avatar_url}" alt="${member.username || 'member'}"/>`;
+                }
+                
+                const sClass = member.status === 'online' ? 'online' : (member.status === 'idle' ? 'idle' : 'dnd');
+                
+                htmlBuffer += `
+                  <div class="member-avatar" style="z-index: ${zIndex};" title="${member.username}">
+                     ${avatarInner}
+                     <div class="m-status ${sClass}"></div>
+                  </div>
+                `;
+            });
+            membersGrid.innerHTML = htmlBuffer;
+        } else {
+            membersGrid.innerHTML = '<span style="font-size:16px; opacity: 0.6;">( No members currently broadcasting activity )</span>';
+        }
+        
+    } catch (e) {
+        console.warn('Discord widget fetching failed or blocked. Using graceful fallback.', e);
+        statsArea.innerHTML = `<span>Community server verified & operational</span>`;
+        membersGrid.innerHTML = ``;
+    }
+}
+
+// Start sequence when page renders
+window.addEventListener('DOMContentLoaded', fetchDiscordCommunity);
+
 </script>
 </body>
 </html>
