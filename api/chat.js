@@ -114,7 +114,8 @@ export default async function handler(req, res) {
                             account_status: acc.account_status,
                             ban_expires: acc.ban_expires || null,
                             role: acc.role || null,
-                            verified: acc.verified || false
+                            verified: acc.verified || false,
+                            isDeveloper: Boolean(acc.isDeveloper)
                         };
                     }
                 }
@@ -148,14 +149,53 @@ export default async function handler(req, res) {
             }
 
             case 'messages': {
-                const { cid, type } = payload;
+                const { cid, type, limit = 20, beforeId } = payload;
                 if (!cid || !type) return res.status(400).json({ error: "Missing channel data" });
                 
                 const chSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
                 const channel = chSnap.val();
                 
-                if (!channel || !channel.members || !channel.members[uid]) return res.status(403).json({ error: "Not a member of this channel." });
-                return res.status(200).json({ messages: channel.messages || {}, members: channel.members || {} });
+                if (!channel || !channel.members || !channel.members[uid]) {
+                    return res.status(403).json({ error: "Not a member of this channel.", unauthorized: true });
+                }
+
+                const allMsgs = channel.messages || {};
+                const allKeys = Object.keys(allMsgs).filter(k => allMsgs[k] !== null).sort((a, b) => {
+                    const na = Number(a), nb = Number(b);
+                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                    return a.localeCompare(b);
+                });
+
+                let selectedKeys = allKeys;
+                let hasMore = false;
+
+                if (beforeId) {
+                    const beforeIdx = allKeys.indexOf(String(beforeId));
+                    if (beforeIdx > 0) {
+                        const startIdx = Math.max(0, beforeIdx - limit);
+                        selectedKeys = allKeys.slice(startIdx, beforeIdx);
+                        hasMore = startIdx > 0;
+                    } else {
+                        selectedKeys = [];
+                        hasMore = false;
+                    }
+                } else if (limit && limit > 0) {
+                    const startIdx = Math.max(0, allKeys.length - limit);
+                    selectedKeys = allKeys.slice(startIdx);
+                    hasMore = startIdx > 0;
+                }
+
+                const slicedMsgs = {};
+                for (const k of selectedKeys) {
+                    slicedMsgs[k] = allMsgs[k];
+                }
+
+                return res.status(200).json({
+                    messages: slicedMsgs,
+                    members: channel.members || {},
+                    hasMore,
+                    oldestId: selectedKeys.length > 0 ? selectedKeys[0] : null
+                });
             }
 
             case 'sendMessage': {
