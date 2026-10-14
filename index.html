@@ -268,6 +268,39 @@ html, body {
   line-height: 1.5;
 }
 
+/* Message of the Day */
+.motd {
+  max-width: 620px;
+  margin: 24px auto 0;
+  padding: 14px 20px;
+  background: var(--msg-bg);
+  border: 2px solid var(--border);
+  border-left: 4px solid var(--red);
+  border-radius: 14px;
+  text-align: left;
+  animation: fadeUp 0.6s ease forwards;
+}
+
+.motd[hidden] {
+  display: none;
+}
+
+.motd-label {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 4px;
+}
+
+.motd-text {
+  display: block;
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
 .launcher-container {
   max-width: 1000px;
   margin: 0 auto;
@@ -575,6 +608,11 @@ html, body {
     in one seamless suite.
   </p>
 
+  <div id="motd" class="motd" hidden>
+    <span class="motd-label" id="motdLabel"></span>
+    <span class="motd-text" id="motdText"></span>
+  </div>
+
   <div id="heroAuthContainer" style="margin-top: 30px;"></div>
 
 </div>
@@ -730,6 +768,25 @@ Privacy Policy </a>
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
+
+/* ===========================================
+   MESSAGE OF THE DAY - EDIT THIS SECTION
+   =========================================== */
+const MOTD = {
+  enabled: true,                      // set to false to hide the message
+  label: "Message of the Day",        // small heading above the message
+  message: "Testing, Testing 123....."  // <-- change this
+};
+/* =========================================== */
+
+(function renderMOTD() {
+  const box = document.getElementById('motd');
+  if (!box || !MOTD.enabled || !MOTD.message.trim()) return;
+
+  document.getElementById('motdLabel').textContent = MOTD.label;
+  document.getElementById('motdText').textContent = MOTD.message;
+  box.hidden = false;
+})();
 
 window.addEventListener('offline', () =>
   document.getElementById('offlineBanner').classList.add('show')
