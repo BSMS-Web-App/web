@@ -1,5 +1,5 @@
 <!--
-BSMS Web - Admin Console
+BSMS Web
 Copyright © 2026 Jellyfish Jelly
 SPDX-License-Identifier: MIT
 -->
@@ -135,7 +135,25 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .badge.banned { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
 .badge.deleted { background: rgba(255, 255, 255, 0.1); color: var(--fg2); border: 1px solid var(--border); }
 .badge.admin { background: rgba(var(--theme-rgb), 0.25); color: #ff6b81; border: 1px solid var(--red); }
+.badge.mod { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+.badge.dev { background: #404040; color: #e5e5e5; border: 1px solid #737373; }
 .badge.verified { background: rgba(59, 130, 246, 0.2); color: var(--blue); border: 1px solid var(--blue); }
+
+.banner-mod {
+    background: rgba(234, 179, 8, 0.15); border: 2px solid #eab308; color: #facc15;
+    padding: 12px 16px; border-radius: 12px; font-size: 13px; margin-bottom: 14px;
+    display: none; align-items: center; gap: 10px;
+}
+.banner-mod.show { display: flex; }
+
+.status-filters { display: flex; gap: 8px; align-items: center; }
+.status-filter-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel-alt); color: var(--fg2); cursor: pointer; font-family: var(--font-tech);
+    font-size: 12px; transition: 0.15s;
+}
+.status-filter-btn:hover { color: var(--fg); border-color: var(--fg2); }
+.status-filter-btn.active { background: var(--red); color: #fff; border-color: var(--red); font-weight: bold; }
 
 /* Modal */
 .overlay {
@@ -187,7 +205,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
     <button class="nav-btn active" onclick="Admin.switchTab('users', this)">Accounts Registry</button>
     <button class="nav-btn" onclick="Admin.switchTab('devices', this)">Banned Devices</button>
-    <button class="nav-btn" onclick="Admin.switchTab('db', this)">Raw DB Inspector</button>
+    <button class="nav-btn" id="nav-btn-db" onclick="Admin.switchTab('db', this)">Raw DB Inspector</button>
     <div style="flex:1"></div>
     <a href="/accounts" class="btn sec">← Back to Accounts</a>
 </div>
@@ -195,23 +213,38 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <div id="main">
     <!-- Accounts Panel -->
     <div id="users-panel" class="panel active">
+        <div id="mod-banner" class="banner-mod">
+            ⚠️ <strong>Moderator View (Read-Only)</strong>: You are logged in with Moderator permissions. You can inspect all accounts, device attributions, and records, but editing, banning, and deletion operations are reserved for Administrators.
+        </div>
         <div class="panel-header">
             <h1>Accounts Registry</h1>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <input type="text" id="user-search" placeholder="Filter UID / username..." oninput="Admin.renderUsers()" style="width:240px;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="user-search" placeholder="Filter UID / username..." oninput="Admin.renderUsers()" style="width:200px;">
+                <button id="bulk-ban-btn" class="btn warn sm" style="display:none;" onclick="Admin.openBulkBanModal()">Bulk Ban (<span id="bulk-count">0</span>)</button>
                 <button class="btn" onclick="Admin.loadUsers()">Refresh</button>
             </div>
         </div>
+
+        <!-- Status Filter Tabs -->
+        <div class="status-filters">
+            <span style="color:var(--fg2); font-size:12px; font-weight:bold;">Filter Status:</span>
+            <button class="status-filter-btn active" onclick="Admin.setStatusFilter('all', this)">All</button>
+            <button class="status-filter-btn" onclick="Admin.setStatusFilter('active', this)">Active</button>
+            <button class="status-filter-btn" onclick="Admin.setStatusFilter('banned', this)">Banned</button>
+            <button class="status-filter-btn" onclick="Admin.setStatusFilter('deleted', this)">Deleted</button>
+        </div>
+
         <div class="table-wrap">
             <table id="users-table">
                 <thead>
                     <tr>
+                        <th style="width:36px; text-align:center;"><input type="checkbox" id="bulk-select-all" onchange="Admin.toggleSelectAll(this.checked)"></th>
                         <th>PFP</th>
                         <th>UID</th>
                         <th>Username / Display</th>
                         <th>Badges</th>
-                        <th>Status / Ban Expiry</th>
-                        <th>Sessions</th>
+                        <th>Status / Expiry</th>
+                        <th>Origin Device</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -280,14 +313,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
                 <input type="email" id="em-email">
             </div>
             <div class="form-group">
-                <label>Role & Verification</label>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <select id="em-role" style="flex:1;">
+                <label>Role, Verification & Developer</label>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <select id="em-role" style="flex:1; min-width:130px;">
                         <option value="">User (Default)</option>
-                        <option value="admin">Admin</option>
+                        <option value="mod">Moderator</option>
+                        <option value="admin">Administrator</option>
                     </select>
                     <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer;">
                         <input type="checkbox" id="em-verified" style="width:16px; height:16px;"> Verified
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer;">
+                        <input type="checkbox" id="em-developer" style="width:16px; height:16px;"> Developer
                     </label>
                 </div>
             </div>
@@ -296,6 +333,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="form-group">
             <label>Bio</label>
             <textarea id="em-bio" rows="2"></textarea>
+        </div>
+
+        <!-- Originating Device & Session Info -->
+        <div style="background:var(--panel-alt); padding:10px 14px; border-radius:10px; border:1px solid var(--border); margin-bottom:16px;">
+            <div style="font-size:12px; color:var(--fg2);">
+                <strong style="color:var(--fg);">Originating Device / Session:</strong> 
+                <span id="em-creator-info" style="color:var(--warn); font-family:var(--font-tech);">---</span>
+            </div>
         </div>
 
         <h3>Credentials</h3>
@@ -311,6 +356,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
 
         <h3>Ban & Suspension Controls</h3>
+        <div id="em-admin-protect-notice" style="display:none; color:var(--warn); font-size:12px; margin-bottom:8px;">
+            ⚠️ Protected Account: Administrators cannot ban or demote other administrators.
+        </div>
         <div class="grid-2">
             <div class="form-group">
                 <label>Account Status</label>
@@ -347,9 +395,40 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             </table>
         </div>
 
+        <div id="em-mod-notice" style="display:none; color:var(--warn); font-size:12px; margin-bottom:10px; text-align:right;">
+            Read-Only: Moderators cannot modify account details.
+        </div>
         <div style="display:flex; justify-content:flex-end; gap:10px;">
-            <button class="btn sec" onclick="Admin.closeModal()">Cancel</button>
-            <button class="btn" onclick="Admin.saveUser()">Save Account Changes</button>
+            <button class="btn sec" onclick="Admin.closeModal()">Close</button>
+            <button class="btn" id="em-save-btn" onclick="Admin.saveUser()">Save Account Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Ban Modal -->
+<div id="bulk-ban-modal" class="overlay" onclick="if(event.target===this) Admin.closeBulkBanModal()">
+    <div class="modal" style="max-width:500px;">
+        <h2>Bulk Ban Accounts</h2>
+        <p style="color:var(--fg2); margin-top:-8px; margin-bottom:16px;">
+            You have selected <strong id="bb-count" style="color:var(--danger);">0</strong> accounts for mass suspension. (Note: Admin accounts are protected and excluded).
+        </p>
+
+        <div class="form-group">
+            <label>Ban Reason</label>
+            <input type="text" id="bb-reason" value="Bulk banned by administration." placeholder="Reason for ban...">
+        </div>
+
+        <div class="form-group">
+            <label>Ban Expiration (Leave empty for Permanent)</label>
+            <div style="display:flex; gap:6px;">
+                <input type="datetime-local" id="bb-expires-dt">
+                <button class="btn sec sm" onclick="document.getElementById('bb-expires-dt').value=''">Perm</button>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <button class="btn sec" onclick="Admin.closeBulkBanModal()">Cancel</button>
+            <button class="btn warn" onclick="Admin.submitBulkBan()">Confirm Bulk Ban</button>
         </div>
     </div>
 </div>
