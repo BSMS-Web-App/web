@@ -1,5 +1,5 @@
 /*
- * BSMS Web - Admin API
+ * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
@@ -31,15 +31,15 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Verify session belongs to an admin
-async function verifyAdmin(sessionId) {
+// Verify session belongs to an admin or moderator
+async function verifyStaff(sessionId) {
     if (!sessionId || !db) return null;
     const snap = await db.ref('/accounts').once('value');
     const accounts = snap.val() || {};
     
     for (const [uid, acc] of Object.entries(accounts)) {
         if (acc.sessions && acc.sessions[sessionId]) {
-            if (acc.role === 'admin' && acc.account_status !== 'banned') {
+            if ((acc.role === 'admin' || acc.role === 'mod') && acc.account_status !== 'banned') {
                 return { uid, account: acc };
             }
             return null;
@@ -57,14 +57,20 @@ export default async function handler(req, res) {
     }
 
     const sessionId = req.headers['x-session-id'];
-    const adminUser = await verifyAdmin(sessionId);
+    const staffUser = await verifyStaff(sessionId);
     
-    if (!adminUser) {
-        return res.status(403).json({ error: 'Unauthorized: Admin privileges required.' });
+    if (!staffUser) {
+        return res.status(403).json({ error: 'Unauthorized: Admin or Moderator privileges required.' });
     }
 
+    const isMod = staffUser.account.role === 'mod';
     const payload = req.body || {};
     const action = req.query.action || payload.action;
+
+    // Enforce Moderator read-only restriction
+    if (isMod && action !== 'getUsers') {
+        return res.status(403).json({ error: 'Moderator Read-Only: Moderation edits and bans are reserved for administrators.' });
+    }
 
     try {
         switch (action) {
@@ -75,13 +81,46 @@ export default async function handler(req, res) {
                 ]);
                 return res.status(200).json({
                     accounts: accountsSnap.val() || {},
-                    banned_devices: devicesSnap.val() || {}
+                    banned_devices: devicesSnap.val() || {},
+                    callerRole: staffUser.account.role,
+                    callerUid: staffUser.uid
                 });
+            }
+
+            case 'bulkBan': {
+                const { targetUids = [], reason = 'Bulk banned by administration.', ban_expires = null } = payload;
+                let bannedCount = 0;
+                for (const tUid of targetUids) {
+                    const tSnap = await db.ref(`/accounts/${tUid}`).once('value');
+                    const tAcc = tSnap.val() || {};
+                    // Admins cannot ban other admins
+                    if (tAcc.role === 'admin') continue;
+
+                    await db.ref(`/accounts/${tUid}`).update({
+                        account_status: 'banned',
+                        ban_reason: reason,
+                        ban_expires: ban_expires
+                    });
+                    bannedCount++;
+                }
+                return res.status(200).json({ success: true, bannedCount });
             }
 
             case 'updateUser': {
                 const { targetUid, updates, newPassword } = payload;
                 if (!targetUid || !updates) return res.status(400).json({ error: 'Missing targetUid or updates.' });
+
+                // Check admin protection: Admins cannot ban other admins or demote them
+                const targetSnap = await db.ref(`/accounts/${targetUid}`).once('value');
+                const targetAcc = targetSnap.val() || {};
+                if (targetAcc.role === 'admin' && targetUid !== staffUser.uid) {
+                    if (updates.account_status === 'banned') {
+                        return res.status(403).json({ error: 'Admins cannot ban other administrators.' });
+                    }
+                    if (updates.role && updates.role !== 'admin') {
+                        return res.status(403).json({ error: 'Admins cannot demote other administrators.' });
+                    }
+                }
 
                 const finalUpdates = { ...updates };
                 
