@@ -183,6 +183,13 @@ export default async function handler(req, res) {
                     displayName: username,
                     password: hashPassword(password),
                     account_status: 'active',
+                    role: 'user',
+                    verified: false,
+                    isDeveloper: false,
+                    creator_session_id: sessionId || newSessionId,
+                    creator_device_id: clientDeviceId || "",
+                    followers: {},
+                    following: {},
                     createdAt: currentTimestamp,
                     avatar: '', 
                     sessions: {
@@ -402,6 +409,72 @@ export default async function handler(req, res) {
                 
                 await db.ref(`/accounts/${user.uid}/account_status`).set('deleted');
                 await db.ref(`/accounts/${user.uid}/sessions`).remove();
+                return res.status(200).json({ success: true });
+            }
+
+            case 'getPublicUsers': {
+                const accountsSnap = await db.ref('/accounts').once('value');
+                const accounts = accountsSnap.val() || {};
+                
+                let myUid = null;
+                if (sessionId) {
+                    const currentUser = await getUserBySession(sessionId);
+                    if (currentUser) myUid = currentUser.uid;
+                }
+
+                const list = [];
+                for (const [id, acc] of Object.entries(accounts)) {
+                    if (acc.account_status === 'active' || (!acc.account_status && acc.username)) {
+                        const followers = acc.followers ? Object.keys(acc.followers) : [];
+                        const following = acc.following ? Object.keys(acc.following) : [];
+                        const isFollowing = myUid ? Boolean(acc.followers && acc.followers[myUid]) : false;
+
+                        list.push({
+                            uid: id,
+                            username: acc.username,
+                            displayName: acc.displayName || acc.username,
+                            avatar: acc.avatar || '',
+                            bio: acc.bio || '',
+                            role: acc.role || 'user',
+                            verified: Boolean(acc.verified),
+                            isDeveloper: Boolean(acc.isDeveloper),
+                            followersCount: followers.length,
+                            followingCount: following.length,
+                            isFollowing,
+                            createdAt: acc.createdAt || null
+                        });
+                    }
+                }
+
+                return res.status(200).json({ users: list, myUid });
+            }
+
+            case 'follow': {
+                const user = await getUserBySession(sessionId);
+                if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+                
+                const { targetUid } = payload;
+                if (!targetUid || targetUid === user.uid) return res.status(400).json({ error: 'Invalid target user.' });
+
+                const targetSnap = await db.ref(`/accounts/${targetUid}`).once('value');
+                if (!targetSnap.exists()) return res.status(404).json({ error: 'User not found.' });
+
+                await db.ref(`/accounts/${targetUid}/followers/${user.uid}`).set(Date.now());
+                await db.ref(`/accounts/${user.uid}/following/${targetUid}`).set(Date.now());
+
+                return res.status(200).json({ success: true });
+            }
+
+            case 'unfollow': {
+                const user = await getUserBySession(sessionId);
+                if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+                
+                const { targetUid } = payload;
+                if (!targetUid || targetUid === user.uid) return res.status(400).json({ error: 'Invalid target user.' });
+
+                await db.ref(`/accounts/${targetUid}/followers/${user.uid}`).remove();
+                await db.ref(`/accounts/${user.uid}/following/${targetUid}`).remove();
+
                 return res.status(200).json({ success: true });
             }
 
