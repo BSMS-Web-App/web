@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===== EASILY CONFIGURABLE SETTINGS =====
     const motdConfig = {
         message: "Testing testing 123.....", // Change this text
-        backgroundColor: "#FFE4E1" // Light red (mistyrose) - whiteish red as requested
+        backgroundColor: "#e34040" // Light red
     };
     // ========================================
 
@@ -64,8 +64,8 @@ Or save as motd.js and include with <script src="motd.js"></script>
 Simply edit the message and backgroundColor values in the configuration section to customize
 Example color variations (all qualify as "whiteish red"):
 
-#FFE4E1 (current - mistyrose)
-#FFF0F0 (even lighter)
+##e34040 (current - mistyrose)
+##f05d5d (even lighter)
 #FFE6E6 (slightly more red)
 #FFD1D1 (more saturated but still light)
 The solution maintains performance with CSS transitions and doesn't interfere with existing page functionality while providing a professional, noticeable-yet-unobtrusive notification system.
