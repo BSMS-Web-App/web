@@ -1,5 +1,4 @@
-Here's a JavaScript solution that adds a configurable Message of the Day (MOTD) at the top of the website with the requested hover effect and color specification. The message and background color are easily adjustable via variables at the top of the script:
-
+MoTD javascript
 document.addEventListener('DOMContentLoaded', function() {
     // ===== EASILY CONFIGURABLE SETTINGS =====
     const motdConfig = {
