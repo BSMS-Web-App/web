@@ -1,7 +1,7 @@
 /*
  * BSMS Web Server
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT.            oh my fucking god im losing my mind over this stupid glitch
+ * SPDX-License-Identifier: MIT
  */
 
 import express from 'express';
