@@ -1,5 +1,5 @@
 /*
- * BSMS Web - Admin Logic
+ * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
@@ -9,11 +9,16 @@ const Admin = {
     bannedDevicesCache: {},
     activeTargetUid: null,
     currentAvatarValue: "",
+    callerRole: 'user',
+    callerUid: null,
+    statusFilter: 'all',
+    selectedUids: new Set(),
 
     switchTab: function(tabId, btnEl) {
         document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`${tabId}-panel`).classList.add('active');
+        const panel = document.getElementById(`${tabId}-panel`);
+        if (panel) panel.classList.add('active');
         if (btnEl) btnEl.classList.add('active');
         
         if (tabId === 'users' || tabId === 'devices') this.loadUsers();
@@ -31,7 +36,7 @@ const Admin = {
             body: JSON.stringify({ action, ...payload })
         });
         
-        // If the user isn't an admin, inject 401.html over the whole page without redirecting
+        // If the user isn't staff (admin or mod), inject 401.html
         if (res.status === 401 || res.status === 403) {
             try {
                 const unauthorizedPage = await fetch('/401.html');
@@ -40,10 +45,8 @@ const Admin = {
                 document.write(htmlText);
                 document.close();
             } catch (e) {
-                // Fallback if 401.html fails to load
                 document.body.innerHTML = '<h1 style="color:#ef4444;text-align:center;margin-top:100px;font-family:sans-serif;">401 Unauthorized</h1>';
             }
-            // Return an unresolved Promise to instantly halt execution and prevent UI errors from firing
             return new Promise(() => {});
         }
 
@@ -55,7 +58,6 @@ const Admin = {
         return data;
     },
 
-    // Helper: Convert MS timestamp to YYYY-MM-DDTHH:mm for <input type="datetime-local">
     tsToDateTimeLocal: function(ts) {
         if (!ts || isNaN(ts)) return "";
         const d = new Date(Number(ts));
@@ -64,17 +66,14 @@ const Admin = {
         return new Date(d.getTime() - offset).toISOString().slice(0, 16);
     },
 
-    // Helper: Convert <input type="datetime-local"> value to MS timestamp
     dateTimeLocalToTs: function(val) {
         if (!val) return null;
         const ts = new Date(val).getTime();
         return isNaN(ts) ? null : ts;
     },
 
-    // Helper: Decode Base64 if applicable, or display SHA-256 hash from auth.js
     formatPasswordDisplay: function(rawPass) {
         if (!rawPass) return "(None)";
-        // auth.js uses 64-character hex SHA-256 hashes
         if (/^[a-f0-9]{64}$/i.test(rawPass)) {
             return `[SHA-256] ${rawPass}`;
         }
@@ -85,7 +84,6 @@ const Admin = {
         }
     },
 
-    // Helper: Render PFP or Initial
     buildPfpHTML: function(acc, large = false) {
         const initial = ((acc.displayName || acc.username || '?').charAt(0)).toUpperCase();
         if (acc.avatar && acc.avatar.trim() !== '') {
@@ -94,17 +92,43 @@ const Admin = {
         return initial;
     },
 
+    setStatusFilter: function(status, btnEl) {
+        this.statusFilter = status;
+        document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        this.renderUsers();
+    },
+
     loadUsers: async function() {
         const tbody = document.querySelector('#users-table tbody');
-        tbody.innerHTML = '<tr><td colspan="7">Syncing with Firebase...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Syncing with Firebase...</td></tr>';
         try {
             const data = await this.apiCall('getUsers');
             this.usersCache = data.accounts || {};
             this.bannedDevicesCache = data.banned_devices || {};
+            this.callerRole = data.callerRole || 'user';
+            this.callerUid = data.callerUid || null;
+
+            // Apply moderator restrictions if mod
+            const modBanner = document.getElementById('mod-banner');
+            const bulkBtn = document.getElementById('bulk-ban-btn');
+            const navDb = document.getElementById('nav-btn-db');
+
+            if (this.callerRole === 'mod') {
+                if (modBanner) modBanner.classList.add('show');
+                if (bulkBtn) bulkBtn.style.display = 'none';
+                if (navDb) navDb.style.display = 'none';
+            } else {
+                if (modBanner) modBanner.classList.remove('show');
+                if (navDb) navDb.style.display = 'block';
+            }
+
+            this.selectedUids.clear();
+            this.updateBulkCount();
             this.renderUsers();
             this.renderBannedDevices();
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="7" style="color:var(--danger)">Failed to load accounts. Ensure your account has role: "admin" in Firebase.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger)">Failed to load accounts. Ensure your account has role: "admin" or "mod".</td></tr>';
         }
     },
 
@@ -113,11 +137,19 @@ const Admin = {
         const query = (document.getElementById('user-search')?.value || '').toLowerCase();
         tbody.innerHTML = '';
 
+        const isMod = this.callerRole === 'mod';
+
         for (const [uid, acc] of Object.entries(this.usersCache)) {
+            const status = acc.account_status || 'active';
+
+            // Filter by status tab
+            if (this.statusFilter !== 'all' && status !== this.statusFilter) {
+                continue;
+            }
+
             const matchStr = `${uid} ${acc.username || ''} ${acc.displayName || ''} ${acc.email || ''}`.toLowerCase();
             if (query && !matchStr.includes(query)) continue;
 
-            const status = acc.account_status || 'active';
             let expiryText = '';
             if (status === 'banned') {
                 expiryText = acc.ban_expires
@@ -127,14 +159,25 @@ const Admin = {
 
             const badges = [];
             if (acc.role === 'admin') badges.push(`<span class="badge admin">Admin</span>`);
+            else if (acc.role === 'mod') badges.push(`<span class="badge mod">Mod</span>`);
+            if (acc.isDeveloper) badges.push(`<span class="badge dev">Dev</span>`);
             if (acc.verified) badges.push(`<span class="badge verified">✓ Verified</span>`);
 
-            const sessionCount = acc.sessions ? Object.keys(acc.sessions).length : 0;
+            const isTargetAdmin = acc.role === 'admin';
+            const canSelect = !isMod && !isTargetAdmin;
+            const isChecked = this.selectedUids.has(uid);
+
+            const creatorDisp = acc.creator_session_id ? `${acc.creator_session_id.substring(0, 10)}...` : (acc.sessions ? `${Object.keys(acc.sessions)[0]?.substring(0, 10)}...` : 'N/A');
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td style="text-align:center;">
+                    <input type="checkbox" ${canSelect ? '' : 'disabled title="Admin accounts cannot be bulk banned"'} 
+                           ${isChecked ? 'checked' : ''} 
+                           onchange="Admin.toggleSelect('${uid}', this.checked)">
+                </td>
                 <td><div class="pfp-cell">${this.buildPfpHTML(acc)}</div></td>
-                <td style="color:var(--fg2);">${uid}</td>
+                <td style="color:var(--fg2); font-size:11px;">${uid}</td>
                 <td>
                     <strong style="color:var(--fg);">${acc.username || 'N/A'}</strong>
                     <div style="color:var(--fg2); font-size:11px;">${acc.displayName || ''}</div>
@@ -144,10 +187,80 @@ const Admin = {
                     <span class="badge ${status}">${status}</span>
                     ${expiryText}
                 </td>
-                <td>${sessionCount} active</td>
-                <td><button class="btn sm" onclick="Admin.openEditModal('${uid}')">Manage</button></td>
+                <td style="font-size:11px; color:var(--fg2);">${creatorDisp}</td>
+                <td><button class="btn sm ${isMod ? 'sec' : ''}" onclick="Admin.openEditModal('${uid}')">${isMod ? 'View Details' : 'Manage'}</button></td>
             `;
             tbody.appendChild(tr);
+        }
+
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--fg2); padding:20px;">No accounts found matching filter.</td></tr>`;
+        }
+    },
+
+    toggleSelect: function(uid, isChecked) {
+        if (isChecked) {
+            this.selectedUids.add(uid);
+        } else {
+            this.selectedUids.delete(uid);
+        }
+        this.updateBulkCount();
+    },
+
+    toggleSelectAll: function(isChecked) {
+        for (const [uid, acc] of Object.entries(this.usersCache)) {
+            const status = acc.account_status || 'active';
+            if (this.statusFilter !== 'all' && status !== this.statusFilter) continue;
+            if (acc.role === 'admin') continue; // Admins cannot be bulk banned
+
+            if (isChecked) this.selectedUids.add(uid);
+            else this.selectedUids.delete(uid);
+        }
+        this.updateBulkCount();
+        this.renderUsers();
+    },
+
+    updateBulkCount: function() {
+        const count = this.selectedUids.size;
+        const btn = document.getElementById('bulk-ban-btn');
+        const countSpan = document.getElementById('bulk-count');
+        if (countSpan) countSpan.innerText = count;
+
+        if (btn) {
+            if (count > 0 && this.callerRole !== 'mod') {
+                btn.style.display = 'inline-flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+    },
+
+    openBulkBanModal: function() {
+        if (this.selectedUids.size === 0) return;
+        document.getElementById('bb-count').innerText = this.selectedUids.size;
+        document.getElementById('bulk-ban-modal').classList.add('show');
+    },
+
+    closeBulkBanModal: function() {
+        document.getElementById('bulk-ban-modal').classList.remove('show');
+    },
+
+    submitBulkBan: async function() {
+        if (this.selectedUids.size === 0) return;
+        const reason = document.getElementById('bb-reason').value.trim() || 'Bulk banned by administration.';
+        const dtVal = document.getElementById('bb-expires-dt').value;
+        const ban_expires = this.dateTimeLocalToTs(dtVal);
+
+        const targetUids = Array.from(this.selectedUids);
+
+        try {
+            await this.apiCall('bulkBan', { targetUids, reason, ban_expires });
+            alert(`Successfully banned ${targetUids.length} accounts.`);
+            this.closeBulkBanModal();
+            this.selectedUids.clear();
+            this.loadUsers();
+        } catch (e) {
+            alert("Bulk ban failed: " + e.message);
         }
     },
 
@@ -156,9 +269,10 @@ const Admin = {
         if (!tbody) return;
         tbody.innerHTML = '';
 
+        const isMod = this.callerRole === 'mod';
         const entries = Object.entries(this.bannedDevicesCache);
         if (entries.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="color:var(--fg2);">No banned devices recorded.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="color:var(--fg2); text-align:center;">No banned devices recorded.</td></tr>';
             return;
         }
 
@@ -169,7 +283,7 @@ const Admin = {
                 <td><strong>${devId}</strong></td>
                 <td>${info.reason || '---'}</td>
                 <td style="color:var(--warn);">${exp}</td>
-                <td><button class="btn sec sm" onclick="Admin.unbanDevice('${devId}')">Unban Device</button></td>
+                <td>${isMod ? '<span style="color:var(--fg2);">Read-Only</span>' : `<button class="btn sec sm" onclick="Admin.unbanDevice('${devId}')">Unban Device</button>`}</td>
             `;
             tbody.appendChild(tr);
         }
@@ -180,10 +294,20 @@ const Admin = {
         const acc = this.usersCache[uid];
         this.currentAvatarValue = acc.avatar || "";
 
+        const isMod = this.callerRole === 'mod';
+        const isTargetAdmin = acc.role === 'admin';
+        const isSelf = uid === this.callerUid;
+
         document.getElementById('em-uid').innerText = uid;
         document.getElementById('em-pfp-preview').innerHTML = this.buildPfpHTML(acc, true);
         document.getElementById('em-header-name').innerText = `${acc.displayName || acc.username} (@${acc.username})`;
         document.getElementById('em-created').innerText = `Created: ${acc.createdAt ? new Date(acc.createdAt).toLocaleString() : 'Unknown'}`;
+        
+        // Creator session attribution
+        const creatorInfoEl = document.getElementById('em-creator-info');
+        if (creatorInfoEl) {
+            creatorInfoEl.innerText = acc.creator_session_id || (acc.sessions ? Object.keys(acc.sessions)[0] || 'N/A' : 'N/A');
+        }
 
         document.getElementById('em-username').value = acc.username || '';
         document.getElementById('em-displayname').value = acc.displayName || '';
@@ -191,13 +315,51 @@ const Admin = {
         document.getElementById('em-bio').value = acc.bio || '';
         document.getElementById('em-role').value = acc.role || '';
         document.getElementById('em-verified').checked = Boolean(acc.verified);
+        document.getElementById('em-developer').checked = Boolean(acc.isDeveloper);
 
         document.getElementById('em-password-view').value = this.formatPasswordDisplay(acc.password);
         document.getElementById('em-new-password').value = '';
 
-        document.getElementById('em-status').value = acc.account_status || 'active';
+        const statusSelect = document.getElementById('em-status');
+        statusSelect.value = acc.account_status || 'active';
         document.getElementById('em-banreason').value = acc.ban_reason || '';
         document.getElementById('em-banexpires-dt').value = this.tsToDateTimeLocal(acc.ban_expires);
+
+        // Admin protection notice & status options
+        const protectNotice = document.getElementById('em-admin-protect-notice');
+        const bannedOption = statusSelect.querySelector('option[value="banned"]');
+        if (isTargetAdmin && !isSelf) {
+            if (protectNotice) protectNotice.style.display = 'block';
+            if (bannedOption) bannedOption.disabled = true;
+            document.getElementById('em-role').disabled = true;
+        } else {
+            if (protectNotice) protectNotice.style.display = 'none';
+            if (bannedOption) bannedOption.disabled = false;
+            document.getElementById('em-role').disabled = isMod;
+        }
+
+        // Mod read-only controls
+        const modNotice = document.getElementById('em-mod-notice');
+        const saveBtn = document.getElementById('em-save-btn');
+        if (isMod) {
+            if (modNotice) modNotice.style.display = 'block';
+            if (saveBtn) saveBtn.style.display = 'none';
+            ['em-username', 'em-displayname', 'em-email', 'em-bio', 'em-role', 'em-new-password', 'em-status', 'em-banreason', 'em-banexpires-dt'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
+            document.getElementById('em-verified').disabled = true;
+            document.getElementById('em-developer').disabled = true;
+        } else {
+            if (modNotice) modNotice.style.display = 'none';
+            if (saveBtn) saveBtn.style.display = 'inline-flex';
+            ['em-username', 'em-displayname', 'em-email', 'em-bio', 'em-new-password', 'em-status', 'em-banreason', 'em-banexpires-dt'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
+            document.getElementById('em-verified').disabled = false;
+            document.getElementById('em-developer').disabled = false;
+        }
 
         // Render Sessions & Device IDs
         const sessBody = document.querySelector('#em-sessions-table tbody');
@@ -216,10 +378,12 @@ const Admin = {
                     </td>
                     <td>${lastAct}</td>
                     <td style="display:flex; gap:6px;">
+                        ${isMod ? '<span style="color:var(--fg2);">Read-Only</span>' : `
                         <button class="btn warn sm" onclick="Admin.banDeviceFromModal('${devId}')">
                             ${isDevBanned ? 'Update Device Ban' : 'Ban Device'}
                         </button>
                         <button class="btn sec sm" onclick="Admin.revokeSession('${uid}', '${sid}')">Revoke</button>
+                        `}
                     </td>
                 `;
                 sessBody.appendChild(tr);
@@ -236,16 +400,33 @@ const Admin = {
     },
 
     clearAvatar: function() {
+        if (this.callerRole === 'mod') return;
         this.currentAvatarValue = "";
         const acc = { ...this.usersCache[this.activeTargetUid], avatar: "" };
         document.getElementById('em-pfp-preview').innerHTML = this.buildPfpHTML(acc, true);
     },
 
     saveUser: async function() {
+        if (this.callerRole === 'mod') {
+            alert("Moderators have read-only access.");
+            return;
+        }
+
         const uid = this.activeTargetUid;
         if (!uid) return;
 
+        const targetAcc = this.usersCache[uid] || {};
+        const isTargetAdmin = targetAcc.role === 'admin';
+        const isSelf = uid === this.callerUid;
+
         const status = document.getElementById('em-status').value;
+
+        // Admin protection check
+        if (isTargetAdmin && !isSelf && status === 'banned') {
+            alert("Admins cannot ban other admins.");
+            return;
+        }
+
         const dtVal = document.getElementById('em-banexpires-dt').value;
         const expiresTs = status === 'banned' ? this.dateTimeLocalToTs(dtVal) : null;
         const reasonVal = status === 'banned' ? (document.getElementById('em-banreason').value.trim() || 'This account has been banned.') : null;
@@ -259,6 +440,7 @@ const Admin = {
             avatar: this.currentAvatarValue,
             role: roleVal ? roleVal : null,
             verified: document.getElementById('em-verified').checked,
+            isDeveloper: document.getElementById('em-developer').checked,
             account_status: status,
             ban_reason: reasonVal,
             ban_expires: expiresTs
@@ -272,11 +454,11 @@ const Admin = {
     },
 
     banDeviceFromModal: async function(deviceId) {
+        if (this.callerRole === 'mod') return;
         const defaultReason = document.getElementById('em-banreason').value.trim() || 'This device has been banned from the ecosystem.';
         const reason = prompt(`Ban Device ID: ${deviceId}\nEnter ban reason:`, defaultReason);
         if (reason === null) return;
 
-        // Uses the modal's date/time picker if filled, or asks confirmation for permanent
         const dtVal = document.getElementById('em-banexpires-dt').value;
         const ban_expires = this.dateTimeLocalToTs(dtVal);
 
@@ -286,106 +468,82 @@ const Admin = {
     },
 
     unbanDevice: async function(deviceId) {
+        if (this.callerRole === 'mod') return;
         if (!confirm(`Remove ban for device ${deviceId}?`)) return;
         await this.apiCall('unbanDevice', { deviceId });
         this.loadUsers();
     },
 
     revokeSession: async function(uid, sid) {
+        if (this.callerRole === 'mod') return;
         if (!confirm(`Revoke session ${sid}?`)) return;
         await this.apiCall('revokeSession', { targetUid: uid, targetSessionId: sid });
         await this.loadUsers();
         this.openEditModal(uid);
     },
 
-    // --- RAW DATABASE INSPECTOR ---
     loadDB: async function() {
-        const tree = document.getElementById('db-tree');
-        tree.innerHTML = 'Loading full Firebase Realtime Database tree...';
+        if (this.callerRole === 'mod') return;
+        const treeEl = document.getElementById('db-tree');
+        treeEl.innerHTML = 'Fetching database snapshot...';
         try {
             const data = await this.apiCall('getDB');
-            tree.innerHTML = '';
-            tree.appendChild(this.buildTree(data, ''));
+            treeEl.innerHTML = '';
+            treeEl.appendChild(this.buildDBTreeNode('/', data));
         } catch (e) {
-            tree.innerHTML = '<span style="color:var(--danger)">Failed to load database tree.</span>';
+            treeEl.innerHTML = `<span style="color:var(--danger)">Failed to fetch database: ${e.message}</span>`;
         }
     },
 
-    buildTree: function(obj, currentPath) {
+    buildDBTreeNode: function(path, val) {
         const wrap = document.createElement('div');
         wrap.className = 'tree-node';
 
-        if (typeof obj === 'object' && obj !== null) {
-            for (const key of Object.keys(obj)) {
-                const val = obj[key];
-                const nextPath = `${currentPath}/${key}`;
-                const row = document.createElement('div');
+        if (typeof val === 'object' && val !== null) {
+            const header = document.createElement('div');
+            header.innerHTML = `<span class="tree-key">▼ ${path.split('/').pop() || 'root'}</span> <span style="color:var(--fg2);font-size:11px;">(${Array.isArray(val) ? 'Array' : 'Object'}: ${Object.keys(val).length} keys)</span>`;
+            
+            const childrenContainer = document.createElement('div');
+            header.querySelector('.tree-key').onclick = () => {
+                const isHidden = childrenContainer.style.display === 'none';
+                childrenContainer.style.display = isHidden ? 'block' : 'none';
+                header.querySelector('.tree-key').innerText = (isHidden ? '▼ ' : '▶ ') + (path.split('/').pop() || 'root');
+            };
 
-                if (typeof val === 'object' && val !== null) {
-                    const keyEl = document.createElement('span');
-                    keyEl.className = 'tree-key';
-                    keyEl.innerText = `▶ ${key}`;
+            wrap.appendChild(header);
 
-                    const childWrap = this.buildTree(val, nextPath);
-                    childWrap.style.display = 'none';
-
-                    keyEl.onclick = () => {
-                        const open = childWrap.style.display === 'none';
-                        childWrap.style.display = open ? 'block' : 'none';
-                        keyEl.innerText = `${open ? '▼' : '▶'} ${key}`;
-                    };
-
-                    const delBtn = document.createElement('span');
-                    delBtn.className = 'tree-act';
-                    delBtn.innerText = 'Delete';
-                    delBtn.onclick = () => this.deleteDBNode(nextPath);
-
-                    row.appendChild(keyEl);
-                    row.appendChild(delBtn);
-                    wrap.appendChild(row);
-                    wrap.appendChild(childWrap);
-                } else {
-                    const keyEl = document.createElement('span');
-                    keyEl.style.color = 'var(--fg2)';
-                    keyEl.innerText = `${key}: `;
-
-                    const valEl = document.createElement('span');
-                    valEl.className = `tree-val ${typeof val}`;
-                    const displayStr = typeof val === 'string' && val.length > 80 ? val.slice(0, 80) + '...' : val;
-                    valEl.innerText = JSON.stringify(displayStr);
-
-                    const editBtn = document.createElement('span');
-                    editBtn.className = 'tree-act';
-                    editBtn.innerText = 'Edit';
-                    editBtn.onclick = () => this.editDBNode(nextPath, val);
-
-                    row.appendChild(keyEl);
-                    row.appendChild(valEl);
-                    row.appendChild(editBtn);
-                    wrap.appendChild(row);
-                }
+            for (const [k, v] of Object.entries(val)) {
+                const subPath = path === '/' ? `/${k}` : `${path}/${k}`;
+                childrenContainer.appendChild(this.buildDBTreeNode(subPath, v));
             }
+            wrap.appendChild(childrenContainer);
+        } else {
+            const type = typeof val;
+            let displayVal = JSON.stringify(val);
+            wrap.innerHTML = `
+                <span class="tree-key">${path.split('/').pop()}</span>: 
+                <span class="tree-val ${type}">${displayVal}</span>
+                <span class="tree-act" onclick="Admin.editDBNode('${path}', ${JSON.stringify(val)})">Edit</span>
+            `;
         }
         return wrap;
     },
 
     editDBNode: async function(path, currentVal) {
-        const rawInput = prompt(`Edit Firebase Node: ${path}\nEnter valid JSON value (wrap strings in quotes):`, JSON.stringify(currentVal));
-        if (rawInput === null) return;
+        if (this.callerRole === 'mod') return;
+        const input = prompt(`Update Database Path: ${path}\nCurrent Value: ${JSON.stringify(currentVal)}\nEnter new JSON-compatible value:`, JSON.stringify(currentVal));
+        if (input === null) return;
+        let parsed;
         try {
-            const parsed = JSON.parse(rawInput);
-            await this.apiCall('updateDBNode', { path, value: parsed });
-            this.loadDB();
+            parsed = JSON.parse(input);
         } catch (e) {
-            alert("Invalid JSON syntax. Example string: \"hello\" | Example number: 123");
+            parsed = input;
         }
-    },
-
-    deleteDBNode: async function(path) {
-        if (!confirm(`Permanently delete node ${path} from Firebase?`)) return;
-        await this.apiCall('updateDBNode', { path, value: null });
+        await this.apiCall('updateDBNode', { path, value: parsed });
         this.loadDB();
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => Admin.loadUsers());
+window.addEventListener('DOMContentLoaded', () => {
+    Admin.loadUsers();
+});
