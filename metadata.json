@@ -1,7 +1,39 @@
 {
   "name": "BSMS Web",
-  "description": "The central digital hub for Boiling Springs Middle School.",
-  "capabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  "slug": "bsms-web",
+  "description": "The unified digital ecosystem for Boiling Springs Middle School. Connect with classmates, track your schedule, and manage your account in one seamless suite.",
+  "repository": "https://github.com/JellyfishJelly13/BSMS-Web",
+  "homepage": "https://bsms-web.vercel.app",
+  "license": "MIT",
+  "author": "Jellyfish Jelly",
+  "platform": "web",
+  "status": "active",
+  "deployment": {
+    "provider": "Vercel",
+    "production": "https://bsms-web.vercel.app",
+    "beta": "https://bsms-web-beta.vercel.app",
+    "development": "https://bsms-web-development.vercel.app"
+  },
+  "technology": {
+    "frontend": [
+      "HTML",
+      "CSS",
+      "JavaScript"
+    ],
+    "backend": [
+      "Node.js",
+      "Express"
+    ],
+    "database": "Firebase Realtime Database",
+    "hosting": "Vercel"
+  },
+  "features": [
+    "Student accounts",
+    "Chat and messaging",
+    "Countdowns",
+    "Games",
+    "Bug reports",
+    "Privacy information",
+    "Administrative tools"
   ]
 }
