@@ -301,7 +301,7 @@ export default async function handler(req, res) {
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
                 if (banCheck.isBanned) return res.status(403).json({ error: 'Banned.', account_status: 'banned', banType: banCheck.banType, reason: banCheck.banReason, ban_expires: banCheck.banExpires });
 
-                const { displayName, bio, email, phone, avatar } = payload;
+                const { displayName, bio, email, phone, avatar, showInUsersList } = payload;
                 const updates = {};
                 
                 if (displayName !== undefined) {
@@ -314,11 +314,25 @@ export default async function handler(req, res) {
                 }
                 if (email !== undefined) updates['email'] = email;
                 if (phone !== undefined) updates['phone'] = phone;
-                if (avatar !== undefined) updates['avatar'] = avatar;
+                if (showInUsersList !== undefined) updates['showInUsersList'] = Boolean(showInUsersList);
+                if (avatar !== undefined) {
+                    if (!avatar) {
+                        await db.ref(`/accounts/${user.uid}/avatar`).remove();
+                    } else {
+                        updates['avatar'] = avatar;
+                    }
+                }
 
                 if (Object.keys(updates).length > 0) {
                     await db.ref(`/accounts/${user.uid}`).update(updates);
                 }
+                return res.status(200).json({ success: true });
+            }
+
+            case 'removeAvatar': {
+                const user = await getUserBySession(sessionId);
+                if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+                await db.ref(`/accounts/${user.uid}/avatar`).remove();
                 return res.status(200).json({ success: true });
             }
 
@@ -422,12 +436,45 @@ export default async function handler(req, res) {
                     if (currentUser) myUid = currentUser.uid;
                 }
 
+                // Identify all banned and deleted accounts
+                const bannedOrDeletedUids = new Set();
+                for (const [id, acc] of Object.entries(accounts)) {
+                    if (acc.account_status === 'banned' || acc.account_status === 'deleted') {
+                        bannedOrDeletedUids.add(id);
+                    }
+                }
+
+                // Asynchronously purge any follow links involving banned/deleted accounts
+                for (const bannedId of bannedOrDeletedUids) {
+                    const bAcc = accounts[bannedId];
+                    if (bAcc) {
+                        if (bAcc.following) {
+                            for (const fTarget of Object.keys(bAcc.following)) {
+                                db.ref(`/accounts/${fTarget}/followers/${bannedId}`).remove().catch(() => {});
+                            }
+                            db.ref(`/accounts/${bannedId}/following`).remove().catch(() => {});
+                        }
+                        if (bAcc.followers) {
+                            for (const fOrigin of Object.keys(bAcc.followers)) {
+                                db.ref(`/accounts/${fOrigin}/following/${bannedId}`).remove().catch(() => {});
+                            }
+                            db.ref(`/accounts/${bannedId}/followers`).remove().catch(() => {});
+                        }
+                    }
+                }
+
                 const list = [];
                 for (const [id, acc] of Object.entries(accounts)) {
+                    // Never include banned or deleted accounts
+                    if (bannedOrDeletedUids.has(id)) continue;
                     if (acc.account_status === 'active' || (!acc.account_status && acc.username)) {
-                        const followers = acc.followers ? Object.keys(acc.followers) : [];
-                        const following = acc.following ? Object.keys(acc.following) : [];
-                        const isFollowing = myUid ? Boolean(acc.followers && acc.followers[myUid]) : false;
+                        const rawFollowers = acc.followers ? Object.keys(acc.followers) : [];
+                        const rawFollowing = acc.following ? Object.keys(acc.following) : [];
+
+                        // Filter out any banned user IDs from followers and following counts
+                        const followers = rawFollowers.filter(u => !bannedOrDeletedUids.has(u));
+                        const following = rawFollowing.filter(u => !bannedOrDeletedUids.has(u));
+                        const isFollowing = myUid ? followers.includes(myUid) : false;
 
                         list.push({
                             uid: id,
@@ -440,7 +487,10 @@ export default async function handler(req, res) {
                             isDeveloper: Boolean(acc.isDeveloper),
                             followersCount: followers.length,
                             followingCount: following.length,
+                            followersList: followers,
+                            followingList: following,
                             isFollowing,
+                            hiddenFromDirectory: acc.showInUsersList === false,
                             createdAt: acc.createdAt || null
                         });
                     }

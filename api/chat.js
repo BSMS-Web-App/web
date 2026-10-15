@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
     if (!db) return res.status(500).json({ error: "Database failed to initialize. Check environment variables." });
 
-    const action = req.query.action;
+    const action = req.query.action || (req.body && req.body.action);
     const sessionId = req.headers['x-session-id'];
     const payload = req.body || {};
 
@@ -137,15 +137,28 @@ export default async function handler(req, res) {
                     if (allConvos[type]) {
                         for (const [cid, channel] of Object.entries(allConvos[type])) {
                             if (channel.members && channel.members[uid]) {
+                                // Filter out banned accounts so they no longer appear as members
+                                const activeMembers = {};
+                                for (const [mUid, mData] of Object.entries(channel.members)) {
+                                    if (allAccounts[mUid]?.account_status !== 'banned') {
+                                        activeMembers[mUid] = mData;
+                                    }
+                                }
+
                                 let strippedMessages = {};
                                 if (channel.messages) {
                                     let mKeys = Object.keys(channel.messages).filter(k => channel.messages[k] !== null);
                                     if (mKeys.length > 0) {
                                         const lastKey = mKeys[mKeys.length - 1];
-                                        strippedMessages[lastKey] = channel.messages[lastKey];
+                                        const lm = channel.messages[lastKey];
+                                        if (lm && (lm.contentType === 'file' || lm.contentType === 'image')) {
+                                            strippedMessages[lastKey] = { ...lm, content: null, hasContent: true };
+                                        } else {
+                                            strippedMessages[lastKey] = lm;
+                                        }
                                     }
                                 }
-                                let chData = { ...channel, _type: type, _id: cid, messages: strippedMessages };
+                                let chData = { ...channel, members: activeMembers, _type: type, _id: cid, messages: strippedMessages };
                                 if (channel.members[uid].role !== 'owner' && chData.joinRequests) {
                                     delete chData.joinRequests;
                                 }
@@ -155,7 +168,9 @@ export default async function handler(req, res) {
                     }
                 }
                 
-                return res.status(200).json({ myUid: uid, users: usersCache, accounts: accountsCache, channels: myChannels });
+                // Hidden DMs stored in Firebase account node
+                const hiddenDms = account.hidden_dms ? Object.keys(account.hidden_dms) : [];
+                return res.status(200).json({ myUid: uid, users: usersCache, accounts: accountsCache, channels: myChannels, hiddenDms });
             }
 
             case 'messages': {
@@ -163,11 +178,23 @@ export default async function handler(req, res) {
                 if (!cid || !type) return res.status(400).json({ error: "Missing channel data" });
                 const numLimit = parseInt(limit, 10) || 20;
                 
-                const chSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
+                const [chSnap, acctSnap] = await Promise.all([
+                    db.ref(`/chat/conversations/${type}/${cid}`).once('value'),
+                    db.ref('/accounts').once('value')
+                ]);
                 const channel = chSnap.val();
+                const allAccounts = acctSnap.val() || {};
                 
                 if (!channel || !channel.members || !channel.members[uid]) {
                     return res.status(403).json({ error: "Not a member of this channel.", unauthorized: true });
+                }
+
+                // Filter out banned members
+                const activeMembers = {};
+                for (const [mUid, mData] of Object.entries(channel.members)) {
+                    if (allAccounts[mUid]?.account_status !== 'banned') {
+                        activeMembers[mUid] = mData;
+                    }
                 }
 
                 const allMsgs = channel.messages || {};
@@ -198,7 +225,24 @@ export default async function handler(req, res) {
 
                 const slicedMsgs = {};
                 for (const k of selectedKeys) {
-                    slicedMsgs[k] = allMsgs[k];
+                    const msg = allMsgs[k];
+                    if (!msg) continue;
+                    const isBanned = allAccounts[msg.senderUid]?.account_status === 'banned';
+                    // Zero download for images/files until user clicks Load: do not return full base64 in initial payload!
+                    if (msg.contentType === 'file' || msg.contentType === 'image') {
+                        slicedMsgs[k] = {
+                            ...msg,
+                            content: null,
+                            hasContent: Boolean(msg.content),
+                            attachmentName: msg.attachmentName || 'Attachment',
+                            senderBanned: isBanned
+                        };
+                    } else {
+                        slicedMsgs[k] = {
+                            ...msg,
+                            senderBanned: isBanned
+                        };
+                    }
                 }
 
                 // Gather real accounts for senders and members so usernames are never raw UIDs
@@ -208,8 +252,7 @@ export default async function handler(req, res) {
                 }
                 const chAccounts = {};
                 for (const mUid of neededUids) {
-                    const uSnap = await db.ref(`/accounts/${mUid}`).once('value');
-                    const uVal = uSnap.val();
+                    const uVal = allAccounts[mUid];
                     if (uVal) {
                         chAccounts[mUid] = {
                             username: uVal.username || uVal.displayName || mUid,
@@ -225,7 +268,7 @@ export default async function handler(req, res) {
 
                 return res.status(200).json({
                     messages: slicedMsgs,
-                    members: channel.members || {},
+                    members: activeMembers,
                     accounts: chAccounts,
                     hasMore,
                     oldestId: selectedKeys.length > 0 ? selectedKeys[0] : null
@@ -246,6 +289,10 @@ export default async function handler(req, res) {
                     if (await checkProfanity(content)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
                 } else if (contentType === 'poll') {
                     if (await checkProfanity(content.pollQuestion)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
+                } else if (contentType === 'invite') {
+                    if (typeof content === 'object' && content.groupName) {
+                        if (await checkProfanity(content.groupName)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
+                    }
                 }
 
                 const lastMsgSnap = await db.ref(`/chat/users/${uid}/lastMessageTimestamp`).once('value');
@@ -527,6 +574,29 @@ export default async function handler(req, res) {
                 if (cid && type && msgId) {
                     await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}/readReceipts/${uid}`).set(true);
                 }
+                return res.status(200).json({ success: true });
+            }
+
+            case 'getAttachment': {
+                const { cid, type, msgId } = payload;
+                if (!cid || !type || !msgId) return res.status(400).json({ error: "Missing parameters." });
+                const msgSnap = await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}`).once('value');
+                const msg = msgSnap.val();
+                if (!msg) return res.status(404).json({ error: "Message not found" });
+                return res.status(200).json({ content: msg.content, attachmentName: msg.attachmentName });
+            }
+
+            case 'hideDM': {
+                const { cid } = payload;
+                if (!cid) return res.status(400).json({ error: "Missing CID." });
+                await db.ref(`/accounts/${uid}/hidden_dms/${cid}`).set(true);
+                return res.status(200).json({ success: true });
+            }
+
+            case 'unhideDM': {
+                const { cid } = payload;
+                if (!cid) return res.status(400).json({ error: "Missing CID." });
+                await db.ref(`/accounts/${uid}/hidden_dms/${cid}`).remove();
                 return res.status(200).json({ success: true });
             }
 
