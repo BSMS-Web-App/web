@@ -1,5 +1,5 @@
 
-name: JavaScript Validation
+name: BSMS Web
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   javascript:
-    name: JavaScript Syntax
+    name: JavaScript Validation
     runs-on: ubuntu-latest
 
     steps:
