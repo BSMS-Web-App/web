@@ -13,9 +13,8 @@ SPDX-License-Identifier: MIT
 <meta name="author" content="BSMS Web"/>
 <meta name="theme-color" content="#BB001E">
 <meta name="color-scheme" content="#BB001E">
-<meta name="application-name" content="BSMS Accounts">
-<meta name="application-version" content="v5.0.0">
-<meta property="og:title" content="BSMS Accounts">
+<meta name="application-name" content="BSMS Web Accounts">
+<meta property="og:title" content="BSMS Web Accounts">
 <meta property="og:description" content="Manage your unified profile and security settings.">
 <meta property="og:category" content="Education">
 <meta property="og:url" content="https://bsms-web.vercel.app/accounts">
@@ -331,6 +330,17 @@ textarea{resize:vertical;height:110px}
   </div>
 </div>
 
+<div id="removeAvatarModal" class="overlay" onclick="if(event.target===this) closePopup('removeAvatarModal')">
+  <div class="popup" style="text-align:center;">
+    <h2 style="color:var(--fg);">Remove Profile Picture?</h2>
+    <p style="color:var(--fg2); line-height:1.5;">Are you sure you want to remove your profile picture? Your avatar will revert to your default letter initials.</p>
+    <div style="display:flex; gap:12px; margin-top:14px;">
+      <button class="btn sec" style="flex:1;" onclick="closePopup('removeAvatarModal')">Cancel</button>
+      <button class="btn" style="flex:1; background:#ef4444; border-color:#dc2626;" onclick="confirmRemoveAvatar()">Remove</button>
+    </div>
+  </div>
+</div>
+
 <div id="deleteAccountModal" class="overlay" onclick="if(event.target===this) closePopup('deleteAccountModal')">
   <div class="popup">
     <h2 style="color:#ff3333;">Delete Account</h2>
@@ -425,7 +435,10 @@ textarea{resize:vertical;height:110px}
         <div class="form-group" style="display:flex; flex-direction:column; align-items:center;">
             <div class="avatar-preview" id="avatarPreviewContainer"></div>
             <input type="file" id="avatarUpload" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)"/>
-            <button class="btn sec" style="width:auto; padding: 8px 18px; font-size:18px;" onclick="document.getElementById('avatarUpload').click()" data-ga="upload_avatar">Upload Picture</button>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn sec" style="width:auto; padding: 8px 18px; font-size:18px;" onclick="document.getElementById('avatarUpload').click()" data-ga="upload_avatar">Upload Picture</button>
+                <button class="btn sec" id="removeAvatarBtn" style="width:auto; padding: 8px 18px; font-size:18px; color:#ef4444; border-color:#ef4444; display:none;" onclick="openPopup('removeAvatarModal')" data-ga="remove_avatar">Remove Picture</button>
+            </div>
             <p style="font-size:15px; color:var(--fg2); margin: 12px 0 20px 0;">Account created: <strong id="accountCreatedDate">---</strong></p>
         </div>
 
@@ -444,8 +457,25 @@ textarea{resize:vertical;height:110px}
         </div>
         
         <div class="form-group">
-            <label>Bio</label>
-            <textarea id="profileBio" placeholder="Tell us a bit about yourself..." maxlength="200"></textarea>
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Bio</span>
+                <span style="font-size:13px; color:var(--fg2);">Supports markdown: **bold**, *italic*, <u>underline</u></span>
+            </label>
+            <textarea id="profileBio" placeholder="Tell us a bit about yourself..." maxlength="200" oninput="updateBioPreview()"></textarea>
+            <div style="margin-top:6px; padding:8px 12px; background:var(--input-bg); border:1px solid var(--border); border-radius:10px; font-size:15px;">
+                <div style="font-size:11px; color:var(--fg2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Bio Live Preview</div>
+                <div id="bioPreviewContent" style="color:var(--fg); line-height:1.4;"></div>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 24px; padding: 16px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 14px;">
+            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin:0;">
+                <div>
+                    <strong style="font-size:18px; color:var(--fg);">Show Profile in Users Directory</strong>
+                    <p style="font-size:14px; color:var(--fg2); margin:4px 0 0;">Allow your profile to appear publicly in the /users directory list. If disabled, you won't appear in the directory search/list, but others can still view your profile via direct URL.</p>
+                </div>
+                <input type="checkbox" id="toggleShowInUsers" checked style="width:24px; height:24px; accent-color:var(--red); cursor:pointer; flex-shrink:0; margin-left:16px;"/>
+            </label>
         </div>
 
         <div class="panel-header" style="margin-top: 40px;">
@@ -814,6 +844,7 @@ function loadDashboard() {
     document.getElementById('profileBio').value = currentAccountData.bio || "";
     document.getElementById('profileEmail').value = currentAccountData.email || "";
     document.getElementById('profilePhone').value = currentAccountData.phone || "";
+    document.getElementById('toggleShowInUsers').checked = (currentAccountData.showInUsersList !== false);
     pendingAvatarBase64 = currentAccountData.avatar || null;
     
     let cd = 'Unknown';
@@ -826,12 +857,64 @@ function loadDashboard() {
     document.getElementById('accountCreatedDate').textContent = cd;
     
     renderAvatarPreview();
+    updateBioPreview();
+}
+
+function renderBioMarkdown(str) {
+    if (!str) return '';
+    let out = str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
+    out = out.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
+    out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/__(.*?)__/g, '<u>$1</u>');
+    out = out.replace(/(^|[^*])\*(?!\*)(.*?)\*(?!\*)/g, '$1<em>$2</em>');
+    out = out.replace(/(^|[^_])_(?!_)(.*?)(?<!_)_/g, '$1<em>$2</em>');
+    return out;
+}
+
+function updateBioPreview() {
+    const text = document.getElementById('profileBio').value.trim();
+    const preview = document.getElementById('bioPreviewContent');
+    if (!preview) return;
+    if (!text) {
+        preview.innerHTML = '<span style="color:var(--fg2); font-style:italic;">No bio set.</span>';
+    } else {
+        preview.innerHTML = renderBioMarkdown(text);
+    }
 }
 
 function renderAvatarPreview() {
     const container = document.getElementById('avatarPreviewContainer');
-    if (pendingAvatarBase64) { container.innerHTML = `<img src="${pendingAvatarBase64}">`; container.style.border = "none"; }
-    else { container.innerHTML = (document.getElementById('profileDisplayName').value || authSession.username).charAt(0).toUpperCase(); container.style.border = "3px solid var(--red)"; }
+    const removeBtn = document.getElementById('removeAvatarBtn');
+    if (pendingAvatarBase64) {
+        container.innerHTML = `<img src="${pendingAvatarBase64}">`;
+        container.style.border = "none";
+        if (removeBtn) removeBtn.style.display = 'inline-block';
+    } else {
+        container.innerHTML = (document.getElementById('profileDisplayName').value || authSession.username).charAt(0).toUpperCase();
+        container.style.border = "3px solid var(--red)";
+        if (removeBtn) removeBtn.style.display = 'none';
+    }
+}
+
+async function confirmRemoveAvatar() {
+    closePopup('removeAvatarModal');
+    try {
+        await apiFetch('/api/auth', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'removeAvatar' })
+        });
+        pendingAvatarBase64 = null;
+        currentAccountData.avatar = "";
+        authSession.pfp = null;
+        localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
+        const fileInp = document.getElementById('avatarUpload');
+        if (fileInp) fileInp.value = '';
+        renderAvatarPreview();
+        showToast("Profile picture removed!");
+        loadDashboard();
+    } catch (err) {
+        showAlert(err.message || "Failed to remove picture.");
+    }
 }
 
 function handleAvatarUpload(e) {
@@ -875,7 +958,8 @@ async function saveProfile() {
             bio: document.getElementById('profileBio').value.trim(),
             email: document.getElementById('profileEmail').value.trim(),
             phone: document.getElementById('profilePhone').value.trim(),
-            avatar: pendingAvatarBase64 || ""
+            avatar: pendingAvatarBase64 || "",
+            showInUsersList: document.getElementById('toggleShowInUsers').checked
         };
         
         await apiFetch(`/api/auth`, {
