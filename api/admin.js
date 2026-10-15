@@ -31,7 +31,7 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Verify session belongs to an admin or moderator
+// Verify session belongs to an owner, admin or moderator
 async function verifyStaff(sessionId) {
     if (!sessionId || !db) return null;
     const snap = await db.ref('/accounts').once('value');
@@ -39,7 +39,7 @@ async function verifyStaff(sessionId) {
     
     for (const [uid, acc] of Object.entries(accounts)) {
         if (acc.sessions && acc.sessions[sessionId]) {
-            if ((acc.role === 'admin' || acc.role === 'mod') && acc.account_status !== 'banned') {
+            if ((acc.role === 'owner' || acc.role === 'admin' || acc.role === 'mod') && acc.account_status !== 'banned') {
                 return { uid, account: acc };
             }
             return null;
@@ -60,10 +60,12 @@ export default async function handler(req, res) {
     const staffUser = await verifyStaff(sessionId);
     
     if (!staffUser) {
-        return res.status(403).json({ error: 'Unauthorized: Admin or Moderator privileges required.' });
+        return res.status(403).json({ error: 'Unauthorized: Staff privileges required.' });
     }
 
-    const isMod = staffUser.account.role === 'mod';
+    const callerRole = staffUser.account.role;
+    const isOwner = callerRole === 'owner';
+    const isMod = callerRole === 'mod';
     const payload = req.body || {};
     const action = req.query.action || payload.action;
 
@@ -82,7 +84,7 @@ export default async function handler(req, res) {
                 return res.status(200).json({
                     accounts: accountsSnap.val() || {},
                     banned_devices: devicesSnap.val() || {},
-                    callerRole: staffUser.account.role,
+                    callerRole: callerRole,
                     callerUid: staffUser.uid
                 });
             }
@@ -93,8 +95,9 @@ export default async function handler(req, res) {
                 for (const tUid of targetUids) {
                     const tSnap = await db.ref(`/accounts/${tUid}`).once('value');
                     const tAcc = tSnap.val() || {};
-                    // Admins cannot ban other admins
-                    if (tAcc.role === 'admin') continue;
+                    // Admins cannot ban other admins or the owner; Owner can ban anyone except themselves
+                    if (!isOwner && (tAcc.role === 'admin' || tAcc.role === 'owner')) continue;
+                    if (isOwner && tUid === staffUser.uid) continue;
 
                     await db.ref(`/accounts/${tUid}`).update({
                         account_status: 'banned',
@@ -110,15 +113,39 @@ export default async function handler(req, res) {
                 const { targetUid, updates, newPassword } = payload;
                 if (!targetUid || !updates) return res.status(400).json({ error: 'Missing targetUid or updates.' });
 
-                // Check admin protection: Admins cannot ban other admins or demote them
                 const targetSnap = await db.ref(`/accounts/${targetUid}`).once('value');
                 const targetAcc = targetSnap.val() || {};
-                if (targetAcc.role === 'admin' && targetUid !== staffUser.uid) {
-                    if (updates.account_status === 'banned') {
-                        return res.status(403).json({ error: 'Admins cannot ban other administrators.' });
+
+                // Target is owner - only the owner can modify themselves, admins cannot touch the owner
+                if (targetAcc.role === 'owner' && !isOwner) {
+                    return res.status(403).json({ error: 'Admins cannot modify the server owner.' });
+                }
+
+                // If caller is admin (not owner):
+                if (!isOwner) {
+                    // Cannot promote anyone to owner
+                    if (updates.role === 'owner') {
+                        return res.status(403).json({ error: 'Only the server owner can transfer ownership.' });
                     }
-                    if (updates.role && updates.role !== 'admin') {
-                        return res.status(403).json({ error: 'Admins cannot demote other administrators.' });
+                    // Admins cannot ban other admins
+                    if (targetAcc.role === 'admin' && targetUid !== staffUser.uid) {
+                        if (updates.account_status === 'banned') {
+                            return res.status(403).json({ error: 'Admins cannot ban other administrators.' });
+                        }
+                        if (updates.role && updates.role !== 'admin') {
+                            return res.status(403).json({ error: 'Admins cannot demote other administrators.' });
+                        }
+                    }
+                }
+
+                // Strict single-owner enforcement: if someone is set to owner, demote existing owner to admin
+                if (updates.role === 'owner' && targetAcc.role !== 'owner') {
+                    const allSnap = await db.ref('/accounts').once('value');
+                    const allAccounts = allSnap.val() || {};
+                    for (const [accId, acc] of Object.entries(allAccounts)) {
+                        if (acc.role === 'owner' && accId !== targetUid) {
+                            await db.ref(`/accounts/${accId}/role`).set('admin');
+                        }
                     }
                 }
 
@@ -160,11 +187,19 @@ export default async function handler(req, res) {
             }
 
             case 'getDB': {
+                // Strictly owner only! Admins cannot access raw db inspector
+                if (!isOwner) {
+                    return res.status(403).json({ error: 'Forbidden: Only the Owner can access the raw database inspector.' });
+                }
                 const snap = await db.ref('/').once('value');
                 return res.status(200).json(snap.val() || {});
             }
 
             case 'updateDBNode': {
+                // Strictly owner only! Admins cannot modify raw db
+                if (!isOwner) {
+                    return res.status(403).json({ error: 'Forbidden: Only the Owner can modify the raw database.' });
+                }
                 const { path, value } = payload;
                 if (!path || path === '/') return res.status(400).json({ error: "Invalid database path." });
                 await db.ref(path).set(value);
