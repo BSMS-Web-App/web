@@ -1,5 +1,5 @@
 
-name: Repository Integrity
+name: BSMS Web
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   integrity:
-    name: Repository Integrity
+    name: Repository Validation
     runs-on: ubuntu-latest
 
     steps:
