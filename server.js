@@ -1,5 +1,5 @@
 /*
- * BSMS Web Server
+ * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
@@ -48,6 +48,7 @@ app.get('/bug-report', (req, res) => res.sendFile(path.join(__dirname, 'bug-repo
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.get('/401', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.html')));
+app.get('/users', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
 
 // Static asset folders
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
