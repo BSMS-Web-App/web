@@ -107,20 +107,26 @@ const Admin = {
             this.usersCache = data.accounts || {};
             this.bannedDevicesCache = data.banned_devices || {};
             this.callerRole = data.callerRole || 'user';
+            this.callerRole = data.callerRole || 'user';
             this.callerUid = data.callerUid || null;
 
-            // Apply moderator restrictions if mod
+            // Apply role-based restrictions
             const modBanner = document.getElementById('mod-banner');
             const bulkBtn = document.getElementById('bulk-ban-btn');
             const navDb = document.getElementById('nav-btn-db');
 
+            // Strictly: Only OWNER can access raw DB inspector!
+            if (this.callerRole === 'owner') {
+                if (navDb) navDb.style.display = 'block';
+            } else {
+                if (navDb) navDb.style.display = 'none';
+            }
+
             if (this.callerRole === 'mod') {
                 if (modBanner) modBanner.classList.add('show');
                 if (bulkBtn) bulkBtn.style.display = 'none';
-                if (navDb) navDb.style.display = 'none';
             } else {
                 if (modBanner) modBanner.classList.remove('show');
-                if (navDb) navDb.style.display = 'block';
             }
 
             this.selectedUids.clear();
@@ -128,7 +134,7 @@ const Admin = {
             this.renderUsers();
             this.renderBannedDevices();
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger)">Failed to load accounts. Ensure your account has role: "admin" or "mod".</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger)">Failed to load accounts. Ensure your account has staff privileges.</td></tr>';
         }
     },
 
@@ -138,6 +144,7 @@ const Admin = {
         tbody.innerHTML = '';
 
         const isMod = this.callerRole === 'mod';
+        const isOwner = this.callerRole === 'owner';
 
         for (const [uid, acc] of Object.entries(this.usersCache)) {
             const status = acc.account_status || 'active';
@@ -158,13 +165,14 @@ const Admin = {
             }
 
             const badges = [];
-            if (acc.role === 'admin') badges.push(`<span class="badge admin">Admin</span>`);
+            if (acc.role === 'owner') badges.push(`<span class="badge owner">Owner</span>`);
+            else if (acc.role === 'admin') badges.push(`<span class="badge admin">Admin</span>`);
             else if (acc.role === 'mod') badges.push(`<span class="badge mod">Mod</span>`);
             if (acc.isDeveloper) badges.push(`<span class="badge dev">Dev</span>`);
             if (acc.verified) badges.push(`<span class="badge verified">✓ Verified</span>`);
 
-            const isTargetAdmin = acc.role === 'admin';
-            const canSelect = !isMod && !isTargetAdmin;
+            const isTargetAdminOrOwner = acc.role === 'admin' || acc.role === 'owner';
+            const canSelect = !isMod && (isOwner ? uid !== this.callerUid : !isTargetAdminOrOwner);
             const isChecked = this.selectedUids.has(uid);
 
             const creatorDisp = acc.creator_session_id ? `${acc.creator_session_id.substring(0, 10)}...` : (acc.sessions ? `${Object.keys(acc.sessions)[0]?.substring(0, 10)}...` : 'N/A');
@@ -172,7 +180,7 @@ const Admin = {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="text-align:center;">
-                    <input type="checkbox" ${canSelect ? '' : 'disabled title="Admin accounts cannot be bulk banned"'} 
+                    <input type="checkbox" ${canSelect ? '' : 'disabled title="Protected staff accounts cannot be bulk banned"'} 
                            ${isChecked ? 'checked' : ''} 
                            onchange="Admin.toggleSelect('${uid}', this.checked)">
                 </td>
@@ -295,6 +303,8 @@ const Admin = {
         this.currentAvatarValue = acc.avatar || "";
 
         const isMod = this.callerRole === 'mod';
+        const isOwner = this.callerRole === 'owner';
+        const isTargetOwner = acc.role === 'owner';
         const isTargetAdmin = acc.role === 'admin';
         const isSelf = uid === this.callerUid;
 
@@ -317,6 +327,10 @@ const Admin = {
         document.getElementById('em-verified').checked = Boolean(acc.verified);
         document.getElementById('em-developer').checked = Boolean(acc.isDeveloper);
 
+        // Single-owner role option: only visible to current owner
+        const ownerOpt = document.getElementById('em-role-owner-opt');
+        if (ownerOpt) ownerOpt.style.display = isOwner ? 'block' : 'none';
+
         document.getElementById('em-password-view').value = this.formatPasswordDisplay(acc.password);
         document.getElementById('em-new-password').value = '';
 
@@ -325,22 +339,38 @@ const Admin = {
         document.getElementById('em-banreason').value = acc.ban_reason || '';
         document.getElementById('em-banexpires-dt').value = this.tsToDateTimeLocal(acc.ban_expires);
 
-        // Admin protection notice & status options
+        // Admin & Owner protection notice
         const protectNotice = document.getElementById('em-admin-protect-notice');
         const bannedOption = statusSelect.querySelector('option[value="banned"]');
-        if (isTargetAdmin && !isSelf) {
-            if (protectNotice) protectNotice.style.display = 'block';
+        const saveBtn = document.getElementById('em-save-btn');
+
+        if (isTargetOwner && !isOwner) {
+            // Non-owners cannot touch the owner
+            if (protectNotice) {
+                protectNotice.style.display = 'block';
+                protectNotice.innerText = '⚠️ Protected Account: Only the Server Owner can modify the owner account.';
+            }
             if (bannedOption) bannedOption.disabled = true;
             document.getElementById('em-role').disabled = true;
+            if (saveBtn) saveBtn.style.display = 'none';
+        } else if (isTargetAdmin && !isSelf && !isOwner) {
+            // Admins cannot ban or demote other admins
+            if (protectNotice) {
+                protectNotice.style.display = 'block';
+                protectNotice.innerText = '⚠️ Protected Account: Administrators cannot ban or demote other administrators.';
+            }
+            if (bannedOption) bannedOption.disabled = true;
+            document.getElementById('em-role').disabled = true;
+            if (saveBtn) saveBtn.style.display = 'inline-flex';
         } else {
             if (protectNotice) protectNotice.style.display = 'none';
             if (bannedOption) bannedOption.disabled = false;
             document.getElementById('em-role').disabled = isMod;
+            if (saveBtn) saveBtn.style.display = isMod ? 'none' : 'inline-flex';
         }
 
         // Mod read-only controls
         const modNotice = document.getElementById('em-mod-notice');
-        const saveBtn = document.getElementById('em-save-btn');
         if (isMod) {
             if (modNotice) modNotice.style.display = 'block';
             if (saveBtn) saveBtn.style.display = 'none';
@@ -352,10 +382,11 @@ const Admin = {
             document.getElementById('em-developer').disabled = true;
         } else {
             if (modNotice) modNotice.style.display = 'none';
-            if (saveBtn) saveBtn.style.display = 'inline-flex';
             ['em-username', 'em-displayname', 'em-email', 'em-bio', 'em-new-password', 'em-status', 'em-banreason', 'em-banexpires-dt'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.disabled = false;
+                if (el && !((isTargetOwner && !isOwner) || (isTargetAdmin && !isSelf && !isOwner && id === 'em-role'))) {
+                    el.disabled = false;
+                }
             });
             document.getElementById('em-verified').disabled = false;
             document.getElementById('em-developer').disabled = false;
@@ -416,14 +447,29 @@ const Admin = {
         if (!uid) return;
 
         const targetAcc = this.usersCache[uid] || {};
+        const isOwner = this.callerRole === 'owner';
+        const isTargetOwner = targetAcc.role === 'owner';
         const isTargetAdmin = targetAcc.role === 'admin';
         const isSelf = uid === this.callerUid;
 
         const status = document.getElementById('em-status').value;
+        const roleVal = document.getElementById('em-role').value;
 
-        // Admin protection check
-        if (isTargetAdmin && !isSelf && status === 'banned') {
-            alert("Admins cannot ban other admins.");
+        // Owner protection check
+        if (isTargetOwner && !isOwner) {
+            alert("Admins cannot modify the server owner.");
+            return;
+        }
+
+        // Admin protection check: Admins cannot ban other admins
+        if (isTargetAdmin && !isSelf && !isOwner && status === 'banned') {
+            alert("Admins cannot ban other administrators.");
+            return;
+        }
+
+        // Admin protection check: Admins cannot promote anyone to owner
+        if (!isOwner && roleVal === 'owner') {
+            alert("Only the Server Owner can transfer ownership.");
             return;
         }
 

@@ -114,6 +114,9 @@ a { color: var(--accent); text-decoration: none; }
 #loadPct { margin-top: 10px; color: var(--fg2); font-size: 1.1rem; }
 
 /* Special Badge Utilities */
+.owner-badge { background: #9333ea; color: #ffffff; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; margin-left: 6px; cursor: pointer; transition: transform 0.15s; box-shadow: 0 0 10px rgba(147, 51, 234, 0.4); }
+.owner-badge:hover { transform: scale(1.05); }
+
 .admin-badge { background: #dc2626; color: #ffffff; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; margin-left: 6px; cursor: pointer; transition: transform 0.15s; }
 .admin-badge:hover { transform: scale(1.05); }
 
@@ -544,6 +547,8 @@ a { color: var(--accent); text-decoration: none; }
             <path d="M10.09 16.72l-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48-7.33 7.35z" fill="#ffffff"/>
         </symbol>
         <symbol id="ico-banned" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z" fill="#ef4444"/></symbol>
+        <symbol id="ico-phone" viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></symbol>
+        <symbol id="ico-eye-off" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></symbol>
     </defs>
 </svg>
 
@@ -571,7 +576,7 @@ a { color: var(--accent); text-decoration: none; }
 <div id="verifiedModal" class="overlay" onclick="if(event.target===this) UI.closeModal('verifiedModal')">
     <div class="modal-card" style="align-items: center; text-align: center;">
         <svg class="ic" style="width: 80px; height: 80px; margin-bottom: 16px;"><use href="#ico-verified"></use></svg>
-        <h2 style="font-size: 2rem; margin-bottom: 8px;">Authentic Account</h2>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Verified Account</h2>
         <p style="color: var(--fg2); margin-bottom: 20px;">
             The account <strong id="vmUserDisplay" style="color:var(--fg);">---</strong> is verified. This means they have been manually confirmed by BSMS Web administrators as an authentic, notable figure within the ecosystem.
         </p>
@@ -611,6 +616,42 @@ a { color: var(--accent); text-decoration: none; }
             The account <strong id="dmUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Developer. Developers design, program, and maintain core codebases, systems, and features across the platform.
         </p>
         <button class="btn sec" onclick="UI.closeModal('devModal')">Close</button>
+    </div>
+</div>
+
+<div id="ownerModal" class="overlay" onclick="if(event.target===this) UI.closeModal('ownerModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="owner-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px; margin-left:0;">Owner</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Platform Owner</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="omUserDisplay" style="color:var(--fg);">---</strong> is the BSMS Web Platform Owner. The Owner holds ultimate authority across the ecosystem, including overall governance, infrastructure access, and administrative hierarchy.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('ownerModal')">Close</button>
+    </div>
+</div>
+
+<div id="hideDMModal" class="overlay" onclick="if(event.target===this) UI.closeModal('hideDMModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <svg class="ic" style="width:64px; height:64px; fill:var(--accent); margin-bottom:16px;"><use href="#ico-eye-off"></use></svg>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Hide Conversation?</h2>
+        <p style="color: var(--fg2); margin-bottom: 24px; line-height: 1.5;">
+            This conversation will be hidden from your sidebar. Your message history will not be deleted, and you can resume chatting anytime by searching for this user again.
+        </p>
+        <div style="display:flex; gap:12px; width:100%;">
+            <button class="btn sec" style="flex:1;" onclick="UI.closeModal('hideDMModal')">Cancel</button>
+            <button class="btn" style="flex:1; background:#ef4444; border-color:#dc2626;" onclick="ChatManager.executeHideDM()">Hide</button>
+        </div>
+    </div>
+</div>
+
+<div id="voiceChatModal" class="overlay" onclick="if(event.target===this) UI.closeModal('voiceChatModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <svg class="ic" style="width:64px; height:64px; fill:var(--accent); margin-bottom:16px;"><use href="#ico-phone"></use></svg>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Voice Chat Coming Soon</h2>
+        <p style="color: var(--fg2); margin-bottom: 24px; line-height: 1.5;">
+            Real-time peer-to-peer voice calls and group audio rooms are currently in active development. Stay tuned for upcoming updates!
+        </p>
+        <button class="btn" style="width:100%;" onclick="UI.closeModal('voiceChatModal')">Got It</button>
     </div>
 </div>
 
@@ -861,6 +902,8 @@ a { color: var(--accent); text-decoration: none; }
                 <h3 id="activeChatName">---</h3>
                 <span id="activeChatStatus">---</span>
             </div>
+            <button class="icon-btn" id="btnVoiceChat" title="Voice Chat" onclick="UI.showVoiceChatModal()"><svg class="ic"><use href="#ico-phone"></use></svg></button>
+            <button class="icon-btn" id="btnHideDM" style="display:none;" title="Hide Conversation" onclick="ChatManager.confirmHideDM()"><svg class="ic"><use href="#ico-eye-off"></use></svg></button>
             <button class="icon-btn" id="btnGroupSettings" style="display:none;" onclick="UI.openSettings()"><svg class="ic"><use href="#ico-settings"></use></svg></button>
             <button class="icon-btn" id="btnLeaveGroup" style="display:none;color:#ef4444;" onclick="GroupManager.leaveGroup()" data-ga="chat_leave_group"><svg class="ic"><use href="#ico-leave"></use></svg></button>
         </div>
@@ -887,13 +930,14 @@ a { color: var(--accent); text-decoration: none; }
                 <div class="spinner-anim"></div>
                 <span>Loading conversation...</span>
             </div>
-            <div id="loadEarlierWrap" class="load-earlier-wrap" style="display:none;">
-                <button class="load-earlier-btn" onclick="ChatManager.loadEarlierMessages()">
-                    <svg class="ic" style="width:16px; height:16px;"><use href="#ico-refresh"></use></svg>
-                    Load Earlier Messages
-                </button>
+            <div id="chatLog">
+                <div id="loadEarlierWrap" class="load-earlier-wrap" style="display:none;">
+                    <button class="load-earlier-btn" id="btnLoadEarlier" onclick="ChatManager.loadEarlierMessages()">
+                        <svg class="ic" style="width:16px; height:16px;"><use href="#ico-refresh"></use></svg>
+                        <span>Load Earlier Messages</span>
+                    </button>
+                </div>
             </div>
-            <div id="chatLog"></div>
         </div>
 
         <button id="smartScrollPill" onclick="ScrollManager.scrollToBottom(true)" data-ga="chat_smart_scroll">
@@ -1032,9 +1076,17 @@ const Utils = {
         sel.removeAllRanges();
         sel.addRange(range);
     },
+    username: (uid) => {
+        if (uid === BOT_UID) return 'bsms';
+        if (State.accountsCache[uid] && State.accountsCache[uid].username) {
+            return State.accountsCache[uid].username;
+        }
+        return uid;
+    },
     displayName: (uid, ch) => {
         if(ch && ch._type === 'gcs' && ch.config && ch.config.allowCustomNicknames !== false && ch.members && ch.members[uid] && ch.members[uid].nickname) return ch.members[uid].nickname;
-        if(State.accountsCache[uid] && State.accountsCache[uid].displayName) return State.accountsCache[uid].displayName;
+        const acc = State.accountsCache[uid];
+        if(acc && (acc.displayName || acc.username)) return acc.displayName || acc.username;
         return uid;
     },
     getBadgesHTML: (uid) => {
@@ -1046,7 +1098,9 @@ const Utils = {
         if (acc.verified) {
             html += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal('${safeName}')"><use href="#ico-verified"></use></svg>`;
         }
-        if (acc.role === 'admin') {
+        if (acc.role === 'owner') {
+            html += `<span class="owner-badge" title="Platform Owner" onclick="event.stopPropagation(); UI.showOwnerModal('${safeName}')">Owner</span>`;
+        } else if (acc.role === 'admin') {
             html += `<span class="admin-badge" title="Administrator" onclick="event.stopPropagation(); UI.showAdminModal('${safeName}')">Admin</span>`;
         } else if (acc.role === 'mod') {
             html += `<span class="mod-badge" title="Community Moderator" onclick="event.stopPropagation(); UI.showModModal('${safeName}')">Mod</span>`;
@@ -1182,15 +1236,19 @@ const PollingManager = {
                 return;
             }
 
+            if (data && data.accounts) {
+                State.accountsCache = { ...State.accountsCache, ...data.accounts };
+            }
+
             if (data && data.messages) {
-                ChatManager.mergeMessages(data.messages);
+                ChatManager.mergeMessages(data.messages, requestedCid);
                 if (data.oldestId && !ChatManager.oldestMessageId) {
                     ChatManager.oldestMessageId = data.oldestId;
                 }
             }
             if (data && typeof data.hasMore !== 'undefined') {
-                const earlierWrap = document.getElementById('loadEarlierWrap');
-                if (earlierWrap) earlierWrap.style.display = data.hasMore ? 'block' : 'none';
+                ChatManager.hasMoreMessages = Boolean(data.hasMore);
+                ChatManager.checkScrollForEarlier();
             }
             if (data && data.members) ChatManager.renderTyping(data.members);
         } catch(e) {
@@ -1264,6 +1322,15 @@ const UI = {
         UI.openModal('devModal');
     },
 
+    showOwnerModal: (name) => {
+        document.getElementById('omUserDisplay').innerText = name;
+        UI.openModal('ownerModal');
+    },
+
+    showVoiceChatModal: () => {
+        UI.openModal('voiceChatModal');
+    },
+
     openSettings: () => {
         if(!State.activeChannelId) return;
         const c = State.channels[State.activeChannelId];
@@ -1273,13 +1340,14 @@ const UI = {
             let html = '';
             for(let uid in c.members) {
                 const acc = State.accountsCache[uid] || { displayName: uid };
+                const uName = Utils.username(uid);
                 html += `<div style="padding:10px;background:var(--section-bg);border-radius:12px;display:flex;align-items:center;gap:12px;">
                     <div class="c-av" style="width:40px;height:40px;font-size:1.1rem;cursor:default;">
                         <div class="c-av-inner">${acc.avatar ? `<img src="${Utils.escapeHTML(acc.avatar)}">` : uid.charAt(0).toUpperCase()}</div>
                     </div>
                     <div style="text-align:left;">
-                        <div style="font-weight:bold;color:var(--fg); display:flex; align-items:center;">${Utils.escapeHTML(acc.displayName || uid)} ${Utils.getBadgesHTML(uid)}</div>
-                        <div style="font-size:0.85rem;color:var(--fg2);">@${Utils.escapeHTML(uid)}</div>
+                        <div style="font-weight:bold;color:var(--fg); display:flex; align-items:center;">${Utils.escapeHTML(acc.displayName || uName)} ${Utils.getBadgesHTML(uid)}</div>
+                        <div style="font-size:0.85rem;color:var(--fg2);">@${Utils.escapeHTML(uName)}</div>
                     </div>
                 </div>`;
             }
@@ -1461,6 +1529,13 @@ const SearchManager = {
         try {
             const res = await ApiClient.call('startDM', { targetUid });
             if (res && res.cid) {
+                try {
+                    let hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
+                    if (hidden.includes(res.cid)) {
+                        hidden = hidden.filter(id => id !== res.cid);
+                        localStorage.setItem('bsms_hidden_dms_' + State.user.uid, JSON.stringify(hidden));
+                    }
+                } catch(e) {}
                 await PollingManager.syncGlobal();
                 ChatManager.open(res.cid);
             }
@@ -1473,8 +1548,19 @@ const SidebarManager = {
         const list = document.getElementById('chatList');
         if(!list) return;
 
-        let arr = Object.keys(State.channels).map(id => {
+        let hiddenDms = [];
+        try {
+            hiddenDms = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
+        } catch(e) {}
+
+        let arr = [];
+        for (let id in State.channels) {
             const c = State.channels[id];
+            // Filter out hidden DMs if not actively selected
+            if (c._type === 'dms' && hiddenDms.includes(id) && State.activeChannelId !== id) {
+                continue;
+            }
+
             let sortTime = c.config?.createdAt || 0;
             let previewText = "New conversation";
             let unread = false;
@@ -1496,8 +1582,8 @@ const SidebarManager = {
                     if (lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true)) unread = true;
                 }
             }
-            return { id, c, sortTime, preview: previewText, unread };
-        });
+            arr.push({ id, c, sortTime, preview: previewText, unread });
+        }
 
         arr.sort((a, b) => b.sortTime - a.sortTime);
 
@@ -1519,7 +1605,8 @@ const SidebarManager = {
                 } else if (targetUid) {
                     const acc = State.accountsCache[targetUid] || {};
                     title = acc.displayName || acc.username || targetUid;
-                    isOnline = State.usersCache[targetUid]?.status === 'online';
+                    const uData = State.usersCache[targetUid];
+                    isOnline = uData?.status === 'online' && (Date.now() - (uData.lastSeen || 0) < 25000);
                     avHtml = acc.avatar ? `<img src="${Utils.escapeHTML(acc.avatar)}">` : title.charAt(0).toUpperCase();
                 } else {
                     title = "Unknown User";
@@ -1580,6 +1667,7 @@ const ScrollManager = {
                 if (!State.isScrolledUp) {
                     document.getElementById('smartScrollPill').classList.remove('show');
                 }
+                ChatManager.checkScrollForEarlier();
             });
 
             this.observer = new IntersectionObserver((entries) => {
@@ -1628,6 +1716,179 @@ const ScrollManager = {
 };
 
 const ChatManager = {
+    oldestMessageId: null,
+    hasMoreMessages: false,
+    isLoadingEarlier: false,
+
+    resetChatLog: function() {
+        const log = document.getElementById('chatLog');
+        if (!log) return;
+        log.innerHTML = `
+            <div id="loadEarlierWrap" class="load-earlier-wrap" style="display:none; text-align:center; padding:12px; margin-bottom:8px;">
+                <button class="load-earlier-btn" id="btnLoadEarlier" onclick="ChatManager.loadEarlierMessages()" style="display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:20px; background:var(--section-bg); border:1px solid var(--border); color:var(--fg); font-size:0.95rem; cursor:pointer;">
+                    <svg class="ic" style="width:16px; height:16px;"><use href="#ico-refresh"></use></svg>
+                    <span id="loadEarlierText">Load Earlier Messages</span>
+                </button>
+            </div>
+        `;
+        State.lastRenderedDate = null;
+        this.oldestMessageId = null;
+        this.hasMoreMessages = false;
+        this.isLoadingEarlier = false;
+    },
+
+    checkScrollForEarlier: function() {
+        const wrap = document.getElementById('loadEarlierWrap');
+        if (!wrap) return;
+        const feed = document.getElementById('chatLog');
+        if (!feed) return;
+        if (this.hasMoreMessages && feed.scrollTop < 150) {
+            wrap.style.display = 'block';
+        } else {
+            wrap.style.display = 'none';
+        }
+    },
+
+    loadEarlierMessages: async function() {
+        if (this.isLoadingEarlier || !this.hasMoreMessages || !this.oldestMessageId) return;
+        this.isLoadingEarlier = true;
+        const btnText = document.getElementById('loadEarlierText');
+        if (btnText) btnText.innerText = "Loading earlier messages...";
+
+        const feed = document.getElementById('chatLog');
+        const prevScrollHeight = feed.scrollHeight;
+        const prevScrollTop = feed.scrollTop;
+        const cid = State.activeChannelId;
+        const type = State.activeType;
+
+        try {
+            const data = await ApiClient.call('messages', {
+                cid: cid,
+                type: type,
+                limit: 20,
+                beforeId: this.oldestMessageId
+            });
+
+            if (State.activeChannelId !== cid) return;
+
+            if (data && data.accounts) {
+                State.accountsCache = { ...State.accountsCache, ...data.accounts };
+            }
+
+            if (data && data.messages) {
+                const keys = Object.keys(data.messages).sort((a,b) => {
+                    const na = Number(a), nb = Number(b);
+                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                    return a.localeCompare(b);
+                });
+
+                if (keys.length > 0) {
+                    this.oldestMessageId = data.oldestId || keys[0];
+                    const c = State.channels[cid];
+                    if (c) {
+                        c.messages = { ...data.messages, ...(c.messages || {}) };
+                    }
+
+                    const wrap = document.getElementById('loadEarlierWrap');
+                    let fragment = document.createDocumentFragment();
+                    let tempDiv = document.createElement('div');
+                    let prependHtml = '';
+                    let lastDate = null;
+
+                    for (const mid of keys) {
+                        const m = data.messages[mid];
+                        if (!m) continue;
+                        const dStr = Utils.formatDateDivider(m.timestamp);
+                        if (dStr !== lastDate) {
+                            prependHtml += `<div class="date-div"><span>${dStr}</span></div>`;
+                            lastDate = dStr;
+                        }
+                        prependHtml += this.buildMessageHTML(mid, m);
+                    }
+
+                    tempDiv.innerHTML = prependHtml;
+                    while (tempDiv.firstChild) {
+                        fragment.appendChild(tempDiv.firstChild);
+                    }
+                    if (wrap && wrap.nextSibling) {
+                        wrap.parentNode.insertBefore(fragment, wrap.nextSibling);
+                    } else if (wrap) {
+                        wrap.parentNode.appendChild(fragment);
+                    }
+
+                    for (const mid of keys) {
+                        const m = data.messages[mid];
+                        if (m.contentType === 'audio' && !m.status?.unsent && !m.status?.deletedByMod) {
+                            AudioManager.bindPlayer(mid);
+                        }
+                        if (ScrollManager.observer) {
+                            const el = document.getElementById(`msg-${mid}`);
+                            if (el) ScrollManager.observer.observe(el);
+                        }
+                    }
+
+                    feed.scrollTop = feed.scrollHeight - prevScrollHeight + prevScrollTop;
+                }
+                this.hasMoreMessages = Boolean(data.hasMore);
+            } else {
+                this.hasMoreMessages = false;
+            }
+        } catch(e) {
+            console.error("Failed to load earlier messages:", e);
+            UI.showToast("Failed to load earlier messages.", 'error');
+        } finally {
+            this.isLoadingEarlier = false;
+            if (btnText) btnText.innerText = "Load Earlier Messages";
+            this.checkScrollForEarlier();
+        }
+    },
+
+    confirmHideDM: function() {
+        UI.openModal('hideDMModal');
+    },
+
+    executeHideDM: function() {
+        UI.closeModal('hideDMModal');
+        if (!State.activeChannelId || State.activeType !== 'dms') return;
+        const cid = State.activeChannelId;
+        let hidden = [];
+        try {
+            hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
+        } catch(e) {}
+        if (!hidden.includes(cid)) {
+            hidden.push(cid);
+            localStorage.setItem('bsms_hidden_dms_' + State.user.uid, JSON.stringify(hidden));
+        }
+        ChatManager.close();
+        SidebarManager.render();
+        UI.showToast("Conversation hidden from sidebar.", 'info');
+    },
+
+    showUnauthorized: function() {
+        UI.hide('emptyState');
+        UI.hide('feedWrap');
+        UI.hide('composerWrap');
+        UI.hide('sysBotNotice');
+        UI.hide('pinnedBanner');
+        UI.hide('dmBannedState');
+        UI.show('chatHeader');
+        document.getElementById('activeChatName').innerText = "Unauthorized";
+        document.getElementById('activeChatStatus').innerText = "Access Restricted";
+        UI.hide('btnVoiceChat');
+        UI.hide('btnHideDM');
+        UI.hide('btnGroupSettings');
+        UI.hide('btnLeaveGroup');
+        const unauthEl = document.getElementById('unauthorizedState');
+        if (unauthEl) unauthEl.style.display = 'flex';
+    },
+
+    closeToSidebar: function() {
+        this.close();
+        if (window.innerWidth <= 768) {
+            SidebarManager.showMobile();
+        }
+    },
+
     open: function(cid) {
         try {
             if (State.activeChannelId === cid && document.getElementById('dmBannedState').style.display !== 'flex') { 
@@ -1637,11 +1898,29 @@ const ChatManager = {
             this.close();
 
             State.activeChannelId = cid;
+            State.activeChannelToken = Date.now() + Math.random();
             const c = State.channels[cid];
-            if (!c) return;
+            if (!c) {
+                this.showUnauthorized();
+                return;
+            }
 
             State.activeType = c._type;
             State.currentRole = c.members[State.user.uid]?.role || 'member';
+
+            // Unhide DM if reopened
+            if (c._type === 'dms') {
+                try {
+                    let hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
+                    if (hidden.includes(cid)) {
+                        hidden = hidden.filter(id => id !== cid);
+                        localStorage.setItem('bsms_hidden_dms_' + State.user.uid, JSON.stringify(hidden));
+                    }
+                } catch(e) {}
+            }
+
+            const unauthEl = document.getElementById('unauthorizedState');
+            if (unauthEl) unauthEl.style.display = 'none';
 
             UI.hide('emptyState');
             UI.show('chatHeader');
@@ -1655,7 +1934,7 @@ const ChatManager = {
                 if (otherAcc.account_status === 'banned') {
                     UI.hide('feedWrap'); UI.hide('composerWrap'); UI.hide('sysBotNotice'); UI.hide('pinnedBanner');
                     UI.show('dmBannedState');
-                    document.getElementById('dmBannedName').innerText = otherAcc.displayName || otherUid;
+                    document.getElementById('dmBannedName').innerText = otherAcc.displayName || otherAcc.username || otherUid;
 
                     if (State.dmBanTimer) clearInterval(State.dmBanTimer);
                     const timerEl = document.getElementById('dmBannedTimer');
@@ -1720,8 +1999,7 @@ const ChatManager = {
             this.updateHeader();
             SidebarManager.render();
 
-            document.getElementById('chatLog').innerHTML = '';
-            State.lastRenderedDate = null;
+            this.resetChatLog();
             c.messages = {}; // Flush for fresh render
 
             clearInterval(State.msgInterval);
@@ -1741,6 +2019,7 @@ const ChatManager = {
         if (State.dmBanTimer) clearInterval(State.dmBanTimer);
 
         State.activeChannelId = null;
+        State.activeChannelToken = null;
         State.activeType = null;
         ComposerManager.cancelReply();
         ComposerManager.cancelEdit();
@@ -1753,13 +2032,40 @@ const ChatManager = {
         UI.hide('sysBotNotice');
         UI.hide('pinnedBanner');
         UI.hide('dmBannedState');
-        document.getElementById('chatLog').innerHTML = '';
+        UI.hide('btnHideDM');
+        UI.hide('btnLeaveGroup');
+        const unauthEl = document.getElementById('unauthorizedState');
+        if (unauthEl) unauthEl.style.display = 'none';
+        this.resetChatLog();
         Router.clearHash();
         SidebarManager.render();
 
         const mv = document.getElementById('mainView');
         mv.style.removeProperty('--chat-bg'); mv.style.removeProperty('--chat-fg');
         mv.style.removeProperty('--chat-accent'); mv.style.removeProperty('--chat-wp'); mv.style.removeProperty('--chat-wp-dim');
+    },
+
+    loadAttachment: function(msgId) {
+        const c = State.channels[State.activeChannelId];
+        if (!c || !c.messages || !c.messages[msgId]) return;
+        const m = c.messages[msgId];
+        const preview = document.getElementById(`att-preview-${msgId}`);
+        const header = document.getElementById(`att-header-${msgId}`);
+        if (!preview) return;
+
+        if (typeof m.content === 'string' && m.content.startsWith('data:image')) {
+            preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" style="max-width:100%; border-radius:10px; display:block;">`;
+        } else {
+            preview.innerHTML = `<div style="font-size:0.85rem; color:var(--fg2); word-break:break-all;">Attachment loaded. <a href="${Utils.escapeHTML(m.content)}" download="${Utils.escapeHTML(m.attachmentName || 'download')}" style="color:var(--accent); text-decoration:underline;">Download File</a></div>`;
+        }
+
+        preview.style.display = 'block';
+        requestAnimationFrame(() => {
+            preview.style.opacity = '1';
+        });
+
+        const btn = header?.querySelector('button');
+        if (btn) btn.style.display = 'none';
     },
 
     updateHeader: function() {
@@ -1804,6 +2110,8 @@ const ChatManager = {
                     sEl.style.color = oStatus ? "#22c55e" : "var(--fg2)";
                 }
             }
+            UI.show('btnHideDM');
+            UI.hide('btnLeaveGroup');
             UI.show('btnGroupSettings');
             document.getElementById('activeChatInfo').classList.remove('clickable');
             document.getElementById('activeChatInfo').onclick = null;
@@ -1813,6 +2121,8 @@ const ChatManager = {
             for(let mId in c.members) { if(State.usersCache[mId]?.status === 'online') onlineCount++; }
             sEl.innerText = `${Object.keys(c.members).length} members - ${onlineCount} online`;
             sEl.style.color = "var(--fg2)";
+            UI.hide('btnHideDM');
+            UI.show('btnLeaveGroup');
             UI.show('btnGroupSettings');
             document.getElementById('activeChatInfo').classList.add('clickable');
             document.getElementById('activeChatInfo').onclick = () => GroupManager.openMembersList();
@@ -1866,7 +2176,8 @@ const ChatManager = {
         }
     },
 
-    mergeMessages: function(newMsgs) {
+    mergeMessages: function(newMsgs, targetCid) {
+        if (targetCid && targetCid !== State.activeChannelId) return;
         const c = State.channels[State.activeChannelId];
         if(!c) return;
         if(!c.messages) c.messages = {};
@@ -1923,6 +2234,21 @@ const ChatManager = {
         if (needsScroll) ScrollManager.onNewMessage(lastSender === State.user.uid);
         this.updateReadReceipts();
         this.updateHeader();
+
+        // Mark incoming messages in view as read
+        if (document.visibilityState === 'visible' && !State.isScrolledUp && State.activeChannelId) {
+            const keys = Object.keys(c.messages || {});
+            if (keys.length > 0) {
+                const lastMid = keys[keys.length - 1];
+                const lastM = c.messages[lastMid];
+                if (lastM && lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true)) {
+                    ApiClient.call('readReceipt', { cid: State.activeChannelId, type: State.activeType, msgId: lastMid });
+                    lastM.readReceipts = lastM.readReceipts || {};
+                    lastM.readReceipts[State.user.uid] = true;
+                    ChatManager.updateReadReceipts();
+                }
+            }
+        }
     },
 
     renderMessageNode: function(msgId, m) {
@@ -1986,11 +2312,21 @@ const ChatManager = {
                     <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
                 </div>`;
             } else if (m.contentType === 'file') {
-                if(typeof m.content === 'string' && m.content.startsWith('data:image')) {
-                    content += `<img src="${Utils.escapeHTML(m.content)}" style="max-width:100%; border-radius:12px; cursor:pointer;" onclick="window.open('${Utils.escapeHTML(m.content)}')">`;
-                } else {
-                    content += `<div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.2);padding:10px;border-radius:12px;"><svg class="ic"><use href="#ico-file"></use></svg> ${Utils.escapeHTML(m.attachmentName || 'Attachment')}</div>`;
-                }
+                const isImg = typeof m.content === 'string' && m.content.startsWith('data:image');
+                const name = Utils.escapeHTML(m.attachmentName || (isImg ? 'Image Attachment' : 'File Attachment'));
+                content += `
+                <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-top:4px; max-width:320px;">
+                    <div id="att-header-${msgId}" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px; overflow:hidden; font-size:0.9rem;">
+                            <svg class="ic" style="width:18px; height:18px; flex-shrink:0;"><use href="#ico-file"></use></svg>
+                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${name}">${name}</span>
+                        </div>
+                        <button class="btn sec" style="width:auto; padding:4px 10px; font-size:0.8rem; border-radius:6px; flex-shrink:0;" onclick="ChatManager.loadAttachment('${msgId}')">
+                            Load
+                        </button>
+                    </div>
+                    <div id="att-preview-${msgId}" style="display:none; opacity:0; transition:opacity 0.35s ease; margin-top:10px;"></div>
+                </div>`;
             } else if (m.contentType === 'poll') {
                 content += `<div style="font-weight:bold; margin-bottom:10px;">${Utils.escapeHTML(m.content.pollQuestion)}</div>`;
                 let totalVotes = m.content.pollVotes ? Object.keys(m.content.pollVotes).length : 0;
@@ -2106,8 +2442,15 @@ const AuthManager = {
                 UI.setLoad(95, "Opening conversation");
                 await Router.resolvePendingRoute();
                 UI.setLoad(100, "Ready");
-                if (window.innerWidth <= 768) document.getElementById('sidebar').classList.add('hidden');
-                else document.getElementById('sidebar').classList.remove('hidden');
+                if (window.innerWidth <= 768) {
+                    if (State.activeChannelId) {
+                        document.getElementById('sidebar').classList.add('hidden');
+                    } else {
+                        document.getElementById('sidebar').classList.remove('hidden');
+                    }
+                } else {
+                    document.getElementById('sidebar').classList.remove('hidden');
+                }
             }, 1000);
 
             const inp = document.getElementById('msgInput');
@@ -2141,20 +2484,24 @@ const AuthManager = {
                 else ApiClient.call('status', { status: 'offline' });
             });
 
-            window.addEventListener('beforeunload', () => {
+            const handleDisconnect = () => {
+                const sid = localStorage.getItem('session_id') || "";
+                if (!sid) return;
                 fetch(`/api/chat?action=status`, {
                     method: 'POST', keepalive: true,
-                    headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || "" },
+                    headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
                     body: JSON.stringify({ status: 'offline' })
                 });
                 if (State.activeChannelId) {
                     fetch(`/api/chat?action=typing`, {
                         method: 'POST', keepalive: true,
-                        headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || "" },
+                        headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
                         body: JSON.stringify({ cid: State.activeChannelId, type: State.activeType, isTyping: false })
                     });
                 }
-            });
+            };
+            window.addEventListener('beforeunload', handleDisconnect);
+            window.addEventListener('pagehide', handleDisconnect);
 
         } catch (err) {
             console.error("[BSMS Web :: Auth]", err);
@@ -2666,7 +3013,8 @@ const GroupManager = {
             let u = State.accountsCache[mId] || { displayName: mId };
             let role = c.members[mId].role || 'member';
             let nick = c.members[mId].nickname;
-            let disp = nick ? `${nick} (@${mId})` : `${u.displayName} (@${mId})`;
+            let uName = Utils.username(mId);
+            let disp = nick ? `${nick} (@${uName})` : `${u.displayName || uName} (@${uName})`;
 
             let act = '';
             if (State.currentRole === 'owner' && mId !== State.user.uid) {
