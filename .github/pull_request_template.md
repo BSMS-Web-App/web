@@ -1,7 +1,7 @@
 # BSMS Web — Pull Request
 
 > [!IMPORTANT]
-> **Before creating this pull request, please read the [BSMS Web Contribution Guidelines](../blob/main/CONTRIBUTING.md).**
+> **Before creating this pull request, please read the [BSMS Web Contribution Guidelines](../CONTRIBUTING.md).**
 >
 > These guidelines explain which branches to use, where to make changes, how to submit pull requests, and the rules all contributors must follow.
 
