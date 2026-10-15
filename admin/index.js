@@ -476,7 +476,6 @@ const Admin = {
         const dtVal = document.getElementById('em-banexpires-dt').value;
         const expiresTs = status === 'banned' ? this.dateTimeLocalToTs(dtVal) : null;
         const reasonVal = status === 'banned' ? (document.getElementById('em-banreason').value.trim() || 'This account has been banned.') : null;
-        const roleVal = document.getElementById('em-role').value;
 
         const updates = {
             username: document.getElementById('em-username').value.trim(),

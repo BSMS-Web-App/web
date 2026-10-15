@@ -1,0 +1,36 @@
+
+name: BSMS Web
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev1
+      - dev2
+      - dev3
+  schedule:
+    - cron: "30 12 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: Dependency Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Generate dependency lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
