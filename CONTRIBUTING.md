@@ -4,7 +4,7 @@ Thank you for contributing to **BSMS Web**! We appreciate your help improving th
 
 This guide explains how to work on the codebase, use development branches, and submit changes for review.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Getting Started](#getting-started)
 - [Where to Make Changes](#where-to-make-changes)
