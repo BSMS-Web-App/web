@@ -101,15 +101,25 @@ export default async function handler(req, res) {
                 const convosSnap = await db.ref('/chat/conversations').once('value');
                 
                 const allAccounts = acctSnap.val() || {};
-                const usersCache = usersSnap.val() || {};
+                const rawUsers = usersSnap.val() || {};
+                const now = Date.now();
+                const usersCache = {};
+                for (const [uId, uData] of Object.entries(rawUsers)) {
+                    // If marked online but no heartbeat in 25 seconds (e.g. closed tab), evaluate as offline
+                    const isActive = uData.lastSeen && (now - uData.lastSeen < 25000);
+                    usersCache[uId] = {
+                        ...uData,
+                        status: (uData.status === 'online' && isActive) ? 'online' : 'offline'
+                    };
+                }
+
                 const accountsCache = {};
-                
                 for (const [id, acc] of Object.entries(allAccounts)) {
                     if (acc.account_status !== 'deleted') {
                         // Pass specific ban, role, and verification traits directly to the chat cache
                         accountsCache[id] = { 
-                            displayName: acc.displayName, 
-                            username: acc.username, 
+                            displayName: acc.displayName || acc.username || id, 
+                            username: acc.username || id, 
                             avatar: acc.account_status === 'banned' ? null : acc.avatar, // Automatically strip PFPs from banned profiles
                             account_status: acc.account_status,
                             ban_expires: acc.ban_expires || null,
@@ -151,6 +161,7 @@ export default async function handler(req, res) {
             case 'messages': {
                 const { cid, type, limit = 20, beforeId } = payload;
                 if (!cid || !type) return res.status(400).json({ error: "Missing channel data" });
+                const numLimit = parseInt(limit, 10) || 20;
                 
                 const chSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
                 const channel = chSnap.val();
@@ -172,15 +183,15 @@ export default async function handler(req, res) {
                 if (beforeId) {
                     const beforeIdx = allKeys.indexOf(String(beforeId));
                     if (beforeIdx > 0) {
-                        const startIdx = Math.max(0, beforeIdx - limit);
+                        const startIdx = Math.max(0, beforeIdx - numLimit);
                         selectedKeys = allKeys.slice(startIdx, beforeIdx);
                         hasMore = startIdx > 0;
                     } else {
                         selectedKeys = [];
                         hasMore = false;
                     }
-                } else if (limit && limit > 0) {
-                    const startIdx = Math.max(0, allKeys.length - limit);
+                } else if (numLimit > 0) {
+                    const startIdx = Math.max(0, allKeys.length - numLimit);
                     selectedKeys = allKeys.slice(startIdx);
                     hasMore = startIdx > 0;
                 }
@@ -190,9 +201,32 @@ export default async function handler(req, res) {
                     slicedMsgs[k] = allMsgs[k];
                 }
 
+                // Gather real accounts for senders and members so usernames are never raw UIDs
+                const neededUids = new Set(Object.keys(channel.members || {}));
+                for (const k of selectedKeys) {
+                    if (allMsgs[k]?.senderUid) neededUids.add(allMsgs[k].senderUid);
+                }
+                const chAccounts = {};
+                for (const mUid of neededUids) {
+                    const uSnap = await db.ref(`/accounts/${mUid}`).once('value');
+                    const uVal = uSnap.val();
+                    if (uVal) {
+                        chAccounts[mUid] = {
+                            username: uVal.username || uVal.displayName || mUid,
+                            displayName: uVal.displayName || uVal.username || mUid,
+                            avatar: uVal.account_status === 'banned' ? null : (uVal.avatar || ''),
+                            account_status: uVal.account_status || 'active',
+                            role: uVal.role || null,
+                            verified: Boolean(uVal.verified),
+                            isDeveloper: Boolean(uVal.isDeveloper)
+                        };
+                    }
+                }
+
                 return res.status(200).json({
                     messages: slicedMsgs,
                     members: channel.members || {},
+                    accounts: chAccounts,
                     hasMore,
                     oldestId: selectedKeys.length > 0 ? selectedKeys[0] : null
                 });
