@@ -1,5 +1,5 @@
 
-name: Dependency Security
+name: BSMS Web
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   security:
-    name: Dependency Security Audit
+    name: Dependency Security
     runs-on: ubuntu-latest
 
     steps:
