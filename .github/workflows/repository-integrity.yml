@@ -1,0 +1,61 @@
+
+name: Repository Integrity
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev1
+      - dev2
+      - dev3
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    name: Repository Integrity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Validate package.json
+        run: node --input-type=module -e "import fs from 'node:fs'; const p = JSON.parse(fs.readFileSync('package.json', 'utf8')); if (!p.scripts?.build || !p.scripts?.start) throw new Error('Required build or start script is missing'); console.log('package.json is valid; required scripts exist.');"
+
+      - name: Verify server entry point
+        run: node --check server.js
+
+      - name: Verify server imports
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+
+          const source = fs.readFileSync('server.js', 'utf8');
+          const imports = [
+            ...source.matchAll(/from\s+['"](\.[^'"]+)['"]/g)
+          ];
+
+          if (imports.length === 0) {
+            throw new Error('No local imports were found in server.js');
+          }
+
+          for (const match of imports) {
+            const target = path.resolve(match[1]);
+            if (!fs.existsSync(target)) {
+              throw new Error(`Missing server dependency: ${match[1]}`);
+            }
+            console.log(`Found: ${match[1]}`);
+          }
+
+          console.log(`Verified ${imports.length} local imports.`);
+          NODE
