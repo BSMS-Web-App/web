@@ -1,0 +1,66 @@
+
+name: HTML Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev1
+      - dev2
+      - dev3
+
+permissions:
+  contents: read
+
+jobs:
+  html:
+    name: HTML Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Configure HTMLHint
+        shell: bash
+        run: |
+          cat > .htmlhintrc <<'EOF'
+          {
+            "tagname-lowercase": true,
+            "attr-lowercase": true,
+            "attr-no-duplication": true,
+            "tag-pair": true,
+            "doctype-first": false,
+            "id-unique": false
+          }
+          EOF
+
+      - name: Validate HTML files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          count=0
+
+          while IFS= read -r -d '' file; do
+            echo "Checking: $file"
+            npx --yes htmlhint@1.1.4 --config .htmlhintrc "$file"
+            count=$((count + 1))
+          done < <(
+            find . \
+              -type d \( -name node_modules -o -name .git \) -prune -o \
+              -type f -name '*.html' -print0
+          )
+
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No HTML files were found."
+            exit 1
+          fi
+
+          echo "Successfully checked $count HTML files."
