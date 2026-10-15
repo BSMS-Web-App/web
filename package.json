@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "express": "^5.3.0",
-    "firebase-admin": "^12.0.0",
+    "firebase-admin": "^13.10.0",
     "glin-profanity": "^1.0.2"
   }
 }
