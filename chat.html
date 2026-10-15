@@ -124,20 +124,20 @@ a { color: var(--accent); text-decoration: none; }
 .mod-badge:hover { transform: scale(1.05); }
 
 .dev-badge {
-    width: 18px; height: 18px; background: #3f3f46; border: 1px solid #71717a;
-    transform: rotate(45deg); display: inline-flex; align-items: center; justify-content: center;
-    vertical-align: middle; margin-left: 6px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s;
-    border-radius: 3px;
+    width: 20px; height: 20px; background: #3f3f46; border: 1px solid #71717a;
+    display: inline-flex; align-items: center; justify-content: center;
+    vertical-align: middle; margin-left: 6px; cursor: pointer; flex-shrink: 0;
+    transition: transform 0.15s, background 0.15s; border-radius: 4px;
 }
-.dev-badge:hover { transform: rotate(45deg) scale(1.1); }
-.dev-badge svg { transform: rotate(-45deg); width: 11px; height: 11px; fill: #ffffff; }
+.dev-badge:hover { transform: scale(1.1); background: #52525b; }
+.dev-badge svg { width: 13px; height: 13px; fill: #ffffff; }
 
 .dev-badge-large {
-    width: 54px; height: 54px; background: #3f3f46; border: 2px solid #71717a;
-    transform: rotate(45deg); display: flex; align-items: center; justify-content: center;
-    border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    width: 60px; height: 60px; background: #3f3f46; border: 2px solid #71717a;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
-.dev-badge-large svg { transform: rotate(-45deg); width: 28px; height: 28px; fill: #ffffff; }
+.dev-badge-large svg { width: 34px; height: 34px; fill: #ffffff; }
 
 .verified-icon { width: 18px; height: 18px; fill: #3b82f6; cursor: pointer; display: inline-block; vertical-align: middle; margin-left: 4px; transition: transform 0.15s;}
 .verified-icon:hover { transform: scale(1.1); }
@@ -147,6 +147,50 @@ a { color: var(--accent); text-decoration: none; }
     display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
     border-radius: 20px; background: var(--section-bg); border: 1px solid var(--border);
     color: var(--fg); font-size: 0.95rem; cursor: pointer; transition: 0.2s;
+}
+
+/* Image Fullscreen Modal */
+.image-viewer-modal {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 10000; opacity: 0; transition: opacity 0.25s ease;
+}
+.image-viewer-modal.show { display: flex; opacity: 1; }
+.image-viewer-close {
+    position: absolute; top: 20px; right: 24px; width: 44px; height: 44px;
+    border-radius: 50%; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; z-index: 10001;
+}
+.image-viewer-close:hover { background: rgba(255, 255, 255, 0.35); transform: scale(1.08); }
+.image-viewer-content { max-width: 90vw; max-height: 90vh; display: flex; align-items: center; justify-content: center; }
+.image-viewer-content img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); cursor: pointer; }
+
+/* Group Invite Card */
+.invite-card {
+    background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px; margin-top: 4px; width: 280px;
+    display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
+.invite-card-top { display: flex; align-items: center; gap: 12px; }
+.invite-card-icon {
+    width: 44px; height: 44px; border-radius: 10px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-weight: bold;
+    font-size: 1.2rem; color: #fff; flex-shrink: 0; overflow: hidden;
+}
+.invite-card-icon img { width: 100%; height: 100%; object-fit: cover; }
+.invite-card-info { flex: 1; overflow: hidden; }
+.invite-card-name { font-weight: bold; font-size: 1rem; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.invite-card-members { font-size: 0.8rem; color: var(--fg2); margin-top: 2px; }
+.invite-card-btn { width: 100%; padding: 7px 12px; font-size: 0.9rem; border-radius: 8px; cursor: pointer; text-align: center; }
+
+/* Join Requests Banner in Conversation */
+.join-requests-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: rgba(187, 0, 30, 0.15);
+    border-bottom: 1px solid rgba(187, 0, 30, 0.35); color: var(--fg);
+    font-size: 0.95rem; z-index: 10; gap: 12px;
 }
 .load-earlier-btn:hover { background: var(--pill-bg); border-color: var(--accent); color: var(--accent); }
 
@@ -515,7 +559,7 @@ a { color: var(--accent); text-decoration: none; }
 <!-- Fixed SVG Definitions with viewBox for perfect scaling -->
 <svg style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
     <defs>
-        <symbol id="ico-hammer" viewBox="0 0 24 24"><path d="M14.7 13.3l6.3-6.3-2.8-2.8-6.3 6.3 2.8 2.8zm-8 8l5.6-5.6-2.8-2.8-5.6 5.6 2.8 2.8zM2 20.6l1.4 1.4 3-3-1.4-1.4-3 3zm17.7-14.7l-1.4-1.4c-.4-.4-1-.4-1.4 0l-1.5 1.5 2.8 2.8 1.5-1.5c.4-.4.4-1 0-1.4z"/></symbol>
+        <symbol id="ico-hammer" viewBox="0 0 24 24"><path d="M21.7 6.3l-3-3a1 1 0 0 0-1.4 0l-2.1 2.1 2.1 2.1-1.4 1.4-2.1-2.1-1.2 1.2a3 3 0 0 0-.7 1.4l-8.6 8.6a1.5 1.5 0 0 0 0 2.1l1.3 1.3a1.5 1.5 0 0 0 2.1 0l8.6-8.6a3 3 0 0 0 1.4-.7l1.2-1.2 2.1 2.1 1.4-1.4-2.1-2.1 2.1-2.1a1 1 0 0 0 0-1.4z"/></symbol>
         <symbol id="ico-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
         <symbol id="ico-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
         <symbol id="ico-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
@@ -652,6 +696,34 @@ a { color: var(--accent); text-decoration: none; }
             Real-time peer-to-peer voice calls and group audio rooms are currently in active development. Stay tuned for upcoming updates!
         </p>
         <button class="btn" style="width:100%;" onclick="UI.closeModal('voiceChatModal')">Got It</button>
+    </div>
+</div>
+
+<!-- Fullscreen Image Viewer Modal -->
+<div id="imageViewerModal" class="image-viewer-modal" onclick="if(event.target===this) ImageViewer.close()">
+    <button class="image-viewer-close" onclick="ImageViewer.close()" title="Close image viewer">
+        <svg class="ic" style="width:20px; height:20px;"><use href="#ico-close"></use></svg>
+    </button>
+    <div class="image-viewer-content">
+        <img id="imageViewerImg" src="" alt="Fullscreen image">
+    </div>
+</div>
+
+<!-- Join Requests Popup for Group Owners -->
+<div id="joinRequestsModal" class="overlay" onclick="if(event.target===this) UI.closeModal('joinRequestsModal')">
+    <div class="modal-card" style="width: min(500px, 92vw); max-height: 85vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:1.4rem; display:flex; align-items:center; gap:8px;">
+                <svg class="ic" style="width:22px; height:22px; fill:var(--accent);"><use href="#ico-crown"></use></svg>
+                Group Join Requests
+            </h3>
+            <button class="modal-close-btn" onclick="UI.closeModal('joinRequestsModal')" style="background:none; border:none; color:var(--fg2); font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <p style="color:var(--fg2); font-size:0.9rem; margin-bottom:14px;">The following users have requested to join this group:</p>
+        <div id="joinRequestsList" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; max-height:350px;"></div>
+        <div style="margin-top:16px;">
+            <button class="btn sec" style="width:100%;" onclick="UI.closeModal('joinRequestsModal')">Close</button>
+        </div>
     </div>
 </div>
 
@@ -925,17 +997,24 @@ a { color: var(--accent); text-decoration: none; }
             </div>
         </div>
 
+        <!-- JOIN REQUESTS BANNER FOR GROUP OWNER -->
+        <div id="joinRequestsBanner" class="join-requests-banner" style="display:none;"></div>
+
         <div id="feedWrap">
             <div id="chatLoadingSpinner" class="chat-loading-spinner">
                 <div class="spinner-anim"></div>
                 <span>Loading conversation...</span>
             </div>
             <div id="chatLog">
-                <div id="loadEarlierWrap" class="load-earlier-wrap" style="display:none;">
+                <div id="loadEarlierWrap" class="load-earlier-wrap" style="display:none; text-align:center; padding:12px; margin-bottom:8px;">
                     <button class="load-earlier-btn" id="btnLoadEarlier" onclick="ChatManager.loadEarlierMessages()">
                         <svg class="ic" style="width:16px; height:16px;"><use href="#ico-refresh"></use></svg>
-                        <span>Load Earlier Messages</span>
+                        <span id="loadEarlierText">Load Earlier Messages</span>
                     </button>
+                    <div id="beginningLegendaryMsg" class="beginning-of-chat-banner" style="display:none; text-align:center; padding:16px 12px; color:var(--fg2); font-size:0.95rem; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                        <svg class="ic" style="width:24px; height:24px; opacity:0.6;"><use href="#ico-chat"></use></svg>
+                        <span>You have reached the beginning of this legendary conversation.</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1037,10 +1116,38 @@ const State = {
     attachmentData: null,
     attachmentName: null,
 
+    hiddenDms: [],
+    conversationCache: {},
+
     pendingRoute: null,
     syncInterval: null,
     msgInterval: null
 };
+
+const ImageViewer = {
+    open: function(src) {
+        if (!src) return;
+        const modal = document.getElementById('imageViewerModal');
+        const img = document.getElementById('imageViewerImg');
+        if (!modal || !img) return;
+        img.src = src;
+        modal.classList.add('show');
+    },
+    close: function() {
+        const modal = document.getElementById('imageViewerModal');
+        if (!modal) return;
+        modal.classList.remove('show');
+        setTimeout(() => {
+            const img = document.getElementById('imageViewerImg');
+            if (img) img.src = '';
+        }, 200);
+    }
+};
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('imageViewerModal')?.classList.contains('show')) {
+        ImageViewer.close();
+    }
+});
 
 const Utils = {
     escapeHTML: (str) => {
@@ -1051,6 +1158,19 @@ const Utils = {
     formatDuration: (sec) => {
         const s = Math.max(0, Math.floor(sec));
         return `${Math.floor(s/60)}:${(s%60).toString().padStart(2, '0')}`;
+    },
+    formatLastSeen: (timestamp) => {
+        if (!timestamp) return "Offline";
+        const diff = Date.now() - Number(timestamp);
+        if (diff < 60000) return "Last seen just now";
+        const mins = Math.floor(diff / 60000);
+        if (mins < 60) return `Last seen ${mins} ${mins === 1 ? 'minute' : 'minutes'} ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `Last seen ${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+        const days = Math.floor(hours / 24);
+        if (days === 1) return "Last seen yesterday";
+        if (days < 7) return `Last seen ${days} days ago`;
+        return `Last seen on ${new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
     },
     timeAgo: (ts) => {
         if(!ts) return "a while ago";
@@ -1195,6 +1315,7 @@ const PollingManager = {
             State.usersCache = data.users || {};
             State.accountsCache = data.accounts || {};
             State.channels = data.channels || {};
+            if (Array.isArray(data.hiddenDms)) State.hiddenDms = data.hiddenDms;
             
             if (State.activeChannelId && State.channels[State.activeChannelId]) {
                 const c = State.channels[State.activeChannelId];
@@ -1415,15 +1536,22 @@ const Router = {
         if(!r) return;
         if(r.type === 'dm' || r.type === 'gc') {
             if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+            await PollingManager.syncGlobal();
+            if(State.channels[r.id]) { ChatManager.open(r.id); return; }
             this.clearHash();
+        } else if(r.type === 'user') {
+            await SearchManager.startDM(r.id);
         } else if(r.type === 'join') {
             await GroupManager.requestJoinById(r.id);
         }
     },
-    handleHash: function() {
+    handleHash: async function() {
         const r = this.parseHash();
         if(!r) return;
         if(r.type === 'join') { GroupManager.requestJoinById(r.id); return; }
+        if(r.type === 'user') { await SearchManager.startDM(r.id); return; }
+        if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+        await PollingManager.syncGlobal();
         if(State.channels[r.id]) ChatManager.open(r.id);
     }
 };
@@ -1529,13 +1657,10 @@ const SearchManager = {
         try {
             const res = await ApiClient.call('startDM', { targetUid });
             if (res && res.cid) {
-                try {
-                    let hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
-                    if (hidden.includes(res.cid)) {
-                        hidden = hidden.filter(id => id !== res.cid);
-                        localStorage.setItem('bsms_hidden_dms_' + State.user.uid, JSON.stringify(hidden));
-                    }
-                } catch(e) {}
+                if (State.hiddenDms.includes(res.cid)) {
+                    State.hiddenDms = State.hiddenDms.filter(id => id !== res.cid);
+                    ApiClient.call('unhideDM', { cid: res.cid });
+                }
                 await PollingManager.syncGlobal();
                 ChatManager.open(res.cid);
             }
@@ -1548,10 +1673,7 @@ const SidebarManager = {
         const list = document.getElementById('chatList');
         if(!list) return;
 
-        let hiddenDms = [];
-        try {
-            hiddenDms = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
-        } catch(e) {}
+        const hiddenDms = State.hiddenDms || [];
 
         let arr = [];
         for (let id in State.channels) {
@@ -1724,11 +1846,15 @@ const ChatManager = {
         const log = document.getElementById('chatLog');
         if (!log) return;
         log.innerHTML = `
-            <div id="loadEarlierWrap" class="load-earlier-wrap" style="display:none; text-align:center; padding:12px; margin-bottom:8px;">
-                <button class="load-earlier-btn" id="btnLoadEarlier" onclick="ChatManager.loadEarlierMessages()" style="display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:20px; background:var(--section-bg); border:1px solid var(--border); color:var(--fg); font-size:0.95rem; cursor:pointer;">
+            <div id="loadEarlierWrap" class="load-earlier-wrap" style="text-align:center; padding:12px; margin-bottom:8px;">
+                <button class="load-earlier-btn" id="btnLoadEarlier" onclick="ChatManager.loadEarlierMessages()" style="display:none; align-items:center; gap:8px; padding:6px 16px; border-radius:20px; background:var(--section-bg); border:1px solid var(--border); color:var(--fg); font-size:0.95rem; cursor:pointer; margin: 0 auto;">
                     <svg class="ic" style="width:16px; height:16px;"><use href="#ico-refresh"></use></svg>
                     <span id="loadEarlierText">Load Earlier Messages</span>
                 </button>
+                <div id="beginningLegendaryMsg" class="beginning-of-chat-banner" style="display:none; text-align:center; padding:16px 12px; color:var(--fg2); font-size:0.95rem; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <svg class="ic" style="width:24px; height:24px; opacity:0.6;"><use href="#ico-chat"></use></svg>
+                    <span>You have reached the beginning of this legendary conversation.</span>
+                </div>
             </div>
         `;
         State.lastRenderedDate = null;
@@ -1740,12 +1866,15 @@ const ChatManager = {
     checkScrollForEarlier: function() {
         const wrap = document.getElementById('loadEarlierWrap');
         if (!wrap) return;
-        const feed = document.getElementById('chatLog');
-        if (!feed) return;
-        if (this.hasMoreMessages && feed.scrollTop < 150) {
-            wrap.style.display = 'block';
+        const btn = document.getElementById('btnLoadEarlier');
+        const legend = document.getElementById('beginningLegendaryMsg');
+        wrap.style.display = 'block';
+        if (this.hasMoreMessages) {
+            if (btn) btn.style.display = 'inline-flex';
+            if (legend) legend.style.display = 'none';
         } else {
-            wrap.style.display = 'none';
+            if (btn) btn.style.display = 'none';
+            if (legend) legend.style.display = 'flex';
         }
     },
 
@@ -1847,18 +1976,14 @@ const ChatManager = {
         UI.openModal('hideDMModal');
     },
 
-    executeHideDM: function() {
+    executeHideDM: async function() {
         UI.closeModal('hideDMModal');
         if (!State.activeChannelId || State.activeType !== 'dms') return;
         const cid = State.activeChannelId;
-        let hidden = [];
         try {
-            hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
+            await ApiClient.call('hideDM', { cid });
+            if (!State.hiddenDms.includes(cid)) State.hiddenDms.push(cid);
         } catch(e) {}
-        if (!hidden.includes(cid)) {
-            hidden.push(cid);
-            localStorage.setItem('bsms_hidden_dms_' + State.user.uid, JSON.stringify(hidden));
-        }
         ChatManager.close();
         SidebarManager.render();
         UI.showToast("Conversation hidden from sidebar.", 'info');
@@ -1889,6 +2014,23 @@ const ChatManager = {
         }
     },
 
+    renderInitialMessages: function(messages) {
+        const log = document.getElementById('chatLog');
+        if (!log) return;
+        this.resetChatLog();
+        const keys = Object.keys(messages || {}).sort((a,b) => {
+            const na = Number(a), nb = Number(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return a.localeCompare(b);
+        });
+        keys.forEach(mid => {
+            const m = messages[mid];
+            if (m) this.renderMessageNode(mid, m);
+        });
+        ScrollManager.scrollToBottom(false);
+        this.checkScrollForEarlier();
+    },
+
     open: function(cid) {
         try {
             if (State.activeChannelId === cid && document.getElementById('dmBannedState').style.display !== 'flex') { 
@@ -1908,15 +2050,10 @@ const ChatManager = {
             State.activeType = c._type;
             State.currentRole = c.members[State.user.uid]?.role || 'member';
 
-            // Unhide DM if reopened
-            if (c._type === 'dms') {
-                try {
-                    let hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + State.user.uid) || '[]');
-                    if (hidden.includes(cid)) {
-                        hidden = hidden.filter(id => id !== cid);
-                        localStorage.setItem('bsms_hidden_dms_' + State.user.uid, JSON.stringify(hidden));
-                    }
-                } catch(e) {}
+            // Unhide DM in Firebase if reopened
+            if (c._type === 'dms' && State.hiddenDms.includes(cid)) {
+                State.hiddenDms = State.hiddenDms.filter(id => id !== cid);
+                ApiClient.call('unhideDM', { cid });
             }
 
             const unauthEl = document.getElementById('unauthorizedState');
@@ -1968,7 +2105,7 @@ const ChatManager = {
                     
                     this.updateHeader();
                     SidebarManager.render();
-                    return; // Early return to halt normal message fetching for banned users
+                    return;
                 } else {
                     UI.hide('dmBannedState');
                     if (State.dmBanTimer) clearInterval(State.dmBanTimer);
@@ -1999,8 +2136,21 @@ const ChatManager = {
             this.updateHeader();
             SidebarManager.render();
 
-            this.resetChatLog();
-            c.messages = {}; // Flush for fresh render
+            // Conversation Caching: Instant restore from cache if available
+            const cached = State.conversationCache[cid];
+            if (cached && cached.messages && Object.keys(cached.messages).length > 0) {
+                c.messages = { ...cached.messages };
+                this.oldestMessageId = cached.oldestId;
+                this.hasMoreMessages = cached.hasMore;
+                const spinner = document.getElementById('chatLoadingSpinner');
+                if (spinner) spinner.style.display = 'none';
+                this.renderInitialMessages(c.messages);
+                this.checkScrollForEarlier();
+            } else {
+                this.resetChatLog();
+                const spinner = document.getElementById('chatLoadingSpinner');
+                if (spinner) spinner.style.display = 'flex';
+            }
 
             clearInterval(State.msgInterval);
             PollingManager.syncMessages();
@@ -2034,6 +2184,8 @@ const ChatManager = {
         UI.hide('dmBannedState');
         UI.hide('btnHideDM');
         UI.hide('btnLeaveGroup');
+        const reqBanner = document.getElementById('joinRequestsBanner');
+        if (reqBanner) reqBanner.style.display = 'none';
         const unauthEl = document.getElementById('unauthorizedState');
         if (unauthEl) unauthEl.style.display = 'none';
         this.resetChatLog();
@@ -2045,7 +2197,7 @@ const ChatManager = {
         mv.style.removeProperty('--chat-accent'); mv.style.removeProperty('--chat-wp'); mv.style.removeProperty('--chat-wp-dim');
     },
 
-    loadAttachment: function(msgId) {
+    loadAttachment: async function(msgId) {
         const c = State.channels[State.activeChannelId];
         if (!c || !c.messages || !c.messages[msgId]) return;
         const m = c.messages[msgId];
@@ -2053,19 +2205,34 @@ const ChatManager = {
         const header = document.getElementById(`att-header-${msgId}`);
         if (!preview) return;
 
-        if (typeof m.content === 'string' && m.content.startsWith('data:image')) {
-            preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" style="max-width:100%; border-radius:10px; display:block;">`;
-        } else {
-            preview.innerHTML = `<div style="font-size:0.85rem; color:var(--fg2); word-break:break-all;">Attachment loaded. <a href="${Utils.escapeHTML(m.content)}" download="${Utils.escapeHTML(m.attachmentName || 'download')}" style="color:var(--accent); text-decoration:underline;">Download File</a></div>`;
-        }
-
-        preview.style.display = 'block';
-        requestAnimationFrame(() => {
-            preview.style.opacity = '1';
-        });
-
         const btn = header?.querySelector('button');
-        if (btn) btn.style.display = 'none';
+        if (btn) { btn.disabled = true; btn.innerText = "Loading..."; }
+
+        try {
+            if (!m.content) {
+                const res = await ApiClient.call('getAttachment', {
+                    cid: State.activeChannelId,
+                    type: State.activeType,
+                    msgId
+                });
+                if (res && res.content) {
+                    m.content = res.content;
+                }
+            }
+
+            if (typeof m.content === 'string' && (m.content.startsWith('data:image') || m.contentType === 'image')) {
+                preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" onclick="ImageViewer.open(this.src)" title="Click to view fullscreen" style="max-width:100%; border-radius:10px; display:block; cursor:pointer;">`;
+            } else {
+                preview.innerHTML = `<div style="font-size:0.85rem; color:var(--fg2); word-break:break-all;">Attachment loaded. <a href="${Utils.escapeHTML(m.content)}" download="${Utils.escapeHTML(m.attachmentName || 'download')}" style="color:var(--accent); text-decoration:underline;">Download File</a></div>`;
+            }
+
+            preview.style.display = 'block';
+            requestAnimationFrame(() => { preview.style.opacity = '1'; });
+            if (btn) btn.style.display = 'none';
+        } catch(e) {
+            UI.showToast("Failed to load attachment.", 'error');
+            if (btn) { btn.disabled = false; btn.innerText = "Load"; }
+        }
     },
 
     updateHeader: function() {
@@ -2105,9 +2272,14 @@ const ChatManager = {
                     sEl.innerText = "Account Banned";
                     sEl.style.color = "#ef4444";
                 } else {
-                    const oStatus = State.usersCache[otherUid]?.status === 'online';
-                    sEl.innerText = oStatus ? "Online" : "Offline";
-                    sEl.style.color = oStatus ? "#22c55e" : "var(--fg2)";
+                    const isOnline = State.usersCache[otherUid]?.status === 'online' && (Date.now() - (State.usersCache[otherUid]?.lastSeen || 0) < 25000);
+                    if (isOnline) {
+                        sEl.innerText = "Online";
+                        sEl.style.color = "#22c55e";
+                    } else {
+                        sEl.innerText = Utils.formatLastSeen(State.usersCache[otherUid]?.lastSeen);
+                        sEl.style.color = "var(--fg2)";
+                    }
                 }
             }
             UI.show('btnHideDM');
@@ -2118,8 +2290,9 @@ const ChatManager = {
         } else {
             nEl.innerText = c.name || "Group";
             let onlineCount = 0;
-            for(let mId in c.members) { if(State.usersCache[mId]?.status === 'online') onlineCount++; }
-            sEl.innerText = `${Object.keys(c.members).length} members - ${onlineCount} online`;
+            const validMemberIds = Object.keys(c.members).filter(mId => State.accountsCache[mId]?.account_status !== 'banned');
+            for(let mId of validMemberIds) { if(State.usersCache[mId]?.status === 'online') onlineCount++; }
+            sEl.innerText = `${validMemberIds.length} members - ${onlineCount} online`;
             sEl.style.color = "var(--fg2)";
             UI.hide('btnHideDM');
             UI.show('btnLeaveGroup');
@@ -2127,6 +2300,25 @@ const ChatManager = {
             document.getElementById('activeChatInfo').classList.add('clickable');
             document.getElementById('activeChatInfo').onclick = () => GroupManager.openMembersList();
         }
+
+        // Join requests banner in conversation container for group owner
+        const reqBanner = document.getElementById('joinRequestsBanner');
+        if (reqBanner) {
+            if (c._type === 'gcs' && State.currentRole === 'owner' && c.joinRequests && Object.keys(c.joinRequests).length > 0) {
+                const reqCount = Object.keys(c.joinRequests).length;
+                reqBanner.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <svg class="ic" style="width:20px; height:20px; fill:var(--accent); flex-shrink:0;"><use href="#ico-crown"></use></svg>
+                        <span><strong>${reqCount} new join request${reqCount > 1 ? 's' : ''}</strong> pending for this group.</span>
+                    </div>
+                    <button class="btn sec" style="width:auto; padding:5px 14px; font-size:0.9rem; margin:0;" onclick="GroupManager.openJoinRequestsPopup()">View Requests</button>
+                `;
+                reqBanner.style.display = 'flex';
+            } else {
+                reqBanner.style.display = 'none';
+            }
+        }
+
 
         const pb = document.getElementById('pinnedBanner');
         let pinnedFound = false;
@@ -2278,12 +2470,16 @@ const ChatManager = {
 
         if (isGroup && !isMine && !isSysBot) {
             const disp = Utils.displayName(m.senderUid, c);
-            html += `<div class="msg-author" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)} ${Utils.getBadgesHTML(m.senderUid)}</div>`;
+            html += `<div class="msg-author" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
         }
-        if (isSysBot) html += `<div class="msg-author">BSMS Web ${Utils.getBadgesHTML(BOT_UID)}</div>`;
+        if (isSysBot) html += `<div class="msg-author">BSMS Web</div>`;
 
         let content = '';
-        if (m.status?.deletedByMod) {
+        const isBannedSender = m.senderBanned || State.accountsCache[m.senderUid]?.account_status === 'banned';
+        if (isBannedSender) {
+            content = `<div class="sys-msg" style="color:#ef4444; margin:0; font-style:italic;">[This user was banned]</div>`;
+            html += `<div class="msg-bubble-wrap">${content}</div>`;
+        } else if (m.status?.deletedByMod) {
             content = `<div class="sys-msg" style="color:#ef4444; margin:0;">[This message was deleted by a moderator]</div>`;
             html += `<div class="msg-bubble-wrap">${content}</div>`;
         } else if (m.status?.unsent) {
@@ -2311,8 +2507,8 @@ const ChatManager = {
                     <div class="ap-time" id="ap-time-${msgId}">0:00</div>
                     <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
                 </div>`;
-            } else if (m.contentType === 'file') {
-                const isImg = typeof m.content === 'string' && m.content.startsWith('data:image');
+            } else if (m.contentType === 'file' || m.contentType === 'image') {
+                const isImg = typeof m.content === 'string' && m.content.startsWith('data:image') || m.contentType === 'image';
                 const name = Utils.escapeHTML(m.attachmentName || (isImg ? 'Image Attachment' : 'File Attachment'));
                 content += `
                 <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-top:4px; max-width:320px;">
@@ -2326,6 +2522,33 @@ const ChatManager = {
                         </button>
                     </div>
                     <div id="att-preview-${msgId}" style="display:none; opacity:0; transition:opacity 0.35s ease; margin-top:10px;"></div>
+                </div>`;
+            } else if (m.contentType === 'invite') {
+                let inv = m.content;
+                if (typeof inv === 'string') {
+                    try { inv = JSON.parse(inv); } catch(e) { inv = { groupName: m.content }; }
+                }
+                const gCid = inv.groupCid || '';
+                const gName = inv.groupName || 'Group Chat';
+                const gCode = inv.joinCode || '';
+                const isMember = Boolean(State.channels[gCid]);
+                const count = isMember ? Object.keys(State.channels[gCid].members).length : (inv.memberCount || 1);
+                const avHtml = inv.groupIcon ? `<img src="${Utils.escapeHTML(inv.groupIcon)}">` : gName.charAt(0).toUpperCase();
+
+                content += `
+                <div class="invite-card">
+                    <div class="invite-card-top">
+                        <div class="invite-card-icon">${avHtml}</div>
+                        <div class="invite-card-info">
+                            <div class="invite-card-name" title="${Utils.escapeHTML(gName)}">${Utils.escapeHTML(gName)}</div>
+                            <div class="invite-card-members">${count} member${count === 1 ? '' : 's'}</div>
+                        </div>
+                    </div>
+                    ${isMember ? `
+                        <button class="btn sec invite-card-btn" onclick="ChatManager.open('${gCid}')">Open Group</button>
+                    ` : `
+                        <button class="btn invite-card-btn" onclick="GroupManager.joinByInviteCard('${Utils.escapeHTML(gCode)}', '${gCid}')">Join Group</button>
+                    `}
                 </div>`;
             } else if (m.contentType === 'poll') {
                 content += `<div style="font-weight:bold; margin-bottom:10px;">${Utils.escapeHTML(m.content.pollQuestion)}</div>`;
@@ -2993,10 +3216,104 @@ const GroupManager = {
         try {
             const res = await ApiClient.call('startDM', { targetUid });
             if (res.cid) {
-                await ApiClient.call('sendMessage', { cid: res.cid, type: 'dms', content: `You've been invited to join "${c.name}". Join code: ${c.config?.joinCode || '------'}`, contentType: 'text' });
+                const invitePayload = {
+                    type: 'invite',
+                    groupCid: State.activeChannelId,
+                    groupName: c.name,
+                    groupIcon: c.config?.icon || null,
+                    memberCount: Object.keys(c.members).length,
+                    joinCode: c.config?.joinCode || ''
+                };
+                await ApiClient.call('sendMessage', {
+                    cid: res.cid,
+                    type: 'dms',
+                    content: invitePayload,
+                    contentType: 'invite'
+                });
                 await PollingManager.syncGlobal();
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error("Failed to send invite:", e);
+        }
+    },
+
+    joinByInviteCard: async function(joinCode, groupCid) {
+        try {
+            if (joinCode) {
+                const res = await ApiClient.call('joinGroup', { code: joinCode });
+                if (res.requested) {
+                    UI.showToast("Join request sent. Pending admin approval.", 'success');
+                } else if (res.cid) {
+                    UI.showToast("Joined group!", 'success');
+                    await PollingManager.syncGlobal();
+                    ChatManager.open(res.cid);
+                }
+            } else if (groupCid) {
+                await GroupManager.requestJoinById(groupCid);
+            }
+        } catch(e) {
+            UI.showToast(e.message || "Failed to join group.", 'error');
+        }
+    },
+
+    openJoinRequestsPopup: function() {
+        const c = State.channels[State.activeChannelId];
+        if (!c || !c.joinRequests || State.currentRole !== 'owner') return;
+        const list = document.getElementById('joinRequestsList');
+        if (!list) return;
+
+        let html = '';
+        for (let uId in c.joinRequests) {
+            const u = c.joinRequests[uId];
+            const acc = State.accountsCache[uId] || {};
+            const dName = acc.displayName || u.displayName || u.username || uId;
+            const avHtml = acc.avatar ? `<img src="${Utils.escapeHTML(acc.avatar)}">` : dName.charAt(0).toUpperCase();
+
+            html += `
+            <div class="member-item" id="req-item-${uId}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--section-bg); border-radius:10px; border:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="c-av" style="width:36px; height:36px; font-size:1rem;">
+                        <div class="c-av-inner">${avHtml}</div>
+                    </div>
+                    <div>
+                        <div style="font-weight:bold; color:var(--fg);">${Utils.escapeHTML(dName)}</div>
+                        <div style="font-size:0.8rem; color:var(--fg2);">@${Utils.escapeHTML(u.username || uId)}</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn sec" style="width:auto; padding:5px 12px; font-size:0.85rem;" onclick="GroupManager.handleOwnerJoinDecision('${uId}', false)">Decline</button>
+                    <button class="btn" style="width:auto; padding:5px 12px; font-size:0.85rem;" onclick="GroupManager.handleOwnerJoinDecision('${uId}', true)">Accept</button>
+                </div>
+            </div>`;
+        }
+        list.innerHTML = html || `<div style="text-align:center; color:var(--fg2); padding:20px;">No pending join requests.</div>`;
+        UI.openModal('joinRequestsModal');
+    },
+
+    handleOwnerJoinDecision: async function(targetUid, isApproved) {
+        const cid = State.activeChannelId;
+        try {
+            await ApiClient.call('groupAction', { gAction: 'approveJoin', cid, targetUid, value: isApproved });
+            const c = State.channels[cid];
+            if (c && c.joinRequests) {
+                delete c.joinRequests[targetUid];
+            }
+            const itemEl = document.getElementById(`req-item-${targetUid}`);
+            if (itemEl) itemEl.remove();
+
+            const remaining = c && c.joinRequests ? Object.keys(c.joinRequests).length : 0;
+            if (remaining === 0) {
+                UI.closeModal('joinRequestsModal');
+                const reqBanner = document.getElementById('joinRequestsBanner');
+                if (reqBanner) reqBanner.style.display = 'none';
+            } else {
+                ChatManager.updateHeader();
+            }
+            UI.showToast(isApproved ? "Join request accepted!" : "Join request declined.", 'success');
+            await PollingManager.syncGlobal();
+        } catch(e) {
+            UI.showToast("Failed to process join request.", 'error');
+        }
     },
 
     openMembersList: function() {
@@ -3011,6 +3328,7 @@ const GroupManager = {
 
         for (let mId in c.members) {
             let u = State.accountsCache[mId] || { displayName: mId };
+            if (u.account_status === 'banned') continue;
             let role = c.members[mId].role || 'member';
             let nick = c.members[mId].nickname;
             let uName = Utils.username(mId);
