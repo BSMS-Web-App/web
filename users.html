@@ -1,786 +1,504 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: MIT
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Browse active community members, discover friends, and connect across BSMS Web.">
-    <title>Users Directory | BSMS Web</title>
-
-    <script src="/js/ban-check.js"></script>
-    <script src="/js/account-check.js"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-2TKPQV995W');
-    </script>
-    <script src="/js/analytics.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-
-        :root {
-            --bg: #090a0d;
-            --surface: #12141a;
-            --surface-hover: #191c24;
-            --panel: #161820;
-            --border: rgba(255, 255, 255, 0.08);
-            --border-highlight: rgba(187, 0, 30, 0.4);
-            --fg: #ffffff;
-            --fg2: rgba(255, 255, 255, 0.65);
-            --accent: #BB001E;
-            --accent-hover: #D10022;
-            --accent-glow: rgba(187, 0, 30, 0.35);
-            --owner: #9333ea;
-            --admin: #dc2626;
-            --mod: #eab308;
-            --dev: #737373;
-            --verified: #3b82f6;
-            --success: #22c55e;
-            --radius-lg: 16px;
-            --radius-md: 12px;
-            --radius-sm: 8px;
-            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-brand: 'Patrick Hand', cursive;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: var(--fg);
-            font-family: var(--font);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(ellipse at 50% 0%, rgba(187, 0, 30, 0.12) 0%, transparent 60%),
-                radial-gradient(circle at 100% 50%, rgba(87, 101, 242, 0.05) 0%, transparent 40%);
-            background-attachment: fixed;
-        }
-
-        /* App Header */
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            background: rgba(18, 20, 26, 0.75);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .brand-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-            color: var(--fg);
-        }
-
-        .brand-badge {
-            background: var(--accent);
-            color: #fff;
-            padding: 4px 10px;
-            border-radius: var(--radius-sm);
-            font-weight: 800;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
-            box-shadow: 0 0 15px var(--accent-glow);
-        }
-
-        .brand-title {
-            font-family: var(--font-brand);
-            font-size: 1.6rem;
-            letter-spacing: 0.5px;
-        }
-
-        nav {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        nav a {
-            color: var(--fg2);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: color 0.2s;
-            padding: 6px 12px;
-            border-radius: var(--radius-sm);
-        }
-
-        nav a:hover, nav a.active {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            font-family: var(--font);
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #fff;
-            box-shadow: 0 4px 14px var(--accent-glow);
-        }
-
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--fg);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 0.85rem;
-        }
-
-        /* Container */
-        main {
-            flex: 1;
-            max-width: 1200px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 32px 20px 60px;
-        }
-
-        .page-intro {
-            margin-bottom: 28px;
-            text-align: center;
-        }
-
-        .page-intro h1 {
-            font-size: clamp(2rem, 4vw, 2.8rem);
-            font-weight: 800;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
-
-        .page-intro h1 span {
-            color: var(--accent);
-        }
-
-        .page-intro p {
-            color: var(--fg2);
-            font-size: 1.1rem;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        /* Search & Filter Toolbar */
-        .toolbar {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 16px 20px;
-            margin-bottom: 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        }
-
-        .search-row {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .search-input-wrap {
-            position: relative;
-            flex: 1;
-            min-width: 260px;
-        }
-
-        .search-input-wrap svg {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 18px;
-            height: 18px;
-            fill: var(--fg2);
-            pointer-events: none;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 14px 12px 42px;
-            background: rgba(0, 0, 0, 0.25);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            color: var(--fg);
-            font-size: 0.95rem;
-            font-family: var(--font);
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        .search-input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(187, 0, 30, 0.2);
-        }
-
-        .filter-tags {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
-
-        .filter-chip {
-            padding: 6px 14px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            color: var(--fg2);
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.15s;
-        }
-
-        .filter-chip:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .filter-chip.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-            box-shadow: 0 2px 8px var(--accent-glow);
-        }
-
-        /* User Grid */
-        .user-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
-        }
-
-        .user-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 22px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .user-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(255, 255, 255, 0.16);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-        }
-
-        .user-card-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
-        .avatar-wrap {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #fff;
-            flex-shrink: 0;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .avatar-wrap img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .status-dot {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #64748b;
-            border: 2px solid var(--surface);
-        }
-
-        .status-dot.online {
-            background: var(--success);
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-        }
-
-        .user-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .name-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 2px;
-        }
-
-        .display-name {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--fg);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-
-        .display-name:hover {
-            text-decoration: underline;
-        }
-
-        .username {
-            font-size: 0.9rem;
-            color: var(--fg2);
-            font-family: var(--font-mono);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .user-bio {
-            color: var(--fg2);
-            font-size: 0.9rem;
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            min-height: 2.7em;
-        }
-
-        .user-stats {
-            display: flex;
-            gap: 16px;
-            padding: 10px 14px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: var(--radius-md);
-            font-size: 0.85rem;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--fg2);
-        }
-
-        .stat-item strong {
-            color: var(--fg);
-            font-weight: 700;
-        }
-
-        .user-card-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: auto;
-        }
-
-        .user-card-actions .btn {
-            flex: 1;
-        }
-
-        /* Badge Badging Styles */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            cursor: pointer;
-            transition: transform 0.15s;
-        }
-
-        .badge:hover {
-            transform: scale(1.05);
-        }
-
-        .badge.owner {
-            background: var(--owner);
-            color: #fff;
-        }
-
-        .badge.admin {
-            background: var(--admin);
-            color: #fff;
-        }
-
-        .badge.mod {
-            background: var(--mod);
-            color: #000;
-            font-weight: 800;
-        }
-
-        .badge-dev {
-            width: 18px;
-            height: 18px;
-            background: var(--dev);
-            transform: rotate(45deg);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 3px;
-            margin-left: 2px;
-            cursor: pointer;
-            transition: transform 0.15s;
-        }
-
-        .badge-dev:hover {
-            transform: rotate(45deg) scale(1.15);
-        }
-
-        .badge-dev svg {
-            width: 11px;
-            height: 11px;
-            fill: #fff;
-            transform: rotate(-45deg);
-        }
-
-        .badge-verified {
-            width: 18px;
-            height: 18px;
-            fill: var(--verified);
-            cursor: pointer;
-            display: inline-block;
-            vertical-align: middle;
-            transition: transform 0.15s;
-        }
-
-        .badge-verified:hover {
-            transform: scale(1.15);
-        }
-
-        /* Overlay / Modal */
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .overlay.show {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-            padding: 28px;
-            position: relative;
-            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes modalPop {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: var(--fg2);
-            cursor: pointer;
-            font-size: 1.5rem;
-            line-height: 1;
-            padding: 4px;
-        }
-
-        .modal-close:hover {
-            color: #fff;
-        }
-
-        /* Loading & Empty States */
-        .state-container {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--fg2);
-        }
-
-        .state-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Toast Container */
-        #toastContainer {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 12px 20px;
-            border-radius: var(--radius-md);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            display: none;
-            color: var(--fg);
-            font-size: 0.95rem;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #toastContainer.show {
-            display: flex;
-            animation: toastIn 0.25s ease;
-        }
-
-        #toastContainer.error {
-            border-color: #ef4444;
-            color: #f87171;
-        }
-
-        #toastContainer.success {
-            border-color: var(--success);
-            color: #4ade80;
-        }
-
-        @keyframes toastIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @media (max-width: 768px) {
-            header {
-                padding: 12px 16px;
-            }
-            nav {
-                display: none;
-            }
-            .user-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="description" content="Browse active BSMS Web Users, discover friends, and connect.">
+<meta property="og:title" content="Users Directory | BSMS Web">
+<meta property="og:description" content="Browse active community members, discover friends, and connect across BSMS Web.">
+<meta property="og:url" content="https://bsms-web.vercel.app/users">
+<meta property="og:image" content="/img/app-icon.png">
+<meta property="og:type" content="website">
+<title>Users Directory | BSMS Web</title>
+
+<!-- Ban Check Enforcer -->
+<script src="/js/ban-check.js"></script>
+
+<!-- Account Update Checker -->
+<script src="/js/account-check.js"></script>
+    
+<!-- Favicons -->
+<link rel="icon" href="/img/icon.png">
+<link rel="apple-touch-icon" href="/img/app-icon.png">
+
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2TKPQV995W');
+</script>
+<script src="/js/analytics.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --text-scale: 1;
+    --theme-rgb: 187, 0, 30;
+    --accent: #BB001E;
+    --accent-hover: #d10022;
+    --accent-glow: rgba(187, 0, 30, 0.35);
+
+    --bg: #000000;
+    --fg: #ffffff;
+    --fg2: rgba(255, 255, 255, 0.6);
+    --border: rgba(255, 255, 255, 0.15);
+    --pill-bg: rgba(255, 255, 255, 0.08);
+    --input-bg: rgba(255, 255, 255, 0.1);
+
+    --ctrl-bg: rgba(20, 20, 20, 0.98);
+    --ctrl-border: rgba(187, 0, 30, 0.4);
+    --section-bg: rgba(255, 255, 255, 0.04);
+    --section-border: rgba(255, 255, 255, 0.08);
+
+    --font: 'Patrick Hand', cursive;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow: 0 10px 40px rgba(0,0,0,0.5);
+    --shadow-sm: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+body.light-mode {
+    --bg: #f0f2f5;
+    --fg: #1c1e21;
+    --fg2: rgba(0, 0, 0, 0.6);
+    --border: rgba(0, 0, 0, 0.15);
+    --pill-bg: #e4e6eb;
+    --input-bg: #ffffff;
+
+    --ctrl-bg: #ffffff;
+    --ctrl-border: rgba(0, 0, 0, 0.15);
+    --section-bg: rgba(0, 0, 0, 0.05);
+    --section-border: rgba(0, 0, 0, 0.1);
+    --shadow: 0 10px 40px rgba(0,0,0,0.15);
+    --shadow-sm: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+    margin: 0; padding: 0; height: 100dvh; width: 100%;
+    font-family: var(--font); font-size: calc(18px * var(--text-scale));
+    background: var(--bg); color: var(--fg);
+    transition: background 0.3s, color 0.3s;
+    overflow-x: hidden;
+}
+button, input, textarea, select { font-family: var(--font); font-size: inherit; outline: none; border: none; background: transparent; color: inherit; }
+svg.ic { width: 24px; height: 24px; min-width: 24px; fill: currentColor; display: block; flex-shrink: 0; }
+a { color: var(--accent); text-decoration: none; }
+
+/* General UI Components matching Chat */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    padding: 10px 16px; border-radius: 12px; border: 2px solid var(--accent);
+    background: var(--accent); color: #fff; cursor: pointer; transition: 0.15s; font-size: 1.1rem;
+}
+.btn:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.02); box-shadow: var(--shadow-sm); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn.sec { background: transparent; border-color: var(--border); color: var(--fg); }
+.btn.sec:hover:not(:disabled) { background: var(--section-bg); border-color: var(--fg2); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.icon-btn {
+    color: var(--fg2); padding: 8px; cursor: pointer; border-radius: 12px; transition: 0.2s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--section-bg); color: var(--fg); }
+.icon-btn.active { color: var(--accent); background: rgba(187,0,30,0.1); }
+
+.input-field {
+    width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--border);
+    background: var(--input-bg); color: var(--fg); margin-bottom: 12px; transition: 0.2s;
+}
+.input-field:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+.search-box { position: relative; display: flex; align-items: center; width: 100%; margin-bottom: 16px; }
+.search-box svg.ic { position: absolute; left: 14px; width: 20px; height: 20px; fill: var(--fg2); pointer-events: none; }
+.search-box input { padding-left: 44px; margin-bottom: 0; }
+
+.pill-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.pill { 
+    background: var(--pill-bg); border: 2px solid transparent; border-radius: 50px; 
+    padding: 6px 16px; cursor: pointer; color: var(--fg2); transition: 0.2s; 
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; 
+}
+.pill:hover { background: var(--section-border); color: var(--fg); }
+.pill.active { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(187,0,30,0.3); }
+
+/* App Specific Layout */
+#appShell {
+    max-width: 1200px; margin: 0 auto; padding: 24px 20px 80px; position: relative;
+    display: flex; flex-direction: column; min-height: 100dvh;
+}
+
+#controls-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 200; background: var(--ctrl-bg); color: var(--fg);
+    border: 2px solid var(--ctrl-border); border-radius: 50%; width: 50px; height: 50px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: 0.2s ease; box-shadow: var(--shadow-sm); overflow: hidden; padding: 0;
+}
+#controls-btn:hover { border-color: var(--accent); transform: translateY(-2px) scale(1.05); box-shadow: var(--shadow); }
+#controls-btn img { width: 100%; height: 100%; object-fit: cover; }
+#controls-btn .fallback-initial { font-size: 1.5rem; font-weight: bold; }
+
+.page-header { text-align: center; margin-bottom: 32px; animation: slideUp 0.3s ease; }
+.page-header h1 { font-size: 2.8rem; margin: 0 0 8px; line-height: 1.1; }
+.page-header h1 span { color: var(--accent); }
+.page-header p { color: var(--fg2); font-size: 1.2rem; max-width: 600px; margin: 0 auto; }
+
+/* User Grid & Cards */
+.user-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
+    animation: fadeIn 0.4s ease;
+}
+
+.user-card {
+    background: var(--section-bg); border: 2px solid var(--border); border-radius: 16px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: 0.2s;
+    cursor: pointer; position: relative; overflow: hidden;
+}
+.user-card:hover { background: var(--pill-bg); border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+.user-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; padding: 20px; border-color: var(--accent); background: rgba(187, 0, 30, 0.05); margin-bottom: 12px;}
+
+.c-av {
+    width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    position: relative; flex-shrink: 0; background: var(--pill-bg); border: 2px solid var(--border);
+    font-size: 1.8rem; font-weight: bold; color: var(--fg); overflow: hidden;
+}
+.c-av img { width: 100%; height: 100%; object-fit: cover; }
+.user-card.wide .c-av { width: 80px; height: 80px; font-size: 2.5rem; border-color: var(--accent); }
+
+.status-dot {
+    position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px;
+    border-radius: 50%; border: 3px solid var(--bg); background: var(--fg2); z-index: 2;
+}
+.status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+
+.u-info { flex: 1; min-width: 0; }
+.u-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.u-name { font-size: 1.3rem; color: var(--fg); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.u-username { font-size: 1rem; color: var(--fg2); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-card.wide .u-name { font-size: 1.8rem; }
+.user-card.wide .u-username { font-size: 1.1rem; }
+
+/* Badges */
+.owner-badge { background: #9333ea; color: #ffffff; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; cursor: pointer; transition: transform 0.15s; box-shadow: 0 0 10px rgba(147, 51, 234, 0.4); }
+.owner-badge:hover { transform: scale(1.05); }
+
+.admin-badge { background: #dc2626; color: #ffffff; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; cursor: pointer; transition: transform 0.15s; }
+.admin-badge:hover { transform: scale(1.05); }
+
+.mod-badge { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; cursor: pointer; transition: transform 0.15s; }
+.mod-badge:hover { transform: scale(1.05); }
+
+.dev-badge {
+    width: 18px; height: 18px; background: #3f3f46; border: 1px solid #71717a;
+    transform: rotate(45deg); display: inline-flex; align-items: center; justify-content: center;
+    vertical-align: middle; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; border-radius: 3px;
+}
+.dev-badge:hover { transform: rotate(45deg) scale(1.1); }
+.dev-badge svg { transform: rotate(-45deg); width: 11px; height: 11px; fill: #ffffff; }
+
+.dev-badge-large {
+    width: 54px; height: 54px; background: #3f3f46; border: 2px solid #71717a;
+    transform: rotate(45deg); display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+.dev-badge-large svg { transform: rotate(-45deg); width: 28px; height: 28px; fill: #ffffff; }
+
+.verified-icon { width: 18px; height: 18px; fill: #3b82f6; cursor: pointer; display: inline-block; vertical-align: middle; transition: transform 0.15s;}
+.verified-icon:hover { transform: scale(1.1); }
+
+/* Full Screen Profile View */
+#profileView {
+    position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+    display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden;
+    animation: fadeIn 0.3s ease;
+}
+
+#profileView.show { display: flex; }
+
+.pv-header {
+    position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex;
+    align-items: center; justify-content: space-between; z-index: 10;
+}
+.pv-header-title { font-size: 1.4rem; font-weight: bold; }
+
+.pv-content {
+    max-width: 600px; width: 100%; margin: 0 auto; padding: 32px 20px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px;
+}
+.pv-avatar {
+    width: 120px; height: 120px; border-radius: 50%; background: var(--pill-bg);
+    border: 4px solid var(--accent); font-size: 3.5rem; font-weight: bold; color: var(--fg);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    box-shadow: 0 8px 24px var(--accent-glow); margin-bottom: 8px; position: relative;
+}
+.pv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pv-name-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.pv-name { font-size: 2.2rem; font-weight: bold; line-height: 1.1; }
+.pv-username { font-size: 1.2rem; color: var(--fg2); font-family: var(--font-mono); margin-bottom: 12px; }
+
+.pv-actions { display: flex; gap: 12px; width: 100%; max-width: 400px; margin: 12px 0; }
+
+.pv-tabs {
+    display: flex; width: 100%; border-bottom: 2px solid var(--border); margin-top: 16px;
+}
+.pv-tab {
+    flex: 1; background: none; border: none; padding: 14px 10px; color: var(--fg2);
+    font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s;
+    border-bottom: 3px solid transparent; margin-bottom: -2px; font-family: var(--font);
+}
+.pv-tab:hover { color: var(--fg); background: var(--section-bg); }
+.pv-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pv-tab span { display: block; font-size: 1.5rem; color: var(--fg); line-height: 1; margin-bottom: 4px; }
+
+.pv-tab-content { width: 100%; padding: 24px 0; text-align: left; }
+.pv-pane { display: none; animation: fadeIn 0.3s ease; }
+.pv-pane.active { display: block; }
+
+.pv-bio { font-size: 1.1rem; color: var(--fg2); line-height: 1.6; text-align: center; white-space: pre-wrap; }
+.pv-bio strong { color: var(--fg); }
+
+/* List inside profile (Followers/Following) */
+.user-list-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--section-bg);
+    border: 1px solid var(--section-border); border-radius: 12px; margin-bottom: 10px;
+    cursor: pointer; transition: 0.2s;
+}
+.user-list-item:hover { border-color: var(--accent); transform: translateX(4px); }
+.uli-av { width: 44px; height: 44px; font-size: 1.2rem; border-width: 1px; }
+
+/* Modals matching Chat */
+.overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; z-index: 5000;
+    animation: fadeIn 0.2s ease;
+}
+.overlay.show { display: flex; }
+.modal-card {
+    background: var(--bg); border: 2px solid var(--accent); border-radius: 20px;
+    padding: 24px; width: min(440px, 92vw); max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow); animation: slideUp 0.25s cubic-bezier(0.2,0.8,0.2,1);
+    display: flex; flex-direction: column;
+}
+.modal-card h2 { font-size: 1.6rem; margin: 0 0 12px; color: var(--fg); line-height: 1.2; }
+.modal-card p { font-size: 1.1rem; color: var(--fg2); margin: 0 0 20px; line-height: 1.5; }
+
+/* Toast */
+#toastContainer {
+    position: fixed; top: 20px; right: 20px; 
+    background: var(--accent); color: #fff; padding: 12px 24px; border-radius: 12px;
+    box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px;
+    font-size: 1.1rem; z-index: 9500; 
+    transform: translateX(150%); opacity: 0; 
+    transition: transform 0.4s cubic-bezier(0.2,1,0.2,1), opacity 0.4s, background 0.3s;
+    cursor: pointer; pointer-events: none; max-width: 90vw;
+}
+#toastContainer.show { transform: translateX(0); opacity: 1; pointer-events: auto; }
+#toastContainer.error { background: #ef4444; border: 1px solid #dc2626; }
+#toastContainer.success { background: #22c55e; border: 1px solid #16a34a; }
+
+.state-container { text-align: center; padding: 60px 20px; color: var(--fg2); font-size: 1.2rem; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
 
-<!-- SVG Sprites -->
-<svg style="display:none;">
+<svg style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
     <defs>
         <symbol id="ico-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
-        <symbol id="ico-verified" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></symbol>
+        <symbol id="ico-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
+        <symbol id="ico-share" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></symbol>
+        <symbol id="ico-verified" viewBox="0 0 24 24">
+            <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z" fill="#3b82f6"/>
+            <path d="M10.09 16.72l-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48-7.33 7.35z" fill="#ffffff"/>
+        </symbol>
         <symbol id="ico-hammer" viewBox="0 0 24 24"><path d="M21.7 6.3l-3-3a1 1 0 0 0-1.4 0l-2.1 2.1 2.1 2.1-1.4 1.4-2.1-2.1-1.2 1.2a3 3 0 0 0-.7 1.4l-8.6 8.6a1.5 1.5 0 0 0 0 2.1l1.3 1.3a1.5 1.5 0 0 0 2.1 0l8.6-8.6a3 3 0 0 0 1.4-.7l1.2-1.2 2.1 2.1 1.4-1.4-2.1-2.1 2.1-2.1a1 1 0 0 0 0-1.4z"/></symbol>
         <symbol id="ico-msg" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></symbol>
+        <symbol id="ico-user" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></symbol>
         <symbol id="ico-user-plus" viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></symbol>
         <symbol id="ico-user-check" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm8.41-3.41L19 9.17l-3.59 3.59-1.41-1.41-1.41 1.41 2.82 2.82 5-5z"/></symbol>
     </defs>
 </svg>
 
-<header>
-    <a href="/" class="brand-link">
-        <span class="brand-badge">BSMS</span>
-        <span class="brand-title">Community</span>
-    </a>
-    <nav>
-        <a href="/">Home</a>
-        <a href="/chat">Chat</a>
-        <a href="/users" class="active">Users</a>
-        <a href="/accounts">Accounts</a>
-        <a href="/g">Games</a>
-        <a href="/bug-report">Bug Report</a>
-    </nav>
-    <div class="header-actions">
-        <a href="/chat" class="btn btn-secondary btn-sm">Open Chat</a>
-        <div id="currentUserPfp" class="avatar-wrap" style="width:38px; height:38px; font-size:1rem;" onclick="location.href='/accounts'">?</div>
-    </div>
-</header>
+<button id="controls-btn" onclick="location.href='/accounts'" title="Manage Account">
+    <div id="headerAvatar" class="fallback-initial">?</div>
+</button>
 
-<main>
-    <div class="page-intro">
-        <h1>Discover <span>BSMS Members</span></h1>
-        <p>Explore profiles, build your network, follow classmates, and initiate direct messages across the school community.</p>
-    </div>
-
-    <div class="toolbar">
-        <div class="search-row">
-            <div class="search-input-wrap">
-                <svg><use href="#ico-search"></use></svg>
-                <input type="text" id="searchInput" class="search-input" placeholder="Search by name, @username, or keyword..." oninput="UsersApp.onSearch(this.value)">
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="UsersApp.fetchUsers()">
-                Refresh List
-            </button>
-        </div>
-        <div class="filter-tags">
-            <button class="filter-chip active" onclick="UsersApp.setFilter('all', this)">All Accounts (<span id="count-all">0</span>)</button>
-            <button class="filter-chip" onclick="UsersApp.setFilter('team', this)">BSMS Web Team (<span id="count-team">0</span>)</button>
-            <button class="filter-chip" onclick="UsersApp.setFilter('following', this)">Following (<span id="count-following">0</span>)</button>
-            <button class="filter-chip" onclick="UsersApp.setFilter('verified', this)">Verified</button>
-        </div>
-    </div>
-
-    <!-- Active Users Grid -->
-    <div id="usersGrid" class="user-grid">
-        <div class="state-container" style="grid-column: 1 / -1;">
-            <div class="state-spinner"></div>
-            <p>Loading active BSMS Web users...</p>
-        </div>
-    </div>
-</main>
-
-<!-- User Profile Modal -->
-<div id="profileModal" class="overlay" onclick="if(event.target===this) UsersApp.closeProfileModal()">
-    <div class="modal">
-        <button class="modal-close" onclick="UsersApp.closeProfileModal()">&times;</button>
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:14px; margin-bottom:20px;">
-            <div id="modalAvatar" class="avatar-wrap" style="width:84px; height:84px; font-size:2rem;"></div>
-            <div>
-                <div id="modalNameRow" class="name-row" style="justify-content:center; font-size:1.3rem;"></div>
-                <div id="modalUsername" class="username" style="font-size:1rem;"></div>
-            </div>
+<div id="appShell">
+    <div id="mainView">
+        <div class="page-header">
+            <h1>Discover <span>BSMS Web Users</span></h1>
+            <p>Explore profiles, build your network, and initiate direct messages across the platform.</p>
         </div>
 
-        <div id="modalBio" style="color:var(--fg2); font-size:0.95rem; line-height:1.6; text-align:center; margin-bottom:20px; min-height:40px;"></div>
-
-        <div style="display:flex; justify-content:space-around; background:rgba(0,0,0,0.25); border-radius:var(--radius-md); padding:12px; margin-bottom:24px;">
-            <div style="text-align:center; cursor:pointer;" onclick="UsersApp.openListModal('followers')" title="Click to view followers">
-                <div id="modalFollowersCount" style="font-size:1.2rem; font-weight:800; color:var(--fg);">0</div>
-                <div style="font-size:0.8rem; color:var(--fg2); text-decoration:underline; text-underline-offset:2px;">Followers</div>
-            </div>
-            <div style="text-align:center; cursor:pointer;" onclick="UsersApp.openListModal('following')" title="Click to view following">
-                <div id="modalFollowingCount" style="font-size:1.2rem; font-weight:800; color:var(--fg);">0</div>
-                <div style="font-size:0.8rem; color:var(--fg2); text-decoration:underline; text-underline-offset:2px;">Following</div>
-            </div>
-            <div style="text-align:center;">
-                <div id="modalJoinedDate" style="font-size:1.2rem; font-weight:800; color:var(--fg);">---</div>
-                <div style="font-size:0.8rem; color:var(--fg2);">Joined</div>
-            </div>
+        <div class="search-box">
+            <svg class="ic"><use href="#ico-search"></use></svg>
+            <input type="text" id="searchInput" class="input-field" placeholder="Search by name, @username..." oninput="DirectoryApp.onSearch(this.value)">
         </div>
 
-        <div style="display:flex; gap:12px;">
-            <button id="modalFollowBtn" class="btn btn-secondary" style="flex:1;">Follow</button>
-            <button id="modalDmBtn" class="btn btn-primary" style="flex:1;">Send Message</button>
+        <div class="pill-grid">
+            <button class="pill active" onclick="DirectoryApp.setFilter('all', this)">All Accounts (<span id="count-all">0</span>)</button>
+            <button class="pill" onclick="DirectoryApp.setFilter('team', this)">BSMS Web Team (<span id="count-team">0</span>)</button>
+            <button class="pill" onclick="DirectoryApp.setFilter('following', this)">Following (<span id="count-following">0</span>)</button>
+            <button class="pill" onclick="DirectoryApp.setFilter('verified', this)">Verified</button>
+        </div>
+
+        <div id="myProfileContainer"></div>
+
+        <div id="usersGrid" class="user-grid">
+            <div class="state-container" style="grid-column: 1 / -1;">
+                <div class="spinner"></div>
+                <p>Loading active BSMS Web users...</p>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Followers / Following List Modal -->
-<div id="followListModal" class="overlay" onclick="if(event.target===this) UsersApp.closeListModal()">
-    <div class="modal" style="max-height: 85vh; display:flex; flex-direction:column; max-width:480px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 id="followListTitle" style="margin:0; font-size:1.3rem;">Followers</h3>
-            <button class="modal-close" onclick="UsersApp.closeListModal()">&times;</button>
+<!-- Full Screen Profile View -->
+<div id="profileView">
+    <div class="pv-header">
+        <button class="icon-btn" onclick="DirectoryApp.closeProfile()"><svg class="ic"><use href="#ico-back"></use></svg></button>
+        <div class="pv-header-title">User Profile</div>
+        <button class="icon-btn" id="btnShareProfile"><svg class="ic"><use href="#ico-share"></use></svg></button>
+    </div>
+    <div class="pv-content">
+        <div class="pv-avatar" id="pvAvatar"></div>
+        <div class="pv-name-row" id="pvNameRow"></div>
+        <div class="pv-username" id="pvUsername"></div>
+        
+        <div class="pv-actions" id="pvActions">
+            <button class="btn sec" id="pvFollowBtn" style="flex:1;">Follow</button>
+            <button class="btn primary" id="pvDmBtn" style="flex:1;">Message</button>
         </div>
-        <div id="followListContent" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; max-height:420px; padding-right:4px;"></div>
+
+        <div class="pv-tabs">
+            <button class="pv-tab active" onclick="DirectoryApp.switchTab('bio', this)">Bio</button>
+            <button class="pv-tab" onclick="DirectoryApp.switchTab('followers', this)"><span id="pvCountFollowers">0</span> Followers</button>
+            <button class="pv-tab" onclick="DirectoryApp.switchTab('following', this)"><span id="pvCountFollowing">0</span> Following</button>
+        </div>
+
+        <div class="pv-tab-content">
+            <div id="pane-bio" class="pv-pane active">
+                <div class="pv-bio" id="pvBioText"></div>
+            </div>
+            <div id="pane-followers" class="pv-pane">
+                <div id="pvFollowersList"></div>
+            </div>
+            <div id="pane-following" class="pv-pane">
+                <div id="pvFollowingList"></div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Badge Information Modals -->
-<div id="badgeInfoModal" class="overlay" onclick="if(event.target===this) UsersApp.closeBadgeModal()">
-    <div class="modal" style="text-align:center;">
-        <button class="modal-close" onclick="UsersApp.closeBadgeModal()">&times;</button>
-        <div id="badgeModalIcon" style="margin-bottom:16px;"></div>
-        <h2 id="badgeModalTitle" style="font-size:1.8rem; margin-bottom:8px;"></h2>
-        <p id="badgeModalDesc" style="color:var(--fg2); line-height:1.6; margin-bottom:24px;"></p>
-        <button class="btn btn-secondary" style="width:100%;" onclick="UsersApp.closeBadgeModal()">Got It</button>
+<!-- Badges Modals -->
+<div id="verifiedModal" class="overlay" onclick="if(event.target===this) UI.closeModal('verifiedModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <svg class="ic" style="width: 80px; height: 80px; fill: #3b82f6; margin-bottom: 16px;"><use href="#ico-verified"></use></svg>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Verified Account</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="vmUserDisplay" style="color:var(--fg);">---</strong> is verified. This means they have been manually confirmed by BSMS Web administrators as an authentic, notable figure.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('verifiedModal')">Close</button>
     </div>
 </div>
 
-<div id="toastContainer">
-    <span id="toastText"></span>
+<div id="adminModal" class="overlay" onclick="if(event.target===this) UI.closeModal('adminModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="admin-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px;">Admin</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Administrator</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="amUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Administrator. Administrators hold root privileges to govern channels and manage systems.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('adminModal')">Close</button>
+    </div>
+</div>
+
+<div id="modModal" class="overlay" onclick="if(event.target===this) UI.closeModal('modModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="mod-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px;">Mod</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Community Moderator</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="mmUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Moderator. Community Moderators enforce safety guidelines and moderate reports.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('modModal')">Close</button>
+    </div>
+</div>
+
+<div id="devModal" class="overlay" onclick="if(event.target===this) UI.closeModal('devModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <div class="dev-badge-large">
+            <svg class="ic"><use href="#ico-hammer"></use></svg>
+        </div>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Platform Developer</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="dmUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Developer. Developers design, program, and maintain core codebases.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('devModal')">Close</button>
+    </div>
+</div>
+
+<div id="ownerModal" class="overlay" onclick="if(event.target===this) UI.closeModal('ownerModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="owner-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px;">Owner</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Platform Owner</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="omUserDisplay" style="color:var(--fg);">---</strong> is the BSMS Web Platform Owner. The Owner holds ultimate authority across the ecosystem.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('ownerModal')">Close</button>
+    </div>
+</div>
+
+<div id="toastContainer" onclick="UI.hideToast()">
+    <svg class="ic" style="width:20px;height:20px;"><use href="#ico-user"></use></svg>
+    <span id="toastText">Notification</span>
 </div>
 
 <script>
-const UsersApp = {
+const UI = {
+    showToast: (msg, type = 'info') => {
+        const t = document.getElementById('toastContainer');
+        t.className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+        document.getElementById('toastText').innerText = msg;
+        t.classList.add('show');
+        clearTimeout(UI.toastTimeout);
+        UI.toastTimeout = setTimeout(() => t.classList.remove('show'), 4000);
+    },
+    hideToast: () => document.getElementById('toastContainer').classList.remove('show'),
+    openModal: id => document.getElementById(id).classList.add('show'),
+    closeModal: id => document.getElementById(id).classList.remove('show'),
+
+    showVerifiedModal: (name) => { document.getElementById('vmUserDisplay').innerText = name; UI.openModal('verifiedModal'); },
+    showAdminModal: (name) => { document.getElementById('amUserDisplay').innerText = name; UI.openModal('adminModal'); },
+    showModModal: (name) => { document.getElementById('mmUserDisplay').innerText = name; UI.openModal('modModal'); },
+    showDevModal: (name) => { document.getElementById('dmUserDisplay').innerText = name; UI.openModal('devModal'); },
+    showOwnerModal: (name) => { document.getElementById('omUserDisplay').innerText = name; UI.openModal('ownerModal'); }
+};
+
+const DirectoryApp = {
     users: [],
     myUid: null,
     activeFilter: 'all',
     searchQuery: '',
+    currentUserObj: null,
 
     init: async function() {
         this.renderCurrentSession();
+        window.addEventListener('hashchange', () => this.handleHashRoute());
         await this.fetchUsers();
     },
 
@@ -789,46 +507,48 @@ const UsersApp = {
             const sessStr = localStorage.getItem('bsms_auth_session');
             if (sessStr) {
                 const sess = JSON.parse(sessStr);
-                const pfpEl = document.getElementById('currentUserPfp');
-                if (pfpEl) {
-                    if (sess.avatar) pfpEl.innerHTML = `<img src="${sess.avatar}">`;
-                    else pfpEl.innerText = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
+                const pfpEl = document.getElementById('headerAvatar');
+                if (sess.avatar) {
+                    pfpEl.innerHTML = `<img src="${this.escapeHTML(sess.avatar)}" style="width:100%;height:100%;object-fit:cover;">`;
+                    pfpEl.className = '';
+                } else {
+                    pfpEl.innerText = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
+                    pfpEl.className = 'fallback-initial';
                 }
             }
         } catch(e) {}
     },
 
     fetchUsers: async function() {
-        const grid = document.getElementById('usersGrid');
-        grid.innerHTML = `
-            <div class="state-container" style="grid-column: 1 / -1;">
-                <div class="state-spinner"></div>
-                <p>Loading active BSMS Web users...</p>
-            </div>
-        `;
         try {
             const sid = localStorage.getItem('session_id') || "";
             const res = await fetch('/api/auth?action=getPublicUsers', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-ID': sid
-                }
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid }
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to load users");
 
             this.users = data.users || [];
             this.myUid = data.myUid || null;
+            
+            if (this.myUid) {
+                const myIdx = this.users.findIndex(u => u.uid === this.myUid);
+                if (myIdx > -1) {
+                    this.currentUserObj = this.users.splice(myIdx, 1)[0];
+                }
+            }
+
             this.updateCounts();
+            this.renderMyCard();
             this.renderUsers();
-            this.handleHash();
+            this.handleHashRoute();
+
         } catch (err) {
-            console.error("Failed to fetch users:", err);
-            grid.innerHTML = `
+            document.getElementById('usersGrid').innerHTML = `
                 <div class="state-container" style="grid-column: 1 / -1; color:#ef4444;">
                     <p>Failed to load directory. Please verify your connection.</p>
-                    <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="UsersApp.fetchUsers()">Try Again</button>
+                    <button class="btn sec" style="width:auto; margin: 16px auto 0;" onclick="DirectoryApp.fetchUsers()">Try Again</button>
                 </div>
             `;
         }
@@ -836,38 +556,31 @@ const UsersApp = {
 
     updateCounts: function() {
         const visible = this.users.filter(u => !u.hiddenFromDirectory);
-        const allCount = visible.length;
-        const teamCount = visible.filter(u => u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper).length;
-        const followingCount = visible.filter(u => u.isFollowing).length;
-        document.getElementById('count-all').innerText = allCount;
-        const teamEl = document.getElementById('count-team');
-        if (teamEl) teamEl.innerText = teamCount;
-        document.getElementById('count-following').innerText = followingCount;
+        document.getElementById('count-all').innerText = visible.length;
+        document.getElementById('count-team').innerText = visible.filter(u => u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper).length;
+        document.getElementById('count-following').innerText = visible.filter(u => u.isFollowing).length;
     },
 
     setFilter: function(filter, btnEl) {
         this.activeFilter = filter;
-        document.querySelectorAll('.filter-chip').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.pill').forEach(el => el.classList.remove('active'));
         if (btnEl) btnEl.classList.add('active');
         this.renderUsers();
     },
 
     onSearch: function(val) {
-        this.searchQuery = (val || '').toLowerCase().trim();
+        this.searchQuery = (val || '').toLowerCase().trim().replace(/^@/, '');
         this.renderUsers();
     },
 
     getFilteredUsers: function() {
         let list = this.users.filter(u => {
-            // Hide users who opted out of the public directory listing
             if (u.hiddenFromDirectory) return false;
-
-            // Filter chip
+            
             if (this.activeFilter === 'following' && !u.isFollowing) return false;
             if (this.activeFilter === 'team' && !(u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper)) return false;
             if (this.activeFilter === 'verified' && !u.verified) return false;
 
-            // Search query
             if (this.searchQuery) {
                 const matchStr = `${u.displayName} ${u.username} ${u.bio || ''}`.toLowerCase();
                 if (!matchStr.includes(this.searchQuery)) return false;
@@ -875,7 +588,6 @@ const UsersApp = {
             return true;
         });
 
-        // Alphabetical sort by display name / username
         list.sort((a, b) => {
             const nameA = (a.displayName || a.username || '').toLowerCase();
             const nameB = (b.displayName || b.username || '').toLowerCase();
@@ -883,6 +595,74 @@ const UsersApp = {
         });
 
         return list;
+    },
+
+    getBadgesHTML: function(u) {
+        let b = '';
+        const safeName = this.escapeHTML(u.displayName);
+        if (u.verified) {
+            b += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal('${safeName}')"><use href="#ico-verified"></use></svg>`;
+        }
+        if (u.role === 'owner') {
+            b += `<span class="owner-badge" onclick="event.stopPropagation(); UI.showOwnerModal('${safeName}')">Owner</span>`;
+        } else if (u.role === 'admin') {
+            b += `<span class="admin-badge" onclick="event.stopPropagation(); UI.showAdminModal('${safeName}')">Admin</span>`;
+        } else if (u.role === 'mod') {
+            b += `<span class="mod-badge" onclick="event.stopPropagation(); UI.showModModal('${safeName}')">Mod</span>`;
+        }
+        if (u.isDeveloper) {
+            b += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal('${safeName}')"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
+        }
+        return b;
+    },
+
+    renderUserCard: function(u, isWide = false) {
+        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
+        const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+        const badgesHtml = this.getBadgesHTML(u);
+        const wideClass = isWide ? 'wide' : '';
+        const tagLine = isWide ? `<span style="font-size:0.9rem; color:var(--accent); font-weight:bold; margin-bottom:4px; display:block;">Your Profile</span>` : '';
+
+        return `
+        <div class="user-card ${wideClass}" onclick="Router.setHash('${u.username}')">
+            <div class="c-av">${avatarHtml}</div>
+            <div class="u-info">
+                ${tagLine}
+                <div class="u-name-row">
+                    <span class="u-name">${this.escapeHTML(u.displayName)}</span>
+                    ${badgesHtml}
+                </div>
+                <div class="u-username">@${this.escapeHTML(u.username)}</div>
+            </div>
+        </div>
+        `;
+    },
+
+    renderMyCard: function() {
+        const c = document.getElementById('myProfileContainer');
+        if (this.currentUserObj && !this.searchQuery && this.activeFilter === 'all') {
+            c.innerHTML = this.renderUserCard(this.currentUserObj, true);
+        } else {
+            c.innerHTML = '';
+        }
+    },
+
+    renderUsers: function() {
+        this.renderMyCard();
+        const grid = document.getElementById('usersGrid');
+        const list = this.getFilteredUsers();
+
+        if (list.length === 0) {
+            grid.innerHTML = `
+                <div class="state-container" style="grid-column: 1 / -1;">
+                    <p style="font-size:1.4rem; color:var(--fg); margin-bottom:8px;">No users found</p>
+                    <p>Try broadening your search or changing the filter.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = list.map(u => this.renderUserCard(u)).join('');
     },
 
     renderMarkdown: function(str) {
@@ -896,114 +676,137 @@ const UsersApp = {
         return out;
     },
 
-    renderUsers: function() {
-        const grid = document.getElementById('usersGrid');
-        const list = this.getFilteredUsers();
+    handleHashRoute: function() {
+        const hash = window.location.hash;
+        if (hash && hash.length > 2 && hash.startsWith('#/')) {
+            const username = decodeURIComponent(hash.substring(2));
+            this.openProfileFullScreen(username);
+        } else {
+            this.closeProfile();
+        }
+    },
 
-        if (list.length === 0) {
-            grid.innerHTML = `
-                <div class="state-container" style="grid-column: 1 / -1;">
-                    <p style="font-size:1.2rem; margin-bottom:6px;">No users found</p>
-                    <p style="color:var(--fg2); font-size:0.9rem;">Try broadening your search or selecting a different filter.</p>
-                </div>
+    openProfileFullScreen: function(username) {
+        let u = this.users.find(x => x.username.toLowerCase() === username.toLowerCase());
+        if (!u && this.currentUserObj && this.currentUserObj.username.toLowerCase() === username.toLowerCase()) {
+            u = this.currentUserObj;
+        }
+
+        if (!u) {
+            UI.showToast("User not found.", "error");
+            Router.clearHash();
+            return;
+        }
+
+        const isMe = this.myUid && this.myUid === u.uid;
+        
+        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
+        document.getElementById('pvAvatar').innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+        document.getElementById('pvNameRow').innerHTML = `<span class="pv-name">${this.escapeHTML(u.displayName)}</span> ${this.getBadgesHTML(u)}`;
+        document.getElementById('pvUsername').innerText = `@${u.username}`;
+        document.getElementById('pvCountFollowers').innerText = u.followersCount || 0;
+        document.getElementById('pvCountFollowing').innerText = u.followingCount || 0;
+        document.getElementById('pvBioText').innerHTML = u.bio ? this.renderMarkdown(u.bio) : '<span style="color:var(--fg2); font-style:italic;">This user hasn\'t written a biography yet.</span>';
+
+        document.getElementById('btnShareProfile').onclick = () => {
+            const url = window.location.origin + '/users/#/' + u.username;
+            if (navigator.share) {
+                navigator.share({ title: 'BSMS Web User: @' + u.username, url: url }).catch(()=>{});
+            } else {
+                navigator.clipboard.writeText(url);
+                UI.showToast('Link copied to clipboard!', 'success');
+            }
+        };
+
+        const actionsDiv = document.getElementById('pvActions');
+        if (isMe) {
+            actionsDiv.innerHTML = `<button class="btn sec" onclick="location.href='/accounts'" style="width:100%;">Edit Profile</button>`;
+        } else {
+            const followText = u.isFollowing ? 'Unfollow' : 'Follow';
+            const followIcon = u.isFollowing ? 'ico-user-check' : 'ico-user-plus';
+            const followBtnCls = u.isFollowing ? 'btn sec' : 'btn primary';
+            actionsDiv.innerHTML = `
+                <button class="${followBtnCls}" id="pvFollowBtn" onclick="DirectoryApp.toggleFollow('${u.uid}')" style="flex:1;">
+                    <svg class="ic" style="width:18px;height:18px;"><use href="#${followIcon}"></use></svg> ${followText}
+                </button>
+                <button class="btn sec" onclick="DirectoryApp.startDM('${u.uid}')" style="flex:1;">
+                    <svg class="ic" style="width:18px;height:18px;"><use href="#ico-msg"></use></svg> Message
+                </button>
             `;
+        }
+
+        this.renderRelationList('pvFollowersList', u.followersList || [], "No followers yet.");
+        this.renderRelationList('pvFollowingList', u.followingList || [], "Not following anyone yet.");
+
+        document.querySelector('.pv-tab[onclick*="bio"]').click();
+
+        document.getElementById('appShell').style.display = 'none';
+        document.getElementById('controls-btn').style.display = 'none';
+        document.getElementById('profileView').classList.add('show');
+        window.scrollTo(0,0);
+    },
+
+    closeProfile: function() {
+        document.getElementById('profileView').classList.remove('show');
+        document.getElementById('appShell').style.display = 'flex';
+        document.getElementById('controls-btn').style.display = 'flex';
+    },
+
+    switchTab: function(tabName, btnEl) {
+        document.querySelectorAll('.pv-tab').forEach(el => el.classList.remove('active'));
+        btnEl.classList.add('active');
+        document.querySelectorAll('.pv-pane').forEach(el => el.classList.remove('active'));
+        document.getElementById('pane-' + tabName).classList.add('active');
+    },
+
+    renderRelationList: function(containerId, uidArray, emptyMsg) {
+        const c = document.getElementById(containerId);
+        if (!uidArray || !Array.isArray(uidArray) || uidArray.length === 0) {
+            c.innerHTML = `<div style="text-align:center; padding:30px; color:var(--fg2);">${emptyMsg}</div>`;
             return;
         }
 
         let html = '';
-        list.forEach(u => {
-            const isMe = this.myUid && this.myUid === u.uid;
+        uidArray.forEach(mId => {
+            let u = this.users.find(x => x.uid === mId);
+            if (!u && this.currentUserObj && this.currentUserObj.uid === mId) u = this.currentUserObj;
+            if (!u) return;
+
             const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-            const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" alt="${this.escapeHTML(u.displayName)}">` : initial;
-            const badgesHtml = this.getBadgesHTML(u);
-
+            const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
             html += `
-            <div class="user-card" id="user-card-${u.uid}">
-                <div class="user-card-header">
-                    <div class="avatar-wrap" onclick="UsersApp.openProfileModal('${u.uid}')">
-                        ${avatarHtml}
-                    </div>
-                    <div class="user-info">
-                        <div class="name-row">
-                            <span class="display-name" onclick="UsersApp.openProfileModal('${u.uid}')">${this.escapeHTML(u.displayName)}</span>
-                            ${badgesHtml}
-                        </div>
-                        <div class="username">@${this.escapeHTML(u.username)}</div>
-                    </div>
+            <div class="user-list-item" onclick="Router.setHash('${u.username}')">
+                <div class="c-av uli-av">${avatarHtml}</div>
+                <div style="flex:1; overflow:hidden;">
+                    <div style="font-weight:bold; color:var(--fg); display:flex; align-items:center; gap:6px;">${this.escapeHTML(u.displayName)} ${this.getBadgesHTML(u)}</div>
+                    <div style="font-size:0.9rem; color:var(--fg2); font-family:var(--font-mono);">@${this.escapeHTML(u.username)}</div>
                 </div>
-
-                <div class="user-bio">${u.bio ? this.renderMarkdown(u.bio) : '<span style="color:rgba(255,255,255,0.3); font-style:italic;">No bio set.</span>'}</div>
-
-                <div class="user-stats">
-                    <div class="stat-item" style="cursor:pointer;" onclick="UsersApp.openListModal('followers', '${u.uid}')" title="Click to view followers">
-                        <strong id="followers-${u.uid}">${u.followersCount}</strong> followers
-                    </div>
-                    <div class="stat-item" style="cursor:pointer;" onclick="UsersApp.openListModal('following', '${u.uid}')" title="Click to view following">
-                        <strong>${u.followingCount}</strong> following
-                    </div>
-                </div>
-
-                <div class="user-card-actions">
-                    ${!isMe ? `
-                        <button class="btn btn-sm ${u.isFollowing ? 'btn-secondary' : 'btn-primary'}" id="btn-follow-${u.uid}" onclick="UsersApp.toggleFollow('${u.uid}')">
-                            ${u.isFollowing ? 'Unfollow' : 'Follow'}
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="UsersApp.startDM('${u.uid}')">
-                            <svg style="width:14px; height:14px; fill:currentColor;"><use href="#ico-msg"></use></svg>
-                            Message
-                        </button>
-                    ` : `
-                        <a href="/accounts" class="btn btn-secondary btn-sm" style="width:100%;">Edit Profile</a>
-                    `}
-                </div>
-            </div>
-            `;
+            </div>`;
         });
-
-        grid.innerHTML = html;
-    },
-
-    getBadgesHTML: function(u) {
-        let b = '';
-        if (u.role === 'owner') {
-            b += `<span class="badge owner" onclick="UsersApp.showBadgeInfo('owner', '${this.escapeHTML(u.displayName)}')">Owner</span>`;
-        } else if (u.role === 'admin') {
-            b += `<span class="badge admin" onclick="UsersApp.showBadgeInfo('admin', '${this.escapeHTML(u.displayName)}')">Admin</span>`;
-        } else if (u.role === 'mod') {
-            b += `<span class="badge mod" onclick="UsersApp.showBadgeInfo('mod', '${this.escapeHTML(u.displayName)}')">Mod</span>`;
-        }
-        if (u.isDeveloper) {
-            b += `<div class="badge-dev" title="Developer" onclick="UsersApp.showBadgeInfo('dev', '${this.escapeHTML(u.displayName)}')"><svg><use href="#ico-hammer"></use></svg></div>`;
-        }
-        if (u.verified) {
-            b += `<svg class="badge-verified" title="Verified" onclick="UsersApp.showBadgeInfo('verified', '${this.escapeHTML(u.displayName)}')"><use href="#ico-verified"></use></svg>`;
-        }
-        return b;
+        c.innerHTML = html || `<div style="text-align:center; padding:30px; color:var(--fg2);">${emptyMsg}</div>`;
     },
 
     toggleFollow: async function(targetUid) {
-        const u = this.users.find(x => x.uid === targetUid);
+        let u = this.users.find(x => x.uid === targetUid);
+        if (!u && this.currentUserObj && this.currentUserObj.uid === targetUid) u = this.currentUserObj;
         if (!u) return;
 
         const sid = localStorage.getItem('session_id');
         if (!sid) {
-            this.showToast("Please log in to follow users.", "error");
+            UI.showToast("Please log in to follow users.", "error");
             location.href = '/accounts';
             return;
         }
 
         const isFollowing = u.isFollowing;
         const action = isFollowing ? 'unfollow' : 'follow';
-        const btn = document.getElementById(`btn-follow-${targetUid}`);
+        const btn = document.getElementById(`pvFollowBtn`);
         if (btn) btn.disabled = true;
 
         try {
             const res = await fetch(`/api/auth?action=${action}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-ID': sid
-                },
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
                 body: JSON.stringify({ targetUid })
             });
             const data = await res.json();
@@ -1011,27 +814,26 @@ const UsersApp = {
 
             u.isFollowing = !isFollowing;
             u.followersCount += isFollowing ? -1 : 1;
+            
+            if (u.followersList) {
+                if (u.isFollowing) u.followersList.push(this.myUid);
+                else u.followersList = u.followersList.filter(id => id !== this.myUid);
+            }
+            
             this.updateCounts();
             
-            const countEl = document.getElementById(`followers-${targetUid}`);
-            if (countEl) countEl.innerText = u.followersCount;
-
             if (btn) {
-                btn.className = `btn btn-sm ${u.isFollowing ? 'btn-secondary' : 'btn-primary'}`;
-                btn.innerText = u.isFollowing ? 'Unfollow' : 'Follow';
+                const followText = u.isFollowing ? 'Unfollow' : 'Follow';
+                const followIcon = u.isFollowing ? 'ico-user-check' : 'ico-user-plus';
+                btn.className = u.isFollowing ? 'btn sec' : 'btn primary';
+                btn.innerHTML = `<svg class="ic" style="width:18px;height:18px;"><use href="#${followIcon}"></use></svg> ${followText}`;
             }
+            document.getElementById('pvCountFollowers').innerText = u.followersCount;
+            this.renderRelationList('pvFollowersList', u.followersList || [], "No followers yet.");
 
-            // Sync with profile modal if open
-            const modalFollowBtn = document.getElementById('modalFollowBtn');
-            if (modalFollowBtn && modalFollowBtn.dataset.uid === targetUid) {
-                modalFollowBtn.className = `btn ${u.isFollowing ? 'btn-secondary' : 'btn-primary'}`;
-                modalFollowBtn.innerText = u.isFollowing ? 'Unfollow' : 'Follow';
-                document.getElementById('modalFollowersCount').innerText = u.followersCount;
-            }
-
-            this.showToast(u.isFollowing ? `You are now following ${u.displayName}!` : `Unfollowed ${u.displayName}`, "success");
+            UI.showToast(u.isFollowing ? `You are now following ${u.displayName}` : `Unfollowed ${u.displayName}`, "success");
         } catch (err) {
-            this.showToast(err.message || "Failed to update follow status", "error");
+            UI.showToast(err.message || "Failed to update follow status", "error");
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -1046,169 +848,22 @@ const UsersApp = {
         try {
             const res = await fetch('/api/chat?action=startDM', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-ID': sid
-                },
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
                 body: JSON.stringify({ targetUid })
             });
             const data = await res.json();
             if (data && data.cid) {
-                location.href = `/chat#dm/${encodeURIComponent(data.cid)}`;
+                let hidden = [];
+                try { hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + this.myUid) || '[]'); } catch(e){}
+                if (hidden.includes(data.cid)) {
+                    hidden = hidden.filter(id => id !== data.cid);
+                    localStorage.setItem('bsms_hidden_dms_' + this.myUid, JSON.stringify(hidden));
+                }
+                location.href = `/chat#/dm/${encodeURIComponent(data.cid)}`;
                 return;
             }
         } catch(e) {}
-        location.href = `/chat#user/${encodeURIComponent(targetUid)}`;
-    },
-
-    openProfileModal: function(uid) {
-        const u = this.users.find(x => x.uid === uid);
-        if (!u) return;
-
-        this.currentModalUid = uid;
-        const isMe = this.myUid && this.myUid === u.uid;
-        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-        document.getElementById('modalAvatar').innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
-        document.getElementById('modalNameRow').innerHTML = `<strong>${this.escapeHTML(u.displayName)}</strong> ${this.getBadgesHTML(u)}`;
-        document.getElementById('modalUsername').innerText = `@${u.username}`;
-        document.getElementById('modalBio').innerHTML = u.bio ? this.renderMarkdown(u.bio) : '<span style="color:var(--fg2); font-style:italic;">This user hasn\'t written a biography yet.</span>';
-        document.getElementById('modalFollowersCount').innerText = u.followersCount;
-        document.getElementById('modalFollowingCount').innerText = u.followingCount;
-        document.getElementById('modalJoinedDate').innerText = u.createdAt ? new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '2026';
-
-        const followBtn = document.getElementById('modalFollowBtn');
-        const dmBtn = document.getElementById('modalDmBtn');
-        followBtn.dataset.uid = u.uid;
-
-        if (isMe) {
-            followBtn.style.display = 'none';
-            dmBtn.innerText = "Edit My Profile";
-            dmBtn.onclick = () => location.href = '/accounts';
-        } else {
-            followBtn.style.display = 'inline-flex';
-            followBtn.className = `btn ${u.isFollowing ? 'btn-secondary' : 'btn-primary'}`;
-            followBtn.innerText = u.isFollowing ? 'Unfollow' : 'Follow';
-            followBtn.onclick = () => this.toggleFollow(u.uid);
-
-            dmBtn.innerText = "Send Message";
-            dmBtn.onclick = () => this.startDM(u.uid);
-        }
-
-        history.replaceState(null, null, `#/${encodeURIComponent(u.username)}`);
-        document.getElementById('profileModal').classList.add('show');
-    },
-
-    closeProfileModal: function() {
-        document.getElementById('profileModal').classList.remove('show');
-        history.replaceState(null, null, window.location.pathname);
-    },
-
-    handleHash: function() {
-        const hash = window.location.hash;
-        if (!hash || hash.length < 2) return;
-        const clean = decodeURIComponent(hash.replace(/^[#\/\[]+/, '').replace(/[\]]+$/, '')).trim().toLowerCase();
-        if (!clean) return;
-        const target = this.users.find(u => (u.username && u.username.toLowerCase() === clean) || u.uid === clean);
-        if (target) {
-            this.openProfileModal(target.uid);
-        }
-    },
-
-    openListModal: function(type, targetUid) {
-        const uid = targetUid || this.currentModalUid;
-        const u = this.users.find(x => x.uid === uid);
-        if (!u) return;
-
-        const isFollowers = type === 'followers';
-        document.getElementById('followListTitle').innerText = isFollowers 
-            ? `${u.displayName}'s Followers` 
-            : `${u.displayName} is Following`;
-
-        const listUids = isFollowers ? (u.followersList || []) : (u.followingList || []);
-        const listContent = document.getElementById('followListContent');
-
-        if (listUids.length === 0) {
-            listContent.innerHTML = `
-                <div style="text-align:center; padding:30px 10px; color:var(--fg2);">
-                    <p style="margin:0; font-size:1rem;">${isFollowers ? 'No followers yet.' : 'Not following anyone yet.'}</p>
-                </div>
-            `;
-        } else {
-            let html = '';
-            listUids.forEach(mId => {
-                const member = this.users.find(x => x.uid === mId);
-                const dName = member ? member.displayName : mId;
-                const uName = member ? member.username : mId;
-                const av = member && member.avatar ? `<img src="${this.escapeHTML(member.avatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : (dName.charAt(0).toUpperCase());
-                const badges = member ? this.getBadgesHTML(member) : '';
-
-                html += `
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px;">
-                    <div style="display:flex; align-items:center; gap:10px; overflow:hidden; cursor:pointer;" onclick="UsersApp.closeListModal(); UsersApp.openProfileModal('${mId}')">
-                        <div class="avatar-wrap" style="width:38px; height:38px; font-size:1rem; flex-shrink:0;">${av}</div>
-                        <div style="overflow:hidden; text-align:left;">
-                            <div style="font-weight:700; color:var(--fg); display:flex; align-items:center; gap:4px; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                ${this.escapeHTML(dName)} ${badges}
-                            </div>
-                            <div style="font-size:0.8rem; color:var(--fg2);">@${this.escapeHTML(uName)}</div>
-                        </div>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" style="flex-shrink:0; width:auto; padding:4px 10px; font-size:0.8rem;" onclick="UsersApp.closeListModal(); UsersApp.openProfileModal('${mId}')">View</button>
-                </div>
-                `;
-            });
-            listContent.innerHTML = html;
-        }
-
-        document.getElementById('followListModal').classList.add('show');
-    },
-
-    closeListModal: function() {
-        document.getElementById('followListModal').classList.remove('show');
-    },
-
-    showBadgeInfo: function(type, userName) {
-        const modal = document.getElementById('badgeInfoModal');
-        const iconEl = document.getElementById('badgeModalIcon');
-        const titleEl = document.getElementById('badgeModalTitle');
-        const descEl = document.getElementById('badgeModalDesc');
-
-        if (type === 'owner') {
-            iconEl.innerHTML = `<span class="badge owner" style="font-size:1.1rem; padding:4px 14px;">Owner</span>`;
-            titleEl.innerText = "Platform Owner";
-            descEl.innerHTML = `<strong>${userName}</strong> is the central platform owner of BSMS Web, overseeing system governance, core security, and administrative hierarchy.`;
-        } else if (type === 'admin') {
-            iconEl.innerHTML = `<span class="badge admin" style="font-size:1.1rem; padding:4px 14px;">Admin</span>`;
-            titleEl.innerText = "System Administrator";
-            descEl.innerHTML = `<strong>${userName}</strong> is an official BSMS Web Administrator with permissions to manage accounts, safeguard safety, and oversee ecosystem integrity.`;
-        } else if (type === 'mod') {
-            iconEl.innerHTML = `<span class="badge mod" style="font-size:1.1rem; padding:4px 14px;">Mod</span>`;
-            titleEl.innerText = "Community Moderator";
-            descEl.innerHTML = `<strong>${userName}</strong> is a Community Moderator designated to monitor channels, enforce school guidelines, and protect discussion environments.`;
-        } else if (type === 'dev') {
-            iconEl.innerHTML = `<div class="badge-dev" style="width:36px; height:36px; margin:0 auto;"><svg style="width:20px; height:20px;"><use href="#ico-hammer"></use></svg></div>`;
-            titleEl.innerText = "Platform Developer";
-            descEl.innerHTML = `<strong>${userName}</strong> is an active developer contributing code, infrastructure, and technical architecture to BSMS Web.`;
-        } else if (type === 'verified') {
-            iconEl.innerHTML = `<svg class="badge-verified" style="width:36px; height:36px;"><use href="#ico-verified"></use></svg>`;
-            titleEl.innerText = "Verified Identity";
-            descEl.innerHTML = `<strong>${userName}</strong> is an officially verified identity authenticated by the BSMS Web team.`;
-        }
-
-        modal.classList.add('show');
-    },
-
-    closeBadgeModal: function() {
-        document.getElementById('badgeInfoModal').classList.remove('show');
-    },
-
-    showToast: function(msg, type = "info") {
-        const t = document.getElementById('toastContainer');
-        t.className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
-        document.getElementById('toastText').innerText = msg;
-        t.classList.add('show');
-        clearTimeout(this.toastTimeout);
-        this.toastTimeout = setTimeout(() => t.classList.remove('show'), 3500);
+        location.href = `/chat#/user/${encodeURIComponent(targetUid)}`;
     },
 
     escapeHTML: function(str) {
@@ -1222,7 +877,17 @@ const UsersApp = {
     }
 };
 
-window.addEventListener('DOMContentLoaded', () => UsersApp.init());
+const Router = {
+    setHash: function(username) {
+        window.location.hash = '#/' + username;
+    },
+    clearHash: function() {
+        history.replaceState(null, null, ' ');
+        DirectoryApp.closeProfile();
+    }
+};
+
+window.addEventListener('DOMContentLoaded', () => DirectoryApp.init());
 </script>
 </body>
 </html>
