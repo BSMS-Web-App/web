@@ -1,5 +1,5 @@
 
-name: HTML Validation
+name: BSMS Web
 
 on:
   pull_request:
