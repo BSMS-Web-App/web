@@ -593,7 +593,6 @@ a { color: var(--accent); text-decoration: none; }
         <symbol id="ico-banned" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z" fill="#ef4444"/></symbol>
         <symbol id="ico-phone" viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></symbol>
         <symbol id="ico-eye-off" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></symbol>
-        <symbol id="ico-unfriend" viewBox="0 0 24 24"><path d="M14 8c0-2.21-1.79-4-4-4S6 5.79 6 8s1.79 4 4 4 4-1.79 4-4zm3 2v2h6v-2h-6zM2 18v2h16v-2c0-2.66-5.33-4-8-4s-8 1.34-8 4z"/></symbol>
     </defs>
 </svg>
 
@@ -977,7 +976,6 @@ a { color: var(--accent); text-decoration: none; }
             </div>
             <button class="icon-btn" id="btnVoiceChat" title="Voice Chat" onclick="UI.showVoiceChatModal()"><svg class="ic"><use href="#ico-phone"></use></svg></button>
             <button class="icon-btn" id="btnHideDM" style="display:none;" title="Hide Conversation" onclick="ChatManager.confirmHideDM()"><svg class="ic"><use href="#ico-eye-off"></use></svg></button>
-            <button class="icon-btn" id="btnUnfriend" style="display:none;color:#ef4444;" title="Unfriend" onclick="FriendManager.confirmUnfriend()"><svg class="ic"><use href="#ico-unfriend"></use></svg></button>
             <button class="icon-btn" id="btnGroupSettings" style="display:none;" onclick="UI.openSettings()"><svg class="ic"><use href="#ico-settings"></use></svg></button>
             <button class="icon-btn" id="btnLeaveGroup" style="display:none;color:#ef4444;" onclick="GroupManager.leaveGroup()" data-ga="chat_leave_group"><svg class="ic"><use href="#ico-leave"></use></svg></button>
         </div>
@@ -1119,7 +1117,6 @@ const State = {
     attachmentName: null,
 
     hiddenDms: [],
-    unfriended: [],
     conversationCache: {},
 
     pendingRoute: null,
@@ -1304,7 +1301,6 @@ const PollingManager = {
             
             if (data.myUid && State.user.uid !== data.myUid) {
                 State.user.uid = data.myUid;
-                FriendManager.load();
                 let sessStr = localStorage.getItem('bsms_auth_session');
                 if (sessStr) {
                     let sess = JSON.parse(sessStr);
@@ -1320,7 +1316,6 @@ const PollingManager = {
             State.accountsCache = data.accounts || {};
             State.channels = data.channels || {};
             if (Array.isArray(data.hiddenDms)) State.hiddenDms = data.hiddenDms;
-            if (Array.isArray(data.unfriended)) { State.unfriended = data.unfriended; FriendManager.save(); }
             
             if (State.activeChannelId && State.channels[State.activeChannelId]) {
                 const c = State.channels[State.activeChannelId];
@@ -1334,7 +1329,6 @@ const PollingManager = {
                 // Dynamic UI Re-evaluation if actively open DM target gets banned
                 if (c._type === 'dms') {
                     const otherUid = Object.keys(c.members).find(id => id !== State.user.uid);
-                    if (FriendManager.isUnfriended(otherUid)) { ChatManager.close(); SidebarManager.render(); return; }
                     if (otherUid !== BOT_UID && State.accountsCache[otherUid]?.account_status === 'banned') {
                         ChatManager.open(State.activeChannelId); // Soft-reload to lock the UI
                     }
@@ -1586,8 +1580,7 @@ const SearchManager = {
                                 displayName: acc.displayName || acc.username || uid,
                                 username: acc.username || uid,
                                 avatar: acc.avatar,
-                                online: State.usersCache[uid]?.status === 'online',
-                                unfriended: FriendManager.isUnfriended(uid)
+                                online: State.usersCache[uid]?.status === 'online'
                             });
                         }
                     }
@@ -1649,7 +1642,7 @@ const SearchManager = {
                     </div>
                     <div style="flex:1; overflow:hidden;">
                         <div style="font-weight:bold; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center;">${Utils.escapeHTML(u.displayName)} ${Utils.getBadgesHTML(u.uid)}</div>
-                        <div style="font-size:0.9rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@${Utils.escapeHTML(u.username)}${u.unfriended ? ' &middot; Unfriended (tap to add back)' : ''}</div>
+                        <div style="font-size:0.9rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@${Utils.escapeHTML(u.username)}</div>
                     </div>
                 </div>`;
             });
@@ -1661,17 +1654,6 @@ const SearchManager = {
     startDM: async function(targetUid) {
         if(document.getElementById('searchInput')) document.getElementById('searchInput').value = "";
         if(document.getElementById('searchResults')) document.getElementById('searchResults').classList.remove('show');
-
-        // Unfriended users must be explicitly added back first
-        if (FriendManager.isUnfriended(targetUid)) {
-            const nm = State.accountsCache[targetUid]?.displayName || Utils.username(targetUid);
-            UI.showConfirm(`You unfriended ${nm}. Add them back to chat?`, [
-                { text: "Cancel", sec: true },
-                { text: "Add Back", cb: async () => { await FriendManager.addBack(targetUid); await SearchManager.startDM(targetUid); } }
-            ], "Unfriended");
-            return;
-        }
-
         try {
             const res = await ApiClient.call('startDM', { targetUid });
             if (res && res.cid) {
@@ -1683,44 +1665,6 @@ const SearchManager = {
                 ChatManager.open(res.cid);
             }
         } catch(e) { UI.showToast("Failed to start conversation.", 'error'); }
-    }
-};
-
-const FriendManager = {
-    key: () => 'bsms_unfriended_' + (State.user ? State.user.uid : ''),
-    load: function() {
-        try { State.unfriended = JSON.parse(localStorage.getItem(FriendManager.key()) || '[]'); } catch(e) { State.unfriended = []; }
-        if (!Array.isArray(State.unfriended)) State.unfriended = [];
-    },
-    save: function() {
-        try { localStorage.setItem(FriendManager.key(), JSON.stringify(State.unfriended)); } catch(e) {}
-    },
-    isUnfriended: (uid) => !!uid && State.unfriended.includes(uid),
-    confirmUnfriend: function() {
-        const c = State.channels[State.activeChannelId];
-        if (!c || c._type !== 'dms') return;
-        const uid = Object.keys(c.members).find(u => u !== State.user.uid);
-        if (!uid || uid === BOT_UID) return;
-        const name = State.accountsCache[uid]?.displayName || Utils.username(uid);
-        UI.showConfirm(`Unfriend ${name}? They will be removed from your chat list until you add them back.`, [
-            { text: "Cancel", sec: true },
-            { text: "Unfriend", danger: true, cb: () => FriendManager.unfriend(uid) }
-        ], "Unfriend");
-    },
-    unfriend: async function(uid) {
-        if (!State.unfriended.includes(uid)) State.unfriended.push(uid);
-        FriendManager.save();
-        ChatManager.close();
-        SidebarManager.render();
-        UI.showToast("Unfriended. Search their name to add them back.", 'info');
-        try { await ApiClient.call('unfriend', { targetUid: uid }); } catch(e) {}
-    },
-    addBack: async function(uid) {
-        State.unfriended = State.unfriended.filter(u => u !== uid);
-        FriendManager.save();
-        SidebarManager.render();
-        UI.showToast("Added back!", 'success');
-        try { await ApiClient.call('addFriend', { targetUid: uid }); } catch(e) {}
     }
 };
 
@@ -1737,12 +1681,6 @@ const SidebarManager = {
             // Filter out hidden DMs if not actively selected
             if (c._type === 'dms' && hiddenDms.includes(id) && State.activeChannelId !== id) {
                 continue;
-            }
-
-            // Filter out unfriended users entirely
-            if (c._type === 'dms') {
-                const t = Object.keys(c.members).find(u => u !== State.user.uid);
-                if (FriendManager.isUnfriended(t)) continue;
             }
 
             let sortTime = c.config?.createdAt || 0;
@@ -2063,7 +2001,6 @@ const ChatManager = {
         document.getElementById('activeChatStatus').innerText = "Access Restricted";
         UI.hide('btnVoiceChat');
         UI.hide('btnHideDM');
-        UI.hide('btnUnfriend');
         UI.hide('btnGroupSettings');
         UI.hide('btnLeaveGroup');
         const unauthEl = document.getElementById('unauthorizedState');
@@ -2096,15 +2033,6 @@ const ChatManager = {
 
     open: function(cid) {
         try {
-            // Block opening DMs with unfriended users
-            {
-                const _c = State.channels[cid];
-                if (_c && _c._type === 'dms') {
-                    const _t = Object.keys(_c.members).find(u => u !== State.user.uid);
-                    if (FriendManager.isUnfriended(_t)) { UI.showToast("You unfriended this user. Add them back to chat.", 'error'); return; }
-                }
-            }
-
             if (State.activeChannelId === cid && document.getElementById('dmBannedState').style.display !== 'flex') { 
                 if(window.innerWidth <= 768) SidebarManager.hideMobile(); 
                 return; 
@@ -2255,7 +2183,6 @@ const ChatManager = {
         UI.hide('pinnedBanner');
         UI.hide('dmBannedState');
         UI.hide('btnHideDM');
-        UI.hide('btnUnfriend');
         UI.hide('btnLeaveGroup');
         const reqBanner = document.getElementById('joinRequestsBanner');
         if (reqBanner) reqBanner.style.display = 'none';
@@ -2356,7 +2283,6 @@ const ChatManager = {
                 }
             }
             UI.show('btnHideDM');
-            if (otherUid !== BOT_UID) UI.show('btnUnfriend'); else UI.hide('btnUnfriend');
             UI.hide('btnLeaveGroup');
             UI.show('btnGroupSettings');
             document.getElementById('activeChatInfo').classList.remove('clickable');
@@ -2369,7 +2295,6 @@ const ChatManager = {
             sEl.innerText = `${validMemberIds.length} members - ${onlineCount} online`;
             sEl.style.color = "var(--fg2)";
             UI.hide('btnHideDM');
-            UI.hide('btnUnfriend');
             UI.show('btnLeaveGroup');
             UI.show('btnGroupSettings');
             document.getElementById('activeChatInfo').classList.add('clickable');
@@ -2723,7 +2648,6 @@ const AuthManager = {
             if (!sess.loggedIn || (!sess.username && !sess.uid)) { AuthManager.reject(); return; }
 
             State.user = { uid: sess.uid || sess.username, username: sess.username, displayName: sess.displayName };
-            FriendManager.load();
 
             UI.setLoad(40, "Connecting to Server");
             await ApiClient.call('status', { status: 'online' });
