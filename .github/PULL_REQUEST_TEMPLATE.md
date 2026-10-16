@@ -28,14 +28,13 @@ Describe what this pull request changes and why.
 
 ## Changes Made
 
-List the important files or features you modified.
+List the important files you modified.
 
 ## Testing
 
 - [ ] I tested my changes.
 - [ ] I checked for errors in the browser console.
 - [ ] I confirmed existing features still work.
-- [ ] I included screenshots if the changes affect the UI.
 
 ## Potential Risks
 
@@ -46,8 +45,6 @@ Does this change affect any of the following?
 - [ ] API or server functionality
 - [ ] Deployment or configuration
 - [ ] None of the above
-
-Explain any risks or known issues:
 
 ## Final Checklist
 
