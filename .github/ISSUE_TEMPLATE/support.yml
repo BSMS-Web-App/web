@@ -1,0 +1,109 @@
+name: Support
+description: Ask a question or get help with BSMS Web.
+title: "[Support]: " 
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reaching out for support with BSMS Web!
+
+        Please describe your question or problem clearly so we can help you.
+
+        You can also ask the community in our [BSMS Web Discord server](https://discord.gg/ySwEjEqjf).
+
+        **Important:** Do not use this form to report security vulnerabilities. Follow the instructions in [SECURITY.md](https://github.com/JellyfishJelly13/BSMS-Web/blob/main/SECURITY.md) instead.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: What do you need help with?
+      description: Select the option that best describes your request.
+      options:
+        - General question
+        - Accounts or authentication
+        - Chat or messaging
+        - Countdown
+        - Games
+        - Website or navigation
+        - Browser or device compatibility
+        - Development or contribution
+        - Deployment or availability
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: page
+    attributes:
+      label: Page or Feature
+      description: Which page, feature, or part of BSMS Web is involved?
+      placeholder: "Example: Chat, Accounts, Countdown"
+    validations:
+      required: false
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: Explain your question or describe what you are having trouble with.
+      placeholder: |
+        Describe what you are trying to do and where you need help...
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Tell us what you have already tried, if anything.
+      placeholder: |
+        1. I tried...
+        2. I expected...
+        3. The result was...
+    validations:
+      required: false
+
+  - type: input
+    id: url
+    attributes:
+      label: Affected URL
+      description: If relevant, provide the URL of the page where you need help.
+      placeholder: "https://bsms-web.vercel.app"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where are you experiencing this?
+      description: Select the environment that applies, if relevant.
+      options:
+        - Production website
+        - My assigned development deployment
+        - Local development environment
+        - Not applicable
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information
+      description: Share relevant error messages, screenshots, or other details that might help us assist you.
+      placeholder: |
+        Anything else we should know?
+        
+        Please remove passwords, private keys, access tokens, and other sensitive information.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have checked existing issues for a similar support request.
+          required: true
+        - label: I have not included passwords, access tokens, private keys, or other sensitive information.
+          required: true
