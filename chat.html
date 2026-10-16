@@ -2649,11 +2649,11 @@ const AuthManager = {
 
             State.user = { uid: sess.uid || sess.username, username: sess.username, displayName: sess.displayName };
 
-            UI.setLoad(40, "Connecting to Backend");
+            UI.setLoad(40, "Connecting to Server");
             await ApiClient.call('status', { status: 'online' });
             
             document.getElementById('loginModal').classList.remove('show');
-            UI.setLoad(70, "Syncing Channels");
+            UI.setLoad(70, "Downloading Conversations");
 
             PollingManager.start();
             SearchManager.init();
