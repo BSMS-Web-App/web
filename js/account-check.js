@@ -1,4 +1,9 @@
-/* account-check.js */
+/*
+ * BSMS Web
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: MIT
+ */
+
 (function() {
     const SESSION_KEY = 'bsms_auth_session';
 
