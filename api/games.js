@@ -27,24 +27,54 @@ if (!admin.apps.length) {
 }
 const db = admin.apps.length ? admin.database() : null;
 
-// Session validator
-async function getUserBySession(sessionId) {
-    if (!sessionId || !db) return null;
-    const snap = await db.ref('/accounts').once('value');
-    const accounts = snap.val() || {};
+// Robust Session & User validator
+async function getUserBySession(sessionId, uidHint) {
+    if (!db) return null;
     
-    for (const [uid, acc] of Object.entries(accounts)) {
-        if (acc.sessions && acc.sessions[sessionId]) {
-            return { uid, account: acc };
-        }
+    // Fast path: direct lookup if uidHint is provided
+    if (uidHint) {
+        try {
+            const snap = await db.ref(`/accounts/${uidHint}`).once('value');
+            const acc = snap.val();
+            if (acc && acc.account_status !== 'deleted') {
+                if (!sessionId || (acc.sessions && acc.sessions[sessionId]) || acc.creator_session_id === sessionId) {
+                    return { uid: uidHint, account: acc };
+                }
+            }
+        } catch (e) {}
     }
+
+    if (!sessionId) return null;
+
+    try {
+        const snap = await db.ref('/accounts').once('value');
+        const accounts = snap.val() || {};
+        
+        // 1. Check sessions dictionary and creator_session_id
+        for (const [uid, acc] of Object.entries(accounts)) {
+            if (acc.account_status !== 'deleted' && (
+                (acc.sessions && acc.sessions[sessionId]) ||
+                acc.creator_session_id === sessionId
+            )) {
+                return { uid, account: acc };
+            }
+        }
+
+        // 2. Fallback: check if sessionId is actually a direct UID
+        if (accounts[sessionId] && accounts[sessionId].account_status !== 'deleted') {
+            return { uid: sessionId, account: accounts[sessionId] };
+        }
+    } catch (e) {
+        console.error("[BSMS Web :: Games] getUserBySession error:", e);
+    }
+    
     return null;
 }
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID, X-UID');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -54,12 +84,14 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: "Database unavailable." });
     }
 
-    const sessionId = req.headers['x-session-id'] || req.query.sessionId;
-    if (!sessionId) {
+    const sessionId = req.headers['x-session-id'] || req.query.sessionId || req.headers['x-device-id'];
+    const uidHint = req.headers['x-uid'] || req.query.uid;
+
+    if (!sessionId && !uidHint) {
         return res.status(401).json({ error: "Unauthorized. Session required." });
     }
 
-    const user = await getUserBySession(sessionId);
+    const user = await getUserBySession(sessionId, uidHint);
     if (!user) {
         return res.status(401).json({ error: "Unauthorized session." });
     }
