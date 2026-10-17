@@ -1525,8 +1525,9 @@ const Router = {
     },
     parseHash: function() {
         const h = window.location.hash;
-        if(!h || h.length < 3) return null;
-        const p = h.substring(1).split('/');
+        if(!h || h.length < 2) return null;
+        const clean = h.replace(/^#+/, '').replace(/^\/+/, '');
+        const p = clean.split('/');
         if(p.length < 2) return null;
         return { type: p[0], id: decodeURIComponent(p[1]) };
     },
@@ -1538,9 +1539,27 @@ const Router = {
         State.pendingRoute = null;
         if(!r) return;
         if(r.type === 'dm' || r.type === 'gc') {
-            if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+            if(State.channels[r.id]) { 
+                if (State.hiddenDms.includes(r.id)) {
+                    State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                    ApiClient.call('unhideDM', { cid: r.id });
+                }
+                ChatManager.open(r.id); 
+                return; 
+            }
             await PollingManager.syncGlobal();
-            if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+            if(State.channels[r.id]) { 
+                if (State.hiddenDms.includes(r.id)) {
+                    State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                    ApiClient.call('unhideDM', { cid: r.id });
+                }
+                ChatManager.open(r.id); 
+                return; 
+            }
+            if(r.type === 'dm') {
+                await SearchManager.startDM(r.id);
+                return;
+            }
             this.clearHash();
         } else if(r.type === 'user') {
             await SearchManager.startDM(r.id);
@@ -1553,9 +1572,26 @@ const Router = {
         if(!r) return;
         if(r.type === 'join') { GroupManager.requestJoinById(r.id); return; }
         if(r.type === 'user') { await SearchManager.startDM(r.id); return; }
-        if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+        if(State.channels[r.id]) { 
+            if (State.hiddenDms.includes(r.id)) {
+                State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                ApiClient.call('unhideDM', { cid: r.id });
+            }
+            ChatManager.open(r.id); 
+            return; 
+        }
         await PollingManager.syncGlobal();
-        if(State.channels[r.id]) ChatManager.open(r.id);
+        if(State.channels[r.id]) {
+            if (State.hiddenDms.includes(r.id)) {
+                State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                ApiClient.call('unhideDM', { cid: r.id });
+            }
+            ChatManager.open(r.id);
+            return;
+        }
+        if(r.type === 'dm') {
+            await SearchManager.startDM(r.id);
+        }
     }
 };
 
