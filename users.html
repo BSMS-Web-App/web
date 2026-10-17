@@ -498,10 +498,13 @@ const DirectoryApp = {
     activeFilter: 'all',
     searchQuery: '',
     currentUserObj: null,
+    usersLoaded: false,
+    pendingProfile: null,
 
     init: async function() {
         this.renderCurrentSession();
         window.addEventListener('hashchange', () => this.handleHashRoute());
+        window.addEventListener('popstate', () => this.handleHashRoute());
         await this.fetchUsers();
     },
 
@@ -542,12 +545,21 @@ const DirectoryApp = {
                 }
             }
 
+            this.usersLoaded = true;
             this.updateCounts();
             this.renderMyCard();
             this.renderUsers();
-            this.handleHashRoute();
+            
+            if (this.pendingProfile) {
+                const target = this.pendingProfile;
+                this.pendingProfile = null;
+                this.openProfileFullScreen(target);
+            } else {
+                this.handleHashRoute();
+            }
 
         } catch (err) {
+            this.usersLoaded = true;
             document.getElementById('usersGrid').innerHTML = `
                 <div class="state-container" style="grid-column: 1 / -1; color:#ef4444;">
                     <p>Failed to load directory. Please verify your connection.</p>
@@ -681,23 +693,46 @@ const DirectoryApp = {
 
     handleHashRoute: function() {
         const hash = window.location.hash;
-        if (hash && hash.length > 2 && hash.startsWith('#/')) {
-            const username = decodeURIComponent(hash.substring(2));
-            this.openProfileFullScreen(username);
+        if (!hash || hash.length < 2 || hash === '#' || hash === '#/') {
+            this.closeProfile(false);
+            return;
+        }
+        let clean = decodeURIComponent(hash);
+        clean = clean.replace(/^#+/, '').replace(/^\/+/, '').trim();
+        clean = clean.replace(/^\[/, '').replace(/\]$/, '').trim();
+        clean = clean.replace(/^\/+/, '').replace(/\/+$/, '').trim();
+        clean = clean.replace(/^@/, '').trim();
+
+        if (clean) {
+            this.openProfileFullScreen(clean);
         } else {
-            this.closeProfile();
+            this.closeProfile(false);
         }
     },
 
     openProfileFullScreen: function(username) {
-        let u = this.users.find(x => x.username.toLowerCase() === username.toLowerCase());
-        if (!u && this.currentUserObj && this.currentUserObj.username.toLowerCase() === username.toLowerCase()) {
+        const cleanName = username.trim().toLowerCase().replace(/^@/, '');
+        
+        // If users haven't loaded yet, show loading card and queue
+        if (!this.usersLoaded) {
+            this.pendingProfile = cleanName;
+            document.getElementById('profileView').classList.add('show');
+            document.getElementById('appShell').style.display = 'none';
+            document.getElementById('controls-btn').style.display = 'none';
+            document.getElementById('pvAvatar').innerHTML = '<div class="spinner-anim" style="width:36px;height:36px;border-width:3px;margin:auto;"></div>';
+            document.getElementById('pvNameRow').innerHTML = '<span class="pv-name">Loading Profile...</span>';
+            document.getElementById('pvUsername').innerText = '@' + cleanName;
+            return;
+        }
+
+        let u = this.users.find(x => (x.username && x.username.toLowerCase() === cleanName) || x.uid === cleanName || (x.displayName && x.displayName.toLowerCase() === cleanName));
+        if (!u && this.currentUserObj && ((this.currentUserObj.username && this.currentUserObj.username.toLowerCase() === cleanName) || this.currentUserObj.uid === cleanName || (this.currentUserObj.displayName && this.currentUserObj.displayName.toLowerCase() === cleanName))) {
             u = this.currentUserObj;
         }
 
         if (!u) {
             UI.showToast("User not found.", "error");
-            Router.clearHash();
+            this.closeProfile(true);
             return;
         }
 
@@ -712,7 +747,7 @@ const DirectoryApp = {
         document.getElementById('pvBioText').innerHTML = u.bio ? this.renderMarkdown(u.bio) : '<span style="color:var(--fg2); font-style:italic;">This user hasn\'t written a biography yet.</span>';
 
         document.getElementById('btnShareProfile').onclick = () => {
-            const url = window.location.origin + '/users/#/' + u.username;
+            const url = window.location.origin + '/users/#/' + encodeURIComponent(u.username);
             if (navigator.share) {
                 navigator.share({ title: 'BSMS Web User: @' + u.username, url: url }).catch(()=>{});
             } else {
@@ -746,13 +781,28 @@ const DirectoryApp = {
         document.getElementById('appShell').style.display = 'none';
         document.getElementById('controls-btn').style.display = 'none';
         document.getElementById('profileView').classList.add('show');
+        
+        try {
+            const cleanHash = '#/' + encodeURIComponent(u.username);
+            if (window.location.hash !== cleanHash) {
+                history.replaceState(null, '', cleanHash);
+            }
+        } catch(e) {}
         window.scrollTo(0,0);
     },
 
-    closeProfile: function() {
+    closeProfile: function(updateHistory = true) {
+        this.pendingProfile = null;
         document.getElementById('profileView').classList.remove('show');
         document.getElementById('appShell').style.display = 'flex';
         document.getElementById('controls-btn').style.display = 'flex';
+        if (updateHistory) {
+            try {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            } catch (e) {
+                window.location.hash = '';
+            }
+        }
     },
 
     switchTab: function(tabName, btnEl) {
@@ -843,11 +893,23 @@ const DirectoryApp = {
     },
 
     startDM: async function(targetUid) {
-        const sid = localStorage.getItem('session_id');
-        if (!sid) {
-            location.href = '/accounts';
+        let isAuth = false;
+        try {
+            const sessStr = localStorage.getItem('bsms_auth_session');
+            if (sessStr) {
+                const sess = JSON.parse(sessStr);
+                if (sess.loggedIn && (sess.uid || sess.username)) isAuth = true;
+            }
+        } catch(e) {}
+
+        if (!isAuth) {
+            UI.showToast("Please log in to message users.", "error");
+            setTimeout(() => { location.href = '/accounts'; }, 900);
             return;
         }
+
+        const sid = localStorage.getItem('session_id') || "";
+        UI.showToast("Opening conversation...", "info");
         try {
             const res = await fetch('/api/chat?action=startDM', {
                 method: 'POST',
@@ -856,17 +918,11 @@ const DirectoryApp = {
             });
             const data = await res.json();
             if (data && data.cid) {
-                let hidden = [];
-                try { hidden = JSON.parse(localStorage.getItem('bsms_hidden_dms_' + this.myUid) || '[]'); } catch(e){}
-                if (hidden.includes(data.cid)) {
-                    hidden = hidden.filter(id => id !== data.cid);
-                    localStorage.setItem('bsms_hidden_dms_' + this.myUid, JSON.stringify(hidden));
-                }
-                location.href = `/chat#/dm/${encodeURIComponent(data.cid)}`;
+                location.href = `/chat#dm/${encodeURIComponent(data.cid)}`;
                 return;
             }
         } catch(e) {}
-        location.href = `/chat#/user/${encodeURIComponent(targetUid)}`;
+        location.href = `/chat#user/${encodeURIComponent(targetUid)}`;
     },
 
     escapeHTML: function(str) {
@@ -882,11 +938,11 @@ const DirectoryApp = {
 
 const Router = {
     setHash: function(username) {
-        window.location.hash = '#/' + username;
+        const clean = encodeURIComponent(String(username).trim().replace(/^@/, ''));
+        window.location.hash = '#/' + clean;
     },
     clearHash: function() {
-        history.replaceState(null, null, ' ');
-        DirectoryApp.closeProfile();
+        DirectoryApp.closeProfile(true);
     }
 };
 
