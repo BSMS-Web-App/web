@@ -251,10 +251,13 @@ section {
 .reveal.in-view { opacity: 1; transform: translateY(0); }
 
 .stagger > * { opacity: 0; transform: translateY(20px); transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
-.reveal.in-view .stagger > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
-.reveal.in-view .stagger > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.2s; }
-.reveal.in-view .stagger > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
-.reveal.in-view .stagger > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+.reveal.in-view .stagger > * { opacity: 1; transform: translateY(0); }
+.reveal.in-view .stagger > *:nth-child(1) { transition-delay: 0.1s; }
+.reveal.in-view .stagger > *:nth-child(2) { transition-delay: 0.2s; }
+.reveal.in-view .stagger > *:nth-child(3) { transition-delay: 0.3s; }
+.reveal.in-view .stagger > *:nth-child(4) { transition-delay: 0.4s; }
+.reveal.in-view .stagger > *:nth-child(5) { transition-delay: 0.5s; }
+.reveal.in-view .stagger > *:nth-child(6) { transition-delay: 0.6s; }
 
 /* Cinematic Hero */
 .hero {
@@ -449,6 +452,38 @@ section {
 .s3 { width: 60px; height: 60px; top: 40%; left: 60%; transform: rotateX(80deg) translateZ(110px); border-width: 3px; animation-delay: -4s; background: transparent; border-color: var(--red); }
 @keyframes floatObj { 0% { transform: translateY(0) rotateX(10deg); } 100% { transform: translateY(-40px) rotateX(40deg) scale(1.1); } }
 
+/* Changelog Visual */
+.visual-changelog { width: 100%; height: 100%; position: relative; perspective: 1000px; transform-style: preserve-3d; display: flex; justify-content: center; align-items: center; }
+.cl-window {
+  background: var(--glass-bg); backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border); border-radius: 12px;
+  width: 85%; max-width: 280px; padding: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  transform: rotateY(-15deg) rotateX(5deg) translateY(calc(var(--mouse-y) * -10px));
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+}
+.cl-window:hover { box-shadow: 0 25px 50px rgba(187,0,30,0.2); border-color: rgba(187,0,30,0.4); }
+.cl-header { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; }
+.cl-dot { width: 10px; height: 10px; border-radius: 50%; }
+.cl-dot:nth-child(1) { background: #ff5f56; }
+.cl-dot:nth-child(2) { background: #ffbd2e; }
+.cl-dot:nth-child(3) { background: #27c93f; }
+.cl-body { display: flex; flex-direction: column; gap: 10px; position: relative; }
+.cl-line { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+.cl-line span { display: block; height: 100%; border-radius: 4px; background: var(--fg2); width: 0; animation: codeType 6s infinite ease-out; }
+.cl-line.cl-add span { background: #27c93f; box-shadow: 0 0 8px rgba(39,201,63,0.3); }
+.cl-line.cl-mod span { background: #ffbd2e; box-shadow: 0 0 8px rgba(255,189,46,0.3); }
+.cl-line.cl-del span { background: #ff5f56; box-shadow: 0 0 8px rgba(255,95,86,0.3); }
+.cl-line:nth-child(1) span { animation-delay: 0s; }
+.cl-line:nth-child(2) span { animation-delay: 0.4s; }
+.cl-line:nth-child(3) span { animation-delay: 0.8s; }
+.cl-line:nth-child(4) span { animation-delay: 1.2s; }
+.cl-line:nth-child(5) span { animation-delay: 1.6s; }
+@keyframes codeType {
+  0%, 10% { width: 0%; }
+  30%, 85% { width: 100%; }
+  95%, 100% { width: 0%; }
+}
 
 /* Discord Section */
 .discord-section { background: radial-gradient(ellipse at center, rgba(30, 35, 75, 0.3) 0%, var(--bg) 80%); color: #fff; text-align: center; display: block; padding-top: 60px; padding-bottom: 60px; border-top: 1px solid rgba(87, 101, 242, 0.15); border-bottom: 1px solid rgba(87, 101, 242, 0.15); }
@@ -488,13 +523,25 @@ section {
 }
 .overlay.show { opacity: 1; visibility: visible; }
 .popup {
-  background: var(--surface); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
-  padding: 40px 30px; width: min(420px, 90%); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  background: var(--bg); border: 2px solid var(--red); border-radius: 20px;
+  padding: 30px 24px 24px; width: min(400px, 90%); text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   transform: scale(0.95) translateY(15px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex; flex-direction: column; align-items: center; box-sizing: border-box;
 }
 .overlay.show .popup { transform: scale(1) translateY(0); }
-.popup h2 { font-size: 38px; margin: 0 0 10px; color: #fff; letter-spacing: 1px;}
-.popup p { font-size: 22px; color: var(--fg2); margin: 0 0 30px; }
+.popup h2 { font-size: 28px; margin: 0 0 2px; color: var(--fg, #fff); }
+.popup p { font-size: 16px; color: var(--fg2); margin: 0 0 22px; line-height: 1.5; }
+.popup .btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 10px 16px; border-radius: 12px; border: 2px solid var(--red);
+  background: var(--red); color: #fff; cursor: pointer; transition: 0.15s; font-size: 1.1rem;
+  font-family: inherit; text-decoration: none; box-sizing: border-box;
+}
+.popup .btn:hover { background: #d10022; transform: scale(1.02); }
+.popup .btn.sec {
+  background: transparent; border: none; color: var(--fg2); margin-top: 6px;
+}
+.popup .btn.sec:hover { background: rgba(255,255,255,0.06); color: #fff; transform: none; }
 
 /* Footer */
 .footer {
@@ -526,7 +573,7 @@ section {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-  .hero-3d-scene, .chat-panel, .game-shape, .floating-user { transform: none !important; animation: none !important; }
+  .hero-3d-scene, .chat-panel, .game-shape, .floating-user, .cl-window { transform: none !important; animation: none !important; }
 }
 
 html { scroll-padding-top: 100px; }
@@ -541,28 +588,25 @@ html { scroll-padding-top: 100px; }
 
 <div id="main-wrapper">
   <nav class="glass-nav">
-    <a href="#countdown">Countdown</a>
-    <a href="#chat">Chat</a>
-    <a href="#users">Users</a>
-    <a href="#games">Games</a>
-    <a href="#community">Community</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('countdown')">Countdown</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('chat')">Chat</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('users')">Users</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('games')">Games</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('changelog')">Changelog</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('community')">Community</a>
   </nav>
 
   <div id="globalUserBtn" onclick="handleUserIconClick()" data-ga="global_user_btn"></div>
 
   <!-- Account Popup -->
   <div id="accountPopup" class="overlay" onclick="if(event.target===this) closePopup('accountPopup')">
-    <div class="popup">
-      <div id="accPopupAvatar" style="width:90px;height:90px;border-radius:50%;border:2px solid var(--red);margin:0 auto 20px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:42px;background:var(--glass-bg);color:#fff; box-shadow: 0 0 20px rgba(187,0,30,0.3);">
+    <div class="popup" style="align-items:center;">
+      <div id="accPopupAvatar" style="width:86px;height:86px;border-radius:50%;border:3px solid var(--red);margin:0 auto 12px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--surface, #1a1a1a);font-weight:bold;color:#fff;">
       </div>
-      <h2 id="accPopupName">---</h2>
-      <p>@<span id="accPopupUser">---</span></p>
-      <a href="/accounts" class="btn-cinematic" style="width:100%; margin-bottom: 14px;" data-ga="manage_account_popup">
-        Manage Account
-      </a>
-      <button class="btn-cinematic disabled-btn" onclick="closePopup('accountPopup')" style="width:100%; cursor: pointer; pointer-events: auto;">
-        Close
-      </button>
+      <h2 id="accPopupName" style="margin-bottom:2px;">---</h2>
+      <p style="font-size:16px; margin-bottom:22px;">@<span id="accPopupUser">---</span></p>
+      <a href="/accounts" class="btn" data-ga="home_manage_account">Manage Account</a>
+      <button class="btn sec" onclick="closePopup('accountPopup')" style="border:none; margin-top:6px;">Close</button>
     </div>
   </div>
 
@@ -671,7 +715,7 @@ html { scroll-padding-top: 100px; }
     <div class="showcase-content stagger">
       <div class="showcase-text">
         <h2>Games</h2>
-        <p>Your interactive break from the grid. Access an expansive library of immersive, high-performance web applications instantly from any device.</p>
+        <p>Your interactive break from the grid. Access an expansive library of immersive, high-performance, web-based games instantly from your browser.</p>
         <a href="/g" class="btn-cinematic" data-ga="launch_games">Go to Games
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
@@ -681,6 +725,34 @@ html { scroll-padding-top: 100px; }
           <div class="game-shape s1"></div>
           <div class="game-shape s2"></div>
           <div class="game-shape s3"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="showcase reveal" id="changelog">
+    <div class="showcase-content stagger">
+      <div class="showcase-text">
+        <h2>Changelog</h2>
+        <p>A chronological record of updates, improvements, and changes to BSMS Web since it became open source.</p>
+        <a href="https://github.com/JellyfishJelly13/BSMS-Web/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="btn-cinematic" data-ga="launch_changelog">View Changelog
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="showcase-visual">
+        <div class="visual-changelog">
+          <div class="cl-window">
+            <div class="cl-header">
+              <div class="cl-dot"></div><div class="cl-dot"></div><div class="cl-dot"></div>
+            </div>
+            <div class="cl-body">
+              <div class="cl-line" style="width: 85%"><span></span></div>
+              <div class="cl-line cl-add" style="width: 65%"><span></span></div>
+              <div class="cl-line" style="width: 90%"><span></span></div>
+              <div class="cl-line cl-mod" style="width: 50%"><span></span></div>
+              <div class="cl-line cl-del" style="width: 75%"><span></span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -808,6 +880,21 @@ function handleUserIconClick() {
 
 function openPopup(id) { document.getElementById(id).classList.add('show'); }
 function closePopup(id) { document.getElementById(id).classList.remove('show'); }
+
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+if (window.location.hash) {
+    const target = window.location.hash.replace(/^#/, '');
+    try {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch(e) {}
+    setTimeout(() => scrollToSection(target), 200);
+}
 
 syncAuthSession();
 

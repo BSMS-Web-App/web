@@ -540,9 +540,205 @@ a { color: var(--accent); text-decoration: none; }
 
 #mobSidebarOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; display: none; }
 
-.theme-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.theme-mode-btn { flex: 1; padding: 8px; border-radius: 10px; border: 2px solid var(--border); background: var(--input-bg); color: var(--fg); cursor: pointer; text-align: center; font-size: 1rem; }
-.theme-mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(187,0,30,0.08); }
+.chat-text-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 500;
+}
+.chat-text-link:hover { opacity: 0.85; }
+
+.link-preview-container {
+    margin-top: 8px;
+    width: 100%;
+}
+.link-preview-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    max-width: 380px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+.link-preview-card:hover {
+    border-color: var(--chat-accent, var(--accent));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.msg-row.mine .link-preview-card {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+.lp-img-wrap {
+    width: 100%;
+    height: 140px;
+    overflow: hidden;
+    background: #0f0f13;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.lp-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.link-preview-card:hover .lp-img-wrap img { transform: scale(1.03); }
+.lp-content {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.lp-site {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+.lp-site-ic {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+}
+.lp-title {
+    font-weight: 700;
+    font-size: 0.98rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.lp-desc {
+    font-size: 0.84rem;
+    opacity: 0.85;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.link-card-shimmer {
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    padding: 12px;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.shimmer-line {
+    height: 10px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+.shimmer-line.line-site { width: 35%; height: 8px; }
+.shimmer-line.line-title { width: 85%; height: 12px; }
+.shimmer-line.line-desc { width: 65%; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Profile Picture Hover Popup */
+.user-pfp-trigger {
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+.user-pfp-trigger:hover {
+    transform: scale(1.06);
+}
+.msg-theirs-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 85%;
+}
+.pfp-hover-popup {
+    position: fixed;
+    z-index: 10000;
+    width: 250px;
+    background: var(--ctrl-bg, #1a1a20);
+    border: 2px solid var(--ctrl-border, var(--border));
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    padding: 14px;
+    backdrop-filter: blur(16px);
+    pointer-events: auto;
+    animation: pfpPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pfpPopIn {
+    from { opacity: 0; transform: scale(0.95) translateY(4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.php-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.php-avatar {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+}
+.php-info {
+    overflow: hidden;
+    flex: 1;
+}
+.php-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.php-username {
+    font-size: 0.85rem;
+    color: var(--fg2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.php-actions {
+    display: flex;
+}
+.php-btn {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    background: var(--chat-accent, var(--accent, #bb001e));
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    text-align: center;
+    transition: 0.2s;
+    text-decoration: none;
+    display: block;
+}
+.php-btn:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+}
 
 @media (max-width: 768px) {
     #sidebar { position: fixed; inset: 0; width: 100%; z-index: 50; transform: translateX(0); background: var(--bg); transition: transform 0.25s ease; box-shadow: var(--shadow); }
@@ -973,6 +1169,9 @@ a { color: var(--accent); text-decoration: none; }
 
         <div id="chatHeader">
             <button id="mobBackBtn" class="icon-btn" onclick="SidebarManager.showMobile()"><svg class="ic"><use href="#ico-back"></use></svg></button>
+            <div id="activeChatAvatarWrap" class="c-av user-pfp-trigger" style="width:42px;height:42px;cursor:pointer;flex-shrink:0;display:none;" title="Click or hover to view profile">
+                <div class="c-av-inner" id="activeChatAvatar">?</div>
+            </div>
             <div id="activeChatInfo" class="clickable" onclick="GroupManager.openMembersList()">
                 <h3 id="activeChatName">---</h3>
                 <span id="activeChatStatus">---</span>
@@ -1156,6 +1355,20 @@ const Utils = {
     escapeHTML: (str) => {
         if(typeof str !== 'string') return '';
         return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
+    },
+    extractUrls: (text) => {
+        if (!text || typeof text !== 'string') return [];
+        const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/gi;
+        const matches = text.match(urlRegex);
+        return matches ? Array.from(new Set(matches)) : [];
+    },
+    linkifyText: (text) => {
+        if (!text || typeof text !== 'string') return '';
+        const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/gi;
+        const escaped = Utils.escapeHTML(text);
+        return escaped.replace(urlRegex, (url) => {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-text-link">${url}</a>`;
+        });
     },
     formatTime: (ts) => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
     formatDuration: (sec) => {
@@ -1525,8 +1738,9 @@ const Router = {
     },
     parseHash: function() {
         const h = window.location.hash;
-        if(!h || h.length < 3) return null;
-        const p = h.substring(1).split('/');
+        if(!h || h.length < 2) return null;
+        const clean = h.replace(/^#+/, '').replace(/^\/+/, '');
+        const p = clean.split('/');
         if(p.length < 2) return null;
         return { type: p[0], id: decodeURIComponent(p[1]) };
     },
@@ -1538,9 +1752,27 @@ const Router = {
         State.pendingRoute = null;
         if(!r) return;
         if(r.type === 'dm' || r.type === 'gc') {
-            if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+            if(State.channels[r.id]) { 
+                if (State.hiddenDms.includes(r.id)) {
+                    State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                    ApiClient.call('unhideDM', { cid: r.id });
+                }
+                ChatManager.open(r.id); 
+                return; 
+            }
             await PollingManager.syncGlobal();
-            if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+            if(State.channels[r.id]) { 
+                if (State.hiddenDms.includes(r.id)) {
+                    State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                    ApiClient.call('unhideDM', { cid: r.id });
+                }
+                ChatManager.open(r.id); 
+                return; 
+            }
+            if(r.type === 'dm') {
+                await SearchManager.startDM(r.id);
+                return;
+            }
             this.clearHash();
         } else if(r.type === 'user') {
             await SearchManager.startDM(r.id);
@@ -1553,9 +1785,26 @@ const Router = {
         if(!r) return;
         if(r.type === 'join') { GroupManager.requestJoinById(r.id); return; }
         if(r.type === 'user') { await SearchManager.startDM(r.id); return; }
-        if(State.channels[r.id]) { ChatManager.open(r.id); return; }
+        if(State.channels[r.id]) { 
+            if (State.hiddenDms.includes(r.id)) {
+                State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                ApiClient.call('unhideDM', { cid: r.id });
+            }
+            ChatManager.open(r.id); 
+            return; 
+        }
         await PollingManager.syncGlobal();
-        if(State.channels[r.id]) ChatManager.open(r.id);
+        if(State.channels[r.id]) {
+            if (State.hiddenDms.includes(r.id)) {
+                State.hiddenDms = State.hiddenDms.filter(id => id !== r.id);
+                ApiClient.call('unhideDM', { cid: r.id });
+            }
+            ChatManager.open(r.id);
+            return;
+        }
+        if(r.type === 'dm') {
+            await SearchManager.startDM(r.id);
+        }
     }
 };
 
@@ -1686,6 +1935,12 @@ const SidebarManager = {
                 continue;
             }
 
+            // Filter out empty conversations (no messages)
+            const msgCount = c.messages ? Object.keys(c.messages).length : 0;
+            if (msgCount === 0) {
+                continue;
+            }
+
             let sortTime = c.config?.createdAt || 0;
             let previewText = "New conversation";
             let unread = false;
@@ -1747,10 +2002,11 @@ const SidebarManager = {
             const dot = (c._type === 'dms' && !isOfficial) ? `<div class="status-dot ${isOnline ? 'online' : ''}"></div>` : '';
             const badge = item.unread ? `<div class="unread-badge"></div>` : '';
             const offCls = isOfficial ? 'official' : '';
+            const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${targetUid}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
 
             html += `
             <div class="chat-row ${activeCls} ${unreadCls}" onclick="ChatManager.open('${id}')">
-                <div class="c-av ${offCls}">
+                <div ${pfpAttr}>
                     <div class="c-av-inner">${avHtml}</div>
                     ${dot}
                 </div>
@@ -2262,8 +2518,23 @@ const ChatManager = {
             mv.style.removeProperty('--chat-bg'); mv.style.removeProperty('--chat-wp'); mv.style.removeProperty('--chat-wp-dim');
         }
 
+        const avWrap = document.getElementById('activeChatAvatarWrap');
+        const avEl = document.getElementById('activeChatAvatar');
+
         if (c._type === 'dms') {
             const otherUid = Object.keys(c.members).find(id => id !== State.user.uid);
+            if (avWrap && avEl) {
+                avWrap.style.display = 'flex';
+                if (otherUid === BOT_UID) {
+                    avEl.innerHTML = `<img src="${BOT_PFP}">`;
+                    avWrap.removeAttribute('data-uid');
+                } else if (otherUid) {
+                    const acc = State.accountsCache[otherUid] || {};
+                    const avHtml = acc.avatar ? `<img src="${Utils.escapeHTML(acc.avatar)}">` : (acc.displayName || otherUid).charAt(0).toUpperCase();
+                    avEl.innerHTML = avHtml;
+                    avWrap.setAttribute('data-uid', otherUid);
+                }
+            }
             if (otherUid === BOT_UID) {
                 nEl.innerHTML = `BSMS Web ${Utils.getBadgesHTML(BOT_UID)}`;
                 sEl.innerText = "System Account";
@@ -2291,6 +2562,15 @@ const ChatManager = {
             document.getElementById('activeChatInfo').classList.remove('clickable');
             document.getElementById('activeChatInfo').onclick = null;
         } else {
+            if (avWrap && avEl) {
+                avWrap.style.display = 'flex';
+                avWrap.removeAttribute('data-uid');
+                if (c.config?.icon) {
+                    avEl.innerHTML = `<img src="${Utils.escapeHTML(c.config.icon)}">`;
+                } else {
+                    avEl.innerHTML = (c.name || "G").charAt(0).toUpperCase();
+                }
+            }
             nEl.innerText = c.name || "Group";
             let onlineCount = 0;
             const validMemberIds = Object.keys(c.members).filter(mId => State.accountsCache[mId]?.account_status !== 'banned');
@@ -2456,6 +2736,7 @@ const ChatManager = {
             State.lastRenderedDate = dStr;
         }
         log.insertAdjacentHTML('beforeend', this.buildMessageHTML(msgId, m));
+        if (window.LinkPreviewManager) LinkPreviewManager.loadAllPending();
     },
 
     buildMessageHTML: function(msgId, m) {
@@ -2469,11 +2750,30 @@ const ChatManager = {
         if (m.status?.deletedByMod) cls += ' deleted';
         if (m.status?.temp) cls += ' sending';
 
+        let pfpElement = '';
+        if (!isMine) {
+            if (isSysBot) {
+                pfpElement = `<div class="msg-pfp-trigger" title="BSMS Web" style="margin-bottom:4px;">
+                    <div class="c-av" style="width:34px;height:34px;"><div class="c-av-inner"><img src="${BOT_PFP}"></div></div>
+                </div>`;
+            } else {
+                const sAcc = State.accountsCache[m.senderUid] || {};
+                const sDisp = Utils.displayName(m.senderUid, c);
+                const sAvHtml = sAcc.avatar ? `<img src="${Utils.escapeHTML(sAcc.avatar)}">` : sDisp.charAt(0).toUpperCase();
+                pfpElement = `<div class="msg-pfp-trigger user-pfp-trigger" data-uid="${m.senderUid}" title="Click or hover to view profile" style="margin-bottom:4px;">
+                    <div class="c-av" style="width:34px;height:34px;font-size:0.95rem;">
+                        <div class="c-av-inner">${sAvHtml}</div>
+                    </div>
+                </div>`;
+            }
+        }
+
         let html = `<div class="msg-row ${cls}" id="msg-${msgId}">`;
+        if (!isMine) html += `<div class="msg-theirs-container">${pfpElement}<div class="msg-theirs-body" style="flex:1; overflow:hidden;">`;
 
         if (isGroup && !isMine && !isSysBot) {
             const disp = Utils.displayName(m.senderUid, c);
-            html += `<div class="msg-author" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
+            html += `<div class="msg-author user-pfp-trigger" data-uid="${m.senderUid}" title="Click or hover to view profile" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
         }
         if (isSysBot) html += `<div class="msg-author">BSMS Web</div>`;
 
@@ -2575,7 +2875,12 @@ const ChatManager = {
                     </div>`;
                 }
             } else {
-                content += `<div class="msg-text">${Utils.escapeHTML(m.content)}</div>`;
+                const urls = Utils.extractUrls(m.content);
+                const textWithLinks = Utils.linkifyText(m.content);
+                content += `<div class="msg-text">${textWithLinks}</div>`;
+                if (urls.length > 0) {
+                    content += `<div class="link-preview-container" id="lp-${msgId}" data-url="${Utils.escapeHTML(urls[0])}"></div>`;
+                }
             }
 
             const timeStr = Utils.formatTime(m.timestamp);
@@ -2604,6 +2909,7 @@ const ChatManager = {
         }
 
         if (isMine) html += `<div class="msg-status" id="stat-${msgId}"></div>`;
+        if (!isMine) html += `</div></div>`;
         html += `</div>`;
         return html;
     },
@@ -2625,6 +2931,220 @@ const ChatManager = {
         else if (active.length === 2) ind.innerText = `${active[0]} and ${active[1]} are typing...`;
         else if (active.length === 3) ind.innerText = `${active[0]}, ${active[1]}, and ${active[2]} are typing...`;
         else ind.innerText = "Several people are typing...";
+    }
+};
+
+const LinkPreviewManager = {
+    cache: {},
+
+    loadForMessage: async function(container) {
+        if (!container || container.dataset.loaded) return;
+        container.dataset.loaded = "true";
+        const url = container.dataset.url;
+        if (!url) return;
+
+        if (this.cache[url]) {
+            this.renderCard(container, this.cache[url]);
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="link-card-shimmer">
+                <div class="shimmer-line line-site"></div>
+                <div class="shimmer-line line-title"></div>
+                <div class="shimmer-line line-desc"></div>
+            </div>`;
+
+        try {
+            const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
+            if (res.ok) {
+                const data = await res.json();
+                this.cache[url] = data;
+                this.renderCard(container, data);
+            } else {
+                container.remove();
+            }
+        } catch (e) {
+            console.error("[BSMS Web :: LinkPreview] Error loading preview:", e);
+            container.remove();
+        }
+    },
+
+    renderCard: function(container, data) {
+        if (!data || !data.title) {
+            container.remove();
+            return;
+        }
+
+        const safeUrl = Utils.escapeHTML(data.url || '#');
+        const safeTitle = Utils.escapeHTML(data.title || '');
+        const safeDesc = Utils.escapeHTML(data.description || '');
+        let safeSite = Utils.escapeHTML(data.siteName || '');
+        if (!safeSite) {
+            try { safeSite = new URL(data.url).hostname; } catch(e) { safeSite = 'Website'; }
+        }
+        const hasImage = Boolean(data.image);
+
+        let imgHtml = '';
+        if (hasImage) {
+            imgHtml = `<div class="lp-img-wrap"><img src="${Utils.escapeHTML(data.image)}" alt="Preview" loading="lazy" onerror="this.parentElement.remove()"></div>`;
+        }
+
+        container.innerHTML = `
+            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="link-preview-card ${hasImage ? 'has-img' : ''}">
+                ${imgHtml}
+                <div class="lp-content">
+                    <div class="lp-site">
+                        <svg class="ic lp-site-ic" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+                        <span>${safeSite}</span>
+                    </div>
+                    <div class="lp-title">${safeTitle}</div>
+                    ${safeDesc ? `<div class="lp-desc">${safeDesc}</div>` : ''}
+                </div>
+            </a>`;
+        if (window.ScrollManager) ScrollManager.scrollToBottom(false);
+    },
+
+    loadAllPending: function() {
+        document.querySelectorAll('.link-preview-container:not([data-loaded])').forEach(el => {
+            this.loadForMessage(el);
+        });
+    }
+};
+
+const ProfileHoverManager = {
+    activeUid: null,
+    hideTimer: null,
+    isHoveringPopup: false,
+    isLocked: false,
+
+    init: function() {
+        const popup = document.getElementById('pfpHoverPopup');
+        if (!popup) return;
+
+        popup.addEventListener('mouseenter', () => {
+            this.isHoveringPopup = true;
+            clearTimeout(this.hideTimer);
+        });
+
+        popup.addEventListener('mouseleave', () => {
+            this.isHoveringPopup = false;
+            this.scheduleHide(150);
+        });
+
+        const btn = document.getElementById('phpViewProfileBtn');
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (this.activeUid) {
+                    const acc = State.accountsCache[this.activeUid] || {};
+                    const username = acc.username || this.activeUid;
+                    window.location.href = `/users#${encodeURIComponent(username)}`;
+                }
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!popup.contains(e.target) && !e.target.closest('.user-pfp-trigger')) {
+                this.hide();
+            }
+        });
+
+        document.addEventListener('mouseover', (e) => {
+            const trigger = e.target.closest('.user-pfp-trigger');
+            if (trigger && trigger.dataset.uid && trigger.dataset.uid !== BOT_UID) {
+                clearTimeout(this.hideTimer);
+                this.show(trigger.dataset.uid, e.clientX, e.clientY);
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            const trigger = e.target.closest('.user-pfp-trigger');
+            if (trigger && trigger.dataset.uid && trigger.dataset.uid !== BOT_UID) {
+                if (!this.isLocked) {
+                    this.updatePosition(e.clientX, e.clientY);
+                }
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const trigger = e.target.closest('.user-pfp-trigger');
+            if (trigger && !this.isLocked) {
+                this.scheduleHide(250);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            const trigger = e.target.closest('.user-pfp-trigger');
+            if (trigger && trigger.dataset.uid && trigger.dataset.uid !== BOT_UID) {
+                e.stopPropagation();
+                this.isLocked = true;
+                this.show(trigger.dataset.uid, e.clientX, e.clientY);
+            } else if (!e.target.closest('#pfpHoverPopup')) {
+                this.isLocked = false;
+            }
+        });
+    },
+
+    show: function(uid, mouseX, mouseY) {
+        if (!uid || uid === BOT_UID) return;
+        this.activeUid = uid;
+        const popup = document.getElementById('pfpHoverPopup');
+        if (!popup) return;
+
+        const acc = State.accountsCache[uid] || {};
+        const dName = acc.displayName || acc.username || uid;
+        const uName = acc.username || uid;
+        const avHtml = acc.avatar ? `<img src="${Utils.escapeHTML(acc.avatar)}">` : dName.charAt(0).toUpperCase();
+
+        const avEl = document.getElementById('phpAvatar');
+        const nameEl = document.getElementById('phpName');
+        const uEl = document.getElementById('phpUsername');
+
+        if (avEl) avEl.innerHTML = avHtml;
+        if (nameEl) nameEl.innerHTML = `${Utils.escapeHTML(dName)} ${Utils.getBadgesHTML(uid)}`;
+        if (uEl) uEl.textContent = `@${uName}`;
+
+        popup.style.display = 'block';
+        this.updatePosition(mouseX, mouseY);
+    },
+
+    updatePosition: function(mouseX, mouseY) {
+        const popup = document.getElementById('pfpHoverPopup');
+        if (!popup || popup.style.display === 'none') return;
+
+        const popW = 250;
+        const popH = popup.offsetHeight || 130;
+        let left = mouseX + 14;
+        let top = mouseY + 14;
+
+        if (left + popW > window.innerWidth - 12) {
+            left = mouseX - popW - 14;
+        }
+        if (top + popH > window.innerHeight - 12) {
+            top = mouseY - popH - 14;
+        }
+        if (left < 10) left = 10;
+        if (top < 10) top = 10;
+
+        popup.style.left = `${left}px`;
+        popup.style.top = `${top}px`;
+    },
+
+    scheduleHide: function(delay = 200) {
+        clearTimeout(this.hideTimer);
+        this.hideTimer = setTimeout(() => {
+            if (!this.isHoveringPopup && !this.isLocked) {
+                this.hide();
+            }
+        }, delay);
+    },
+
+    hide: function() {
+        this.isLocked = false;
+        const popup = document.getElementById('pfpHoverPopup');
+        if (popup) popup.style.display = 'none';
+        this.activeUid = null;
     }
 };
 
@@ -2663,6 +3183,7 @@ const AuthManager = {
             ScrollManager.init();
             ContextMenu.init();
             Router.init();
+            ProfileHoverManager.init();
             
             setTimeout(async () => {
                 UI.setLoad(95, "Opening conversation");
@@ -3526,5 +4047,24 @@ const GroupManager = {
 
 window.onload = () => AuthManager.init();
 </script>
+
+<!-- Profile Picture Hover Popup -->
+<div id="pfpHoverPopup" class="pfp-hover-popup" style="display:none;">
+    <div class="php-body">
+        <div class="php-avatar">
+            <div class="c-av" style="width:44px; height:44px;">
+                <div class="c-av-inner" id="phpAvatar">?</div>
+            </div>
+        </div>
+        <div class="php-info">
+            <div class="php-name" id="phpName">---</div>
+            <div class="php-username" id="phpUsername">@---</div>
+        </div>
+    </div>
+    <div class="php-actions">
+        <button class="php-btn" id="phpViewProfileBtn">View Profile</button>
+    </div>
+</div>
+
 </body>
 </html>

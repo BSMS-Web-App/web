@@ -377,11 +377,37 @@ function handleUserIconClick() {
     }
 }
 
+let cloudSaveTimeout = null;
+
+function scheduleCloudSave(delay = 1000) {
+    if (isGuest || !authSession) return;
+    clearTimeout(cloudSaveTimeout);
+    cloudSaveTimeout = setTimeout(() => {
+        pushCloudSaves();
+    }, delay);
+}
+
+function getActiveSessionId() {
+    return localStorage.getItem('session_id') || (authSession && (authSession.sessionId || authSession.session_id)) || currentSessionId || "";
+}
+function getActiveUid() {
+    return (authSession && authSession.uid) || "";
+}
+
 async function pullCloudSaves() {
     if (isGuest || !authSession) return;
     try {
-        const res = await fetch(`/api/games/saves`, {
-            headers: { 'X-Session-ID': currentSessionId }
+        const sid = getActiveSessionId();
+        const uid = getActiveUid();
+        const qParams = new URLSearchParams();
+        if (sid) qParams.set('sessionId', sid);
+        if (uid) qParams.set('uid', uid);
+
+        const res = await fetch(`/api/games/saves?${qParams.toString()}`, {
+            headers: { 
+                'X-Session-ID': sid,
+                'X-UID': uid
+            }
         });
         if(res.status === 403) {
             const data = await res.json();
@@ -390,12 +416,16 @@ async function pullCloudSaves() {
         
         if (res.ok) {
             const data = await res.json();
-            if (data && data.saves) {
+            if (data && data.saves && typeof data.saves === 'object') {
                 for (const [key, value] of Object.entries(data.saves)) {
-                    localStorage.setItem(key, value);
+                    if (key && key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+                        try {
+                            localStorage.setItem(key, value);
+                        } catch(e) {}
+                    }
                 }
             }
-            console.log("[BSMS Web :: Games] Cloud saves successfully loaded.");
+            console.log("[BSMS Web :: Games] Cloud saves successfully loaded from Firebase.");
         }
         cloudSyncDone = true;
     } catch (err) {
@@ -404,9 +434,11 @@ async function pullCloudSaves() {
     }
 }
 
-async function pushCloudSaves() {
-    if (isGuest || !authSession || !cloudSyncDone) return;
+async function pushCloudSaves(keepAlive = false) {
+    if (isGuest || !authSession) return;
     try {
+        const sid = getActiveSessionId();
+        const uid = getActiveUid();
         const dump = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -415,19 +447,36 @@ async function pushCloudSaves() {
             }
         }
         
-        await fetch(`/api/games/saves`, {
+        const qParams = new URLSearchParams();
+        if (sid) qParams.set('sessionId', sid);
+        if (uid) qParams.set('uid', uid);
+
+        await fetch(`/api/games/saves?${qParams.toString()}`, {
             method: 'PUT',
+            keepalive: !!keepAlive,
             headers: { 
                 'Content-Type': 'application/json',
-                'X-Session-ID': currentSessionId
+                'X-Session-ID': sid,
+                'X-UID': uid
             },
             body: JSON.stringify({ saves: dump })
         });
-        console.log("[BSMS Web :: Games] Progress saved to the cloud.");
+        console.log("[BSMS Web :: Games] Progress successfully stored in Firebase.");
     } catch (err) {
         console.error("[BSMS Web :: Games] Failed to push cloud saves", err);
     }
 }
+
+// Hook into parent window localStorage changes
+try {
+    const _nativeSetItem = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = function(k, v) {
+        _nativeSetItem(k, v);
+        if (cloudSyncDone && !isGuest && k !== SESSION_KEY && k !== 'session_id' && !k.startsWith('firebase')) {
+            scheduleCloudSave(1000);
+        }
+    };
+} catch(e) {}
 
 function openPopup(id) { document.getElementById(id).classList.add('show'); }
 function closePopup(id) { document.getElementById(id).classList.remove('show'); }
@@ -556,18 +605,45 @@ async function triggerLoadGame(game) {
         
         const scriptToInject = `
             <script>
-                window.addEventListener('keydown', function(e) {
-                    if(e.key === 'Escape') {
-                        window.parent.postMessage({ type: 'bsms-esc' }, '*');
-                    }
-                });
-                // Ensure instant focus
-                window.addEventListener('mousedown', function() {
-                    window.focus();
-                });
-                document.addEventListener('click', function() {
-                    window.focus();
-                });
+                (function() {
+                    window.addEventListener('keydown', function(e) {
+                        if(e.key === 'Escape') {
+                            window.parent.postMessage({ type: 'bsms-esc' }, '*');
+                        }
+                    });
+                    // Ensure instant focus
+                    window.addEventListener('mousedown', function() {
+                        window.focus();
+                    });
+                    document.addEventListener('click', function() {
+                        window.focus();
+                    });
+
+                    // Live localStorage proxy to notify parent and persist to Firebase
+                    try {
+                        const _origSet = window.localStorage.setItem.bind(window.localStorage);
+                        window.localStorage.setItem = function(k, v) {
+                            try { _origSet(k, v); } catch(e) {}
+                            try {
+                                window.parent.postMessage({ type: 'bsms-storage-save', key: String(k), val: String(v) }, '*');
+                            } catch(e) {}
+                        };
+                        const _origRemove = window.localStorage.removeItem.bind(window.localStorage);
+                        window.localStorage.removeItem = function(k) {
+                            try { _origRemove(k); } catch(e) {}
+                            try {
+                                window.parent.postMessage({ type: 'bsms-storage-remove', key: String(k) }, '*');
+                            } catch(e) {}
+                        };
+                        const _origClear = window.localStorage.clear.bind(window.localStorage);
+                        window.localStorage.clear = function() {
+                            try { _origClear(); } catch(e) {}
+                            try {
+                                window.parent.postMessage({ type: 'bsms-storage-clear' }, '*');
+                            } catch(e) {}
+                        };
+                    } catch(err) {}
+                })();
             <\/script>
         `;
         
@@ -625,12 +701,36 @@ function showToast() {
     setTimeout(() => toast.classList.remove('show'), 4500);
 }
 
-// In-Game Escape Listener Map
+// In-Game Message Listener Map (Escape + Storage Sync)
 window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'bsms-esc') toggleInGameMenu();
+    if (!e.data) return;
+    if (e.data.type === 'bsms-esc') toggleInGameMenu();
+    if (e.data.type === 'bsms-storage-save') {
+        const { key, val } = e.data;
+        if (key && key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+            try { localStorage.setItem(key, val); } catch(err) {}
+            scheduleCloudSave(600);
+        }
+    }
+    if (e.data.type === 'bsms-storage-remove') {
+        const { key } = e.data;
+        if (key && key !== SESSION_KEY && key !== 'session_id') {
+            try { localStorage.removeItem(key); } catch(err) {}
+            scheduleCloudSave(600);
+        }
+    }
+    if (e.data.type === 'bsms-storage-clear') {
+        scheduleCloudSave(600);
+    }
 });
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && isGameRunning) toggleInGameMenu();
+});
+window.addEventListener('beforeunload', () => {
+    if (isGameRunning) pushCloudSaves(true);
+});
+window.addEventListener('pagehide', () => {
+    if (isGameRunning) pushCloudSaves(true);
 });
 
 function toggleInGameMenu() {

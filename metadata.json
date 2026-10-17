@@ -8,12 +8,6 @@
   "author": "Jellyfish Jelly",
   "platform": "web",
   "status": "active",
-  "deployment": {
-    "provider": "Vercel",
-    "production": "https://bsms-web.vercel.app",
-    "beta": "https://bsms-web-beta.vercel.app",
-    "development": "https://bsms-web-development.vercel.app"
-  },
   "technology": {
     "frontend": [
       "HTML",

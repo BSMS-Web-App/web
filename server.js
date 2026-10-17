@@ -11,9 +11,11 @@ import { fileURLToPath } from 'url';
 import authHandler from './api/auth.js';
 import adminHandler from './api/admin.js';
 import chatHandler from './api/chat.js';
+import gamesHandler from './api/games.js';
 import bugReportHandler from './api/bug-report.js';
 import exportDataHandler from './api/export-data.js';
 import profanityFilterHandler from './api/profanity-filter.js';
+import linkPreviewHandler from './api/link-preview.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,12 +33,16 @@ app.get('/games', (req, res) => res.redirect(301, '/g'));
 app.get('/rooms', (req, res) => res.redirect(301, '/chat'));
 
 // API Routes
-app.all('/api/auth', (req, res) => authHandler(req, res));
-app.all('/api/admin', (req, res) => adminHandler(req, res));
-app.all('/api/chat', (req, res) => chatHandler(req, res));
-app.all('/api/bug-report', (req, res) => bugReportHandler(req, res));
-app.all('/api/export-data', (req, res) => exportDataHandler(req, res));
-app.all('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res));
+app.use('/api/auth', (req, res) => authHandler(req, res));
+app.use('/api/admin', (req, res) => adminHandler(req, res));
+app.use('/api/chat', (req, res) => chatHandler(req, res));
+app.use('/api/games/saves', (req, res) => gamesHandler(req, res));
+app.use('/games/saves', (req, res) => gamesHandler(req, res));
+app.use('/api/games', (req, res) => gamesHandler(req, res));
+app.use('/api/link-preview', (req, res) => linkPreviewHandler(req, res));
+app.use('/api/bug-report', (req, res) => bugReportHandler(req, res));
+app.use('/api/export-data', (req, res) => exportDataHandler(req, res));
+app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res));
 
 // Clean URLs
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -63,7 +69,7 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.APP_PORT || '3000', 10);
 const HOST = '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
