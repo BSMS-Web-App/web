@@ -1,5 +1,17 @@
 # BSMS Web Changelog
 
+## v5.2.3
+
+- Express Server and Metadata Integration
+
+[View the full changelog](https://github.com/JellyfishJelly13/BSMS-Web/releases/tag/v5.2.3)
+
+## v5.2.2
+
+- Development Tools and Scripts Removal
+
+[View the full changelog](https://github.com/JellyfishJelly13/BSMS-Web/releases/tag/v5.2.2)
+
 ## v5.2.1
 
 - Admin Console Authorization Handling
