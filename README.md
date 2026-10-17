@@ -1,297 +1,208 @@
+
 <div align="center">
-  <img src="img/icon.png" alt="BSMS Web Logo" width="128" height="128" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+  <img src="img/icon.png" alt="BSMS Web Logo" width="125" height="125">
+
   <h1>BSMS Web</h1>
-  <p><strong>A Next-Generation, Full-Stack Real-Time Communication, Gaming Hub & Account Ecosystem</strong></p>
+
+  <p><strong>A web platform for communication, gaming, and account management.</strong></p>
+
+  <p>A centralized digital experience featuring messaging, user accounts, interactive games, and useful web tools.</p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-  [![Node Version](https://img.shields.io/badge/Node.js-18%2B%20%7C%2020%2B-339933?logo=node.js)](https://nodejs.org)
-  [![Express](https://img.shields.io/badge/Backend-Express%205.x-black?logo=express)](https://expressjs.com)
-  
-  [![Database](https://img.shields.io/badge/Database-Firebase%20RTDB-FFCA28?logo=firebase)](https://firebase.google.com)
-  [![Hosting](https://img.shields.io/badge/Hosting-Vercel-000000?logo=vercel)](https://vercel.com)
-  [![Profanity Shield](https://img.shields.io/badge/Moderation-Glin--Profanity-red)](https://www.glincker.com/tools/glin-profanity)
+  [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js)](https://nodejs.org/)
+  [![Express](https://img.shields.io/badge/Express-5.x-black?logo=express)](https://expressjs.com/)
+  [![Firebase](https://img.shields.io/badge/Database-Firebase%20RTDB-FFCA28?logo=firebase)](https://firebase.google.com/)
+  [![Vercel](https://img.shields.io/badge/Hosting-Vercel-black?logo=vercel)](https://vercel.com/)
+
+  [Website](https://bsms-web.vercel.app) · [Report a Bug](https://github.com/JellyfishJelly13/BSMS-Web/issues) · [View Releases](https://github.com/JellyfishJelly13/BSMS-Web/releases)
 </div>
 
 ---
 
-> [!NOTE]
-> **BSMS Web** is an all-in-one web platform engineered for real-time peer-to-peer messaging, persistent game cloud saves, fine-grained device & account management, and community moderation. It operates on an Express server and serverless Vercel infrastructure.
+## About
 
----
+**BSMS Web** is a full-stack web application that brings communication, account management, gaming, and other interactive features together in one platform.
 
-## Table of Contents
+The project combines an HTML, CSS, and JavaScript frontend with a Node.js backend and Firebase Realtime Database. It is hosted on Vercel and maintained as an open-source project.
 
-- [System Architecture](#system-architecture)
-- [Frontend Engineering](#frontend-engineering)
-- [Backend & Serverless API](#backend--serverless-api)
-- [Game Saves Cloud Sync Protocol](#game-saves-cloud-sync-protocol)
-- [Firebase Data Architecture](#firebase-data-architecture)
-- [Real-Time Messaging Engine](#real-time-messaging-engine)
-- [Analytics & Telemetry](#analytics--telemetry)
-- [Vercel Deployment & Rewrites](#vercel-deployment--rewrites)
-- [Dependencies & Tooling](#dependencies--tooling)
-- [Environment Configuration](#local-environment-configuration)
-- [Local Development Setup](#local-development-setup)
+## Features
 
----
+- **User Accounts** — Account registration, authentication, and profile management.
+- **Chat** — Direct messages, group conversations, and interactive messaging features.
+- **Games** — Browser-based games and cloud save synchronization.
+- **Countdowns** — A dedicated countdown page.
+- **Administrative Tools** — Account and moderation management.
+- **Community Reporting** — Tools for submitting bug reports and feedback.
+- **Privacy Information** — A dedicated page explaining privacy-related information.
+- **Responsive Interface** — A web experience designed for desktop and mobile browsers.
 
-## System Architecture
+*Feature availability may vary between production, development, and preview deployments.*
 
-The BSMS Web architecture decouples client interfaces from persistent storage using a resilient multi-tier pipeline:
+## Documentation
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             CLIENT TIER (Browser)                           │
-│  index.html │ accounts.html │ chat.html │ g.html │ users.html │ admin/index │
-└──────┬──────────────────────┬────────────────────────┬──────────────────────┘
-       │                      │                        │
-       │ REST / JSON (Fetch)  │ OpenGraph Scraper API  │ Cloud Game Saves Sync
-       ▼                      ▼                        ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          SERVER / BACKEND ROUTING                           │
-│                    Node.js Express Server (server.js)                       │
-│                        or Vercel Serverless (/api/*)                        │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ Firebase Admin SDK
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        PERSISTENT DATA STORE (Firebase)                     │
-│               Firebase Realtime Database (Accounts, Chat, Saves, Bans)      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Use the following resources to learn more about BSMS Web, its history, and how to contribute.
 
----
+| Document | Description |
+| --- | --- |
+| [Changelog](CHANGELOG.md) | A chronological record of notable updates, improvements, and changes to BSMS Web. |
+| [Security Policy](SECURITY.md) | Instructions for reporting security vulnerabilities responsibly. |
+| [License](LICENSE) | The license governing the project's source code. |
+| [GitHub Releases](https://github.com/JellyfishJelly13/BSMS-Web/releases) | Published releases and their detailed release notes. |
+| [Issues](https://github.com/JellyfishJelly13/BSMS-Web/issues) | Report bugs, request features, and track known issues. |
+| [Pull Requests](https://github.com/JellyfishJelly13/BSMS-Web/pulls) | Review proposed changes and contribute improvements. |
 
-## Frontend Engineering
+## Technology Stack
 
-The frontend is constructed using pure modern **HTML5**, **CSS3 (Custom Properties / Flexbox / Grid)**, and **ES2022+ Vanilla JavaScript**. It requires zero client bundlers, ensuring instant page startup, ultra-low memory overhead, and smooth 60fps animations.
+| Technology | Purpose |
+| --- | --- |
+| HTML, CSS, JavaScript | Frontend and user interface |
+| Node.js | JavaScript runtime for the backend |
+| Express | HTTP server and application routing |
+| Firebase Realtime Database | Persistent application data |
+| Firebase Admin SDK | Server-side Firebase integration |
+| Glin Profanity | Profanity detection and moderation |
+| Vercel | Hosting and deployment |
 
-### Key Capabilities
+The frontend does not require a separate client-side build step in the current project configuration.
 
-- **State Managers**: Encapsulated state modules (`AuthManager`, `ChatManager`, `SidebarManager`, `ProfileHoverManager`, `LinkPreviewManager`, `GroupManager`).
-- **Web Audio API Synthesis**: Custom procedural sound synthesizer (`AudioFX`) generating realistic incoming/outgoing message chimes and haptic sounds without external sound asset dependencies.
-- **Micro-Themes**: Native theme engine supporting Dark, Light, System, and custom accent tints (`--accent`, `--chat-accent`, `--bg`, `--fg`).
-- **Responsive Viewport Support**: Dual-mode layouts transitioning seamlessly from multi-pane desktop layouts to mobile drawer slide-outs (`window.innerWidth <= 768px`).
+## Getting Started
 
-### Hash Routing Specification
+### Prerequisites
 
-To maintain clean URLs while preserving deep-linking capabilities across single-page modules, BSMS uses specialized client-side hash routes:
+Before running BSMS Web locally, install:
 
-| Route Pattern | Target Module | Description |
-| :--- | :--- | :--- |
-| `/#login` / `/#signup` | `accounts.html` | Opens authentication modal in login or signup mode |
-| `/#dm/:cid` | `chat.html` | Opens direct message conversation `:cid` |
-| `/#gc/:cid` | `chat.html` | Opens group chat conversation `:cid` |
-| `/#user/:username` | `chat.html` | Resolves username, starts/unhides DM, and navigates into chat |
-| `/#join/:code` | `chat.html` | Triggers group join confirmation overlay with invite preview |
-| `/#:username` | `users.html` | Automatically opens full-screen user profile modal |
+- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org/) and npm
+- A Firebase project with Realtime Database enabled and appropriate server-side credentials
 
----
+Use a Node.js version supported by the project's dependencies and deployment environment.
 
-## Backend & Serverless API
-
-The backend is built around a unified serverless design compatible with both local Express (`server.js`) and Vercel Serverless Functions (`/api/*`):
-
-| Endpoint | Methods | File Handler | Purpose |
-| :--- | :---: | :--- | :--- |
-| `/api/auth` | `GET`, `POST` | `api/auth.js` | User login, signup, session verification, ban audits, profile updates |
-| `/api/chat` | `GET`, `POST` | `api/chat.js` | Realtime chat polling, channel creation, message dispatch, moderation |
-| `/api/games/saves` | `GET`, `PUT`, `POST` | `api/games.js` | Cloud game save retrieval and raw JSON serialization persistence |
-| `/api/link-preview`| `GET`, `POST` | `api/link-preview.js` | Safe SSR open graph and metadata scraper with timeout protection |
-| `/api/admin` | `GET`, `POST` | `api/admin.js` | Administrative registry, device banning, status escalation |
-| `/api/bug-report` | `POST` | `api/bug-report.js` | Community bug reporting and diagnostic collection |
-| `/api/export-data` | `GET` | `api/export-data.js` | GDPR-compliant user data export archive generator |
-| `/api/profanity-filter` | `POST` | `api/profanity-filter.js` | Real-time vulgarity and profanity analysis |
-
----
-
-## Game Saves Cloud Sync Protocol
-
-The games ecosystem (`/g` or `g.html`) features automated bi-directional cloud synchronization against Firebase:
-
-```
-[ Game Runtime / Canvas ] 
-          │
-          ▼ LocalStorage mutation (setItem hook)
-[ Debounce Timer (1000ms) ]
-          │
-          ▼ PUT /api/games/saves
-[ Node/Vercel Backend ] ──► Encodes Raw JSON String ──► Firebase /accounts/{uid}/game_saves_raw
-                                                     └──► Sanitized Keys  ──► /accounts/{uid}/game_saves
-```
-
-### Persistence Guarantees
-- **Character Preservation**: Games often save keys containing dots (`level.1`), slashes (`item/slot`), and dollar signs (`$score`). Because Firebase Realtime Database forbids these characters in key names, saves are stringified into a pure JSON raw dump at `/accounts/{uid}/game_saves_raw`.
-- **Sanitized Mirroring**: A sanitized copy replacing forbidden characters with underscores is saved to `/accounts/{uid}/game_saves` for administrative readability.
-- **Failover Session Resolution**: The endpoint accepts session identifiers via `X-Session-ID`, `X-UID`, or query parameters (`?sessionId=...&uid=...`), checking active sessions, creator devices, and user keys.
-
----
-
-## Firebase Data Architecture
-
-BSMS Web structures its Realtime Database in high-performance, indexed subtrees:
-
-```json
-{
-  "accounts": {
-    "UID_USER_123": {
-      "username": "example",
-      "displayName": "Example User",
-      "email": "example+bsmswebapp@gmail.com",
-      "avatar": "data:image/jpeg;base64...",
-      "role": "admin",
-      "verified": true,
-      "account_status": "active",
-      "sessions": {
-        "SESS_ABC_789": { "createdAt": 1729188000, "deviceId": "DEV_FINGERPRINT" }
-      },
-      "game_saves_raw": "{\"game_save_v1\":{\"highScore\":12500}}"
-    }
-  },
-  "chat": {
-    "conversations": {
-      "dms": {
-        "DM_UID1_UID2": {
-          "members": { "UID_1": { "role": "member" }, "UID_2": { "role": "member" } },
-          "messages": {
-            "MSG_001": {
-              "senderUid": "UID_1",
-              "content": "Check out https://github.com",
-              "timestamp": 1729188050
-            }
-          }
-        }
-      },
-      "gcs": {
-        "GC_COMMUNITY_ROOM": {
-          "name": "Example Group",
-          "members": { ... },
-          "config": { "allowCustomNicknames": true }
-        }
-      }
-    }
-  },
-  "bans": {
-    "devices": {
-      "DEV_FINGERPRINT": { "reason": "TOS violation", "expires": 1731780000 }
-    }
-  }
-}
-```
-
----
-
-## Real-Time Messaging Engine
-
-The messaging core provides a seamless social chat experience with built-in moderation:
-
-- **Empty Conversation Filtering**: Empty conversations (conversations without messages) are automatically filtered out from the conversations sidebar to eliminate clutter.
-- **Direct Messaging (DMs)**: Instant 1-on-1 private messaging with online status dots, unread badges, and read receipts.
-- **Group Chats (GCS)**: Multi-member chat rooms with roles (`owner`, `admin`, `member`), invite codes, custom nicknames, group avatars, and transferrable ownership.
-- **Rich Message Types**:
-  - Voice messages (in-browser recording and playback with custom audio scrubber)
-  - File and image attachments
-  - Interactive polls with real-time percentage graphs
-  - Reply quotation boxes with jump-to-message navigation
-  - Message reactions (quick emoji picker with reaction counts)
-- **Moderation Tools**: Delete message by moderator, unsend message, ban user, and profanity filtering.
-
----
-
-## Analytics & Telemetry
-
-BSMS Web incorporates privacy-focused **Google Analytics 4** telemetry using declarative data attributes:
-
-```html
-<!-- Example of Telemetry Hook in HTML -->
-<button class="btn" data-ga="chat_send_message">Send</button>
-<button class="nav-btn" data-ga="sidebar_tab_click">Tab</button>
-```
-
-| Event Category | Action Identifier | Trigger Condition |
-| :--- | :--- | :--- |
-| **Authentication** | `auth_login_success` | User completes sign-in flow |
-| **Authentication** | `auth_signup_success` | New account created |
-| **Chat** | `chat_start_dm` | New direct message initiated |
-| **Chat** | `chat_join_group` | User joins group via invite card |
-| **Games** | `game_cloud_save_sync` | Save file successfully synchronized |
-| **Admin** | `admin_ban_device` | Device hash flagged in ban registry |
-
----
-
-## Vercel Deployment & Rewrites
-
-When hosted on Vercel, `vercel.json` provides edge redirects, serverless route bindings, and clean URLs:
-
-```json
-{
-  "cleanUrls": true,
-  "redirects": [
-    { "source": "/account", "destination": "/accounts", "permanent": true },
-    { "source": "/c", "destination": "/chat", "permanent": true },
-    { "source": "/games", "destination": "/g", "permanent": true },
-    { "source": "/rooms", "destination": "/chat", "permanent": true }
-  ]
-}
-```
-
-- **Clean URLs**: Requests for `/chat`, `/accounts`, `/g`, and `/users` resolve directly to their corresponding `.html` files without file extensions in the address bar.
-- **Redirects**: Legacy paths (`/c`, `/games`, `/account`) permanently redirect to modern standardized routes.
-
----
-
-## Dependencies & Tooling
-
-| Package | Version | Purpose |
-| :--- | :--- | :--- |
-| [`express`](https://www.npmjs.com/package/express) | `^5.3.0` | Node.js HTTP web application server with routing and static serving |
-| [`firebase-admin`](https://www.npmjs.com/package/firebase-admin) | `^13.10.0` | Google Cloud Firebase Admin SDK for Realtime Database authorization |
-| [`glin-profanity`](https://www.npmjs.com/package/glin-profanity) | `^1.0.2` | High-accuracy multilingual profanity and vulgarity detection engine |
-
----
-
-## Local Environment Configuration
-
-Create a `.env` file in the project root with the following variables:
-
-```ini
-# Port Configuration
-PORT=3000
-
-# Firebase Service Account Credentials
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgk...YOUR_KEY...\n-----END PRIVATE KEY-----\n"
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
-```
-
-> [!WARNING]
-> Keep `FIREBASE_PRIVATE_KEY` strictly confidential. Never commit raw credentials to version control.
-
----
-
-## Local Development Setup
-
-Follow these simple steps to run BSMS Web locally:
+### 1. Clone the repository
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/jellyfishjelly/bsms-web.git
-cd bsms-web
+git clone https://github.com/JellyfishJelly13/BSMS-Web.git
+cd BSMS-Web
+```
 
-# 2. Install production dependencies
+### 2. Install dependencies
+
+```bash
 npm install
+```
 
-# 3. Configure environment variables
+### 3. Configure environment variables
+
+Create a local environment file from the example:
+
+```bash
 cp .env.example .env
+```
 
-# 4. Launch development server on http://localhost:3000
+Open `.env` and replace the placeholder values with the appropriate configuration for your Firebase project.
+
+| Variable | Description |
+| --- | --- |
+| `PORT` | Local Express server port; defaults to `3000`. |
+| `FIREBASE_PROJECT_ID` | Firebase project ID. |
+| `FIREBASE_CLIENT_EMAIL` | Firebase service account email. |
+| `FIREBASE_PRIVATE_KEY` | Private key used for server-side Firebase authentication. |
+| `FIREBASE_DATABASE_URL` | Firebase Realtime Database URL. |
+
+Make sure `.env` is excluded from version control. Never commit real credentials, private keys, or service account files.
+
+### 4. Start the development server
+
+```bash
 npm run dev
 ```
 
-### Useful Shortcuts
-- <kbd>Esc</kbd> — Dismiss open dialogs, image viewers, and back to main view.
-- <kbd>Ctrl</kbd> + <kbd>Enter</kbd> — Dispatch message in chat composer.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+The `npm start` command is also available to start the Express server.
+
+## Project Structure
+
+The repository contains the frontend, backend, API handlers, and supporting assets.
+
+```text
+BSMS-Web/
+├── admin/                 # Administrative interface
+├── api/                   # Backend API handlers
+├── img/                   # Images and visual assets
+├── js/                    # Shared JavaScript files
+├── index.html             # Main landing page
+├── accounts.html          # Account interface
+├── chat.html              # Messaging interface
+├── countdown.html         # Countdown page
+├── g.html                 # Games interface
+├── users.html             # User profiles
+├── server.js              # Express server
+├── package.json           # Dependencies and npm scripts
+├── vercel.json            # Vercel routing configuration
+├── .env.example           # Example environment configuration
+├── SECURITY.md            # Security reporting policy
+├── CHANGELOG.md           # Project changelog
+└── LICENSE                # MIT license
+```
+
+*This is a simplified overview, not an exhaustive inventory of every repository file.*
+
+## Backend and API
+
+The backend uses Express for local development and supports deployment through Vercel's serverless infrastructure.
+
+The API provides account management, messaging, moderation, game save synchronization, link previews, and administrative functionality.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/api/auth` | Account authentication and related account operations |
+| `/api/admin` | Administrative operations and moderation |
+| `/api/chat` | Messaging operations |
+| `/api/games/saves` | Cloud game save retrieval and synchronization |
+| `/api/link-preview` | Link preview generation and metadata retrieval |
+| `/api/bug-report` | Bug report submission |
+| `/api/export-data` | User data export |
+| `/api/profanity-filter` | Profanity analysis and moderation |
+
+Request methods, parameters, and authentication requirements depend on each endpoint's implementation. Refer to the corresponding handler files for details.
+
+## Deployment
+
+BSMS Web uses Vercel for hosting and supports local development through Express.
+
+To deploy the project:
+
+1. Import the repository into [Vercel](https://vercel.com/).
+2. Configure the required environment variables in the Vercel project settings.
+3. Confirm that Firebase credentials and database access are configured correctly.
+4. Deploy the intended production branch.
+5. Verify the application, API endpoints, and database connectivity after deployment.
+
+Keep production credentials in Vercel's environment variable settings rather than committing them to the repository.
+
+## Contributing
+
+Contributions, bug reports, and suggestions are welcome.
+
+Before contributing:
+
+1. Review existing issues and pull requests to avoid duplicating work.
+2. Explain the proposed change and its purpose.
+3. Keep changes focused and avoid unrelated modifications.
+4. Test affected functionality before submitting a pull request.
+5. Never include credentials, private user information, or other secrets in a contribution.
+
+For security vulnerabilities, follow the instructions in [SECURITY.md](SECURITY.md) instead of opening a public issue.
+
+## Security
+
+Security matters because BSMS Web handles accounts, conversations, and other user-related data.
+
+If you discover a potential vulnerability, **report it privately** using the process described in [SECURITY.md](SECURITY.md). Do not publish sensitive vulnerability details, private keys, or active credentials in public issues or pull requests.
+
+## License
+
+BSMS Web is distributed under the [MIT License](LICENSE).
 
 ---
 
