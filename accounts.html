@@ -338,6 +338,27 @@ textarea{resize:vertical;height:110px}
     <h2 style="color:var(--fg);">Remove Profile Picture?</h2>
     <p style="color:var(--fg2); line-height:1.5;">Are you sure you want to remove your profile picture? Your avatar will revert to your default letter initials.</p>
     <div style="display:flex; gap:12px; margin-top:14px;">
+        <div class="form-group">
+            <label>Display Name <span style="font-size:14px; color:var(--fg2);">(Visible to others)</span></label>
+            <input type="text" id="profileDisplayName" placeholder="Your display name" maxlength="30" oninput="updateChatColorPreview()"/>
+        </div>
+
+        <!-- NEW: Chat Name Color Picker -->
+        <div class="form-group">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Chat Name Color</span>
+                <span style="font-size:13px; color:var(--fg2);">Choose your name's color in chat</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:6px; flex-wrap:wrap;">
+                <input type="color" id="profileChatColor" value="#ffffff" style="width:52px; height:46px; padding:2px; border-radius:10px; cursor:pointer; background:var(--input-bg); border:2px solid var(--border); flex-shrink:0; margin:0;" oninput="onColorPickerChange(this.value)"/>
+                <input type="text" id="profileChatColorHex" placeholder="#ffffff" maxlength="7" style="width:130px; margin:0; text-transform:uppercase; font-family:monospace;" oninput="onHexInputChange(this.value)"/>
+                <button type="button" class="btn sec" style="width:auto; margin:0; padding:8px 16px; font-size:16px;" onclick="resetChatColor()">Default</button>
+                <div style="font-size:18px; margin-left:auto; display:flex; align-items:center; gap:6px;">
+                    <span style="color:var(--fg2);">Preview:</span>
+                    <strong id="chatColorPreviewText" style="color:#ffffff;">Username</strong>
+                </div>
+            </div>
+        </div>
       <button class="btn sec" style="flex:1;" onclick="closePopup('removeAvatarModal')">Cancel</button>
       <button class="btn" style="flex:1; background:#ef4444; border-color:#dc2626;" onclick="confirmRemoveAvatar()">Remove</button>
     </div>
