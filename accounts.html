@@ -822,7 +822,8 @@ function completeLogin(data) {
         uid: data.uid, 
         username: data.profile.username,
         displayName: data.profile.displayName || data.profile.username, 
-        pfp: data.profile.avatar || ""
+        pfp: data.profile.avatar || "",
+        chatColor: data.profile.chatColor || ""
     };
     
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
