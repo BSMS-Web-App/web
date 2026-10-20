@@ -14,7 +14,7 @@
   [![Firebase](https://img.shields.io/badge/Database-Firebase%20RTDB-FFCA28?logo=firebase)](https://firebase.google.com/)
   [![Vercel](https://img.shields.io/badge/Hosting-Vercel-black?logo=vercel)](https://vercel.com/)
 
-  [Website](https://bsms-web.vercel.app) · [Report a Bug](https://github.com/JellyfishJelly13/BSMS-Web/issues) · [View Releases](https://github.com/JellyfishJelly13/BSMS-Web/releases)
+  [Website](https://bsms-web.vercel.app) · [Report a Bug](https://github.com/BSMS-Web-App/web/issues) · [View Releases](https://github.com/BSMS-Web-App/web/releases)
 </div>
 
 ---
@@ -47,9 +47,9 @@ Use the following resources to learn more about BSMS Web, its history, and how t
 | [Changelog](CHANGELOG.md) | A chronological record of notable updates, improvements, and changes to BSMS Web. |
 | [Security Policy](SECURITY.md) | Instructions for reporting security vulnerabilities responsibly. |
 | [License](LICENSE) | The license governing the project's source code. |
-| [GitHub Releases](https://github.com/JellyfishJelly13/BSMS-Web/releases) | Published releases and their detailed release notes. |
-| [Issues](https://github.com/JellyfishJelly13/BSMS-Web/issues) | Report bugs, request features, and track known issues. |
-| [Pull Requests](https://github.com/JellyfishJelly13/BSMS-Web/pulls) | Review proposed changes and contribute improvements. |
+| [GitHub Releases](https://github.com/BSMS-Web-App/web/releases) | Published releases and their detailed release notes. |
+| [Issues](https://github.com/BSMS-Web-App/web/issues) | Report bugs, request features, and track known issues. |
+| [Pull Requests](https://github.com/BSMS-Web-App/web/pulls) | Review proposed changes and contribute improvements. |
 
 ## Technology Stack
 
@@ -80,7 +80,7 @@ Use a Node.js version supported by the project's dependencies and deployment env
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/JellyfishJelly13/BSMS-Web.git
+git clone https://github.com/BSMS-Web-App/web.git
 cd BSMS-Web
 ```
 
