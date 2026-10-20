@@ -6,6 +6,7 @@
 
 import { db, admin } from './db.js';
 import crypto from 'crypto';
+import { checkProfanity } from './profanity.js';
 
 // Secure password hashing
 function hashPassword(password) {
@@ -74,34 +75,7 @@ async function evaluateAndClearBans(uid, deviceId, accountObj) {
     return { isBanned: false };
 }
 
-// Dynamic Glin Profanity checker for usernames and display names
-async function checkProfanity(text) {
-    if (!text) return false;
-    let strippedText = text
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[\u200B-\u200D\uFEFF]/g, "")
-        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-        .replace(/\s+/g, "")
-        .replace(/@/g, "a")
-        .replace(/\$/g, "s")
-        .replace(/0/g, "o")
-        .replace(/1/g, "i")
-        .replace(/3/g, "e")
-        .replace(/4/g, "a")
-        .replace(/5/g, "s")
-        .replace(/7/g, "t")
-        .toLowerCase();
 
-    try {
-        const glinModule = await import('glin-profanity');
-        const profanityCheck = glinModule.default || glinModule;
-        return profanityCheck(text) || profanityCheck(strippedText);
-    } catch (err) {
-        console.error("[BSMS Web :: Auth] Glin Profanity Failed to Load:", err);
-        const blockList = ['fuck', 'shit', 'bitch', 'asshole', 'cunt', 'nigger', 'nigga', 'faggot'];
-        return blockList.some(word => strippedText.includes(word));
-    }
-}
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
