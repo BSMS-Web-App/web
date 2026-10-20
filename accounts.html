@@ -7,118 +7,14 @@ SPDX-License-Identifier: MIT
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="description" content="BSMS Web Account Manager. Manage your profile, identity, and security across the BSMS Web ecosystem."/>
-<meta name="category" content="Education"/>
-<meta name="author" content="BSMS Web"/>
-<meta name="theme-color" content="#BB001E">
-<meta name="color-scheme" content="#BB001E">
-<meta name="application-name" content="BSMS Web Accounts">
-<meta property="og:title" content="BSMS Web Accounts">
-<meta property="og:description" content="Manage your unified profile and security settings.">
-<meta property="og:category" content="Education">
-<meta property="og:url" content="https://bsms-web.vercel.app/accounts">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="description" content="Browse active BSMS Web Users, discover friends, and connect.">
+<meta property="og:title" content="Users Directory | BSMS Web">
+<meta property="og:description" content="Browse active community members, discover friends, and connect across BSMS Web.">
+<meta property="og:url" content="https://bsms-web.vercel.app/users">
 <meta property="og:image" content="/img/app-icon.png">
 <meta property="og:type" content="website">
-<title>BSMS Web Accounts</title>
-
-<!-- Universal Ban Setup -->
-<script>
-window.showBanScreen = function(banData) {
-    const render = () => {
-        // Hide Main App & Loaders without touching session memory
-        const appShell = document.getElementById('appShell');
-        const initLoadingScreen = document.getElementById('initLoadingScreen');
-        const authScreen = document.getElementById('authScreen');
-        
-        if (appShell) appShell.style.display = 'none';
-        if (initLoadingScreen) initLoadingScreen.style.display = 'none';
-        if (authScreen) authScreen.style.display = 'none';
-        document.querySelectorAll('.overlay').forEach(el => el.classList.remove('show'));
-        
-        // Show Ban Screen Elements
-        const banScreen = document.getElementById('ban-screen');
-        const msg = document.getElementById('ban-message');
-        const reasonNode = document.getElementById('ban-reason');
-        const timerNode = document.getElementById('ban-timer');
-        const logoutBtn = document.getElementById('ban-logout-btn');
-        const deviceWarning = document.getElementById('ban-device-warning');
-        
-        // Differentiate Ban Types
-        if (banData.banType === 'device') {
-            msg.textContent = "Your device has been banned from accessing BSMS Web services.";
-            logoutBtn.style.display = 'none';
-            deviceWarning.style.display = 'block';
-        } else {
-            msg.textContent = "Your account has been banned from accessing BSMS Web services.";
-            logoutBtn.style.display = 'inline-block';
-            deviceWarning.style.display = 'none';
-        }
-
-        reasonNode.textContent = banData.reason || 'Violation of Ecosystem Terms.';
-
-        // Live Timer Logic
-        if (window.banTimerInterval) clearInterval(window.banTimerInterval);
-
-        if (!banData.expires || banData.expires <= 0) {
-            timerNode.textContent = "Permanent";
-        } else {
-            const updateTimer = () => {
-                const now = Date.now();
-                const diff = banData.expires - now;
-                if (diff <= 0) {
-                    timerNode.textContent = "Expired. Please refresh the page.";
-                    clearInterval(window.banTimerInterval);
-                    return;
-                }
-                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                const m = Math.floor((diff / 1000 / 60) % 60);
-                const s = Math.floor((diff / 1000) % 60);
-                
-                let str = [];
-                if (d > 0) str.push(`${d}d`);
-                if (h > 0) str.push(`${h}h`);
-                str.push(`${m}m`);
-                str.push(`${s}s remaining`);
-                
-                timerNode.textContent = str.join(' ');
-            };
-            updateTimer(); // fire immediately
-            window.banTimerInterval = setInterval(updateTimer, 1000);
-        }
-
-        // Setup the Explicit Logout Action
-        logoutBtn.onclick = async function() {
-            logoutBtn.disabled = true;
-            logoutBtn.textContent = 'Logging out...';
-            try {
-                // Execute proper backend logout to detach device linkage from account
-                await fetch('/api/auth', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Session-ID': localStorage.getItem('session_id') || ""
-                    },
-                    body: JSON.stringify({ action: 'logout' })
-                });
-            } catch(e) {}
-            
-            localStorage.removeItem('bsms_auth_session');
-            localStorage.removeItem('bsms_banned_data');
-            window.location.href = '/';
-        };
-        
-        if (banScreen) {
-            banScreen.style.display = 'flex'; 
-            banScreen.classList.add('show');
-        }
-    };
-    
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
-    else render();
-};
-</script>
+<title>Users Directory | BSMS Web</title>
 
 <!-- Ban Check Enforcer -->
 <script src="/js/ban-check.js"></script>
@@ -128,7 +24,7 @@ window.showBanScreen = function(banData) {
 
 <!-- Jelly Web Inspector -->
 <script src="https://jelly-web-inspector.vercel.app/index.js"></script>
-
+    
 <!-- Favicons -->
 <link rel="icon" href="/img/icon.png">
 <link rel="apple-touch-icon" href="/img/app-icon.png">
@@ -143,1098 +39,907 @@ window.showBanScreen = function(banData) {
 </script>
 <script src="/js/analytics.js"></script>
 
-<!-- JSZip for Data Export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+:root {
+    --text-scale: 1;
+    --theme-rgb: 187, 0, 30;
+    --accent: #BB001E;
+    --accent-hover: #d10022;
+    --accent-glow: rgba(187, 0, 30, 0.35);
 
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --theme-rgb: 187,0,30;
-  --red: rgb(var(--theme-rgb));
-  --red-h: #d10022;
-  --red-glow: rgba(var(--theme-rgb), 0.35);
-  --bg: #000;
-  --fg: #fff;
-  --fg2: rgba(255,255,255,0.6);
-  --border: rgba(255,255,255,0.13);
-  --msg-bg: rgba(255,255,255,0.06);
-  --input-bg: rgba(255,255,255,0.08);
-  --font: 'Patrick Hand', cursive;
+    --bg: #000000;
+    --fg: #ffffff;
+    --fg2: rgba(255, 255, 255, 0.6);
+    --border: rgba(255, 255, 255, 0.15);
+    --pill-bg: rgba(255, 255, 255, 0.08);
+    --input-bg: rgba(255, 255, 255, 0.1);
+
+    --ctrl-bg: rgba(20, 20, 20, 0.98);
+    --ctrl-border: rgba(187, 0, 30, 0.4);
+    --section-bg: rgba(255, 255, 255, 0.04);
+    --section-border: rgba(255, 255, 255, 0.08);
+
+    --font: 'Patrick Hand', cursive;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow: 0 10px 40px rgba(0,0,0,0.5);
+    --shadow-sm: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 body.light-mode {
-  --bg: #f0f2f5;
-  --fg: #1c1e21;
-  --fg2: rgba(0,0,0,0.6);
-  --border: rgba(0,0,0,0.15);
-  --msg-bg: #fff;
-  --input-bg: #fff;
+    --bg: #f0f2f5;
+    --fg: #1c1e21;
+    --fg2: rgba(0, 0, 0, 0.6);
+    --border: rgba(0, 0, 0, 0.15);
+    --pill-bg: #e4e6eb;
+    --input-bg: #ffffff;
+
+    --ctrl-bg: #ffffff;
+    --ctrl-border: rgba(0, 0, 0, 0.15);
+    --section-bg: rgba(0, 0, 0, 0.05);
+    --section-border: rgba(0, 0, 0, 0.1);
+    --shadow: 0 10px 40px rgba(0,0,0,0.15);
+    --shadow-sm: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-html,body{margin:0;padding:0;height:100%;width:100%;font-family:var(--font);background:var(--bg);color:var(--fg);overflow:hidden; transition:background 0.3s, color 0.3s;}
-
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes slideLeft{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
-@keyframes notifIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
-
-/* Offline Banner */
-#offlineBanner {
-  position: fixed; top: 0; left: 0; width: 100%; background: #ef4444; color: #fff;
-  text-align: center; padding: 10px; font-family: var(--font); font-size: 18px;
-  z-index: 10000; transform: translateY(-100%); transition: transform 0.3s ease;
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+    margin: 0; padding: 0; height: 100dvh; width: 100%;
+    font-family: var(--font); font-size: calc(18px * var(--text-scale));
+    background: var(--bg); color: var(--fg);
+    transition: background 0.3s, color 0.3s;
+    overflow-x: hidden;
 }
-#offlineBanner.show { transform: translateY(0); }
+button, input, textarea, select { font-family: var(--font); font-size: inherit; outline: none; border: none; background: transparent; color: inherit; }
+svg.ic { width: 24px; height: 24px; min-width: 24px; fill: currentColor; display: block; flex-shrink: 0; }
+a { color: var(--accent); text-decoration: none; }
 
-/* UI Elements */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:3000;opacity:0;transition:opacity 0.3s ease;backdrop-filter:blur(4px);}
-.overlay.show{display:flex;opacity:1;}
-.popup{background:var(--bg);border:2px solid var(--red);border-radius:20px;padding:26px 24px 20px;width:min(420px,92vw);animation:popIn .22s ease; display:flex; flex-direction:column; max-height: 90vh; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,0.5);}
-.popup h2{font-size:28px;margin:0 0 8px; color:var(--fg);}
-.popup p{font-size:18px;color:var(--fg2);margin:0 0 14px;line-height:1.45}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-.btn{display:block;width:100%;font-family:var(--font);font-size:21px;padding:10px 14px;border-radius:12px;border:2px solid var(--red);background:var(--red);color:#fff;cursor:pointer;transition:transform .13s,background .13s,border-color .13s,box-shadow .13s;margin-bottom:9px;line-height:1.2; text-align:center; text-decoration: none;}
-.btn:last-child{margin-bottom:0}
-.btn:hover:not(:disabled){background:var(--red-h);transform:scale(1.02);box-shadow:0 4px 18px var(--red-glow)}
-.btn:active:not(:disabled){transform:scale(.97)}
-.btn:disabled{opacity:0.5;cursor:not-allowed;}
-.btn.sec{background:transparent;border-color:var(--border);color:var(--fg);}
-.btn.sec:hover:not(:disabled){background:var(--msg-bg);border-color:var(--fg2);box-shadow:none}
-.btn.warn{background:#7a0010;border-color:#7a0010;color:#fff;}
-.btn.warn:hover:not(:disabled){background:#9a0015;border-color:#9a0015}
-
-input,textarea{width:100%;font-family:var(--font);font-size:20px;padding:10px 13px;border-radius:12px;border:2px solid var(--border);background:var(--input-bg);color:var(--fg);margin:5px 0 12px;display:block;transition:border-color .2s,box-shadow .2s; outline:none;}
-input:focus,textarea:focus{border-color:var(--red);box-shadow:0 0 14px var(--red-glow);}
-input:disabled{opacity:0.5;cursor:not-allowed}
-input::placeholder,textarea::placeholder{color:var(--fg2)}
-textarea{resize:vertical;height:110px}
-
-.spinner{width:46px;height:46px;border:4px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin 1s cubic-bezier(.4,0,.2,1) infinite;margin:0 auto 20px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* Screens */
-.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity 0.3s ease;overflow-y:auto;}
-.screen.show{display:flex;opacity:1;}
-.card{width:min(440px,100%);background:var(--bg);border:3px solid var(--red);border-radius:26px;padding:32px 26px;animation:popIn .3s ease;text-align:center;box-shadow:0 0 60px rgba(var(--theme-rgb),0.15); position:relative;}
-.card h1{font-size:42px;margin:0 0 4px;line-height:1.1; color:var(--fg);}
-.card>p{font-size:19px;color:var(--fg2);margin:0 0 24px}
-.logo-img{width:72px;height:72px;object-fit:contain;margin:0 auto 15px;display:block;border-radius:14px; background: var(--msg-bg); border: 2px solid var(--border);}
-
-/* Dashboard Shell */
-#appShell{position:fixed;inset:0;display:none;flex-direction:row;opacity:0;transition:opacity 0.3s ease;}
-#appShell.show{display:flex;opacity:1;}
-#sidebar{width:260px;min-width:260px;border-right:3px solid var(--red);padding:24px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;background:var(--bg);z-index:50;}
-.sidebar-title { font-size: 26px; margin: 0 0 15px 5px; color: var(--fg); font-weight: bold; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
-.navBtn{width:100%;font-family:var(--font);font-size:19px;padding:12px 16px;border-radius:12px;border:2px solid transparent;background:transparent;color:var(--fg2);cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:12px;}
-.navBtn:hover{background:var(--msg-bg);color:var(--fg);transform:translateX(4px);}
-.navBtn.active{background:rgba(var(--theme-rgb),0.15);border-color:var(--red);color:var(--fg);box-shadow:0 2px 12px rgba(var(--theme-rgb),0.2);}
-.sidebar-gap{flex:1}
-
-/* Mobile Topbar */
-#mobileTopbar{display:none;height:60px;border-bottom:3px solid var(--red);padding:0 16px;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;}
-#mobileMenuBtn{font-family:var(--font);font-size:20px;padding:6px 14px;border-radius:10px;border:2px solid var(--red);background:transparent;color:var(--fg);cursor:pointer;}
-#mobileMenuBtn:hover{background:rgba(var(--theme-rgb),0.1)}
-.mobile-title { font-size: 24px; color: var(--fg); font-weight: bold;}
-
-#mobileDrawerBackdrop{position:fixed;inset:0;top:60px;background:rgba(0,0,0,0.5);z-index:699;display:none;animation:fadeIn .2s ease}
-#mobileDrawerBackdrop.show{display:block}
-#mobileDrawer{position:fixed;top:60px;left:0;bottom:0;width:260px;background:var(--bg);border-right:3px solid var(--red);z-index:700;display:flex;flex-direction:column;gap:7px;padding:15px;overflow-y:auto;transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
-#mobileDrawer.open{transform:translateX(0)}
-
-/* Main View */
-#mainView{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:30px;position:relative;}
-.panel{display:none;flex-direction:column;animation:slideLeft .2s ease; max-width: 650px; margin: 0 auto; width: 100%;}
-.panel.show{display:flex}
-.panel-header{margin-bottom:24px;}
-.panel-header h1{font-size:42px;margin:0 0 5px; color:var(--fg);}
-.panel-header p{font-size:19px;color:var(--fg2);margin:0;}
-
-.form-group { margin-bottom: 22px; }
-.form-group label { display: block; font-size: 18px; margin-bottom: 8px; color: var(--fg); }
-.avatar-preview { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--red); background: var(--input-bg); margin-bottom: 15px; display:flex; align-items:center; justify-content:center; font-size: 46px; color: var(--fg); font-weight:bold; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.2);}
-.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
-
-/* Sessions View */
-.session-card { background: var(--input-bg); border: 1px solid var(--border); padding: 12px 16px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-.session-card.current { border-color: var(--red); box-shadow: 0 0 10px rgba(var(--theme-rgb), 0.2); }
-.session-info { display: flex; flex-direction: column; gap: 4px; }
-.session-info strong { font-size: 18px; color: var(--fg); }
-.session-info span { font-size: 15px; color: var(--fg2); }
-
-/* Notifications */
-#notifContainer{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:9000;pointer-events:none;width:min(400px,92vw)}
-.notif{background:rgba(20,20,20,0.96);border:2px solid var(--red);border-radius:12px;padding:10px 16px;font-size:17px;color:#fff;pointer-events:all;cursor:pointer;animation:notifIn .26s ease;width:100%;text-align:center;transition:opacity .28s,transform .28s; box-shadow: 0 6px 20px rgba(0,0,0,0.5);}
-
-#deleteCountdownDisplay { font-size: 80px; font-weight: bold; color: #ff3333; margin: 10px 0 20px; font-family: 'VT323', monospace; line-height:1;}
-
-@media (max-width:768px){
-    #sidebar{display:none;}
-    #mobileTopbar{display:flex;}
-    #mainView{padding:20px 16px;}
+.btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    padding: 10px 16px; border-radius: 12px; border: 2px solid var(--accent);
+    background: var(--accent); color: #fff; cursor: pointer; transition: 0.15s; font-size: 1.1rem;
 }
+.btn:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.02); box-shadow: var(--shadow-sm); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn.sec { background: transparent; border-color: var(--border); color: var(--fg); }
+.btn.sec:hover:not(:disabled) { background: var(--section-bg); border-color: var(--fg2); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.icon-btn {
+    color: var(--fg2); padding: 8px; cursor: pointer; border-radius: 12px; transition: 0.2s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--section-bg); color: var(--fg); }
+.icon-btn.active { color: var(--accent); background: rgba(187,0,30,0.1); }
+
+.input-field {
+    width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--border);
+    background: var(--input-bg); color: var(--fg); margin-bottom: 12px; transition: 0.2s;
+}
+.input-field:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+.search-box { position: relative; display: flex; align-items: center; width: 100%; margin-bottom: 16px; }
+.search-box svg.ic { position: absolute; left: 14px; width: 20px; height: 20px; fill: var(--fg2); pointer-events: none; }
+.search-box input { padding-left: 44px; margin-bottom: 0; }
+
+.pill-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.pill { 
+    background: var(--pill-bg); border: 2px solid transparent; border-radius: 50px; 
+    padding: 6px 16px; cursor: pointer; color: var(--fg2); transition: 0.2s; 
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; 
+}
+.pill:hover { background: var(--section-border); color: var(--fg); }
+.pill.active { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(187,0,30,0.3); }
+
+#appShell {
+    max-width: 1200px; margin: 0 auto; padding: 24px 20px 80px; position: relative;
+    display: flex; flex-direction: column; min-height: 100dvh;
+}
+
+#controls-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 200; background: var(--ctrl-bg); color: var(--fg);
+    border: 2px solid var(--ctrl-border); border-radius: 50%; width: 50px; height: 50px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: 0.2s ease; box-shadow: var(--shadow-sm); overflow: hidden; padding: 0;
+}
+#controls-btn:hover { border-color: var(--accent); transform: translateY(-2px) scale(1.05); box-shadow: var(--shadow); }
+#controls-btn img { width: 100%; height: 100%; object-fit: cover; }
+#controls-btn .fallback-initial { font-size: 1.5rem; font-weight: bold; }
+
+.page-header { text-align: center; margin-bottom: 32px; animation: slideUp 0.3s ease; }
+.page-header h1 { font-size: 2.8rem; margin: 0 0 8px; line-height: 1.1; }
+.page-header h1 span { color: var(--accent); }
+.page-header p { color: var(--fg2); font-size: 1.2rem; max-width: 600px; margin: 0 auto; }
+
+.user-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
+    animation: fadeIn 0.4s ease;
+}
+
+.user-card {
+    background: var(--section-bg); border: 2px solid var(--border); border-radius: 16px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px; transition: 0.2s;
+    cursor: pointer; position: relative; overflow: hidden;
+}
+.user-card:hover { background: var(--pill-bg); border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+.user-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; padding: 20px; border-color: var(--accent); background: rgba(187, 0, 30, 0.05); margin-bottom: 12px;}
+
+.c-av {
+    width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    position: relative; flex-shrink: 0; background: var(--pill-bg); border: 2px solid var(--border);
+    font-size: 1.8rem; font-weight: bold; color: var(--fg); overflow: hidden;
+}
+.c-av img { width: 100%; height: 100%; object-fit: cover; }
+.user-card.wide .c-av { width: 80px; height: 80px; font-size: 2.5rem; border-color: var(--accent); }
+
+.status-dot {
+    position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px;
+    border-radius: 50%; border: 3px solid var(--bg); background: var(--fg2); z-index: 2;
+}
+.status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+
+.u-info { flex: 1; min-width: 0; }
+.u-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.u-name { font-size: 1.3rem; color: var(--fg); font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.u-username { font-size: 1rem; color: var(--fg2); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-card.wide .u-name { font-size: 1.8rem; }
+.user-card.wide .u-username { font-size: 1.1rem; }
+
+.owner-badge { background: #9333ea; color: #ffffff; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; cursor: pointer; transition: transform 0.15s; box-shadow: 0 0 10px rgba(147, 51, 234, 0.4); }
+.owner-badge:hover { transform: scale(1.05); }
+
+.admin-badge { background: #dc2626; color: #ffffff; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; cursor: pointer; transition: transform 0.15s; }
+.admin-badge:hover { transform: scale(1.05); }
+
+.mod-badge { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; padding: 2px 6px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:inline-block; vertical-align:middle; cursor: pointer; transition: transform 0.15s; }
+.mod-badge:hover { transform: scale(1.05); }
+
+.dev-badge {
+    width: 18px; height: 18px; background: #3f3f46; border: 1px solid #71717a;
+    transform: rotate(45deg); display: inline-flex; align-items: center; justify-content: center;
+    vertical-align: middle; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; border-radius: 3px;
+}
+.dev-badge:hover { transform: rotate(45deg) scale(1.1); }
+.dev-badge svg { transform: rotate(-45deg); width: 11px; height: 11px; fill: #ffffff; }
+
+.dev-badge-large {
+    width: 54px; height: 54px; background: #3f3f46; border: 2px solid #71717a;
+    transform: rotate(45deg); display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+.dev-badge-large svg { transform: rotate(-45deg); width: 28px; height: 28px; fill: #ffffff; }
+
+.verified-icon { width: 18px; height: 18px; fill: #3b82f6; cursor: pointer; display: inline-block; vertical-align: middle; transition: transform 0.15s;}
+.verified-icon:hover { transform: scale(1.1); }
+
+#profileView {
+    position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+    display: none; flex-direction: column; overflow-y: auto; overflow-x: hidden;
+    animation: fadeIn 0.3s ease;
+}
+#profileView.show { display: flex; }
+
+.pv-header {
+    position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex;
+    align-items: center; justify-content: space-between; z-index: 10;
+}
+.pv-header-title { font-size: 1.4rem; font-weight: bold; }
+
+.pv-content {
+    max-width: 600px; width: 100%; margin: 0 auto; padding: 32px 20px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px;
+}
+.pv-avatar {
+    width: 120px; height: 120px; border-radius: 50%; background: var(--pill-bg);
+    border: 4px solid var(--accent); font-size: 3.5rem; font-weight: bold; color: var(--fg);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    box-shadow: 0 8px 24px var(--accent-glow); margin-bottom: 8px; position: relative;
+}
+.pv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pv-name-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.pv-name { font-size: 2.2rem; font-weight: bold; line-height: 1.1; }
+.pv-username { font-size: 1.2rem; color: var(--fg2); font-family: var(--font-mono); margin-bottom: 12px; }
+
+.pv-actions { display: flex; gap: 12px; width: 100%; max-width: 400px; margin: 12px 0; }
+
+.pv-tabs {
+    display: flex; width: 100%; border-bottom: 2px solid var(--border); margin-top: 16px;
+}
+.pv-tab {
+    flex: 1; background: none; border: none; padding: 14px 10px; color: var(--fg2);
+    font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s;
+    border-bottom: 3px solid transparent; margin-bottom: -2px; font-family: var(--font);
+}
+.pv-tab:hover { color: var(--fg); background: var(--section-bg); }
+.pv-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pv-tab span { display: block; font-size: 1.5rem; color: var(--fg); line-height: 1; margin-bottom: 4px; }
+
+.pv-tab-content { width: 100%; padding: 24px 0; text-align: left; }
+.pv-pane { display: none; animation: fadeIn 0.3s ease; }
+.pv-pane.active { display: block; }
+
+.pv-bio { font-size: 1.1rem; color: var(--fg2); line-height: 1.6; text-align: center; white-space: pre-wrap; }
+.pv-bio strong { color: var(--fg); }
+
+.user-list-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--section-bg);
+    border: 1px solid var(--section-border); border-radius: 12px; margin-bottom: 10px;
+    cursor: pointer; transition: 0.2s;
+}
+.user-list-item:hover { border-color: var(--accent); transform: translateX(4px); }
+.uli-av { width: 44px; height: 44px; font-size: 1.2rem; border-width: 1px; }
+
+.overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; z-index: 5000;
+    animation: fadeIn 0.2s ease;
+}
+.overlay.show { display: flex; }
+.modal-card {
+    background: var(--bg); border: 2px solid var(--accent); border-radius: 20px;
+    padding: 24px; width: min(440px, 92vw); max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow); animation: slideUp 0.25s cubic-bezier(0.2,0.8,0.2,1);
+    display: flex; flex-direction: column;
+}
+.modal-card h2 { font-size: 1.6rem; margin: 0 0 12px; color: var(--fg); line-height: 1.2; }
+.modal-card p { font-size: 1.1rem; color: var(--fg2); margin: 0 0 20px; line-height: 1.5; }
+
+#toastContainer {
+    position: fixed; top: 20px; right: 20px; 
+    background: var(--accent); color: #fff; padding: 12px 24px; border-radius: 12px;
+    box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px;
+    font-size: 1.1rem; z-index: 9500; 
+    transform: translateX(150%); opacity: 0; 
+    transition: transform 0.4s cubic-bezier(0.2,1,0.2,1), opacity 0.4s, background 0.3s;
+    cursor: pointer; pointer-events: none; max-width: 90vw;
+}
+#toastContainer.show { transform: translateX(0); opacity: 1; pointer-events: auto; }
+#toastContainer.error { background: #ef4444; border: 1px solid #dc2626; }
+#toastContainer.success { background: #22c55e; border: 1px solid #16a34a; }
+
+.state-container { text-align: center; padding: 60px 20px; color: var(--fg2); font-size: 1.2rem; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<div id="offlineBanner">You are currently offline</div>
+<svg style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
+    <defs>
+        <symbol id="ico-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
+        <symbol id="ico-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
+        <symbol id="ico-share" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></symbol>
+        <symbol id="ico-verified" viewBox="0 0 24 24">
+            <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12z" fill="#3b82f6"/>
+            <path d="M10.09 16.72l-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48-7.33 7.35z" fill="#ffffff"/>
+        </symbol>
+        <symbol id="ico-hammer" viewBox="0 0 24 24"><path d="M21.7 6.3l-3-3a1 1 0 0 0-1.4 0l-2.1 2.1 2.1 2.1-1.4 1.4-2.1-2.1-1.2 1.2a3 3 0 0 0-.7 1.4l-8.6 8.6a1.5 1.5 0 0 0 0 2.1l1.3 1.3a1.5 1.5 0 0 0 2.1 0l8.6-8.6a3 3 0 0 0 1.4-.7l1.2-1.2 2.1 2.1 1.4-1.4-2.1-2.1 2.1-2.1a1 1 0 0 0 0-1.4z"/></symbol>
+        <symbol id="ico-msg" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></symbol>
+        <symbol id="ico-user" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></symbol>
+        <symbol id="ico-user-plus" viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></symbol>
+        <symbol id="ico-user-check" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm8.41-3.41L19 9.17l-3.59 3.59-1.41-1.41-1.41 1.41 2.82 2.82 5-5z"/></symbol>
+    </defs>
+</svg>
 
-<!-- THE REQUIRED BAN SCREEN CONTAINER -->
-<div id="ban-screen" class="screen" style="display: none; background: rgba(0,0,0,0.95); z-index: 9999;">
-  <div class="card" style="border-color: #ff3333; max-width: 480px; text-align: center;">
-    <h1 style="color: #ff3333; font-size: 38px;">Access Denied</h1>
-    <p id="ban-message" style="margin-bottom: 24px;"></p>
-    
-    <div style="background: var(--input-bg); border: 2px solid var(--border); padding: 16px; border-radius: 12px; margin-bottom: 24px; text-align: left;">
-      <strong style="color: var(--fg); font-size: 19px;">Reason:</strong>
-      <div id="ban-reason" style="color: var(--fg2); font-size: 17px; margin-bottom: 12px; word-wrap: break-word;">---</div>
-      <strong style="color: var(--fg); font-size: 19px;">Ban Status:</strong>
-      <div id="ban-timer" style="color: var(--fg2); font-size: 17px; font-family: monospace;">---</div>
-    </div>
-    
-    <button id="ban-logout-btn" class="btn warn" style="display: none; margin-bottom: 10px; border: 2px solid #ff3333; background: transparent; color: #ff3333;">Log Out</button>
-    <p id="ban-device-warning" style="display: none; color: var(--fg2); font-size: 15px; margin-top: 10px; margin-bottom: 15px;">For ecosystem integrity, active accounts cannot be logged out while the physical device is restricted.</p>
-  </div>
-</div>
+<button id="controls-btn" onclick="location.href='/accounts'" title="Manage Account">
+    <div id="headerAvatar" class="fallback-initial">?</div>
+</button>
 
-<!-- Loaders & Modals -->
-<div id="initLoadingScreen" class="screen show">
-  <div class="card" style="background:transparent; border:none; box-shadow:none;">
-    <div class="spinner"></div>
-    <h1 style="font-size:46px;">BSMS Web</h1>
-    <div style="font-size:20px; color:var(--red);">Loading Account...</div>
-  </div>
-</div>
-
-<div id="actionLoadingScreen" class="overlay">
-  <div class="popup" style="width: auto; background: transparent; border: none; align-items: center; box-shadow: none;">
-    <div class="spinner"></div>
-    <div id="actionLoadingText" style="font-size: 24px; font-weight: bold; color:var(--red);">Please wait...</div>
-  </div>
-</div>
-
-<div id="alertOverlay" class="overlay" onclick="if(event.target===this) closePopup('alertOverlay')">
-  <div class="popup">
-    <p id="alertText" style="font-size:22px;margin-bottom:24px;color:var(--fg)"></p>
-    <button class="btn" onclick="closePopup('alertOverlay')" data-ga="alert_ok">OK</button>
-  </div>
-</div>
-
-<!-- Modals -->
-<div id="changeUsernameModal" class="overlay" onclick="if(event.target===this) closePopup('changeUsernameModal')">
-  <div class="popup">
-    <h2>Change Username</h2>
-    <p>You can only change your username once every 7 days. Your new username must not be taken.</p>
-    <input type="text" id="newUsernameInput" placeholder="New Username (3-20 chars)" maxlength="20"/>
-    <p style="font-size: 15px; color:var(--fg2); margin-top:-5px;">Only letters, numbers, dashes, and underscores allowed.</p>
-    <button class="btn warn" id="confirmUsernameBtn" onclick="executeUsernameChange()" data-ga="confirm_username_change">Confirm Change</button>
-    <button class="btn sec" onclick="closePopup('changeUsernameModal')">Cancel</button>
-  </div>
-</div>
-
-<div id="removeAvatarModal" class="overlay" onclick="if(event.target===this) closePopup('removeAvatarModal')">
-  <div class="popup" style="text-align:center;">
-    <h2 style="color:var(--fg);">Remove Profile Picture?</h2>
-    <p style="color:var(--fg2); line-height:1.5;">Are you sure you want to remove your profile picture? Your avatar will revert to your default letter initials.</p>
-    <div style="display:flex; gap:12px; margin-top:14px;">
-        <div class="form-group">
-            <label>Display Name <span style="font-size:14px; color:var(--fg2);">(Visible to others)</span></label>
-            <input type="text" id="profileDisplayName" placeholder="Your display name" maxlength="30" oninput="updateChatColorPreview()"/>
-        </div>
-
-        <!-- NEW: Chat Name Color Picker -->
-        <div class="form-group">
-            <label style="display:flex; justify-content:space-between; align-items:center;">
-                <span>Chat Name Color</span>
-                <span style="font-size:13px; color:var(--fg2);">Choose your name's color in chat</span>
-            </label>
-            <div style="display:flex; align-items:center; gap:12px; margin-top:6px; flex-wrap:wrap;">
-                <input type="color" id="profileChatColor" value="#ffffff" style="width:52px; height:46px; padding:2px; border-radius:10px; cursor:pointer; background:var(--input-bg); border:2px solid var(--border); flex-shrink:0; margin:0;" oninput="onColorPickerChange(this.value)"/>
-                <input type="text" id="profileChatColorHex" placeholder="#ffffff" maxlength="7" style="width:130px; margin:0; text-transform:uppercase; font-family:monospace;" oninput="onHexInputChange(this.value)"/>
-                <button type="button" class="btn sec" style="width:auto; margin:0; padding:8px 16px; font-size:16px;" onclick="resetChatColor()">Default</button>
-                <div style="font-size:18px; margin-left:auto; display:flex; align-items:center; gap:6px;">
-                    <span style="color:var(--fg2);">Preview:</span>
-                    <strong id="chatColorPreviewText" style="color:#ffffff;">Username</strong>
-                </div>
-            </div>
-        </div>
-      <button class="btn sec" style="flex:1;" onclick="closePopup('removeAvatarModal')">Cancel</button>
-      <button class="btn" style="flex:1; background:#ef4444; border-color:#dc2626;" onclick="confirmRemoveAvatar()">Remove</button>
-    </div>
-  </div>
-</div>
-
-<div id="deleteAccountModal" class="overlay" onclick="if(event.target===this) closePopup('deleteAccountModal')">
-  <div class="popup">
-    <h2 style="color:#ff3333;">Delete Account</h2>
-    <p>This action is irreversible. All of your BSMS Web data will be permanently lost.</p>
-    <p style="font-size: 16px;">Please confirm your credentials to proceed.</p>
-    <input type="text" id="delAuthUser" placeholder="Enter your username"/>
-    <input type="password" id="delAuthPass" placeholder="Enter your password"/>
-    <button class="btn warn" id="confirmDeleteBtn" onclick="verifyAccountDeletion()" data-ga="confirm_delete_account">Proceed</button>
-    <button class="btn sec" onclick="closePopup('deleteAccountModal')">Cancel</button>
-  </div>
-</div>
-
-<div id="deleteCountdownModal" class="overlay" style="background:rgba(20,0,0,0.96);">
-  <div class="popup" style="border-color:#ff3333; text-align:center;">
-    <h2 style="color:#ff3333;">Account Deletion</h2>
-    <p>Your account will be permanently deleted in:</p>
-    <div id="deleteCountdownDisplay">10</div>
-    <p style="font-size:18px;">This is your last chance to abort.</p>
-    <button class="btn sec" style="border-color:var(--border);" onclick="cancelDeletion()" data-ga="cancel_deletion">Cancel Deletion</button>
-  </div>
-</div>
-
-<!-- Authentication Screen (Login / Sign Up) -->
-<div id="authScreen" class="screen">
-  <div class="card">
-    <div class="logo-img">
-        <svg style="width:40px;height:40px;margin-top:14px;fill:var(--red);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-    </div>
-    <h1 id="authTitle">Sign In</h1>
-    <p id="authSubtitle">Access your BSMS Web Account</p>
-    
-    <div style="text-align: left;">
-      <input id="authUsername" type="text" placeholder="Username (3-20 chars)" maxlength="20" autocomplete="username"/>
-      <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password"/>
-    </div>
-    
-    <button class="btn" id="authSubmitBtn" onclick="handleAuth()" style="margin-top: 14px;" data-ga="auth_submit">Login</button>
-    <a href="/" class="btn sec" style="margin-top: 10px;" data-ga="auth_home">Go Back Home</a>
-    
-    <div style="margin-top: 22px; font-size: 18px; color: var(--fg2);">
-      <span id="authToggleText">Don't have an account?</span> 
-      <strong style="color:var(--red); cursor:pointer;" onclick="toggleAuthMode()" data-ga="auth_toggle">Sign up here</strong>
-    </div>
-  </div>
-</div>
-
-<!-- Logged In Dashboard -->
 <div id="appShell">
-  <div id="sidebar">
-    <div class="sidebar-title">Accounts</div>
-    <button class="navBtn active" id="dock-profile" onclick="switchPanel('profile')" data-ga="tab_profile">Profile</button>
-    <button class="navBtn" id="dock-security" onclick="switchPanel('security')" data-ga="tab_security">Security</button>
-    <button class="navBtn" id="dock-sessions" onclick="switchPanel('sessions')" data-ga="tab_sessions">Sessions</button>
-    <div class="sidebar-gap"></div>
-    <a href="/" class="btn sec" style="text-align: left; padding: 12px 16px; font-size: 19px; border-color: transparent;" data-ga="dash_home">← Go Back Home</a>
-    <div style="font-size: 15px; color:var(--fg2); text-align:center; margin-bottom:10px;">Logged in as <br><strong id="sidebarUsername" style="color:var(--fg);font-size:17px;">---</strong></div>
-    <button class="navBtn" style="border-color:var(--border); color:#ff4444; justify-content:center; font-weight:bold;" onclick="logout()" data-ga="dash_logout">Logout</button>
-  </div>
-
-  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;">
-    
-    <div id="mobileTopbar">
-      <button id="mobileMenuBtn" onclick="toggleMobileDrawer()">
-        <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--fg);"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-      </button>
-      <div class="mobile-title">Accounts</div>
-      <div style="width:40px;"></div> <!-- Spacer -->
-    </div>
-    
-    <div id="mobileDrawerBackdrop" onclick="closeMobileDrawer()"></div>
-    <div id="mobileDrawer">
-      <div class="sidebar-title">Menu</div>
-      <button class="navBtn active" id="mob-profile" onclick="switchPanel('profile'); closeMobileDrawer()">Profile</button>
-      <button class="navBtn" id="mob-security" onclick="switchPanel('security'); closeMobileDrawer()">Security</button>
-      <button class="navBtn" id="mob-sessions" onclick="switchPanel('sessions'); closeMobileDrawer()">Sessions</button>
-      <div class="sidebar-gap"></div>
-      <a href="/" class="btn sec" style="text-align: left; padding: 12px 16px; font-size: 19px; border-color: transparent;">← Go Back Home</a>
-      <div style="font-size: 15px; color:var(--fg2); text-align:center; margin-bottom:10px;">Logged in as <br><strong id="mobileSidebarUsername" style="color:var(--fg);font-size:17px;">---</strong></div>
-      <button class="navBtn" style="border-color:var(--border); color:#ff4444; justify-content:center; font-weight:bold;" onclick="logout()">Logout</button>
-    </div>
-
-    <!-- Main Content Area -->
     <div id="mainView">
-        
-      <!-- Profile Panel -->
-      <div id="profilePanel" class="panel show">
-        <div class="panel-header">
-            <h1>Public Profile</h1>
-            <p>Manage your identity across the BSMS Web ecosystem.</p>
-        </div>
-        
-        <div class="form-group" style="display:flex; flex-direction:column; align-items:center;">
-            <div class="avatar-preview" id="avatarPreviewContainer"></div>
-            <input type="file" id="avatarUpload" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)"/>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn sec" style="width:auto; padding: 8px 18px; font-size:18px;" onclick="document.getElementById('avatarUpload').click()" data-ga="upload_avatar">Upload Picture</button>
-                <button class="btn sec" id="removeAvatarBtn" style="width:auto; padding: 8px 18px; font-size:18px; color:#ef4444; border-color:#ef4444; display:none;" onclick="openPopup('removeAvatarModal')" data-ga="remove_avatar">Remove Picture</button>
-            </div>
-            <p style="font-size:15px; color:var(--fg2); margin: 12px 0 20px 0;">Account created: <strong id="accountCreatedDate">---</strong></p>
+        <div class="page-header">
+            <h1>Discover <span>BSMS Web Users</span></h1>
+            <p>Explore profiles, build your network, and initiate direct messages across the platform.</p>
         </div>
 
-        <div class="form-group">
-            <label>Username <span style="font-size:14px; color:var(--fg2);">(Used for login)</span></label>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="profileUsername" disabled style="margin:0;"/>
-                <button class="btn sec" style="width:auto; margin:0;" onclick="openUsernameModal()" data-ga="open_username_modal">Change</button>
-            </div>
-            <div id="usernameCooldownText" style="font-size: 15px; color:var(--red); margin-top:8px; display:none;"></div>
+        <div class="search-box">
+            <svg class="ic"><use href="#ico-search"></use></svg>
+            <input type="text" id="searchInput" class="input-field" placeholder="Search by name, @username..." oninput="DirectoryApp.onSearch(this.value)">
         </div>
 
-        <div class="form-group">
-            <label>Display Name <span style="font-size:14px; color:var(--fg2);">(Visible to others)</span></label>
-            <input type="text" id="profileDisplayName" placeholder="Your display name" maxlength="30"/>
+        <div class="pill-grid">
+            <button class="pill active" onclick="DirectoryApp.setFilter('all', this)">All Accounts (<span id="count-all">0</span>)</button>
+            <button class="pill" onclick="DirectoryApp.setFilter('team', this)">BSMS Web Team (<span id="count-team">0</span>)</button>
+            <button class="pill" onclick="DirectoryApp.setFilter('following', this)">Following (<span id="count-following">0</span>)</button>
+            <button class="pill" onclick="DirectoryApp.setFilter('verified', this)">Verified</button>
         </div>
-        
-        <div class="form-group">
-            <label style="display:flex; justify-content:space-between; align-items:center;">
-                <span>Bio</span>
-                <span style="font-size:13px; color:var(--fg2);">Supports markdown: **bold**, *italic*, <u>underline</u></span>
-            </label>
-            <textarea id="profileBio" placeholder="Tell us a bit about yourself..." maxlength="200" oninput="updateBioPreview()"></textarea>
-            <div style="margin-top:6px; padding:8px 12px; background:var(--input-bg); border:1px solid var(--border); border-radius:10px; font-size:15px;">
-                <div style="font-size:11px; color:var(--fg2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Bio Live Preview</div>
-                <div id="bioPreviewContent" style="color:var(--fg); line-height:1.4;"></div>
+
+        <div id="myProfileContainer"></div>
+
+        <div id="usersGrid" class="user-grid">
+            <div class="state-container" style="grid-column: 1 / -1;">
+                <div class="spinner"></div>
+                <p>Loading active BSMS Web users...</p>
             </div>
         </div>
-
-        <div class="form-group" style="margin-top: 24px; padding: 16px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 14px;">
-            <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin:0;">
-                <div>
-                    <strong style="font-size:18px; color:var(--fg);">Show Profile in Users Directory</strong>
-                    <p style="font-size:14px; color:var(--fg2); margin:4px 0 0;">Allow your profile to appear publicly in the /users directory list. If disabled, you won't appear in the directory search/list, but others can still view your profile via direct URL.</p>
-                </div>
-                <input type="checkbox" id="toggleShowInUsers" checked style="width:24px; height:24px; accent-color:var(--red); cursor:pointer; flex-shrink:0; margin-left:16px;"/>
-            </label>
-        </div>
-
-        <div class="panel-header" style="margin-top: 40px;">
-            <h2 style="margin:0; font-size: 32px; color:var(--fg);">Contact Information (Optional)</h2>
-        </div>
-
-        <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="profileEmail" placeholder="name@example.com"/>
-        </div>
-
-        <div class="form-group">
-            <label>Phone Number</label>
-            <input type="tel" id="profilePhone" placeholder="(123) 456-7890"/>
-        </div>
-
-        <button class="btn" id="saveProfileBtn" onclick="saveProfile()" style="margin-top: 20px; margin-bottom: 60px;" data-ga="save_profile">Save Profile Changes</button>
-      </div>
-
-      <!-- Security Panel -->
-      <div id="securityPanel" class="panel">
-        <div class="panel-header">
-            <h1>Security</h1>
-            <p>Update your password and export your data.</p>
-        </div>
-        
-        <div class="form-group">
-            <label>Current Password</label>
-            <input type="password" id="secCurrentPass" placeholder="Enter current password"/>
-        </div>
-        <div class="form-group">
-            <label>New Password</label>
-            <input type="password" id="secNewPass" placeholder="Enter new password (min 6 chars)"/>
-        </div>
-        <div class="form-group">
-            <label>Confirm New Password</label>
-            <input type="password" id="secConfirmPass" placeholder="Confirm new password"/>
-        </div>
-        
-        <button class="btn warn" id="updatePasswordBtn" onclick="changePassword()" style="margin-top: 14px;" data-ga="update_password">Update Password</button>
-
-        <div style="margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--border);">
-            <h2 style="margin: 0 0 12px; font-size:32px;">Export Data</h2>
-            <p style="font-size:18px; color:var(--fg2); margin:0 0 20px;">Download a ZIP file containing your unified profile, chats, and configurations.</p>
-            <button class="btn sec" id="exportDataBtn" onclick="exportData()" data-ga="export_data">Request Data Export</button>
-        </div>
-
-        <div style="margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--border); margin-bottom: 40px;">
-            <h2 style="color: #ff3333; margin: 0 0 12px; font-size:32px;">Danger Zone</h2>
-            <p style="font-size:18px; color:var(--fg2); margin:0 0 20px;">Once you delete your account, there is no going back. Please be certain.</p>
-            <button class="btn warn" style="background:transparent; color:#ff3333; border-color:#ff3333;" onclick="openPopup('deleteAccountModal')" data-ga="open_delete_modal">Delete Account</button>
-        </div>
-      </div>
-
-      <!-- Sessions Panel -->
-      <div id="sessionsPanel" class="panel">
-        <div class="panel-header">
-            <h1>Active Sessions</h1>
-            <p>Manage the devices currently logged into your account.</p>
-        </div>
-
-        <div id="sessionsListContainer">
-            <div style="text-align:center; color:var(--fg2); padding: 20px;">Loading sessions...</div>
-        </div>
-
-      </div>
-
     </div>
-  </div>
 </div>
 
-<div id="notifContainer"></div>
+<!-- Full Screen Profile View -->
+<div id="profileView">
+    <div class="pv-header">
+        <button class="icon-btn" onclick="DirectoryApp.closeProfile()"><svg class="ic"><use href="#ico-back"></use></svg></button>
+        <div class="pv-header-title">User Profile</div>
+        <button class="icon-btn" id="btnShareProfile"><svg class="ic"><use href="#ico-share"></use></svg></button>
+    </div>
+    <div class="pv-content">
+        <div class="pv-avatar" id="pvAvatar"></div>
+        <div class="pv-name-row" id="pvNameRow"></div>
+        <div class="pv-username" id="pvUsername"></div>
+        
+        <div class="pv-actions" id="pvActions">
+            <button class="btn sec" id="pvFollowBtn" style="flex:1;">Follow</button>
+            <button class="btn primary" id="pvDmBtn" style="flex:1;">Message</button>
+        </div>
+
+        <div class="pv-tabs">
+            <button class="pv-tab active" onclick="DirectoryApp.switchTab('bio', this)">Bio</button>
+            <button class="pv-tab" onclick="DirectoryApp.switchTab('followers', this)"><span id="pvCountFollowers">0</span> Followers</button>
+            <button class="pv-tab" onclick="DirectoryApp.switchTab('following', this)"><span id="pvCountFollowing">0</span> Following</button>
+        </div>
+
+        <div class="pv-tab-content">
+            <div id="pane-bio" class="pv-pane active">
+                <div class="pv-bio" id="pvBioText"></div>
+            </div>
+            <div id="pane-followers" class="pv-pane">
+                <div id="pvFollowersList"></div>
+            </div>
+            <div id="pane-following" class="pv-pane">
+                <div id="pvFollowingList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Badges Modals -->
+<div id="verifiedModal" class="overlay" onclick="if(event.target===this) UI.closeModal('verifiedModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <svg class="ic" style="width: 80px; height: 80px; fill: #3b82f6; margin-bottom: 16px;"><use href="#ico-verified"></use></svg>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Verified Account</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="vmUserDisplay" style="color:var(--fg);">---</strong> is verified. This means they have been manually confirmed by BSMS Web administrators as an authentic, notable figure.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('verifiedModal')">Close</button>
+    </div>
+</div>
+
+<div id="adminModal" class="overlay" onclick="if(event.target===this) UI.closeModal('adminModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="admin-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px;">Admin</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Administrator</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="amUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Administrator. Administrators hold root privileges to govern channels and manage systems.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('adminModal')">Close</button>
+    </div>
+</div>
+
+<div id="modModal" class="overlay" onclick="if(event.target===this) UI.closeModal('modModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="mod-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px;">Mod</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Community Moderator</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="mmUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Moderator. Community Moderators enforce safety guidelines and moderate reports.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('modModal')">Close</button>
+    </div>
+</div>
+
+<div id="devModal" class="overlay" onclick="if(event.target===this) UI.closeModal('devModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <div class="dev-badge-large">
+            <svg class="ic"><use href="#ico-hammer"></use></svg>
+        </div>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Platform Developer</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="dmUserDisplay" style="color:var(--fg);">---</strong> is a BSMS Web Developer. Developers design, program, and maintain core codebases.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('devModal')">Close</button>
+    </div>
+</div>
+
+<div id="ownerModal" class="overlay" onclick="if(event.target===this) UI.closeModal('ownerModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="owner-badge" style="font-size: 1.1rem; padding: 4px 14px; margin-bottom: 16px;">Owner</span>
+        <h2 style="font-size: 2rem; margin-bottom: 8px;">Platform Owner</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            The account <strong id="omUserDisplay" style="color:var(--fg);">---</strong> is the BSMS Web Platform Owner. The Owner holds ultimate authority across the ecosystem.
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('ownerModal')">Close</button>
+    </div>
+</div>
+
+<div id="toastContainer" onclick="UI.hideToast()">
+    <svg class="ic" style="width:20px;height:20px;"><use href="#ico-user"></use></svg>
+    <span id="toastText">Notification</span>
+</div>
 
 <script>
-/*
- * BSMS Web
- * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
- */
+const UI = {
+    showToast: (msg, type = 'info') => {
+        const t = document.getElementById('toastContainer');
+        t.className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+        document.getElementById('toastText').innerText = msg;
+        t.classList.add('show');
+        clearTimeout(UI.toastTimeout);
+        UI.toastTimeout = setTimeout(() => t.classList.remove('show'), 4000);
+    },
+    hideToast: () => document.getElementById('toastContainer').classList.remove('show'),
+    openModal: id => document.getElementById(id).classList.add('show'),
+    closeModal: id => document.getElementById(id).classList.remove('show'),
 
-// Initialize standard offline checking
-window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
-window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
-if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
+    showVerifiedModal: (name) => { document.getElementById('vmUserDisplay').innerText = name; UI.openModal('verifiedModal'); },
+    showAdminModal: (name) => { document.getElementById('amUserDisplay').innerText = name; UI.openModal('adminModal'); },
+    showModModal: (name) => { document.getElementById('mmUserDisplay').innerText = name; UI.openModal('modModal'); },
+    showDevModal: (name) => { document.getElementById('dmUserDisplay').innerText = name; UI.openModal('devModal'); },
+    showOwnerModal: (name) => { document.getElementById('omUserDisplay').innerText = name; UI.openModal('ownerModal'); }
+};
 
-// Establish global session ID (and primary device ID) on load if missing
-if (!localStorage.getItem('session_id')) {
-    // Generate standard UUID v4 format to match your ecosystem standard
-    const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-    localStorage.setItem('session_id', id);
-    console.log("[BSMS Web :: Auth] Generated new fallback session_id for device tracking.");
-}
+const DirectoryApp = {
+    users: [],
+    myUid: null,
+    activeFilter: 'all',
+    searchQuery: '',
+    currentUserObj: null,
+    usersLoaded: false,
+    pendingProfile: null,
 
-const SESSION_KEY = 'bsms_auth_session';
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    init: async function() {
+        this.renderCurrentSession();
+        window.addEventListener('hashchange', () => this.handleHashRoute());
+        window.addEventListener('popstate', () => this.handleHashRoute());
+        await this.fetchUsers();
+    },
 
-let authSession = null;
-let currentAccountData = null;
-let authMode = 'login'; 
-let pendingAvatarBase64 = null;
-let deleteInterval = null;
-let deleteTimer = 10;
-
-// ---------- INIT & ROUTING ----------
-window.addEventListener('hashchange', handleHash);
-
-function init() {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (raw) {
-        authSession = JSON.parse(raw);
-        if(authSession.loggedIn && authSession.uid) {
-            fetchCloudProfile();
-            return;
-        }
-    }
-    
-    // Logged out
-    authSession = null;
-    handleHash();
-}
-
-async function apiFetch(endpoint, options = {}) {
-    if (!options.headers) options.headers = {};
-    const sessionId = localStorage.getItem('session_id') || "";
-    
-    // Send it for both session tracking and precise device banning
-    options.headers['X-Session-ID'] = sessionId;
-    options.headers['X-Device-ID'] = sessionId;
-    options.headers['Content-Type'] = 'application/json';
-
-    try {
-        const response = await fetch(endpoint, options);
-        const data = await response.json().catch(() => ({}));
-        
-        if (response.status === 403 && data.account_status === "banned") {
-            console.warn("[BSMS Web :: Auth] Device/Account banned. Showing UI.");
-            // We explicitly DO NOT remove SESSION_KEY so they can stay logged in underneath the restriction
-            if (window.showBanScreen) {
-                window.showBanScreen({ 
-                    banType: data.banType, 
-                    reason: data.reason, 
-                    expires: data.ban_expires 
-                });
+    renderCurrentSession: function() {
+        try {
+            const sessStr = localStorage.getItem('bsms_auth_session');
+            if (sessStr) {
+                const sess = JSON.parse(sessStr);
+                const pfpEl = document.getElementById('headerAvatar');
+                if (sess.avatar) {
+                    pfpEl.innerHTML = `<img src="${this.escapeHTML(sess.avatar)}" style="width:100%;height:100%;object-fit:cover;">`;
+                    pfpEl.className = '';
+                } else {
+                    pfpEl.innerText = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
+                    pfpEl.className = 'fallback-initial';
+                }
             }
-            return null;
-        }
-        
-        if (!response.ok) {
-            throw new Error(data.error || `HTTP error ${response.status}`);
-        }
-        
-        return data;
-    } catch (err) {
-        console.error(`[BSMS Web :: API] Fetch failed for ${endpoint}:`, err);
-        throw err;
-    }
-}
+        } catch(e) {}
+    },
 
-async function fetchCloudProfile() {
-    try {
-        const data = await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'getProfile' })
-        });
-        
-        if (data && data.profile) {
-            currentAccountData = data.profile;
-            loadDashboard();
-        } else if (data === null) {
-            // Already handled internally by apiFetch / ban trigger
-            return;
-        } else {
-            throw new Error("Invalid session data");
-        }
-    } catch(err) {
-        localStorage.removeItem(SESSION_KEY);
-        authSession = null;
-        handleHash();
-    }
-}
+    fetchUsers: async function() {
+        try {
+            const sid = localStorage.getItem('session_id') || "";
+            const res = await fetch('/api/auth?action=getPublicUsers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to load users");
 
-function handleHash() {
-    // If the ban screen is showing, DO NOT alter the display via routing
-    const banScreen = document.getElementById('ban-screen');
-    if (banScreen && banScreen.style.display !== 'none') return;
-    
-    let hash = window.location.hash || '#';
-    
-    setTimeout(() => {
-        document.getElementById('initLoadingScreen').classList.remove('show');
-        
-        if (authSession && authSession.loggedIn) {
-            showScreen('appShell');
-            if (hash === '#security') switchPanel('security');
-            else if (hash === '#sessions') { switchPanel('sessions'); loadSessions(); }
-            else switchPanel('profile');
-        } else {
-            showScreen('authScreen');
-            if (hash === '#signup') {
-                authMode = 'signup';
+            this.users = data.users || [];
+            this.myUid = data.myUid || null;
+            
+            if (this.myUid) {
+                const myIdx = this.users.findIndex(u => u.uid === this.myUid);
+                if (myIdx > -1) {
+                    this.currentUserObj = this.users.splice(myIdx, 1)[0];
+                }
+            }
+
+            this.usersLoaded = true;
+            this.updateCounts();
+            this.renderMyCard();
+            this.renderUsers();
+            
+            if (this.pendingProfile) {
+                const target = this.pendingProfile;
+                this.pendingProfile = null;
+                this.openProfileFullScreen(target);
             } else {
-                authMode = 'login';
+                this.handleHashRoute();
             }
-            updateAuthUI();
+
+        } catch (err) {
+            this.usersLoaded = true;
+            document.getElementById('usersGrid').innerHTML = `
+                <div class="state-container" style="grid-column: 1 / -1; color:#ef4444;">
+                    <p>Failed to load directory. Please verify your connection.</p>
+                    <button class="btn sec" style="width:auto; margin: 16px auto 0;" onclick="DirectoryApp.fetchUsers()">Try Again</button>
+                </div>
+            `;
         }
-    }, 50);
-}
+    },
 
-// ---------- UI HELPERS ----------
-function showScreen(id) {
-    document.querySelectorAll('.screen, #appShell').forEach(s => s.classList.remove('show'));
-    void document.getElementById(id).offsetWidth;
-    document.getElementById(id).classList.add('show');
-}
-function openPopup(id) { document.getElementById(id).classList.add('show'); }
-function closePopup(id) { document.getElementById(id).classList.remove('show'); }
+    updateCounts: function() {
+        const visible = this.users.filter(u => !u.hiddenFromDirectory);
+        document.getElementById('count-all').innerText = visible.length;
+        document.getElementById('count-team').innerText = visible.filter(u => u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper).length;
+        document.getElementById('count-following').innerText = visible.filter(u => u.isFollowing).length;
+    },
 
-function setButtonLoading(btnId, isLoading, originalText = "") {
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-    if (isLoading) {
-        btn.disabled = true;
-        btn.dataset.originalText = btn.textContent;
-        btn.textContent = "Please wait...";
-    } else {
-        btn.disabled = false;
-        btn.textContent = originalText || btn.dataset.originalText || "Submit";
-    }
-}
+    setFilter: function(filter, btnEl) {
+        this.activeFilter = filter;
+        document.querySelectorAll('.pill').forEach(el => el.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        this.renderUsers();
+    },
 
-function showAction(msg) { document.getElementById('actionLoadingText').textContent = msg; document.getElementById('actionLoadingScreen').classList.add('show'); }
-function hideAction() { document.getElementById('actionLoadingScreen').classList.remove('show'); }
-function showAlert(msg) { document.getElementById('alertText').innerText = msg; openPopup('alertOverlay'); }
-function showToast(msg) {
-    const c = document.getElementById('notifContainer');
-    const n = document.createElement('div'); n.className = 'notif'; n.textContent = msg;
-    n.onclick = () => { n.style.opacity='0'; setTimeout(()=>n.remove(), 280); }; c.appendChild(n);
-    setTimeout(() => { if(n.parentNode) n.click(); }, 4000);
-}
+    onSearch: function(val) {
+        this.searchQuery = (val || '').toLowerCase().trim().replace(/^@/, '');
+        this.renderUsers();
+    },
 
-function preventSpaces(e) { this.value = this.value.replace(/ /g, '_'); }
-document.getElementById('authUsername').addEventListener('input', preventSpaces);
-document.getElementById('newUsernameInput').addEventListener('input', preventSpaces);
+    getFilteredUsers: function() {
+        let list = this.users.filter(u => {
+            if (u.hiddenFromDirectory) return false;
+            
+            if (this.activeFilter === 'following' && !u.isFollowing) return false;
+            if (this.activeFilter === 'team' && !(u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper)) return false;
+            if (this.activeFilter === 'verified' && !u.verified) return false;
 
-function toggleMobileDrawer(){
-    const d=document.getElementById('mobileDrawer'), bd=document.getElementById('mobileDrawerBackdrop');
-    const o=d.classList.toggle('open'); bd.classList.toggle('show',o);
-}
-function closeMobileDrawer(){
-    document.getElementById('mobileDrawer').classList.remove('open');
-    document.getElementById('mobileDrawerBackdrop').classList.remove('show');
-}
-
-function switchPanel(name) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
-    document.querySelectorAll('.navBtn').forEach(b => b.classList.remove('active'));
-    document.getElementById(name + 'Panel').classList.add('show');
-    if(document.getElementById('dock-' + name)) document.getElementById('dock-' + name).classList.add('active');
-    if(document.getElementById('mob-' + name)) document.getElementById('mob-' + name).classList.add('active');
-    window.location.hash = `#${name}`;
-}
-
-// ---------- AUTHENTICATION ----------
-function toggleAuthMode() {
-    window.location.hash = authMode === 'login' ? '#signup' : '#login';
-}
-
-function updateAuthUI() {
-    const title = document.getElementById('authTitle');
-    const subtitle = document.getElementById('authSubtitle');
-    const btn = document.getElementById('authSubmitBtn');
-    const toggleText = document.getElementById('authToggleText');
-    const toggleLink = toggleText.nextElementSibling;
-
-    if (authMode === 'signup') {
-        title.textContent = 'Create Account'; subtitle.textContent = 'Join the BSMS Web ecosystem';
-        btn.textContent = 'Sign Up'; toggleText.textContent = 'Already have an account?'; toggleLink.textContent = 'Log in here';
-    } else {
-        title.textContent = 'Sign In'; subtitle.textContent = 'Access your BSMS Web Account';
-        btn.textContent = 'Login'; toggleText.textContent = "Don't have an account?"; toggleLink.textContent = 'Sign up here';
-    }
-}
-
-async function handleAuth() {
-    let user = document.getElementById('authUsername').value.replace(/ /g, '_');
-    const pass = document.getElementById('authPassword').value.trim();
-
-    if (user.length < 3 || user.length > 20) return showAlert("Username must be between 3 and 20 characters.");
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(user)) return showAlert("Username must start with a letter/number and contain only letters, numbers, dashes, and underscores.");
-    if (!pass) return showAlert("Password is required.");
-
-    setButtonLoading('authSubmitBtn', true);
-
-    try {
-        const data = await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ 
-                action: authMode === 'signup' ? 'register' : 'login',
-                username: user, 
-                password: pass 
-            })
+            if (this.searchQuery) {
+                const matchStr = `${u.displayName} ${u.username} ${u.bio || ''}`.toLowerCase();
+                if (!matchStr.includes(this.searchQuery)) return false;
+            }
+            return true;
         });
-        
-        if (data && data.success) {
-            completeLogin(data);
+
+        list.sort((a, b) => {
+            const nameA = (a.displayName || a.username || '').toLowerCase();
+            const nameB = (b.displayName || b.username || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+
+        return list;
+    },
+
+    getBadgesHTML: function(u) {
+        let b = '';
+        const safeName = this.escapeHTML(u.displayName);
+        if (u.verified) {
+            b += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal('${safeName}')"><use href="#ico-verified"></use></svg>`;
         }
-    } catch (err) { 
-        showAlert(err.message || "Connection error."); 
-    } finally {
-        setButtonLoading('authSubmitBtn', false);
-    }
-}
-
-function completeLogin(data) {
-    const sessionObj = {
-        loggedIn: true, 
-        uid: data.uid, 
-        username: data.profile.username,
-        displayName: data.profile.displayName || data.profile.username, 
-        pfp: data.profile.avatar || "",
-        chatColor: data.profile.chatColor || ""
-    };
-    
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
-    authSession = sessionObj;
-    currentAccountData = data.profile;
-    
-    document.getElementById('authPassword').value = '';
-    
-    const cb = new URLSearchParams(window.location.search).get('callback_url');
-    if (cb && cb.startsWith('/') && !cb.startsWith('//')) {
-        window.location.href = cb;
-    } else {
-        window.location.hash = '#profile';
-        loadDashboard();
-    }
-}
-
-async function logout() {
-    try {
-        await apiFetch(`/api/auth`, { 
-            method: 'POST', 
-            body: JSON.stringify({ action: 'logout' }) 
-        });
-    } catch(e) {
-        console.warn("[BSMS Web :: Auth] Backend logout failed, clearing locally.");
-    }
-    localStorage.removeItem(SESSION_KEY);
-    authSession = null; currentAccountData = null; pendingAvatarBase64 = null;
-    showToast("Logged out.");
-    window.location.hash = '#login';
-}
-// --- Chat Color Picker Helpers ---
-function updateChatColorPreview() {
-    const hexInput = document.getElementById('profileChatColorHex');
-    const colorInput = document.getElementById('profileChatColor');
-    const preview = document.getElementById('chatColorPreviewText');
-    const dNameInput = document.getElementById('profileDisplayName');
-    
-    if (!preview) return;
-    const name = (dNameInput && dNameInput.value.trim()) || (authSession && authSession.displayName) || (authSession && authSession.username) || 'Username';
-    preview.textContent = name;
-
-    const val = (hexInput && hexInput.value.trim()) || (colorInput && colorInput.value) || '';
-    if (/^#[0-9a-fA-F]{3,6}$/.test(val)) {
-        preview.style.color = val;
-    } else {
-        preview.style.color = 'var(--fg)';
-    }
-}
-
-function onColorPickerChange(hex) {
-    const hexInput = document.getElementById('profileChatColorHex');
-    if (hexInput) hexInput.value = hex;
-    updateChatColorPreview();
-}
-
-function onHexInputChange(val) {
-    const colorInput = document.getElementById('profileChatColor');
-    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-        if (colorInput) colorInput.value = val;
-    }
-    updateChatColorPreview();
-}
-
-function resetChatColor() {
-    const colorInput = document.getElementById('profileChatColor');
-    const hexInput = document.getElementById('profileChatColorHex');
-    if (colorInput) colorInput.value = '#ffffff';
-    if (hexInput) hexInput.value = '';
-    updateChatColorPreview();
-}
-
-...
-// ---------- DASHBOARD POPULATION ----------
-function loadDashboard() {
-    document.getElementById('initLoadingScreen').classList.remove('show');
-    showScreen('appShell');
-    
-    document.getElementById('sidebarUsername').textContent = authSession.username;
-    document.getElementById('mobileSidebarUsername').textContent = authSession.username;
-    
-    document.getElementById('profileUsername').value = authSession.username;
-    document.getElementById('profileDisplayName').value = currentAccountData.displayName || authSession.username;
-    document.getElementById('profileBio').value = currentAccountData.bio || "";
-    document.getElementById('profileEmail').value = currentAccountData.email || "";
-    document.getElementById('profilePhone').value = currentAccountData.phone || "";
-    document.getElementById('toggleShowInUsers').checked = (currentAccountData.showInUsersList !== false);
-    pendingAvatarBase64 = currentAccountData.avatar || null;
-    
-    let cd = 'Unknown';
-    if (currentAccountData.createdAt) {
-        const dateObj = new Date(currentAccountData.createdAt);
-        if (!isNaN(dateObj.getTime())) {
-            cd = dateObj.toLocaleDateString();
+        if (u.role === 'owner') {
+            b += `<span class="owner-badge" onclick="event.stopPropagation(); UI.showOwnerModal('${safeName}')">Owner</span>`;
+        } else if (u.role === 'admin') {
+            b += `<span class="admin-badge" onclick="event.stopPropagation(); UI.showAdminModal('${safeName}')">Admin</span>`;
+        } else if (u.role === 'mod') {
+            b += `<span class="mod-badge" onclick="event.stopPropagation(); UI.showModModal('${safeName}')">Mod</span>`;
         }
-    }
-    document.getElementById('accountCreatedDate').textContent = cd;
-    
-    renderAvatarPreview();
-    updateBioPreview();
-}
+        if (u.isDeveloper) {
+            b += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal('${safeName}')"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
+        }
+        return b;
+    },
 
-function renderBioMarkdown(str) {
-    if (!str) return '';
-    let out = str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
-    out = out.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
-    out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    out = out.replace(/__(.*?)__/g, '<u>$1</u>');
-    out = out.replace(/(^|[^*])\*(?!\*)(.*?)\*(?!\*)/g, '$1<em>$2</em>');
-    out = out.replace(/(^|[^_])_(?!_)(.*?)(?<!_)_/g, '$1<em>$2</em>');
-    return out;
-}
+    renderUserCard: function(u, isWide = false) {
+        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
+        const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+        const badgesHtml = this.getBadgesHTML(u);
+        const wideClass = isWide ? 'wide' : '';
+        const tagLine = isWide ? `<span style="font-size:0.9rem; color:var(--accent); font-weight:bold; margin-bottom:4px; display:block;">Your Profile</span>` : '';
+        const nameColor = u.chatColor ? `style="color: ${this.escapeHTML(u.chatColor)};"` : '';
 
-function updateBioPreview() {
-    const text = document.getElementById('profileBio').value.trim();
-    const preview = document.getElementById('bioPreviewContent');
-    if (!preview) return;
-    if (!text) {
-        preview.innerHTML = '<span style="color:var(--fg2); font-style:italic;">No bio set.</span>';
-    } else {
-        preview.innerHTML = renderBioMarkdown(text);
-    }
-}
+        return `
+        <div class="user-card ${wideClass}" onclick="Router.setHash('${u.username}')">
+            <div class="c-av">${avatarHtml}</div>
+            <div class="u-info">
+                ${tagLine}
+                <div class="u-name-row">
+                    <span class="u-name" ${nameColor}>${this.escapeHTML(u.displayName)}</span>
+                    ${badgesHtml}
+                </div>
+                <div class="u-username">@${this.escapeHTML(u.username)}</div>
+            </div>
+        </div>
+        `;
+    },
 
-function renderAvatarPreview() {
-    const container = document.getElementById('avatarPreviewContainer');
-    const removeBtn = document.getElementById('removeAvatarBtn');
-    if (pendingAvatarBase64) {
-        container.innerHTML = `<img src="${pendingAvatarBase64}">`;
-        container.style.border = "none";
-        if (removeBtn) removeBtn.style.display = 'inline-block';
-    } else {
-        container.innerHTML = (document.getElementById('profileDisplayName').value || authSession.username).charAt(0).toUpperCase();
-        container.style.border = "3px solid var(--red)";
-        if (removeBtn) removeBtn.style.display = 'none';
-    }
-}
+    renderMyCard: function() {
+        const c = document.getElementById('myProfileContainer');
+        if (this.currentUserObj && !this.searchQuery && this.activeFilter === 'all') {
+            c.innerHTML = this.renderUserCard(this.currentUserObj, true);
+        } else {
+            c.innerHTML = '';
+        }
+    },
 
-async function confirmRemoveAvatar() {
-    closePopup('removeAvatarModal');
-    try {
-        await apiFetch('/api/auth', {
-            method: 'POST',
-            body: JSON.stringify({ action: 'removeAvatar' })
-        });
-        pendingAvatarBase64 = null;
-        currentAccountData.avatar = "";
-        authSession.pfp = null;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
-        const fileInp = document.getElementById('avatarUpload');
-        if (fileInp) fileInp.value = '';
-        renderAvatarPreview();
-        showToast("Profile picture removed!");
-        loadDashboard();
-    } catch (err) {
-        showAlert(err.message || "Failed to remove picture.");
-    }
-}
+    renderUsers: function() {
+        this.renderMyCard();
+        const grid = document.getElementById('usersGrid');
+        const list = this.getFilteredUsers();
 
-function handleAvatarUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return showAlert("Please select a valid image.");
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            
-            const scale = Math.max(256 / img.width, 256 / img.height);
-            const x = (256 / 2) - (img.width / 2) * scale;
-            const y = (256 / 2) - (img.height / 2) * scale;
-            
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-            
-            pendingAvatarBase64 = canvas.toDataURL('image/jpeg', 0.85);
-            renderAvatarPreview();
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
-// ---------- UPDATES ----------
-async function saveProfile() {
-    const dName = document.getElementById('profileDisplayName').value.trim();
-    if (dName.length > 30) return showAlert("Display name cannot exceed 30 characters.");
-    
-    setButtonLoading('saveProfileBtn', true);
-    
-    try {
-        const updateObj = {
-            action: 'updateProfile',
-            displayName: dName || authSession.username,
-            bio: document.getElementById('profileBio').value.trim(),
-            email: document.getElementById('profileEmail').value.trim(),
-            phone: document.getElementById('profilePhone').value.trim(),
-            avatar: pendingAvatarBase64 || "",
-            showInUsersList: document.getElementById('toggleShowInUsers').checked
-        };
-        
-        await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify(updateObj)
-        });
-        
-        Object.assign(currentAccountData, updateObj);
-        
-        authSession.displayName = updateObj.displayName;
-        authSession.pfp = updateObj.avatar;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
-        
-        showToast("Profile updated!"); 
-        loadDashboard();
-    } catch (err) { 
-        showAlert(err.message || "Failed to save profile."); 
-    } finally {
-        setButtonLoading('saveProfileBtn', false);
-    }
-}
-
-function openUsernameModal() {
-    const lastChange = currentAccountData.lastUsernameChange || 0;
-    const timeSince = Date.now() - lastChange;
-    const warnText = document.getElementById('usernameCooldownText');
-
-    if (timeSince < SEVEN_DAYS_MS) {
-        const daysLeft = Math.ceil((SEVEN_DAYS_MS - timeSince) / (1000 * 60 * 60 * 24));
-        warnText.textContent = `Cooldown active. Change available in ${daysLeft} day(s).`;
-        warnText.style.display = 'block';
-    } else {
-        warnText.style.display = 'none';
-        document.getElementById('newUsernameInput').value = '';
-        openPopup('changeUsernameModal');
-    }
-}
-
-async function executeUsernameChange() {
-    let newName = document.getElementById('newUsernameInput').value.replace(/ /g, '_');
-    if (newName.length < 3 || newName.length > 20) return showAlert("3-20 characters required.");
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(newName)) return showAlert("Letters, numbers, underscores, and dashes only.");
-    if (newName === authSession.username) return showAlert("That is already your username.");
-
-    setButtonLoading('confirmUsernameBtn', true);
-    try {
-        const data = await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'changeUsername', newUsername: newName })
-        });
-        
-        authSession.username = newName;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
-        
-        closePopup('changeUsernameModal'); showToast("Username changed!");
-        fetchCloudProfile();
-    } catch (err) { 
-        showAlert(err.message || "Error changing username."); 
-    } finally {
-        setButtonLoading('confirmUsernameBtn', false);
-    }
-}
-
-async function changePassword() {
-    const cp = document.getElementById('secCurrentPass').value, np = document.getElementById('secNewPass').value, cnp = document.getElementById('secConfirmPass').value;
-    if (!cp || !np || !cnp) return showAlert("All fields required.");
-    if (np.length < 6) return showAlert("New password min 6 characters.");
-    if (np !== cnp) return showAlert("Passwords do not match.");
-    
-    setButtonLoading('updatePasswordBtn', true);
-    try {
-        await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'changePassword', currentPassword: cp, newPassword: np })
-        });
-        
-        document.getElementById('secCurrentPass').value = ''; document.getElementById('secNewPass').value = ''; document.getElementById('secConfirmPass').value = '';
-        showToast("Password updated successfully.");
-    } catch(err) { 
-        showAlert(err.message || "Error changing password."); 
-    } finally {
-        setButtonLoading('updatePasswordBtn', false);
-    }
-}
-
-async function loadSessions() {
-    const container = document.getElementById('sessionsListContainer');
-    container.innerHTML = `<div style="text-align:center; color:var(--fg2); padding: 20px;">Loading sessions...</div>`;
-    
-    try {
-        const data = await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'getSessions' })
-        });
-        container.innerHTML = '';
-        
-        if (!data.sessions || Object.keys(data.sessions).length === 0) {
-            container.innerHTML = `<div style="text-align:center; color:var(--fg2); padding: 20px;">No active sessions found.</div>`;
+        if (list.length === 0) {
+            grid.innerHTML = `
+                <div class="state-container" style="grid-column: 1 / -1;">
+                    <p style="font-size:1.4rem; color:var(--fg); margin-bottom:8px;">No users found</p>
+                    <p>Try broadening your search or changing the filter.</p>
+                </div>
+            `;
             return;
         }
 
-        const freshSessionId = localStorage.getItem('session_id');
+        grid.innerHTML = list.map(u => this.renderUserCard(u)).join('');
+    },
 
-        for (const [sid, sData] of Object.entries(data.sessions)) {
-            const isCurrent = sid === freshSessionId;
-            const lastActive = new Date(sData.lastActive).toLocaleString();
-            
-            const card = document.createElement('div');
-            card.className = `session-card ${isCurrent ? 'current' : ''}`;
-            card.innerHTML = `
-                <div class="session-info">
-                    <strong>${isCurrent ? 'This Device' : 'Other Device'}</strong>
-                    <span>Last Active: ${lastActive}</span>
-                </div>
-                ${!isCurrent ? `<button class="btn sec" style="width:auto; margin:0; padding:6px 12px; font-size:16px;" onclick="revokeSession('${sid}')">Revoke</button>` : `<span style="color:var(--red); font-weight:bold;">Active</span>`}
-            `;
-            container.appendChild(card);
+    renderMarkdown: function(str) {
+        if (!str) return '';
+        let out = this.escapeHTML(str);
+        out = out.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
+        out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        out = out.replace(/__(.*?)__/g, '<u>$1</u>');
+        out = out.replace(/(^|[^*])\*(?!\*)(.*?)\*(?!\*)/g, '$1<em>$2</em>');
+        out = out.replace(/(^|[^_])_(?!_)(.*?)(?<!_)_/g, '$1<em>$2</em>');
+        return out;
+    },
+
+    handleHashRoute: function() {
+        const hash = window.location.hash;
+        if (!hash || hash.length < 2 || hash === '#' || hash === '#/') {
+            this.closeProfile(false);
+            return;
         }
-    } catch(err) {
-        container.innerHTML = `<div style="text-align:center; color:#ff3333; padding: 20px;">Failed to load sessions.</div>`;
-    }
-}
+        let clean = decodeURIComponent(hash);
+        clean = clean.replace(/^#+/, '').replace(/^\/+/, '').trim();
+        clean = clean.replace(/^\[/, '').replace(/\]$/, '').trim();
+        clean = clean.replace(/^\/+/, '').replace(/\/+$/, '').trim();
+        clean = clean.replace(/^@/, '').trim();
 
-async function revokeSession(sid) {
-    if(!confirm("Are you sure you want to log out this device?")) return;
-    try {
-        await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'revokeSession', sessionId: sid })
+        if (clean) {
+            this.openProfileFullScreen(clean);
+        } else {
+            this.closeProfile(false);
+        }
+    },
+
+    openProfileFullScreen: function(username) {
+        const cleanName = username.trim().toLowerCase().replace(/^@/, '');
+        
+        if (!this.usersLoaded) {
+            this.pendingProfile = cleanName;
+            document.getElementById('profileView').classList.add('show');
+            document.getElementById('appShell').style.display = 'none';
+            document.getElementById('controls-btn').style.display = 'none';
+            document.getElementById('pvAvatar').innerHTML = '<div class="spinner-anim" style="width:36px;height:36px;border-width:3px;margin:auto;"></div>';
+            document.getElementById('pvNameRow').innerHTML = '<span class="pv-name">Loading Profile...</span>';
+            document.getElementById('pvUsername').innerText = '@' + cleanName;
+            return;
+        }
+
+        let u = this.users.find(x => (x.username && x.username.toLowerCase() === cleanName) || x.uid === cleanName || (x.displayName && x.displayName.toLowerCase() === cleanName));
+        if (!u && this.currentUserObj && ((this.currentUserObj.username && this.currentUserObj.username.toLowerCase() === cleanName) || this.currentUserObj.uid === cleanName || (this.currentUserObj.displayName && this.currentUserObj.displayName.toLowerCase() === cleanName))) {
+            u = this.currentUserObj;
+        }
+
+        if (!u) {
+            UI.showToast("User not found.", "error");
+            this.closeProfile(true);
+            return;
+        }
+
+        const isMe = this.myUid && this.myUid === u.uid;
+        
+        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
+        document.getElementById('pvAvatar').innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+        const nameColor = u.chatColor ? `style="color: ${this.escapeHTML(u.chatColor)};"` : '';
+        document.getElementById('pvNameRow').innerHTML = `<span class="pv-name" ${nameColor}>${this.escapeHTML(u.displayName)}</span> ${this.getBadgesHTML(u)}`;
+        document.getElementById('pvUsername').innerText = `@${u.username}`;
+        document.getElementById('pvCountFollowers').innerText = u.followersCount || 0;
+        document.getElementById('pvCountFollowing').innerText = u.followingCount || 0;
+        document.getElementById('pvBioText').innerHTML = u.bio ? this.renderMarkdown(u.bio) : '<span style="color:var(--fg2); font-style:italic;">This user hasn\'t written a biography yet.</span>';
+
+        document.getElementById('btnShareProfile').onclick = () => {
+            const url = window.location.origin + '/users/#/' + encodeURIComponent(u.username);
+            if (navigator.share) {
+                navigator.share({ title: 'BSMS Web User: @' + u.username, url: url }).catch(()=>{});
+            } else {
+                navigator.clipboard.writeText(url);
+                UI.showToast('Link copied to clipboard!', 'success');
+            }
+        };
+
+        const actionsDiv = document.getElementById('pvActions');
+        if (isMe) {
+            actionsDiv.innerHTML = `<button class="btn sec" onclick="location.href='/accounts'" style="width:100%;">Edit Profile</button>`;
+        } else {
+            const followText = u.isFollowing ? 'Unfollow' : 'Follow';
+            const followIcon = u.isFollowing ? 'ico-user-check' : 'ico-user-plus';
+            const followBtnCls = u.isFollowing ? 'btn sec' : 'btn primary';
+            actionsDiv.innerHTML = `
+                <button class="${followBtnCls}" id="pvFollowBtn" onclick="DirectoryApp.toggleFollow('${u.uid}')" style="flex:1;">
+                    <svg class="ic" style="width:18px;height:18px;"><use href="#${followIcon}"></use></svg> ${followText}
+                </button>
+                <button class="btn sec" onclick="DirectoryApp.startDM('${u.uid}')" style="flex:1;">
+                    <svg class="ic" style="width:18px;height:18px;"><use href="#ico-msg"></use></svg> Message
+                </button>
+            `;
+        }
+
+        this.renderRelationList('pvFollowersList', u.followersList || [], "No followers yet.");
+        this.renderRelationList('pvFollowingList', u.followingList || [], "Not following anyone yet.");
+
+        document.querySelector('.pv-tab[onclick*="bio"]').click();
+
+        document.getElementById('appShell').style.display = 'none';
+        document.getElementById('controls-btn').style.display = 'none';
+        document.getElementById('profileView').classList.add('show');
+        
+        try {
+            const cleanHash = '#/' + encodeURIComponent(u.username);
+            if (window.location.hash !== cleanHash) {
+                history.replaceState(null, '', cleanHash);
+            }
+        } catch(e) {}
+        window.scrollTo(0,0);
+    },
+
+    closeProfile: function(updateHistory = true) {
+        this.pendingProfile = null;
+        document.getElementById('profileView').classList.remove('show');
+        document.getElementById('appShell').style.display = 'flex';
+        document.getElementById('controls-btn').style.display = 'flex';
+        if (updateHistory) {
+            try {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            } catch (e) {
+                window.location.hash = '';
+            }
+        }
+    },
+
+    switchTab: function(tabName, btnEl) {
+        document.querySelectorAll('.pv-tab').forEach(el => el.classList.remove('active'));
+        btnEl.classList.add('active');
+        document.querySelectorAll('.pv-pane').forEach(el => el.classList.remove('active'));
+        document.getElementById('pane-' + tabName).classList.add('active');
+    },
+
+    renderRelationList: function(containerId, uidArray, emptyMsg) {
+        const c = document.getElementById(containerId);
+        if (!uidArray || !Array.isArray(uidArray) || uidArray.length === 0) {
+            c.innerHTML = `<div style="text-align:center; padding:30px; color:var(--fg2);">${emptyMsg}</div>`;
+            return;
+        }
+
+        let html = '';
+        uidArray.forEach(mId => {
+            let u = this.users.find(x => x.uid === mId);
+            if (!u && this.currentUserObj && this.currentUserObj.uid === mId) u = this.currentUserObj;
+            if (!u) return;
+
+            const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
+            const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+            const itemColor = u.chatColor ? `style="color: ${this.escapeHTML(u.chatColor)};"` : '';
+            html += `
+            <div class="user-list-item" onclick="Router.setHash('${u.username}')">
+                <div class="c-av uli-av">${avatarHtml}</div>
+                <div style="flex:1; overflow:hidden;">
+                    <div style="font-weight:bold; color:var(--fg); display:flex; align-items:center; gap:6px;"><span ${itemColor}>${this.escapeHTML(u.displayName)}</span> ${this.getBadgesHTML(u)}</div>
+                    <div style="font-size:0.9rem; color:var(--fg2); font-family:var(--font-mono);">@${this.escapeHTML(u.username)}</div>
+                </div>
+            </div>`;
         });
-        showToast("Session revoked.");
-        loadSessions();
-    } catch(err) {
-        showAlert("Failed to revoke session.");
+        c.innerHTML = html || `<div style="text-align:center; padding:30px; color:var(--fg2);">${emptyMsg}</div>`;
+    },
+
+    toggleFollow: async function(targetUid) {
+        let u = this.users.find(x => x.uid === targetUid);
+        if (!u && this.currentUserObj && this.currentUserObj.uid === targetUid) u = this.currentUserObj;
+        if (!u) return;
+
+        const sid = localStorage.getItem('session_id');
+        if (!sid) {
+            UI.showToast("Please log in to follow users.", "error");
+            location.href = '/accounts';
+            return;
+        }
+
+        const isFollowing = u.isFollowing;
+        const action = isFollowing ? 'unfollow' : 'follow';
+        const btn = document.getElementById(`pvFollowBtn`);
+        if (btn) btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/auth?action=${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
+                body: JSON.stringify({ targetUid })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Action failed");
+
+            u.isFollowing = !isFollowing;
+            u.followersCount += isFollowing ? -1 : 1;
+            
+            if (u.followersList) {
+                if (u.isFollowing) u.followersList.push(this.myUid);
+                else u.followersList = u.followersList.filter(id => id !== this.myUid);
+            }
+            
+            this.updateCounts();
+            
+            if (btn) {
+                const followText = u.isFollowing ? 'Unfollow' : 'Follow';
+                const followIcon = u.isFollowing ? 'ico-user-check' : 'ico-user-plus';
+                btn.className = u.isFollowing ? 'btn sec' : 'btn primary';
+                btn.innerHTML = `<svg class="ic" style="width:18px;height:18px;"><use href="#${followIcon}"></use></svg> ${followText}`;
+            }
+            document.getElementById('pvCountFollowers').innerText = u.followersCount;
+            this.renderRelationList('pvFollowersList', u.followersList || [], "No followers yet.");
+
+            UI.showToast(u.isFollowing ? `You are now following ${u.displayName}` : `Unfollowed ${u.displayName}`, "success");
+        } catch (err) {
+            UI.showToast(err.message || "Failed to update follow status", "error");
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    startDM: async function(targetUid) {
+        let isAuth = false;
+        try {
+            const sessStr = localStorage.getItem('bsms_auth_session');
+            if (sessStr) {
+                const sess = JSON.parse(sessStr);
+                if (sess.loggedIn && (sess.uid || sess.username)) isAuth = true;
+            }
+        } catch(e) {}
+
+        if (!isAuth) {
+            UI.showToast("Please log in to message users.", "error");
+            setTimeout(() => { location.href = '/accounts'; }, 900);
+            return;
+        }
+
+        const sid = localStorage.getItem('session_id') || "";
+        UI.showToast("Opening conversation...", "info");
+        try {
+            const res = await fetch('/api/chat?action=startDM', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
+                body: JSON.stringify({ targetUid })
+            });
+            const data = await res.json();
+            if (data && data.cid) {
+                location.href = `/chat#dm/${encodeURIComponent(data.cid)}`;
+                return;
+            }
+        } catch(e) {}
+        location.href = `/chat#user/${encodeURIComponent(targetUid)}`;
+    },
+
+    escapeHTML: function(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
-}
+};
 
-async function exportData() {
-    setButtonLoading('exportDataBtn', true, "Preparing Data...");
-    try {
-        const data = await apiFetch(`/api/export-data`);
-        
-        const zip = new JSZip();
-        zip.file("profile.json", JSON.stringify(data.profile, null, 2));
-        if (data.messages) zip.file("messages.json", JSON.stringify(data.messages, null, 2));
-        if (data.game_saves) zip.file("game_saves.json", JSON.stringify(data.game_saves, null, 2));
-        
-        const content = await zip.generateAsync({ type: "blob" });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(content);
-        a.download = `bsms_export_${authSession.username}.zip`;
-        a.click();
-        
-        showToast("Export complete.");
-    } catch(err) {
-        showAlert("Failed to export data.");
-    } finally {
-        setButtonLoading('exportDataBtn', false, "Request Data Export");
+const Router = {
+    setHash: function(username) {
+        const clean = encodeURIComponent(String(username).trim().replace(/^@/, ''));
+        window.location.hash = '#/' + clean;
+    },
+    clearHash: function() {
+        DirectoryApp.closeProfile(true);
     }
-}
+};
 
-function verifyAccountDeletion() {
-    const iu = document.getElementById('delAuthUser').value.trim(), ip = document.getElementById('delAuthPass').value.trim();
-    if (iu !== authSession.username) return showAlert("Incorrect username.");
-    if (!ip) return showAlert("Password is required.");
-
-    closePopup('deleteAccountModal');
-    
-    deleteTimer = 10;
-    document.getElementById('deleteCountdownDisplay').textContent = deleteTimer;
-    openPopup('deleteCountdownModal');
-    deleteInterval = setInterval(() => {
-        deleteTimer--; document.getElementById('deleteCountdownDisplay').textContent = deleteTimer;
-        if (deleteTimer <= 0) { clearInterval(deleteInterval); executeFinalDeletion(ip); }
-    }, 1000);
-}
-
-function cancelDeletion() {
-    if (deleteInterval) clearInterval(deleteInterval);
-    closePopup('deleteCountdownModal'); 
-    document.getElementById('delAuthUser').value = ''; document.getElementById('delAuthPass').value = '';
-    showToast("Deletion Canceled.");
-}
-
-async function executeFinalDeletion(password) {
-    showAction("Deleting account...");
-    try {
-        await apiFetch(`/api/auth`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'deleteAccount', password })
-        });
-        
-        closePopup('deleteCountdownModal');
-        localStorage.removeItem(SESSION_KEY);
-        authSession = null;
-        showAlert("Account successfully deleted.");
-        setTimeout(() => window.location.hash = '#login', 1500);
-    } catch (err) { 
-        hideAction();
-        closePopup('deleteCountdownModal'); 
-        showAlert(err.message || "Failed to delete account. Incorrect password?"); 
-    }
-}
-
-// Add Enter listeners
-document.getElementById('authUsername').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('authPassword').focus(); });
-document.getElementById('authPassword').addEventListener('keydown', e => { if(e.key === 'Enter') handleAuth(); });
-
-setTimeout(init, 300);
+window.addEventListener('DOMContentLoaded', () => DirectoryApp.init());
 </script>
 </body>
 </html>
