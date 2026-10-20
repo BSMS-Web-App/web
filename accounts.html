@@ -828,16 +828,22 @@ async function handleAuth() {
 }
 
 function completeLogin(data) {
+    if (data.sessionId) {
+        localStorage.setItem('session_id', data.sessionId);
+    }
     const sessionObj = {
         loggedIn: true, 
+        sessionId: data.sessionId || localStorage.getItem('session_id') || "",
         uid: data.uid, 
         username: data.profile.username,
         displayName: data.profile.displayName || data.profile.username, 
         pfp: data.profile.avatar || "",
-        chatColor: data.profile.chatColor || ""
+        chatColor: data.profile.chatColor || "",
+        nameColor: data.profile.nameColor || data.profile.chatColor || ""
     };
     
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionObj));
+    localStorage.setItem('bsms_session', JSON.stringify(sessionObj));
     authSession = sessionObj;
     currentAccountData = data.profile;
     
@@ -921,8 +927,11 @@ function loadDashboard() {
     document.getElementById('initLoadingScreen').classList.remove('show');
     showScreen('appShell');
     
+    const savedColor = currentAccountData.nameColor || currentAccountData.chatColor || authSession.nameColor || authSession.chatColor || "";
     document.getElementById('sidebarUsername').textContent = authSession.username;
+    document.getElementById('sidebarUsername').style.color = savedColor || 'var(--fg)';
     document.getElementById('mobileSidebarUsername').textContent = authSession.username;
+    document.getElementById('mobileSidebarUsername').style.color = savedColor || 'var(--fg)';
     
     document.getElementById('profileUsername').value = authSession.username;
     document.getElementById('profileDisplayName').value = currentAccountData.displayName || authSession.username;
@@ -932,10 +941,9 @@ function loadDashboard() {
     document.getElementById('toggleShowInUsers').checked = (currentAccountData.showInUsersList !== false);
     pendingAvatarBase64 = currentAccountData.avatar || null;
     
-    const savedColor = currentAccountData.chatColor || "";
     const colorInput = document.getElementById('profileChatColor');
     const hexInput = document.getElementById('profileChatColorHex');
-    if (colorInput) colorInput.value = (savedColor && /^#[0-9a-fA-F]{6}$/.test(savedColor)) ? savedColor : '#ffffff';
+    if (colorInput) colorInput.value = (savedColor && /^#[0-9a-fA-F]{6}$/.test(savedColor)) ? savedColor : (savedColor.toLowerCase() === 'red' ? '#ef4444' : '#ffffff');
     if (hexInput) hexInput.value = savedColor;
     updateChatColorPreview();
 
@@ -1045,6 +1053,7 @@ async function saveProfile() {
     
     try {
         const colorVal = document.getElementById('profileChatColorHex').value.trim();
+        const validColor = (/^#[0-9a-fA-F]{3,8}$/.test(colorVal) || /^[a-zA-Z]+$/.test(colorVal)) ? colorVal : "";
         const updateObj = {
             action: 'updateProfile',
             displayName: dName || authSession.username,
@@ -1052,7 +1061,8 @@ async function saveProfile() {
             email: document.getElementById('profileEmail').value.trim(),
             phone: document.getElementById('profilePhone').value.trim(),
             avatar: pendingAvatarBase64 || "",
-            chatColor: (/^#[0-9a-fA-F]{3,6}$/.test(colorVal)) ? colorVal : "",
+            chatColor: validColor,
+            nameColor: validColor,
             showInUsersList: document.getElementById('toggleShowInUsers').checked
         };
         
@@ -1066,7 +1076,18 @@ async function saveProfile() {
         authSession.displayName = updateObj.displayName;
         authSession.pfp = updateObj.avatar;
         authSession.chatColor = updateObj.chatColor;
+        authSession.nameColor = updateObj.nameColor;
         localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
+
+        // Also sync bsms_auth_session used by chat.html
+        try {
+            const chatSess = JSON.parse(localStorage.getItem('bsms_auth_session') || '{}');
+            chatSess.displayName = updateObj.displayName;
+            chatSess.nameColor = updateObj.nameColor;
+            chatSess.chatColor = updateObj.chatColor;
+            if (updateObj.avatar) chatSess.avatar = updateObj.avatar;
+            localStorage.setItem('bsms_auth_session', JSON.stringify(chatSess));
+        } catch(e) {}
         
         showToast("Profile updated!"); 
         loadDashboard();
