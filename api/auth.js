@@ -4,29 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import admin from 'firebase-admin';
+import { db, admin } from './db.js';
 import crypto from 'crypto';
-
-// Safe Firebase Initialization
-if (!admin.apps.length) {
-    try {
-        if (!process.env.FIREBASE_PRIVATE_KEY) {
-            throw new Error("FIREBASE_PRIVATE_KEY is missing from environment variables.");
-        }
-        
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-            }),
-            databaseURL: process.env.FIREBASE_DATABASE_URL
-        });
-    } catch (err) {
-        console.error("[BSMS Web :: Auth] Firebase Init Error:", err.message);
-    }
-}
-const db = admin.apps.length ? admin.database() : null;
 
 // Secure password hashing
 function hashPassword(password) {
@@ -207,6 +186,10 @@ export default async function handler(req, res) {
                     lastSeen: currentTimestamp,
                     lastMessageTimestamp: 0
                 });
+                await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({
+                    role: 'member',
+                    joinedAt: currentTimestamp
+                });
 
                 const { password: _, ...safeProfile } = newAccount;
                 return res.status(200).json({ success: true, sessionId: newSessionId, uid, profile: safeProfile });
@@ -301,7 +284,7 @@ export default async function handler(req, res) {
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
                 if (banCheck.isBanned) return res.status(403).json({ error: 'Banned.', account_status: 'banned', banType: banCheck.banType, reason: banCheck.banReason, ban_expires: banCheck.banExpires });
 
-                const { displayName, bio, email, phone, avatar, showInUsersList } = payload;
+                const { displayName, bio, email, phone, avatar, showInUsersList, chatColor, nameColor } = payload;
                 const updates = {};
                 
                 if (displayName !== undefined) {
@@ -322,11 +305,29 @@ export default async function handler(req, res) {
                         updates['avatar'] = avatar;
                     }
                 }
+                const colorVal = (nameColor !== undefined ? nameColor : chatColor);
+                if (colorVal !== undefined) {
+                    if (!colorVal || colorVal === "" || colorVal === "default") {
+                        await db.ref(`/accounts/${user.uid}/nameColor`).remove();
+                        await db.ref(`/accounts/${user.uid}/chatColor`).remove();
+                        updates['nameColor'] = "";
+                        updates['chatColor'] = "";
+                    } else {
+                        const trimmedColor = String(colorVal).trim();
+                        if (/^#[0-9a-fA-F]{3,8}$/.test(trimmedColor) || /^[a-zA-Z]+$/.test(trimmedColor)) {
+                            updates['nameColor'] = trimmedColor;
+                            updates['chatColor'] = trimmedColor;
+                        } else {
+                            return res.status(400).json({ error: 'Invalid color format. Please use a valid hex color code (e.g. #ef4444 or #BB001E).' });
+                        }
+                    }
+                }
 
                 if (Object.keys(updates).length > 0) {
                     await db.ref(`/accounts/${user.uid}`).update(updates);
                 }
-                return res.status(200).json({ success: true });
+                const finalNameColor = updates['nameColor'] !== undefined ? updates['nameColor'] : (user.account.nameColor || user.account.chatColor || "");
+                return res.status(200).json({ success: true, nameColor: finalNameColor, chatColor: finalNameColor });
             }
 
             case 'removeAvatar': {
@@ -485,6 +486,8 @@ export default async function handler(req, res) {
                             role: acc.role || 'user',
                             verified: Boolean(acc.verified),
                             isDeveloper: Boolean(acc.isDeveloper),
+                            nameColor: acc.nameColor || acc.chatColor || '',
+                            chatColor: acc.nameColor || acc.chatColor || '',
                             followersCount: followers.length,
                             followingCount: following.length,
                             followersList: followers,
