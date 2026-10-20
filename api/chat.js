@@ -4,27 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import admin from 'firebase-admin';
+import { db, admin } from './db.js';
 import crypto from 'crypto';
-
-// Safe Firebase Initialization with Vercel Environment Variables
-if (!admin.apps.length) {
-    try {
-        if (!process.env.FIREBASE_PRIVATE_KEY) throw new Error("FIREBASE_PRIVATE_KEY is missing from environment variables.");
-        
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-            }),
-            databaseURL: process.env.FIREBASE_DATABASE_URL
-        });
-    } catch (err) { 
-        console.error("[BSMS Web :: API] Firebase Init Error:", err.message); 
-    }
-}
-const db = admin.apps.length ? admin.database() : null;
 
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
@@ -125,13 +106,24 @@ export default async function handler(req, res) {
                             ban_expires: acc.ban_expires || null,
                             role: acc.role || null,
                             verified: acc.verified || false,
-                            isDeveloper: Boolean(acc.isDeveloper)
+                            isDeveloper: Boolean(acc.isDeveloper),
+                            nameColor: acc.nameColor || acc.chatColor || null,
+                            chatColor: acc.nameColor || acc.chatColor || null
                         };
                     }
                 }
 
                 const myChannels = {};
                 const allConvos = convosSnap.val() || {};
+                
+                // Auto-join BSMS General group chat if user is not already a member
+                if (allConvos.gcs && allConvos.gcs['gc-general']) {
+                    if (!allConvos.gcs['gc-general'].members || !allConvos.gcs['gc-general'].members[uid]) {
+                        await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({ role: 'member', joinedAt: Date.now() });
+                        if (!allConvos.gcs['gc-general'].members) allConvos.gcs['gc-general'].members = {};
+                        allConvos.gcs['gc-general'].members[uid] = { role: 'member', joinedAt: Date.now() };
+                    }
+                }
                 
                 for (const type of ['dms', 'gcs']) {
                     if (allConvos[type]) {
@@ -261,7 +253,9 @@ export default async function handler(req, res) {
                             account_status: uVal.account_status || 'active',
                             role: uVal.role || null,
                             verified: Boolean(uVal.verified),
-                            isDeveloper: Boolean(uVal.isDeveloper)
+                            isDeveloper: Boolean(uVal.isDeveloper),
+                            nameColor: uVal.nameColor || uVal.chatColor || null,
+                            chatColor: uVal.nameColor || uVal.chatColor || null
                         };
                     }
                 }
@@ -308,6 +302,8 @@ export default async function handler(req, res) {
                 const rr = {};
                 for (let mUid in channel.members) rr[mUid] = (mUid === uid);
 
+                const userAcc = userLookup.account || {};
+                const senderColor = userAcc.nameColor || userAcc.chatColor || null;
                 const msgObj = {
                     senderUid: uid,
                     timestamp: admin.database.ServerValue.TIMESTAMP,
@@ -316,6 +312,7 @@ export default async function handler(req, res) {
                     readReceipts: rr,
                     status: { unsent: false, deletedByMod: false, pinned: false, repliedTo: repliedTo || false }
                 };
+                if (senderColor) msgObj.senderColor = senderColor;
                 if (attachmentName) msgObj.attachmentName = attachmentName;
 
                 await db.ref(`/chat/conversations/${type}/${cid}/messages/${newId}`).set(msgObj);
