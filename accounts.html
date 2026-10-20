@@ -93,7 +93,6 @@ window.showBanScreen = function(banData) {
             logoutBtn.disabled = true;
             logoutBtn.textContent = 'Logging out...';
             try {
-                // Execute proper backend logout to detach device linkage from account
                 await fetch('/api/auth', {
                     method: 'POST',
                     headers: {
@@ -210,6 +209,12 @@ input:focus,textarea:focus{border-color:var(--red);box-shadow:0 0 14px var(--red
 input:disabled{opacity:0.5;cursor:not-allowed}
 input::placeholder,textarea::placeholder{color:var(--fg2)}
 textarea{resize:vertical;height:110px}
+
+.color-swatch{
+  width:32px; height:32px; border-radius:8px; border:2px solid var(--border);
+  cursor:pointer; transition:transform 0.15s, border-color 0.15s; flex-shrink:0;
+}
+.color-swatch:hover{ transform:scale(1.15); border-color:#fff; }
 
 .spinner{width:46px;height:46px;border:4px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin 1s cubic-bezier(.4,0,.2,1) infinite;margin:0 auto 20px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -338,27 +343,6 @@ textarea{resize:vertical;height:110px}
     <h2 style="color:var(--fg);">Remove Profile Picture?</h2>
     <p style="color:var(--fg2); line-height:1.5;">Are you sure you want to remove your profile picture? Your avatar will revert to your default letter initials.</p>
     <div style="display:flex; gap:12px; margin-top:14px;">
-        <div class="form-group">
-            <label>Display Name <span style="font-size:14px; color:var(--fg2);">(Visible to others)</span></label>
-            <input type="text" id="profileDisplayName" placeholder="Your display name" maxlength="30" oninput="updateChatColorPreview()"/>
-        </div>
-
-        <!-- NEW: Chat Name Color Picker -->
-        <div class="form-group">
-            <label style="display:flex; justify-content:space-between; align-items:center;">
-                <span>Chat Name Color</span>
-                <span style="font-size:13px; color:var(--fg2);">Choose your name's color in chat</span>
-            </label>
-            <div style="display:flex; align-items:center; gap:12px; margin-top:6px; flex-wrap:wrap;">
-                <input type="color" id="profileChatColor" value="#ffffff" style="width:52px; height:46px; padding:2px; border-radius:10px; cursor:pointer; background:var(--input-bg); border:2px solid var(--border); flex-shrink:0; margin:0;" oninput="onColorPickerChange(this.value)"/>
-                <input type="text" id="profileChatColorHex" placeholder="#ffffff" maxlength="7" style="width:130px; margin:0; text-transform:uppercase; font-family:monospace;" oninput="onHexInputChange(this.value)"/>
-                <button type="button" class="btn sec" style="width:auto; margin:0; padding:8px 16px; font-size:16px;" onclick="resetChatColor()">Default</button>
-                <div style="font-size:18px; margin-left:auto; display:flex; align-items:center; gap:6px;">
-                    <span style="color:var(--fg2);">Preview:</span>
-                    <strong id="chatColorPreviewText" style="color:#ffffff;">Username</strong>
-                </div>
-            </div>
-        </div>
       <button class="btn sec" style="flex:1;" onclick="closePopup('removeAvatarModal')">Cancel</button>
       <button class="btn" style="flex:1; background:#ef4444; border-color:#dc2626;" onclick="confirmRemoveAvatar()">Remove</button>
     </div>
@@ -477,7 +461,39 @@ textarea{resize:vertical;height:110px}
 
         <div class="form-group">
             <label>Display Name <span style="font-size:14px; color:var(--fg2);">(Visible to others)</span></label>
-            <input type="text" id="profileDisplayName" placeholder="Your display name" maxlength="30"/>
+            <input type="text" id="profileDisplayName" placeholder="Your display name" maxlength="30" oninput="updateChatColorPreview()"/>
+        </div>
+
+        <!-- Name / Chat Color Switcher -->
+        <div class="form-group">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Name Color</span>
+                <span style="font-size:13px; color:var(--fg2);">Color shown for your name in chat and profile</span>
+            </label>
+
+            <!-- Quick Swatches -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px;">
+                <button type="button" class="color-swatch" style="background:#ffffff;" onclick="setPresetColor('#ffffff')" title="Default White"></button>
+                <button type="button" class="color-swatch" style="background:#BB001E;" onclick="setPresetColor('#BB001E')" title="BSMS Red"></button>
+                <button type="button" class="color-swatch" style="background:#ff4b72;" onclick="setPresetColor('#ff4b72')" title="Coral"></button>
+                <button type="button" class="color-swatch" style="background:#f59e0b;" onclick="setPresetColor('#f59e0b')" title="Gold"></button>
+                <button type="button" class="color-swatch" style="background:#10b981;" onclick="setPresetColor('#10b981')" title="Emerald"></button>
+                <button type="button" class="color-swatch" style="background:#06b6d4;" onclick="setPresetColor('#06b6d4')" title="Cyan"></button>
+                <button type="button" class="color-swatch" style="background:#3b82f6;" onclick="setPresetColor('#3b82f6')" title="Sky Blue"></button>
+                <button type="button" class="color-swatch" style="background:#8b5cf6;" onclick="setPresetColor('#8b5cf6')" title="Purple"></button>
+                <button type="button" class="color-swatch" style="background:#ec4899;" onclick="setPresetColor('#ec4899')" title="Pink"></button>
+            </div>
+
+            <!-- Custom Color Picker + Hex + Live Preview -->
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <input type="color" id="profileChatColor" value="#ffffff" style="width:52px; height:46px; padding:2px; border-radius:10px; cursor:pointer; background:var(--input-bg); border:2px solid var(--border); flex-shrink:0; margin:0;" oninput="onColorPickerChange(this.value)"/>
+                <input type="text" id="profileChatColorHex" placeholder="#ffffff" maxlength="7" style="width:130px; margin:0; text-transform:uppercase; font-family:monospace;" oninput="onHexInputChange(this.value)"/>
+                <button type="button" class="btn sec" style="width:auto; margin:0; padding:8px 16px; font-size:16px;" onclick="resetChatColor()">Reset</button>
+                <div style="font-size:18px; margin-left:auto; display:flex; align-items:center; gap:6px;">
+                    <span style="color:var(--fg2);">Preview:</span>
+                    <strong id="chatColorPreviewText" style="color:#ffffff;">Username</strong>
+                </div>
+            </div>
         </div>
         
         <div class="form-group">
@@ -587,7 +603,6 @@ if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('s
 
 // Establish global session ID (and primary device ID) on load if missing
 if (!localStorage.getItem('session_id')) {
-    // Generate standard UUID v4 format to match your ecosystem standard
     const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
@@ -628,7 +643,6 @@ async function apiFetch(endpoint, options = {}) {
     if (!options.headers) options.headers = {};
     const sessionId = localStorage.getItem('session_id') || "";
     
-    // Send it for both session tracking and precise device banning
     options.headers['X-Session-ID'] = sessionId;
     options.headers['X-Device-ID'] = sessionId;
     options.headers['Content-Type'] = 'application/json';
@@ -639,7 +653,6 @@ async function apiFetch(endpoint, options = {}) {
         
         if (response.status === 403 && data.account_status === "banned") {
             console.warn("[BSMS Web :: Auth] Device/Account banned. Showing UI.");
-            // We explicitly DO NOT remove SESSION_KEY so they can stay logged in underneath the restriction
             if (window.showBanScreen) {
                 window.showBanScreen({ 
                     banType: data.banType, 
@@ -672,7 +685,6 @@ async function fetchCloudProfile() {
             currentAccountData = data.profile;
             loadDashboard();
         } else if (data === null) {
-            // Already handled internally by apiFetch / ban trigger
             return;
         } else {
             throw new Error("Invalid session data");
@@ -685,7 +697,6 @@ async function fetchCloudProfile() {
 }
 
 function handleHash() {
-    // If the ban screen is showing, DO NOT alter the display via routing
     const banScreen = document.getElementById('ban-screen');
     if (banScreen && banScreen.style.display !== 'none') return;
     
@@ -855,7 +866,8 @@ async function logout() {
     showToast("Logged out.");
     window.location.hash = '#login';
 }
-// --- Chat Color Picker Helpers ---
+
+// ---------- COLOR SWITCHER HELPERS ----------
 function updateChatColorPreview() {
     const hexInput = document.getElementById('profileChatColorHex');
     const colorInput = document.getElementById('profileChatColor');
@@ -888,6 +900,14 @@ function onHexInputChange(val) {
     updateChatColorPreview();
 }
 
+function setPresetColor(hex) {
+    const colorInput = document.getElementById('profileChatColor');
+    const hexInput = document.getElementById('profileChatColorHex');
+    if (colorInput) colorInput.value = hex;
+    if (hexInput) hexInput.value = hex;
+    updateChatColorPreview();
+}
+
 function resetChatColor() {
     const colorInput = document.getElementById('profileChatColor');
     const hexInput = document.getElementById('profileChatColorHex');
@@ -912,6 +932,13 @@ function loadDashboard() {
     document.getElementById('toggleShowInUsers').checked = (currentAccountData.showInUsersList !== false);
     pendingAvatarBase64 = currentAccountData.avatar || null;
     
+    const savedColor = currentAccountData.chatColor || "";
+    const colorInput = document.getElementById('profileChatColor');
+    const hexInput = document.getElementById('profileChatColorHex');
+    if (colorInput) colorInput.value = (savedColor && /^#[0-9a-fA-F]{6}$/.test(savedColor)) ? savedColor : '#ffffff';
+    if (hexInput) hexInput.value = savedColor;
+    updateChatColorPreview();
+
     let cd = 'Unknown';
     if (currentAccountData.createdAt) {
         const dateObj = new Date(currentAccountData.createdAt);
@@ -1017,6 +1044,7 @@ async function saveProfile() {
     setButtonLoading('saveProfileBtn', true);
     
     try {
+        const colorVal = document.getElementById('profileChatColorHex').value.trim();
         const updateObj = {
             action: 'updateProfile',
             displayName: dName || authSession.username,
@@ -1024,6 +1052,7 @@ async function saveProfile() {
             email: document.getElementById('profileEmail').value.trim(),
             phone: document.getElementById('profilePhone').value.trim(),
             avatar: pendingAvatarBase64 || "",
+            chatColor: (/^#[0-9a-fA-F]{3,6}$/.test(colorVal)) ? colorVal : "",
             showInUsersList: document.getElementById('toggleShowInUsers').checked
         };
         
@@ -1036,6 +1065,7 @@ async function saveProfile() {
         
         authSession.displayName = updateObj.displayName;
         authSession.pfp = updateObj.avatar;
+        authSession.chatColor = updateObj.chatColor;
         localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
         
         showToast("Profile updated!"); 
