@@ -3316,6 +3316,10 @@ const AuthManager = {
             const sess = JSON.parse(sessionStr);
             if (!sess.loggedIn || (!sess.username && !sess.uid)) { AuthManager.reject(); return; }
 
+            const sid = (localStorage.getItem('session_id') || sess.sessionId || "").trim();
+            if (!sid) { AuthManager.reject(); return; }
+            if (!localStorage.getItem('session_id')) localStorage.setItem('session_id', sid);
+
             State.user = { 
                 uid: sess.uid || sess.username, 
                 username: sess.username, 
@@ -3325,7 +3329,8 @@ const AuthManager = {
             };
 
             UI.setLoad(40, "Connecting to Server");
-            await ApiClient.call('status', { status: 'online' });
+            const statusRes = await ApiClient.call('status', { status: 'online' });
+            if (!statusRes) return;
             
             document.getElementById('loginModal').classList.remove('show');
             UI.setLoad(70, "Downloading Conversations");
@@ -3408,6 +3413,9 @@ const AuthManager = {
         }
     },
     reject: function() {
+        PollingManager.stop();
+        if (State.syncInterval) clearInterval(State.syncInterval);
+        if (State.msgInterval) clearInterval(State.msgInterval);
         UI.setLoad(100, "Ready");
         document.getElementById('loginModal').classList.add('show');
     },
