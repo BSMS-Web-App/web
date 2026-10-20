@@ -855,7 +855,49 @@ async function logout() {
     showToast("Logged out.");
     window.location.hash = '#login';
 }
+// --- Chat Color Picker Helpers ---
+function updateChatColorPreview() {
+    const hexInput = document.getElementById('profileChatColorHex');
+    const colorInput = document.getElementById('profileChatColor');
+    const preview = document.getElementById('chatColorPreviewText');
+    const dNameInput = document.getElementById('profileDisplayName');
+    
+    if (!preview) return;
+    const name = (dNameInput && dNameInput.value.trim()) || (authSession && authSession.displayName) || (authSession && authSession.username) || 'Username';
+    preview.textContent = name;
 
+    const val = (hexInput && hexInput.value.trim()) || (colorInput && colorInput.value) || '';
+    if (/^#[0-9a-fA-F]{3,6}$/.test(val)) {
+        preview.style.color = val;
+    } else {
+        preview.style.color = 'var(--fg)';
+    }
+}
+
+function onColorPickerChange(hex) {
+    const hexInput = document.getElementById('profileChatColorHex');
+    if (hexInput) hexInput.value = hex;
+    updateChatColorPreview();
+}
+
+function onHexInputChange(val) {
+    const colorInput = document.getElementById('profileChatColor');
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        if (colorInput) colorInput.value = val;
+    }
+    updateChatColorPreview();
+}
+
+function resetChatColor() {
+    const colorInput = document.getElementById('profileChatColor');
+    const hexInput = document.getElementById('profileChatColorHex');
+    if (colorInput) colorInput.value = '#ffffff';
+    if (hexInput) hexInput.value = '';
+    updateChatColorPreview();
+}
+
+function loadDashboard() {
+...
 // ---------- DASHBOARD POPULATION ----------
 function loadDashboard() {
     document.getElementById('initLoadingScreen').classList.remove('show');
