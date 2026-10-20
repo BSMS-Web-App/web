@@ -6,6 +6,7 @@
 
 import { db, admin } from './db.js';
 import crypto from 'crypto';
+import { checkProfanity } from './profanity.js';
 
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
@@ -18,30 +19,6 @@ async function getUserBySession(sessionId) {
         }
     }
     return null;
-}
-
-// Extracted Glin Profanity Checker
-async function checkProfanity(text) {
-    if (!text) return false;
-    let strippedText = text
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[\u200B-\u200D\uFEFF]/g, "")
-        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-        .replace(/\s+/g, "")
-        .replace(/@/g, "a").replace(/\$/g, "s").replace(/0/g, "o")
-        .replace(/1/g, "i").replace(/3/g, "e").replace(/4/g, "a")
-        .replace(/5/g, "s").replace(/7/g, "t")
-        .toLowerCase();
-
-    try {
-        const glinModule = await import('glin-profanity');
-        const profanityCheck = glinModule.default || glinModule; 
-        return profanityCheck(text) || profanityCheck(strippedText);
-    } catch (err) {
-        console.error("[BSMS Web :: API] Glin Profanity Failed to Load:", err);
-        const blockList = ['fuck', 'shit', 'bitch', 'asshole', 'cunt', 'nigger', 'nigga', 'faggot'];
-        return blockList.some(word => strippedText.includes(word));
-    }
 }
 
 export default async function handler(req, res) {
@@ -117,12 +94,22 @@ export default async function handler(req, res) {
                 const allConvos = convosSnap.val() || {};
                 
                 // Auto-join BSMS General group chat if user is not already a member
-                if (allConvos.gcs && allConvos.gcs['gc-general']) {
-                    if (!allConvos.gcs['gc-general'].members || !allConvos.gcs['gc-general'].members[uid]) {
-                        await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({ role: 'member', joinedAt: Date.now() });
-                        if (!allConvos.gcs['gc-general'].members) allConvos.gcs['gc-general'].members = {};
-                        allConvos.gcs['gc-general'].members[uid] = { role: 'member', joinedAt: Date.now() };
-                    }
+                if (!allConvos.gcs || !allConvos.gcs['gc-general']) {
+                    const generalGc = {
+                        name: 'BSMS General',
+                        _type: 'gcs',
+                        _id: 'gc-general',
+                        config: { joinCode: 'GENERAL', allowCustomNicknames: true, lastMessageId: 100000 },
+                        members: { [uid]: { role: 'member', joinedAt: now } },
+                        messages: {}
+                    };
+                    await db.ref(`/chat/conversations/gcs/gc-general`).set(generalGc);
+                    if (!allConvos.gcs) allConvos.gcs = {};
+                    allConvos.gcs['gc-general'] = generalGc;
+                } else if (!allConvos.gcs['gc-general'].members || !allConvos.gcs['gc-general'].members[uid]) {
+                    await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({ role: 'member', joinedAt: now });
+                    if (!allConvos.gcs['gc-general'].members) allConvos.gcs['gc-general'].members = {};
+                    allConvos.gcs['gc-general'].members[uid] = { role: 'member', joinedAt: now };
                 }
                 
                 for (const type of ['dms', 'gcs']) {
@@ -174,9 +161,28 @@ export default async function handler(req, res) {
                     db.ref(`/chat/conversations/${type}/${cid}`).once('value'),
                     db.ref('/accounts').once('value')
                 ]);
-                const channel = chSnap.val();
+                let channel = chSnap.val();
                 const allAccounts = acctSnap.val() || {};
                 
+                // Auto-join public general chat if needed
+                if (cid === 'gc-general') {
+                    if (!channel) {
+                        channel = {
+                            name: 'BSMS General',
+                            _type: 'gcs',
+                            _id: 'gc-general',
+                            config: { joinCode: 'GENERAL', allowCustomNicknames: true, lastMessageId: 100000 },
+                            members: { [uid]: { role: 'member', joinedAt: Date.now() } },
+                            messages: {}
+                        };
+                        await db.ref(`/chat/conversations/gcs/gc-general`).set(channel);
+                    } else if (!channel.members || !channel.members[uid]) {
+                        await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({ role: 'member', joinedAt: Date.now() });
+                        if (!channel.members) channel.members = {};
+                        channel.members[uid] = { role: 'member', joinedAt: Date.now() };
+                    }
+                }
+
                 if (!channel || !channel.members || !channel.members[uid]) {
                     return res.status(403).json({ error: "Not a member of this channel.", unauthorized: true });
                 }
