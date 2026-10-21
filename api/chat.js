@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { db, admin } from './db.js';
+import { db, admin } from '../lib/db.js';
 import crypto from 'crypto';
 import { checkProfanity } from './profanity.js';
 
