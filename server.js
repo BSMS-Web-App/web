@@ -80,13 +80,9 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
-const PORT = parseInt(process.env.APP_PORT || process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.APP_PORT || '3000', 10);
 const HOST = '0.0.0.0';
 
-if (!process.env.VERCEL) {
-    app.listen(PORT, HOST, () => {
-        console.log(`[BSMS Web] Server listening on http://${HOST}:${PORT}`);
-    });
-}
-
-export default app;
+app.listen(PORT, HOST, () => {
+    console.log(`[BSMS Web] Server listening on http://${HOST}:${PORT}`);
+});
