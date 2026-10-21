@@ -90,14 +90,16 @@ export default async function handler(req, res) {
             }
 
             case 'bulkBan': {
+                // Strictly owner only: only owners can bulk ban people
+                if (!isOwner) {
+                    return res.status(403).json({ error: 'Forbidden: Only the server owner can perform bulk bans.' });
+                }
                 const { targetUids = [], reason = 'Bulk banned by administration.', ban_expires = null } = payload;
                 let bannedCount = 0;
                 for (const tUid of targetUids) {
                     const tSnap = await db.ref(`/accounts/${tUid}`).once('value');
                     const tAcc = tSnap.val() || {};
-                    // Admins cannot ban other admins or the owner; Owner can ban anyone except themselves
-                    if (!isOwner && (tAcc.role === 'admin' || tAcc.role === 'owner')) continue;
-                    if (isOwner && tUid === staffUser.uid) continue;
+                    if (tUid === staffUser.uid) continue;
 
                     await db.ref(`/accounts/${tUid}`).update({
                         account_status: 'banned',
@@ -126,6 +128,10 @@ export default async function handler(req, res) {
                     // Cannot promote anyone to owner
                     if (updates.role === 'owner') {
                         return res.status(403).json({ error: 'Only the server owner can transfer ownership.' });
+                    }
+                    // Only owners can make other people admin! Admins cannot make other people admin
+                    if (updates.role === 'admin' && targetAcc.role !== 'admin') {
+                        return res.status(403).json({ error: 'Forbidden: Only the server owner can promote users to Administrator.' });
                     }
                     // Admins cannot ban other admins
                     if (targetAcc.role === 'admin' && targetUid !== staffUser.uid) {
