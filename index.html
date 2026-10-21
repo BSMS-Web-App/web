@@ -43,13 +43,12 @@ SPDX-License-Identifier: MIT
   --red-bright: #e31b3b;
   --red-glow: rgba(187, 0, 30, .28);
   --gold: #c9a96e;
+  --gold-soft: rgba(201,169,110,.35);
   --discord-blue: #5765f2;
   --bg: #080707;
   --surface: #111010;
-  --surface-raised: #171515;
   --fg: #fff;
   --fg2: rgba(255,255,255,.72);
-  --border: rgba(255,255,255,.09);
   --font: 'Patrick Hand', cursive;
   --mouse-x: 0;
   --mouse-y: 0;
@@ -102,6 +101,74 @@ body::before {
 }
 @keyframes particleDrift { to { background-position: 0 92px; } }
 
+/* ===== Greek swirl side ornaments ===== */
+.greek-side {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 68px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .55;
+}
+.greek-side.left  { left: 0; }
+.greek-side.right { right: 0; transform: scaleX(-1); }
+
+.greek-side::before,
+.greek-side::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+/* Vertical column line */
+.greek-side::before {
+  left: 18px;
+  width: 3px;
+  background: linear-gradient(to bottom, transparent, var(--gold) 15%, var(--red) 50%, var(--gold) 85%, transparent);
+  box-shadow: 0 0 10px var(--red-glow);
+}
+/* Repeating ionic volute swirls */
+.greek-side::after {
+  left: 0;
+  width: 68px;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 5px, var(--gold) 5.5px 7px, transparent 7.5px) 0 0 / 68px 68px no-repeat,
+    radial-gradient(circle at 50% 50%, transparent 0 13px, var(--red-bright) 13.5px 15px, transparent 15.5px) 0 0 / 68px 68px no-repeat,
+    radial-gradient(circle at 50% 50%, transparent 0 22px, rgba(201,169,110,.6) 22.5px 23.5px, transparent 24px) 0 0 / 68px 68px no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+  animation: swirlDrift 18s linear infinite;
+  filter: drop-shadow(0 0 6px var(--red-glow));
+}
+/* Scroll-pulsing volute caps */
+.greek-side .volute {
+  position: absolute;
+  left: 4px;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  border-right-color: transparent;
+  box-shadow: 0 0 8px var(--red-glow);
+}
+.greek-side .volute.v1 { top: 8%; }
+.greek-side .volute.v2 { top: 32%; transform: rotate(180deg); }
+.greek-side .volute.v3 { top: 56%; }
+.greek-side .volute.v4 { top: 80%; transform: rotate(180deg); }
+.greek-side .volute::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1.5px solid var(--red-bright);
+  border-radius: 50%;
+  border-left-color: transparent;
+}
+@keyframes swirlDrift {
+  to { background-position: 0 0, 0 0, 0 0; }
+}
+
 /* Offline banner */
 #offlineBanner {
   position: fixed;
@@ -116,7 +183,7 @@ body::before {
 }
 #offlineBanner.show { transform: translateY(0); }
 
-/* Compact top navigation */
+/* Top navigation */
 .glass-nav {
   position: fixed;
   z-index: 2000;
@@ -134,7 +201,6 @@ body::before {
   box-shadow: 0 12px 38px rgba(0,0,0,.45);
 }
 .glass-nav a {
-  position: relative;
   padding: 6px 13px;
   color: var(--fg2);
   text-decoration: none;
@@ -143,12 +209,9 @@ body::before {
   border-radius: 12px;
   transition: color .2s, background .2s;
 }
-.glass-nav a:hover {
-  color: white;
-  background: rgba(187,0,30,.2);
-}
+.glass-nav a:hover { color: white; background: rgba(187,0,30,.2); }
 
-/* User account button */
+/* Account button */
 #globalUserBtn {
   position: fixed;
   z-index: 2001;
@@ -196,18 +259,12 @@ body::before {
   box-shadow: 0 6px 18px rgba(187,0,30,.2);
   transition: transform .2s, box-shadow .2s;
 }
-.btn-cinematic:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 9px 24px rgba(187,0,30,.34);
-}
+.btn-cinematic:hover { transform: translateY(-2px); box-shadow: 0 9px 24px rgba(187,0,30,.34); }
 .btn-cinematic:active { transform: scale(.98); }
-.btn-cinematic.discord-btn {
-  background: linear-gradient(135deg, #6875ff, #3b45a5);
-  box-shadow: 0 6px 20px rgba(87,101,242,.2);
-}
+.btn-cinematic.discord-btn { background: linear-gradient(135deg, #6875ff, #3b45a5); box-shadow: 0 6px 20px rgba(87,101,242,.2); }
 .btn-cinematic.discord-btn:hover { box-shadow: 0 9px 24px rgba(87,101,242,.35); }
 
-/* Compact page layout */
+/* Layout */
 section {
   position: relative;
   z-index: 1;
@@ -234,63 +291,29 @@ section {
   background: radial-gradient(circle, rgba(187,0,30,.17), transparent 68%);
   filter: blur(28px);
 }
-.hero-3d-scene {
+
+/* Hero icon: floats only, no spinning */
+.hero-icon {
   position: relative;
-  width: 142px;
-  height: 142px;
+  width: 118px;
+  height: 118px;
   margin: 0 0 20px;
-  perspective: 700px;
-  transform-style: preserve-3d;
-  animation: coreFloat 7s ease-in-out infinite;
-}
-.core-obj {
-  position: absolute;
-  inset: 24px;
-  transform-style: preserve-3d;
-  animation: rotateCore 24s linear infinite;
-}
-.core-ring {
-  position: absolute;
-  inset: -17px;
-  border: 1px solid rgba(201,169,110,.48);
-  border-radius: 50%;
-}
-.core-ring:nth-child(1) {
-  transform: rotateX(72deg);
-  border-color: rgba(227,27,59,.75);
-  box-shadow: 0 0 20px rgba(187,0,30,.2);
-}
-.core-ring:nth-child(2) { transform: rotateY(72deg); }
-.core-ring:nth-child(3) {
-  transform: rotateX(45deg) rotateY(45deg);
-  border-style: dashed;
-  opacity: .7;
-}
-.core-cube {
-  position: absolute;
-  inset: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(227,27,59,.5);
-  background: rgba(187,0,30,.12);
-  box-shadow: inset 0 0 24px rgba(187,0,30,.18);
-  backface-visibility: visible;
+  border: 1px solid rgba(201,169,110,.4);
+  border-radius: 30px;
+  background: linear-gradient(145deg, rgba(187,0,30,.18), rgba(17,16,16,.9));
+  box-shadow: 0 0 30px rgba(187,0,30,.2), inset 0 0 20px rgba(187,0,30,.08);
+  animation: iconFloat 6s ease-in-out infinite;
 }
-.core-cube.front { transform: translateZ(42px); }
-.core-cube.back { transform: rotateY(180deg) translateZ(42px); }
-.core-cube.right { transform: rotateY(90deg) translateZ(42px); }
-.core-cube.left { transform: rotateY(-90deg) translateZ(42px); }
-.core-cube.top { transform: rotateX(90deg) translateZ(42px); }
-.core-cube.bottom { transform: rotateX(-90deg) translateZ(42px); }
-.core-cube img {
+.hero-icon img {
   width: 70%;
   height: 70%;
   object-fit: contain;
   filter: drop-shadow(0 0 12px rgba(187,0,30,.65));
 }
-@keyframes rotateCore { to { transform: rotateY(360deg) rotateX(360deg); } }
-@keyframes coreFloat { 50% { transform: translateY(-5px); } }
+@keyframes iconFloat { 50% { transform: translateY(-6px); } }
 
 .hero-content { max-width: 760px; }
 .hero-content h1 {
@@ -315,11 +338,7 @@ section {
 }
 #heroAuthContainer { min-height: 4px; }
 
-/* Greek-inspired ornamental section dividers */
-.showcase {
-  padding-top: 30px;
-  padding-bottom: 30px;
-}
+.showcase { padding-top: 30px; padding-bottom: 30px; }
 .showcase + .showcase::before,
 .discord-section::before,
 .oss-section::before {
@@ -344,29 +363,9 @@ section {
   padding: 22px 26px;
   border: 1px solid rgba(201,169,110,.16);
   border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.025), transparent 55%),
-    rgba(17,16,16,.72);
+  background: linear-gradient(135deg, rgba(255,255,255,.025), transparent 55%), rgba(17,16,16,.72);
   box-shadow: 0 15px 40px rgba(0,0,0,.2);
 }
-.showcase-content::before,
-.showcase-content::after {
-  content: "";
-  position: absolute;
-  top: 18px;
-  bottom: 18px;
-  width: 14px;
-  opacity: .8;
-  background:
-    radial-gradient(ellipse at 50% 0%, transparent 0 5px, rgba(201,169,110,.65) 5.5px 6.5px, transparent 7px),
-    radial-gradient(ellipse at 50% 100%, transparent 0 5px, rgba(201,169,110,.65) 5.5px 6.5px, transparent 7px),
-    linear-gradient(90deg, transparent 5px, rgba(201,169,110,.45) 5.5px 6.5px, transparent 7px);
-  background-size: 14px 28px, 14px 28px, 14px 100%;
-  background-repeat: repeat-y, repeat-y, no-repeat;
-}
-.showcase-content::before { left: 8px; }
-.showcase-content::after { right: 8px; }
-
 .showcase.reverse .showcase-text { order: 2; }
 .showcase.reverse .showcase-visual { order: 1; }
 .showcase-text h2 {
@@ -404,14 +403,7 @@ section {
   text-align: center;
   transition: transform .2s;
 }
-#demoCelebrationCanvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 5;
-}
+#demoCelebrationCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 .demo-label { font-size: 25px; line-height: 1.1; }
 .demo-timer {
   position: relative;
@@ -431,13 +423,7 @@ section {
   background: rgba(255,255,255,.1);
 }
 .demo-bar { width: 0; height: 100%; border-radius: inherit; background: var(--red-bright); }
-.demo-disclaimer {
-  position: relative;
-  z-index: 10;
-  margin-top: 10px;
-  color: rgba(255,255,255,.43);
-  font-size: 12px;
-}
+.demo-disclaimer { position: relative; z-index: 10; margin-top: 10px; color: rgba(255,255,255,.43); font-size: 12px; }
 
 /* Chat preview */
 .visual-chat { position: relative; width: 100%; max-width: 340px; height: 160px; }
@@ -544,11 +530,7 @@ section {
 }
 .discord-logo-wrap svg { width: 29px; height: 29px; fill: var(--discord-blue); }
 .discord-section h2, .oss-section h2 { margin-bottom: 6px; font-size: clamp(2rem, 4vw, 2.6rem); }
-.discord-section p, .oss-section p {
-  max-width: 650px;
-  margin: 0 auto 12px;
-  color: var(--fg2);
-}
+.discord-section p, .oss-section p { max-width: 650px; margin: 0 auto 12px; color: var(--fg2); }
 .discord-widget-ui {
   display: flex;
   flex-direction: column;
@@ -655,8 +637,16 @@ section {
 .reveal.in-view .stagger > *:nth-child(2) { transition-delay: .08s; }
 .reveal.in-view .stagger > *:nth-child(3) { transition-delay: .16s; }
 
+/* Responsive */
+@media (max-width: 900px) {
+  .greek-side { width: 44px; opacity: .4; }
+  .greek-side::after { width: 44px; }
+  .greek-side::before { left: 11px; }
+  .greek-side .volute { width: 22px; height: 22px; left: 2px; }
+}
 @media (max-width: 760px) {
   body { font-size: 17px; }
+  .greek-side { display: none; }
   .glass-nav {
     top: 10px;
     left: 10px;
@@ -674,24 +664,17 @@ section {
   #globalUserBtn { top: 10px; right: 10px; width: 42px; height: 42px; }
   .hero { min-height: 390px; padding-top: 82px; }
   .showcase { padding: 20px 14px; }
-  .showcase-content {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 20px 22px;
-    text-align: center;
-  }
+  .showcase-content { grid-template-columns: 1fr; gap: 16px; padding: 20px 22px; text-align: center; }
   .showcase-text p { margin-left: auto; margin-right: auto; }
   .showcase.reverse .showcase-text,
   .showcase.reverse .showcase-visual { order: initial; }
   .showcase-visual { min-height: 130px; }
   .discord-section, .oss-section { padding: 30px 16px; }
 }
-
 @media (max-width: 480px) {
   .hero { min-height: 360px; }
-  .hero-3d-scene { width: 120px; height: 120px; }
+  .hero-icon { width: 96px; height: 96px; }
   .showcase-content { padding: 17px 18px; }
-  .showcase-visual { min-height: 120px; }
   .visual-chat, .visual-users, .visual-games { height: 130px; }
   .demo-countdown-container { padding: 16px 14px 12px; }
 }
@@ -710,6 +693,20 @@ section {
 
 <body>
 <div id="offlineBanner">You are currently offline. Check your network connection.</div>
+
+<!-- Greek swirl pillar ornaments on both sides -->
+<div class="greek-side left" aria-hidden="true">
+  <span class="volute v1"></span>
+  <span class="volute v2"></span>
+  <span class="volute v3"></span>
+  <span class="volute v4"></span>
+</div>
+<div class="greek-side right" aria-hidden="true">
+  <span class="volute v1"></span>
+  <span class="volute v2"></span>
+  <span class="volute v3"></span>
+  <span class="volute v4"></span>
+</div>
 
 <div id="main-wrapper">
   <nav class="glass-nav" aria-label="Main navigation">
@@ -737,18 +734,8 @@ section {
 
   <section class="hero reveal" id="top">
     <div class="hero-glow"></div>
-    <div class="hero-3d-scene" aria-hidden="true">
-      <div class="core-obj">
-        <div class="core-ring"></div>
-        <div class="core-ring"></div>
-        <div class="core-ring"></div>
-        <div class="core-cube front"><img src="/img/icon.png" alt="BSMS Web Logo"></div>
-        <div class="core-cube back"></div>
-        <div class="core-cube right"></div>
-        <div class="core-cube left"></div>
-        <div class="core-cube top"></div>
-        <div class="core-cube bottom"></div>
-      </div>
+    <div class="hero-icon">
+      <img src="/img/icon.png" alt="BSMS Web Logo">
     </div>
     <div class="hero-content stagger">
       <h1>Welcome to <span>BSMS Web</span></h1>
@@ -903,12 +890,10 @@ section {
  * SPDX-License-Identifier: MIT
  */
 
-// Offline handling
 window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
 window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
 if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
 
-// Session creation
 if (!localStorage.getItem('session_id')) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let sid = '';
@@ -991,7 +976,6 @@ if (window.location.hash) {
 
 syncAuthSession();
 
-// Mouse tracking for subtle background parallax
 if (window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
   document.addEventListener('mousemove', event => {
     const x = (event.clientX / window.innerWidth - .5) * 2;
@@ -1001,7 +985,6 @@ if (window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
   });
 }
 
-// Reveal sections on scroll
 const revealObserver = new IntersectionObserver((entries, observer) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
@@ -1028,7 +1011,6 @@ const timerObserver = new IntersectionObserver(entries => {
     if (entry.isIntersecting) startDemoTimer();
   });
 }, { threshold: .5 });
-
 timerObserver.observe(document.getElementById('countdown'));
 
 function startDemoTimer() {
@@ -1065,7 +1047,7 @@ function triggerDemoCelebration() {
   const dpr = window.devicePixelRatio || 1;
   demoCanvas.width = width * dpr;
   demoCanvas.height = height * dpr;
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const colors = ['#ff4b4b', '#ffd700', '#00e5ff', '#7cfc00', '#ff8c00', '#da70d6'];
   const particles = Array.from({ length: 75 }, () => ({
