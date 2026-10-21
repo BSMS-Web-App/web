@@ -4,6 +4,15 @@
   <p>A chronological record of updates, improvements, and changes to BSMS Web since it became open source.</p>
 </div>
 
+## v6.1.0
+
+- Announcements System and Administrative Management
+- Homepage Redesign and Feature Previews
+- Administrative Security and Role Privileges
+- Repository Migration and Documentation Updates
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.1.0)
+
 ## v6.0.0
 
 - Users Directory and Profile Management
