@@ -1,10 +1,5 @@
 {
   "cleanUrls": true,
-  "functions": {
-    "api/*.js": {
-      "includeFiles": "{api,data}/**"
-    }
-  },
   "redirects": [
     {
       "source": "/account",
