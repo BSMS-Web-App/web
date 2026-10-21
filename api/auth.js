@@ -92,15 +92,11 @@ async function checkProfanity(text) {
         .replace(/7/g, "t")
         .toLowerCase();
 
-    try {
-        const glinModule = await import('glin-profanity');
-        const profanityCheck = glinModule.default || glinModule;
-        return profanityCheck(text) || profanityCheck(strippedText);
-    } catch (err) {
-        console.error("[BSMS Web :: Auth] Glin Profanity Failed to Load:", err);
-        const blockList = ['fuck', 'shit', 'bitch', 'asshole', 'cunt', 'nigger', 'nigga', 'faggot'];
-        return blockList.some(word => strippedText.includes(word));
-    }
+    const blockList = [
+        'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
+        'nigger', 'nigga', 'faggot', 'fag', 'cock', 'pussy', 'whore', 'slut', 'bastard', 'retard'
+    ];
+    return blockList.some(word => strippedText.includes(word));
 }
 
 
