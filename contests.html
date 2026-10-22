@@ -1,0 +1,549 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: MIT
+-->    
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="Get ready for special BSMS Web events featuring unique challenges, exciting rewards, and friendly competition."/>
+<meta name="category" content="Education"/>
+<meta name="author" content="BSMS Web"/>
+<meta name="theme-color" content="#f97316">
+<meta name="color-scheme" content="dark">
+<meta name="application-name" content="BSMS Web">
+<title>Contests - BSMS Web</title>
+
+<!-- Ban Check Enforcer -->
+<script src="/js/ban-check.js"></script>
+<!-- Account Update Checker -->
+<script src="/js/account-check.js"></script>
+
+<link rel="icon" href="/img/icon.png">
+<link rel="apple-touch-icon" href="/img/app-icon.png">
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2TKPQV995W');
+</script>
+<script src="/js/analytics.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+:root {
+  --theme-rgb: 187,0,30;
+  --red: #BB001E;
+  --red-glow: rgba(187, 0, 30, 0.4);
+  
+  --bg: #030303;
+  --surface: #0a0a0a;
+  --fg: #ffffff;
+  --fg2: rgba(255,255,255,0.75);
+  --border: rgba(255,255,255,0.08);
+  
+  --glass-bg: rgba(15, 15, 15, 0.5);
+  --glass-border: rgba(255,255,255,0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0,0,0,0.5);
+  
+  --hh-orange: #f97316;
+  --hh-orange-glow: rgba(249, 115, 22, 0.4);
+  
+  --font: 'Patrick Hand', cursive;
+}
+
+*,*::before,*::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+#main-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Ambient Background Shared Styles */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(249, 115, 22, 0.05) 0%, transparent 60%);
+  z-index: -2; pointer-events: none;
+}
+.ambient-particles {
+  position: fixed; inset: 0; z-index: -1; opacity: 0.2; pointer-events: none;
+  background-image: radial-gradient(var(--hh-orange-glow) 1.5px, transparent 1.5px);
+  background-size: 60px 60px;
+  transform: perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+  animation: moveParticles 25s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
+}
+@keyframes moveParticles {
+  from { background-position: 0 0; }
+  to { background-position: 0 120px; }
+}
+
+/* Base UI Components (From Index) */
+.btn-cinematic {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 20px; padding: 10px 26px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--red) 0%, #8A0016 100%);
+  color: #fff; cursor: pointer; text-decoration: none; border: 1px solid rgba(255,255,255,0.05);
+  position: relative; overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 8px 25px rgba(187,0,30, 0.3); letter-spacing: 1px;
+}
+.btn-cinematic:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(187,0,30, 0.5); }
+.btn-cinematic:active { transform: scale(0.97); }
+
+/* --- CONTEST PAGE SPECIFIC STYLES --- */
+
+/* Page Header */
+.page-header {
+  text-align: center;
+  padding: 140px 20px 40px;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 5;
+}
+.page-header h1 {
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  color: #fff;
+  margin-bottom: 5px;
+  line-height: 1.1;
+  text-shadow: 0 4px 25px rgba(249, 115, 22, 0.4);
+}
+.page-header h2 {
+  font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+  color: var(--hh-orange);
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+.page-header p {
+  font-size: 1.15rem;
+  color: var(--fg2);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+/* Feature Section (Halloween Haunt) */
+.feature-section {
+  padding: 0 20px 60px;
+  z-index: 5;
+  position: relative;
+}
+.hh-card {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(28, 12, 5, 0.95) 0%, rgba(10, 5, 5, 0.98) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(249, 115, 22, 0.12);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+.hh-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at top right, rgba(249, 115, 22, 0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hh-content-left {
+  display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 2;
+}
+.hh-badge {
+  align-self: flex-start;
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  color: #fb923c;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+.hh-title-wrap {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+}
+.hh-title-wrap img {
+  width: 44px; height: 44px;
+  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.5));
+}
+.hh-title-wrap h2 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  color: #fff;
+  line-height: 1.1;
+}
+.hh-dates {
+  font-size: 16px;
+  color: #fdba74;
+  margin-bottom: 20px;
+  background: rgba(0,0,0,0.4);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border-left: 3px solid #f97316;
+}
+.hh-desc {
+  font-size: 1.1rem;
+  color: var(--fg2);
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+/* Learn More Button */
+.btn-halloween {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 20px;
+  padding: 12px 30px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+  color: #fff; cursor: pointer; text-decoration: none; border: 1px solid rgba(255,255,255,0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.3);
+  letter-spacing: 1px;
+}
+.btn-halloween:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(249, 115, 22, 0.5); }
+
+/* Countdown Sub-Card */
+.hh-countdown {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  margin-top: 30px;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+.hh-countdown h3 {
+  color: #fdba74;
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+.hh-countdown p {
+  color: var(--fg2);
+  font-size: 18px;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+.hh-countdown h4 {
+  color: rgba(255,255,255,0.6);
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.hh-countdown-timer {
+  font-size: clamp(36px, 5vw, 48px);
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 4px 15px rgba(249, 115, 22, 0.6);
+}
+
+/* Leaderboard Preview Container */
+.hh-leaderboard {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+.hh-lb-header h3 {
+  color: #fff; font-size: 26px; margin-bottom: 6px;
+}
+.hh-lb-header p {
+  color: var(--fg2); font-size: 16px; margin-bottom: 24px; line-height: 1.4;
+}
+.lb-row {
+  display: flex; align-items: center; padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px; margin-bottom: 8px; gap: 16px;
+}
+.lb-rank {
+  font-size: 18px; font-weight: bold; color: rgba(255,255,255,0.5); width: 35px; text-align: center;
+}
+.lb-box {
+  flex: 1; height: 24px; background: rgba(255,255,255,0.08); border-radius: 6px;
+}
+.lb-score {
+  color: rgba(255,255,255,0.4); font-size: 16px; width: 75px; text-align: right;
+}
+.lb-note {
+  text-align: center; color: #fb923c; font-size: 16px; margin-top: auto; padding-top: 16px;
+}
+
+/* Secondary Sections (More Contests) */
+.secondary-section {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 60px;
+  padding: 40px 20px;
+  background: rgba(15,15,15,0.6);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  position: relative; z-index: 5;
+}
+.secondary-section h3 { color: #fff; font-size: 28px; margin-bottom: 12px; }
+.secondary-section p { color: var(--fg2); font-size: 18px; line-height: 1.6; }
+
+/* Modal Styling */
+.hh-modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  z-index: 4000;
+  display: flex; justify-content: center; align-items: center;
+  opacity: 0; visibility: hidden; transition: all 0.3s ease;
+}
+.hh-modal.show { opacity: 1; visibility: visible; }
+.hh-modal-content {
+  background: #0a0a0a;
+  border: 2px solid #f97316;
+  border-radius: 20px;
+  width: min(90%, 650px);
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 40px;
+  position: relative;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s ease;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.8), 0 0 30px rgba(249, 115, 22, 0.2);
+}
+.hh-modal.show .hh-modal-content { transform: translateY(0) scale(1); }
+.hh-close-btn {
+  position: absolute; top: 20px; right: 20px;
+  background: rgba(255,255,255,0.1); border: none; color: #fff;
+  font-size: 28px; width: 44px; height: 44px; border-radius: 50%;
+  cursor: pointer; transition: background 0.2s;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.hh-close-btn:hover { background: #ea580c; }
+
+/* Modal Typography */
+.hh-modal-content h2 { color: #fff; font-size: 36px; margin-bottom: 24px; text-align: center; line-height: 1.1;}
+.hh-modal-content h3 { color: #fdba74; font-size: 24px; margin: 24px 0 8px; line-height: 1.2;}
+.hh-modal-content p { color: var(--fg2); font-size: 18px; line-height: 1.6; margin-bottom: 16px; }
+.hh-modal-content p.hype { color: #fff; font-size: 20px; text-align: center; margin-top: 30px; font-weight: bold;}
+.hh-modal-content p.callout { color: #fb923c; font-size: 18px; text-align: center; }
+
+.footer {
+  text-align: center; padding: 28px 20px; color: rgba(255,255,255,0.5); font-size: 18px;
+  border-top: 1px solid rgba(255,255,255,0.05); position: relative; letter-spacing: 1px; margin-top: 40px;
+}
+.footer a { color: rgba(255,255,255,0.7); text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.4); transition: color 0.2s; }
+.footer a:hover { color: var(--hh-orange); border-color: var(--hh-orange); }
+
+@media (max-width: 900px) {
+  .hh-card { grid-template-columns: 1fr; padding: 24px; gap: 30px; }
+  .page-header { padding-top: 100px; }
+  .hh-modal-content { padding: 30px 20px; }
+  .hh-close-btn { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 24px;}
+}
+</style>
+</head>
+<body>
+
+<div id="main-wrapper">
+  <!-- Background Ambient -->
+  <div class="ambient-particles"></div>
+
+  <!-- Page Header -->
+  <section class="page-header">
+    <h1>Contests</h1>
+    <h2>Compete, collect, and climb the leaderboard.</h2>
+    <p>Get ready for special BSMS Web events featuring unique challenges, exciting rewards, and friendly competition. New contests are on the way, so stay tuned!</p>
+    <a href="/" class="btn-cinematic">Return to Home</a>
+  </section>
+
+  <!-- Featured Contest: Halloween Haunt -->
+  <section class="feature-section">
+    <div class="hh-card">
+      <div class="hh-content-left">
+        <div class="hh-badge">Upcoming</div>
+        <div class="hh-title-wrap">
+          <img src="/img/halloween-haunt-contest/pumpkin.svg" alt="Pumpkin">
+          <h2>Halloween Haunt</h2>
+        </div>
+        
+        <div class="hh-dates">
+          <strong>Start:</strong> Monday, October 26, 2026<br>
+          <strong>End:</strong> Friday, October 30, 2026 at 3:10 PM EDT
+        </div>
+        
+        <p class="hh-desc">
+          Get ready for a Halloween adventure! Explore spooky neighborhoods, visit houses, collect candy, discover rare treats, and build your way toward the top of the leaderboard.
+        </p>
+        
+        <button class="btn-halloween" onclick="openHHModal()">Learn More</button>
+
+        <!-- Countdown Card Integrated Here -->
+        <div class="hh-countdown">
+          <h3>The countdown to Halloween Haunt is on.</h3>
+          <p>Stay tuned for more announcements and get ready for an unforgettable candy-collecting adventure!</p>
+          <h4>Begins In</h4>
+          <div class="hh-countdown-timer" id="hh-cd-timer">--d --h --m --s</div>
+        </div>
+      </div>
+
+      <!-- Leaderboard Preview -->
+      <div class="hh-leaderboard">
+        <div class="hh-lb-header">
+          <h3>Halloween Haunt Leaderboard</h3>
+          <p>Think you can make the top spot? The leaderboard will come alive when the contest begins.</p>
+        </div>
+        
+        <div class="lb-row">
+          <span class="lb-rank">1st</span>
+          <div class="lb-box"></div>
+          <span class="lb-score">— candy</span>
+        </div>
+        <div class="lb-row">
+          <span class="lb-rank">2nd</span>
+          <div class="lb-box"></div>
+          <span class="lb-score">— candy</span>
+        </div>
+        <div class="lb-row">
+          <span class="lb-rank">3rd</span>
+          <div class="lb-box"></div>
+          <span class="lb-score">— candy</span>
+        </div>
+        <div class="lb-row">
+          <span class="lb-rank">4th</span>
+          <div class="lb-box"></div>
+          <span class="lb-score">— candy</span>
+        </div>
+        <div class="lb-row">
+          <span class="lb-rank">5th</span>
+          <div class="lb-box"></div>
+          <span class="lb-score">— candy</span>
+        </div>
+        
+        <p class="lb-note">The leaderboard opens when the contest begins.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- More Contests Section -->
+  <section class="secondary-section">
+    <h3>More Contests Coming Soon</h3>
+    <p>Halloween Haunt is just the beginning. Keep an eye on this page for future BSMS Web contests, special events, and new ways to compete.</p>
+  </section>
+
+  <div class="footer">
+    © 2026 Jellyfish Jelly. <a href="/privacy.html">Privacy Policy</a>
+  </div>
+</div>
+
+<!-- Learn More Dialog -->
+<div id="hhModal" class="hh-modal" onclick="handleModalClick(event)">
+  <div class="hh-modal-content">
+    <button class="hh-close-btn" onclick="closeHHModal()" aria-label="Close dialog">&times;</button>
+    
+    <h2>Halloween Haunt Is Coming!</h2>
+    
+    <p>Get ready for the ultimate Halloween candy-collecting adventure on BSMS Web! Halloween Haunt is an upcoming limited-time contest where every house could hold a surprise, every neighborhood has something new to discover, and every piece of candy brings you one step closer to the top.</p>
+    
+    <h3>Explore Spooky Neighborhoods</h3>
+    <p>Venture through Halloween-themed neighborhoods, explore streets lined with decorated houses, and see what surprises are waiting behind each door. The further you progress, the more exciting your candy-hunting adventures can become.</p>
+
+    <h3>Ring the Doorbell. Grab the Candy.</h3>
+    <p>Visit houses, ring their doorbells, and get ready for a candy-collecting experience. Discover different types of candy, chase rare finds, and work toward building an impressive collection. You never know what you might find!</p>
+
+    <h3>Build Your Candy Empire</h3>
+    <p>Collect candy, unlock new possibilities, upgrade your progress, and build your very own Trick-or-Treat Crew. Your crew will help you collect even more candy while you explore the contest's features.</p>
+
+    <h3>Discover Rare Treats</h3>
+    <p>Not all candy is created equal! Keep an eye out for uncommon and extraordinary discoveries. Every candy type has a place in your collection, and rare finds will make your Halloween adventure even more memorable.</p>
+
+    <h3>Climb the Leaderboard</h3>
+    <p>Think you can collect enough candy to reach the top? Watch the leaderboard, keep improving your strategy, and see how you stack up against other players once the contest begins.</p>
+
+    <h3>When Does It Begin?</h3>
+    <p>Halloween Haunt begins Monday, October 26, 2026, and ends Friday, October 30, 2026, at 3:10 PM EDT. This is a limited-time event, so make the most of it while it lasts!</p>
+
+    <p class="hype">The houses are waiting. The candy is calling. Halloween Haunt is almost here!</p>
+    <p class="callout">Stay tuned for more details, and get ready to trick-or-treat your way to the top!</p>
+  </div>
+</div>
+
+<script>
+// --- Countdown Logic ---
+function updateCountdown() {
+    // Target date: October 26, 2026 at 8:00 AM EDT (UTC-4)
+    const targetDate = new Date('2026-10-26T08:00:00-04:00').getTime();
+    const now = new Date().getTime();
+    const diff = targetDate - now;
+    
+    const timerEl = document.getElementById('hh-cd-timer');
+    
+    if (diff <= 0) {
+        // If the date has passed or the contest is active
+        timerEl.innerText = "Contest Started!";
+        return;
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    timerEl.innerText = `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+}
+// Initialize and run every second
+setInterval(updateCountdown, 1000);
+updateCountdown();
+
+// --- Modal Logic ---
+const modal = document.getElementById('hhModal');
+function openHHModal() {
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function closeHHModal() {
+    modal.classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+function handleModalClick(e) {
+    if (e.target === modal) {
+        closeHHModal();
+    }
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('show')) {
+        closeHHModal();
+    }
+});
+</script>
+</body>
+</html>
