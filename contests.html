@@ -19,7 +19,6 @@ SPDX-License-Identifier: MIT
 
 <!-- Ban Check Enforcer -->
 <script src="/js/ban-check.js"></script>
-  
 <!-- Account Update Checker -->
 <script src="/js/account-check.js"></script>
 
@@ -107,21 +106,6 @@ body::before {
 }
 
 /* Base UI Components (From Index) */
-.glass-nav {
-  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; justify-content: center; gap: 32px;
-  background: var(--glass-bg); backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border); padding: 12px 36px; border-radius: 40px;
-  z-index: 2000; box-shadow: var(--glass-shadow); transition: all 0.3s;
-}
-.glass-nav a {
-  color: var(--fg2); text-decoration: none; font-size: 22px; letter-spacing: 1px; transition: color 0.3s, text-shadow 0.3s;
-}
-.glass-nav a:hover {
-  color: #fff; text-shadow: 0 0 12px var(--hh-orange-glow);
-}
-
 .btn-cinematic {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   font-size: 20px; padding: 10px 26px; border-radius: 14px;
@@ -259,16 +243,25 @@ body::before {
   margin-top: 30px;
   box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
+.hh-countdown h3 {
+  color: #fdba74;
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+.hh-countdown p {
+  color: var(--fg2);
+  font-size: 18px;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
 .hh-countdown h4 {
   color: rgba(255,255,255,0.6);
-  font-family: sans-serif;
-  font-size: 12px;
+  font-size: 16px;
   text-transform: uppercase;
   letter-spacing: 2px;
   margin-bottom: 6px;
 }
 .hh-countdown-timer {
-  font-family: var(--font);
   font-size: clamp(36px, 5vw, 48px);
   color: #fff;
   line-height: 1;
@@ -305,13 +298,13 @@ body::before {
   flex: 1; height: 24px; background: rgba(255,255,255,0.08); border-radius: 6px;
 }
 .lb-score {
-  color: rgba(255,255,255,0.4); font-size: 16px; width: 75px; text-align: right; font-family: sans-serif;
+  color: rgba(255,255,255,0.4); font-size: 16px; width: 75px; text-align: right;
 }
 .lb-note {
   text-align: center; color: #fb923c; font-size: 16px; margin-top: auto; padding-top: 16px;
 }
 
-/* Secondary Sections (More Contests & Stay Tuned) */
+/* Secondary Sections (More Contests) */
 .secondary-section {
   text-align: center;
   max-width: 800px;
@@ -373,8 +366,6 @@ body::before {
 
 @media (max-width: 900px) {
   .hh-card { grid-template-columns: 1fr; padding: 24px; gap: 30px; }
-  .glass-nav { left: 12px; right: 12px; top: 12px; transform: none; justify-content: center; gap: 16px; padding: 8px 14px; width: auto; }
-  .glass-nav a { font-size: 18px; }
   .page-header { padding-top: 100px; }
   .hh-modal-content { padding: 30px 20px; }
   .hh-close-btn { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 24px;}
@@ -384,12 +375,6 @@ body::before {
 <body>
 
 <div id="main-wrapper">
-  <!-- Navigation -->
-  <nav class="glass-nav">
-    <a href="/">Home</a>
-    <a href="/contests">Contests</a>
-  </nav>
-
   <!-- Background Ambient -->
   <div class="ambient-particles"></div>
 
@@ -422,8 +407,10 @@ body::before {
         
         <button class="btn-halloween" onclick="openHHModal()">Learn More</button>
 
-        <!-- Countdown Card -->
+        <!-- Countdown Card Integrated Here -->
         <div class="hh-countdown">
+          <h3>The countdown to Halloween Haunt is on.</h3>
+          <p>Stay tuned for more announcements and get ready for an unforgettable candy-collecting adventure!</p>
           <h4>Begins In</h4>
           <div class="hh-countdown-timer" id="hh-cd-timer">--d --h --m --s</div>
         </div>
@@ -471,12 +458,6 @@ body::before {
   <section class="secondary-section">
     <h3>More Contests Coming Soon</h3>
     <p>Halloween Haunt is just the beginning. Keep an eye on this page for future BSMS Web contests, special events, and new ways to compete.</p>
-  </section>
-
-  <!-- Stay Tuned Section -->
-  <section class="secondary-section" style="margin-bottom: 20px; border-color: rgba(249, 115, 22, 0.3);">
-    <h3 style="color: #fdba74;">The countdown to Halloween Haunt is on.</h3>
-    <p>Stay tuned for more announcements and get ready for an unforgettable candy-collecting adventure!</p>
   </section>
 
   <div class="footer">
