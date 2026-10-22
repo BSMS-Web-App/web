@@ -46,6 +46,17 @@ app.use('/api/export-data', (req, res) => exportDataHandler(req, res));
 app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res));
 app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 
+// Raw text endpoints for 1-click copy into GitHub
+app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
+app.get('/raw/accounts.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'accounts.html')));
+app.get('/raw/api/auth.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/auth.js')));
+app.get('/raw/api/chat.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/chat.js')));
+app.get('/raw/api/profanity-filter.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/profanity-filter.js')));
+app.get('/raw/api/db.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/db.js')));
+app.get('/raw/package.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'package.json')));
+app.get('/raw/vercel.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'vercel.json')));
+app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'server.js')));
+
 // Clean URLs
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));

@@ -403,7 +403,15 @@ a { color: var(--accent); text-decoration: none; }
 .msg-row.theirs { align-items: flex-start; }
 
 .msg-author { font-size: 0.95rem; color: var(--fg2); margin: 0 12px 4px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;}
-.msg-author:hover { color: var(--fg); }
+.msg-author:hover { opacity: 0.85; }
+.my-msg-author { font-size: 0.95rem; display: block; cursor: pointer; transition: 0.2s; }
+.my-msg-author:hover { opacity: 0.85; }
+.color-swatch {
+    width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border);
+    cursor: pointer; transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+}
+.color-swatch:hover { transform: scale(1.15); border-color: var(--fg); }
+.color-swatch.active { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.4); }
 .msg-bubble-wrap { position: relative; display: flex; flex-direction: column; max-width: 80%; }
 .msg-row.mine .msg-bubble-wrap { align-items: flex-end; }
 .msg-row.theirs .msg-bubble-wrap { align-items: flex-start; }
@@ -789,6 +797,7 @@ a { color: var(--accent); text-decoration: none; }
         <symbol id="ico-banned" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z" fill="#ef4444"/></symbol>
         <symbol id="ico-phone" viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></symbol>
         <symbol id="ico-eye-off" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></symbol>
+        <symbol id="ico-palette" viewBox="0 0 24 24"><path d="M12 2C6.49 2 2 6.49 2 12c0 4.41 3.59 8 8 8 1.1 0 2-.9 2-2 0-.46-.17-.89-.46-1.22-.29-.33-.46-.77-.46-1.28 0-1.1.9-2 2-2h2.5c3.59 0 6.5-2.91 6.5-6.5C22 6.01 17.51 2 12 2zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8s1.5.67 1.5 1.5S7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></symbol>
     </defs>
 </svg>
 
@@ -809,7 +818,8 @@ a { color: var(--accent); text-decoration: none; }
         <svg class="ic" style="width: 72px; height: 72px; fill: var(--accent); margin-bottom: 20px;"><use href="#ico-chat"></use></svg>
         <h2 style="font-size: 2rem;">Welcome to BSMS Chat</h2>
         <p>You need to be logged in to your BSMS Web account to use the messaging system.</p>
-        <button class="btn" onclick="window.location.href='/accounts#signup'" data-ga="chat_login" style="font-size: 1.3rem; padding: 14px;">Log In</button>
+        <button class="btn" onclick="window.location.href='/accounts#signup'" data-ga="chat_login" style="font-size: 1.3rem; padding: 14px;">Log In / Sign Up</button>
+        <button class="btn sec" onclick="AuthManager.quickDemoLogin()" style="font-size: 1.1rem; padding: 10px; margin-top: 10px; width: 100%;">Quick Demo Login</button>
     </div>
 </div>
 
@@ -1106,6 +1116,62 @@ a { color: var(--accent); text-decoration: none; }
     </div>
 </div>
 
+<div id="nameColorModal" class="overlay" onclick="if(event.target===this) UI.closeModal('nameColorModal')">
+    <div class="modal-card" style="max-width: 440px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <svg class="ic" style="width:24px; height:24px; fill:var(--accent);"><use href="#ico-palette"></use></svg>
+                <h2 style="font-size:1.8rem; margin:0;">Change Name Color</h2>
+            </div>
+            <button class="icon-btn" onclick="UI.closeModal('nameColorModal')" style="width:32px; height:32px;"><svg class="ic"><use href="#ico-close"></use></svg></button>
+        </div>
+        <p style="color:var(--fg2); font-size:1rem; margin-bottom:16px;">Pick a color for your name. When you chat in the chat, your name will appear in this color!</p>
+        
+        <!-- Live Chat Message Preview -->
+        <div style="background:var(--section-bg); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:16px;">
+            <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--fg2); margin-bottom:6px;">Chat Name Preview</div>
+            <div style="display:flex; align-items:baseline; gap:8px;">
+                <span id="nameColorPreviewAuthor" style="font-size:1.1rem; font-weight:bold; color:#ef4444; transition:color 0.2s;">Username</span>
+                <span style="font-size:0.8rem; color:var(--fg2);">Today at 12:00 PM</span>
+            </div>
+            <div style="background:var(--pill-bg); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-top:6px; max-width:280px; font-size:1.05rem; color:var(--fg);">
+                Hello! My name is styled in this color!
+            </div>
+        </div>
+
+        <!-- Preset Swatches with Red first as requested -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:0.9rem; font-weight:600; color:var(--fg2); margin-bottom:8px;">Preset Colors</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="color-swatch active" style="background:#ef4444;" onclick="NameColorManager.selectColor('#ef4444')" title="Red"></button>
+                <button type="button" class="color-swatch" style="background:#BB001E;" onclick="NameColorManager.selectColor('#BB001E')" title="BSMS Crimson"></button>
+                <button type="button" class="color-swatch" style="background:#ff4b72;" onclick="NameColorManager.selectColor('#ff4b72')" title="Coral"></button>
+                <button type="button" class="color-swatch" style="background:#f97316;" onclick="NameColorManager.selectColor('#f97316')" title="Orange"></button>
+                <button type="button" class="color-swatch" style="background:#eab308;" onclick="NameColorManager.selectColor('#eab308')" title="Gold"></button>
+                <button type="button" class="color-swatch" style="background:#22c55e;" onclick="NameColorManager.selectColor('#22c55e')" title="Green"></button>
+                <button type="button" class="color-swatch" style="background:#14b8a6;" onclick="NameColorManager.selectColor('#14b8a6')" title="Teal"></button>
+                <button type="button" class="color-swatch" style="background:#06b6d4;" onclick="NameColorManager.selectColor('#06b6d4')" title="Cyan"></button>
+                <button type="button" class="color-swatch" style="background:#3b82f6;" onclick="NameColorManager.selectColor('#3b82f6')" title="Sky Blue"></button>
+                <button type="button" class="color-swatch" style="background:#8b5cf6;" onclick="NameColorManager.selectColor('#8b5cf6')" title="Purple"></button>
+                <button type="button" class="color-swatch" style="background:#ec4899;" onclick="NameColorManager.selectColor('#ec4899')" title="Pink"></button>
+                <button type="button" class="color-swatch" style="background:#ffffff; border:1px solid #aaa;" onclick="NameColorManager.selectColor('#ffffff')" title="Default White"></button>
+            </div>
+        </div>
+
+        <!-- Custom Color Picker + Hex Input -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+            <input type="color" id="chatNameColorPicker" value="#ef4444" style="width:48px; height:44px; padding:2px; border-radius:10px; cursor:pointer; background:var(--input-bg); border:1px solid var(--border);" oninput="NameColorManager.onPickerInput(this.value)" />
+            <input type="text" id="chatNameColorHex" placeholder="#EF4444" value="#EF4444" maxlength="7" style="flex:1; margin:0; text-transform:uppercase; font-family:var(--font-mono, monospace); padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--input-bg); color:var(--fg); font-size:1rem;" oninput="NameColorManager.onHexInput(this.value)" />
+            <button type="button" class="btn sec" style="width:auto; padding:10px 14px; margin:0; font-size:0.95rem;" onclick="NameColorManager.resetColor()">Reset</button>
+        </div>
+
+        <div style="display:flex; gap:12px;">
+            <button type="button" class="btn sec" style="flex:1; margin:0;" onclick="UI.closeModal('nameColorModal')">Cancel</button>
+            <button type="button" class="btn" id="saveNameColorBtn" style="flex:1; margin:0;" onclick="NameColorManager.saveColor()">Save Color</button>
+        </div>
+    </div>
+</div>
+
 <div id="ctxMenu">
     <div class="ctx-reactions">
         <button class="ctx-rx-btn" onclick="ContextMenu.react('&#10084;&#65039;')">&#10084;&#65039;</button>
@@ -1136,6 +1202,7 @@ a { color: var(--accent); text-decoration: none; }
                     <div id="plusMenu">
                         <div class="plus-item" onclick="SidebarManager.togglePlusMenu(); UI.openModal('joinCodeModal')">Join Group</div>
                         <div class="plus-item" onclick="SidebarManager.togglePlusMenu(); UI.openModal('newGroupModal')">Create Group</div>
+                        <div class="plus-item" onclick="SidebarManager.togglePlusMenu(); NameColorManager.openModal()"><svg class="ic" style="width:16px;height:16px;margin-right:8px;vertical-align:middle;"><use href="#ico-palette"></use></svg>Name Color</div>
                     </div>
                 </div>
             </div>
@@ -1147,6 +1214,28 @@ a { color: var(--accent); text-decoration: none; }
             <div id="searchHint">Search BSMS Web Accounts to start chatting!</div>
         </div>
         <div id="chatList"></div>
+        <div id="sideUserBar" style="padding:10px 14px; border-top:1px solid var(--border); background:var(--section-bg); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px; overflow:hidden; cursor:pointer; flex:1; min-width:0;" onclick="NameColorManager.openModal()" title="Click to customize your name color">
+                <div class="c-av" style="width:36px; height:36px; font-size:1rem; flex-shrink:0;">
+                    <div class="c-av-inner" id="sbUserAvatar">?</div>
+                </div>
+                <div style="overflow:hidden; text-align:left; min-width:0;">
+                    <div id="sbUserDisplayName" style="font-weight:bold; font-size:1rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; color:var(--fg);">You</div>
+                    <div style="font-size:0.8rem; color:var(--fg2); display:flex; align-items:center; gap:5px;">
+                        <span id="sbUserColorDot" style="width:10px; height:10px; border-radius:50%; background:#ef4444; display:inline-block; border:1px solid var(--border); flex-shrink:0;"></span>
+                        <span style="font-size:0.75rem;">Name Color</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                <button class="icon-btn" onclick="NameColorManager.openModal()" title="Change Name Color" style="width:34px; height:34px;">
+                    <svg class="ic" style="width:18px;height:18px;"><use href="#ico-palette"></use></svg>
+                </button>
+                <button class="icon-btn" onclick="window.location.href='/accounts'" title="Account Settings" style="width:34px; height:34px;">
+                    <svg class="ic" style="width:18px;height:18px;"><use href="#ico-settings"></use></svg>
+                </button>
+            </div>
+        </div>
     </div>
 
     <div id="mainView">
@@ -1422,6 +1511,19 @@ const Utils = {
         if(acc && (acc.displayName || acc.username)) return acc.displayName || acc.username;
         return uid;
     },
+    nameColor: (uid) => {
+        if (!uid || uid === BOT_UID) return null;
+        const acc = State.accountsCache[uid];
+        if (acc && (acc.nameColor || acc.chatColor)) return acc.nameColor || acc.chatColor;
+        if (State.user && (State.user.uid === uid || State.user.username === uid)) {
+            if (State.user.nameColor || State.user.chatColor) return State.user.nameColor || State.user.chatColor;
+            try {
+                const s = JSON.parse(localStorage.getItem('bsms_auth_session') || '{}');
+                if (s.nameColor || s.chatColor) return s.nameColor || s.chatColor;
+            } catch(e) {}
+        }
+        return null;
+    },
     getBadgesHTML: (uid) => {
         if (uid === BOT_UID) return `<span class="bot-badge">Official</span>`;
         const acc = State.accountsCache[uid];
@@ -1469,17 +1571,36 @@ document.addEventListener('click', AudioFX.init, { once: true });
 const ApiClient = {
     call: async (action, params = {}) => {
         try {
+            const sid = (localStorage.getItem('session_id') || "").trim();
+            if (!sid && action !== 'status') {
+                PollingManager.stop();
+                AuthManager.reject();
+                return null;
+            }
             const res = await fetch(`/api/chat?action=${action}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || "" },
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
                 body: JSON.stringify(params)
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             
             if (res.status === 403 && data.account_status === "banned") {
                 // If banned, smoothly redirect to accounts.html which handles global bans visually
                 window.location.href = '/accounts.html';
                 return null;
+            }
+            if (res.status === 401 || (data && data.error === 'Unauthorized session.')) {
+                // Session expired or unauthenticated: stop background polling and prompt login cleanly
+                PollingManager.stop();
+                localStorage.removeItem('session_id');
+                localStorage.removeItem('bsms_auth_session');
+                localStorage.removeItem('bsms_session');
+                AuthManager.reject();
+                return null;
+            }
+            if (res.status === 403 && data.unauthorized) {
+                // Channel membership error - return payload so caller can handle UI gracefully
+                return data;
             }
             if (res.status === 400 && data.error && data.error.includes("filter")) {
                 const inp = document.getElementById('msgInput');
@@ -1529,6 +1650,9 @@ const PollingManager = {
             State.accountsCache = data.accounts || {};
             State.channels = data.channels || {};
             if (Array.isArray(data.hiddenDms)) State.hiddenDms = data.hiddenDms;
+            if (typeof NameColorManager !== 'undefined' && NameColorManager.updateSidebarUser) {
+                NameColorManager.updateSidebarUser();
+            }
             
             if (State.activeChannelId && State.channels[State.activeChannelId]) {
                 const c = State.channels[State.activeChannelId];
@@ -1558,8 +1682,10 @@ const PollingManager = {
         if (!State.activeChannelId) return;
         const requestedCid = State.activeChannelId;
         const requestedToken = State.activeChannelToken;
+        const channelType = State.activeType || (State.channels[requestedCid] ? State.channels[requestedCid]._type : (requestedCid.startsWith('gc') ? 'gcs' : 'dms'));
         try {
-            const data = await ApiClient.call('messages', { cid: requestedCid, type: State.activeType, limit: 20 });
+            const data = await ApiClient.call('messages', { cid: requestedCid, type: channelType, limit: 20 });
+            if (!data) return;
             if (State.activeChannelId !== requestedCid || State.activeChannelToken !== requestedToken) return;
 
             const spinner = document.getElementById('chatLoadingSpinner');
@@ -1862,8 +1988,10 @@ const SearchManager = {
                     }
                     let html = '';
                     matches.slice(0,10).forEach(u => {
+                        const sColor = Utils.nameColor(u.uid);
+                        const sColorStyle = sColor ? `style="color:${sColor}; font-weight:bold;"` : '';
                         html += `<div class="member-item" style="cursor:pointer;" onclick="GroupManager.sendInvite('${u.uid}')">
-                            <div class="member-info"><div style="font-weight:bold;color:var(--fg); display:flex; align-items:center;">${Utils.escapeHTML(u.displayName)} ${Utils.getBadgesHTML(u.uid)}</div></div>
+                            <div class="member-info"><div style="font-weight:bold;color:var(--fg); display:flex; align-items:center;"><span ${sColorStyle}>${Utils.escapeHTML(u.displayName)}</span> ${Utils.getBadgesHTML(u.uid)}</div></div>
                             <button class="btn" style="width:auto;padding:4px 10px;font-size:0.9rem;">Invite</button>
                         </div>`;
                     });
@@ -1883,6 +2011,8 @@ const SearchManager = {
             matches.slice(0,10).forEach(u => {
                 const dot = u.online ? `<div class="status-dot online"></div>` : `<div class="status-dot"></div>`;
                 const avHtml = u.avatar ? `<img src="${Utils.escapeHTML(u.avatar)}">` : u.displayName.charAt(0).toUpperCase();
+                const uColor = Utils.nameColor(u.uid);
+                const uColorStyle = uColor ? `style="color:${uColor}; font-weight:bold;"` : '';
                 html += `
                 <div class="search-item" onclick="SearchManager.startDM('${u.uid}')">
                     <div class="c-av" style="width:40px; height:40px; font-size:1.2rem;">
@@ -1890,7 +2020,9 @@ const SearchManager = {
                         ${dot}
                     </div>
                     <div style="flex:1; overflow:hidden;">
-                        <div style="font-weight:bold; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center;">${Utils.escapeHTML(u.displayName)} ${Utils.getBadgesHTML(u.uid)}</div>
+                        <div style="font-weight:bold; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center;">
+                            <span ${uColorStyle}>${Utils.escapeHTML(u.displayName)}</span> ${Utils.getBadgesHTML(u.uid)}
+                        </div>
                         <div style="font-size:0.9rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@${Utils.escapeHTML(u.username)}</div>
                     </div>
                 </div>`;
@@ -2001,6 +2133,8 @@ const SidebarManager = {
             const offCls = isOfficial ? 'official' : '';
             const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${targetUid}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
 
+            const nameColor = (targetUid && Utils.nameColor(targetUid)) ? `style="color:${Utils.nameColor(targetUid)}; font-weight:bold;"` : '';
+
             html += `
             <div class="chat-row ${activeCls} ${unreadCls}" onclick="ChatManager.open('${id}')">
                 <div ${pfpAttr}>
@@ -2008,7 +2142,7 @@ const SidebarManager = {
                     ${dot}
                 </div>
                 <div class="c-info">
-                    <div class="c-name">${Utils.escapeHTML(title)} ${targetUid ? Utils.getBadgesHTML(targetUid) : ''}</div>
+                    <div class="c-name" ${nameColor}>${Utils.escapeHTML(title)} ${targetUid ? Utils.getBadgesHTML(targetUid) : ''}</div>
                     <div class="c-prev">${item.preview}</div>
                 </div>
                 ${badge}
@@ -2537,7 +2671,9 @@ const ChatManager = {
                 sEl.innerText = "System Account";
             } else {
                 const acc = State.accountsCache[otherUid] || { displayName: otherUid };
-                nEl.innerHTML = `${Utils.escapeHTML(acc.displayName)} ${Utils.getBadgesHTML(otherUid)}`;
+                const nColor = Utils.nameColor(otherUid);
+                const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+                nEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(acc.displayName || otherUid)}</span> ${Utils.getBadgesHTML(otherUid)}`;
                 
                 if (acc.account_status === 'banned') {
                     sEl.innerText = "Account Banned";
@@ -2768,9 +2904,15 @@ const ChatManager = {
         let html = `<div class="msg-row ${cls}" id="msg-${msgId}">`;
         if (!isMine) html += `<div class="msg-theirs-container">${pfpElement}<div class="msg-theirs-body" style="flex:1; overflow:hidden;">`;
 
-        if (isGroup && !isMine && !isSysBot) {
+        if (!isSysBot) {
             const disp = Utils.displayName(m.senderUid, c);
-            html += `<div class="msg-author user-pfp-trigger" data-uid="${m.senderUid}" title="Click or hover to view profile" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
+            const nColor = Utils.nameColor(m.senderUid) || m.senderColor;
+            const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+            if (!isMine) {
+                html += `<div class="msg-author user-pfp-trigger" data-uid="${m.senderUid}" ${colorStyle} title="Click or hover to view profile" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
+            } else {
+                html += `<div class="msg-author my-msg-author" data-uid="${m.senderUid}" style="align-self:flex-end; text-align:right; margin:0 12px 4px; ${nColor ? `color:${nColor}; font-weight:bold;` : ''}" title="You">${Utils.escapeHTML(disp)}</div>`;
+            }
         }
         if (isSysBot) html += `<div class="msg-author">BSMS Web</div>`;
 
@@ -2791,9 +2933,11 @@ const ChatManager = {
                 const repMsg = c.messages[m.status.repliedTo];
                 if(repMsg) {
                     const repDisp = Utils.displayName(repMsg.senderUid, c);
+                    const repColor = Utils.nameColor(repMsg.senderUid) || repMsg.senderColor;
+                    const repColorStyle = repColor ? `style="color:${repColor}; font-weight:bold;"` : '';
                     let repSnippet = repMsg.status?.unsent ? "Unsent message" : (repMsg.status?.deletedByMod ? "Deleted message" : (repMsg.contentType === 'text' ? repMsg.content : (repMsg.contentType === 'poll' ? repMsg.content.pollQuestion : (repMsg.contentType === 'audio' ? 'Voice message' : 'Attachment'))));
                     content += `<div class="quote-box" onclick="ScrollManager.scrollToMessage('${m.status.repliedTo}')">
-                        <strong>${Utils.escapeHTML(repDisp)}</strong>
+                        <strong ${repColorStyle}>${Utils.escapeHTML(repDisp)}</strong>
                         ${Utils.escapeHTML(repSnippet)}
                     </div>`;
                 }
@@ -3098,8 +3242,10 @@ const ProfileHoverManager = {
         const nameEl = document.getElementById('phpName');
         const uEl = document.getElementById('phpUsername');
 
+        const nColor = Utils.nameColor(uid);
+        const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
         if (avEl) avEl.innerHTML = avHtml;
-        if (nameEl) nameEl.innerHTML = `${Utils.escapeHTML(dName)} ${Utils.getBadgesHTML(uid)}`;
+        if (nameEl) nameEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(dName)}</span> ${Utils.getBadgesHTML(uid)}`;
         if (uEl) uEl.textContent = `@${uName}`;
 
         popup.style.display = 'block';
@@ -3167,10 +3313,21 @@ const AuthManager = {
             const sess = JSON.parse(sessionStr);
             if (!sess.loggedIn || (!sess.username && !sess.uid)) { AuthManager.reject(); return; }
 
-            State.user = { uid: sess.uid || sess.username, username: sess.username, displayName: sess.displayName };
+            const sid = (localStorage.getItem('session_id') || sess.sessionId || "").trim();
+            if (!sid) { AuthManager.reject(); return; }
+            if (!localStorage.getItem('session_id')) localStorage.setItem('session_id', sid);
+
+            State.user = { 
+                uid: sess.uid || sess.username, 
+                username: sess.username, 
+                displayName: sess.displayName,
+                nameColor: sess.nameColor || sess.chatColor || null,
+                chatColor: sess.nameColor || sess.chatColor || null
+            };
 
             UI.setLoad(40, "Connecting to Server");
-            await ApiClient.call('status', { status: 'online' });
+            const statusRes = await ApiClient.call('status', { status: 'online' });
+            if (!statusRes) return;
             
             document.getElementById('loginModal').classList.remove('show');
             UI.setLoad(70, "Downloading Conversations");
@@ -3253,8 +3410,69 @@ const AuthManager = {
         }
     },
     reject: function() {
+        PollingManager.stop();
+        if (State.syncInterval) clearInterval(State.syncInterval);
+        if (State.msgInterval) clearInterval(State.msgInterval);
         UI.setLoad(100, "Ready");
         document.getElementById('loginModal').classList.add('show');
+    },
+    quickDemoLogin: async function() {
+        UI.setLoad(20, "Creating demo account");
+        try {
+            const randId = Math.floor(1000 + Math.random() * 9000);
+            const username = `Student_${randId}`;
+            const password = `Student_${randId}_Pass!`;
+            
+            // Register new demo user
+            const regRes = await fetch('/api/auth?action=register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+            const regData = await regRes.json();
+            if (!regRes.ok || regData.error) throw new Error(regData.error || 'Registration failed');
+
+            const sid = regData.sessionId;
+            const uid = regData.uid;
+
+            // Set default name color to Red (#ef4444)
+            await fetch('/api/auth?action=updateProfile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': sid
+                },
+                body: JSON.stringify({
+                    displayName: username,
+                    nameColor: '#ef4444',
+                    chatColor: '#ef4444'
+                })
+            });
+
+            const sessionObj = {
+                loggedIn: true,
+                sessionId: sid,
+                uid: uid,
+                username: username,
+                displayName: username,
+                nameColor: '#ef4444',
+                chatColor: '#ef4444'
+            };
+
+            localStorage.setItem('session_id', sid);
+            localStorage.setItem('bsms_auth_session', JSON.stringify(sessionObj));
+            localStorage.setItem('bsms_session', JSON.stringify(sessionObj));
+
+            document.getElementById('loginModal').classList.remove('show');
+            await AuthManager.init();
+            UI.showToast(`Logged in as ${username} with Red name color!`, 'success');
+        } catch (err) {
+            console.error('Quick login error:', err);
+            UI.showToast(err.message || 'Quick login failed', 'error');
+        }
     }
 };
 
@@ -3874,6 +4092,9 @@ const GroupManager = {
                 </div>`;
             } else { act = `<span class="role-badge">${role}</span>`; }
 
+            let mColor = Utils.nameColor(mId);
+            let mColorStyle = mColor ? `style="color:${mColor}; font-weight:bold;"` : '';
+
             html += `
             <div class="member-item">
                 <div class="member-info">
@@ -3881,7 +4102,9 @@ const GroupManager = {
                         <div class="c-av-inner">${u.avatar ? `<img src="${Utils.escapeHTML(u.avatar)}">` : mId.charAt(0).toUpperCase()}</div>
                     </div>
                     <div style="line-height:1.2;">
-                        <div style="font-weight:bold; color:var(--fg); display:flex; align-items:center;">${Utils.escapeHTML(disp)} ${Utils.getBadgesHTML(mId)}</div>
+                        <div style="font-weight:bold; color:var(--fg); display:flex; align-items:center;">
+                            <span ${mColorStyle}>${Utils.escapeHTML(disp)}</span> ${Utils.getBadgesHTML(mId)}
+                        </div>
                     </div>
                 </div>
                 ${act}
@@ -4038,6 +4261,179 @@ const GroupManager = {
                     try { await ApiClient.call('leaveGroup', { cid: State.activeChannelId }); await PollingManager.syncGlobal(); ChatManager.close(); } catch(e) { UI.showToast("Failed to leave group.", 'error'); }
                 }}
             ]);
+        }
+    }
+};
+
+const NameColorManager = {
+    selectedColor: '#ef4444',
+    
+    openModal: function() {
+        const myUid = State.user?.uid;
+        let currentColor = Utils.nameColor(myUid) || '#ef4444';
+        this.selectedColor = currentColor;
+        
+        const previewAuthor = document.getElementById('nameColorPreviewAuthor');
+        const picker = document.getElementById('chatNameColorPicker');
+        const hexInput = document.getElementById('chatNameColorHex');
+        
+        if (previewAuthor) {
+            previewAuthor.textContent = State.user?.displayName || State.user?.username || 'You';
+            previewAuthor.style.color = currentColor;
+        }
+        if (picker) picker.value = currentColor.startsWith('#') && currentColor.length === 7 ? currentColor : '#ef4444';
+        if (hexInput) hexInput.value = currentColor.toUpperCase();
+        
+        this.updateActiveSwatch(currentColor);
+        UI.openModal('nameColorModal');
+    },
+
+    selectColor: function(hex) {
+        this.selectedColor = hex;
+        const previewAuthor = document.getElementById('nameColorPreviewAuthor');
+        const picker = document.getElementById('chatNameColorPicker');
+        const hexInput = document.getElementById('chatNameColorHex');
+
+        if (previewAuthor) previewAuthor.style.color = hex;
+        if (picker && hex.startsWith('#') && hex.length === 7) picker.value = hex;
+        if (hexInput) hexInput.value = hex.toUpperCase();
+
+        this.updateActiveSwatch(hex);
+    },
+
+    onPickerInput: function(hex) {
+        this.selectedColor = hex;
+        const previewAuthor = document.getElementById('nameColorPreviewAuthor');
+        const hexInput = document.getElementById('chatNameColorHex');
+
+        if (previewAuthor) previewAuthor.style.color = hex;
+        if (hexInput) hexInput.value = hex.toUpperCase();
+        this.updateActiveSwatch(hex);
+    },
+
+    onHexInput: function(val) {
+        let hex = val.trim();
+        if (!hex.startsWith('#') && /^[0-9a-fA-F]{3,8}$/.test(hex)) hex = '#' + hex;
+        this.selectedColor = hex;
+        
+        const previewAuthor = document.getElementById('nameColorPreviewAuthor');
+        const picker = document.getElementById('chatNameColorPicker');
+        if (previewAuthor) previewAuthor.style.color = hex;
+        if (picker && /^#[0-9a-fA-F]{6}$/i.test(hex)) picker.value = hex;
+        this.updateActiveSwatch(hex);
+    },
+
+    resetColor: function() {
+        this.selectColor('#ef4444');
+    },
+
+    updateActiveSwatch: function(color) {
+        const swatches = document.querySelectorAll('#nameColorModal .color-swatch');
+        const norm = (color || '').toLowerCase();
+        swatches.forEach(sw => {
+            const bg = (sw.getAttribute('onclick') || '').toLowerCase();
+            if (bg.includes(norm)) {
+                sw.classList.add('active');
+            } else {
+                sw.classList.remove('active');
+            }
+        });
+    },
+
+    saveColor: async function() {
+        const btn = document.getElementById('saveNameColorBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+        }
+        
+        try {
+            const color = this.selectedColor.trim();
+            const sid = localStorage.getItem('session_id') || '';
+            const res = await fetch('/api/auth', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': sid
+                },
+                body: JSON.stringify({
+                    action: 'updateProfile',
+                    nameColor: color,
+                    chatColor: color
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                throw new Error(data.error || 'Failed to update name color');
+            }
+
+            // Update local state
+            if (State.user) {
+                State.user.nameColor = color;
+                State.user.chatColor = color;
+            }
+            if (State.user?.uid && State.accountsCache[State.user.uid]) {
+                State.accountsCache[State.user.uid].nameColor = color;
+                State.accountsCache[State.user.uid].chatColor = color;
+            }
+
+            // Update localStorage auth sessions
+            try {
+                const s = JSON.parse(localStorage.getItem('bsms_auth_session') || '{}');
+                s.nameColor = color;
+                s.chatColor = color;
+                localStorage.setItem('bsms_auth_session', JSON.stringify(s));
+            } catch(e) {}
+
+            try {
+                const s2 = JSON.parse(localStorage.getItem('bsms_session') || '{}');
+                s2.nameColor = color;
+                s2.chatColor = color;
+                localStorage.setItem('bsms_session', JSON.stringify(s2));
+            } catch(e) {}
+
+            this.updateSidebarUser();
+            ChatManager.renderSidebar();
+            if (State.activeChannelId) {
+                ChatManager.renderMessages(State.activeChannelId);
+            }
+
+            UI.closeModal('nameColorModal');
+            UI.showToast('Name color updated!', 'success');
+        } catch (err) {
+            console.error('Error saving name color:', err);
+            UI.showToast(err.message || 'Could not save color', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Save Color';
+            }
+        }
+    },
+
+    updateSidebarUser: function() {
+        const myUid = State.user?.uid;
+        if (!myUid) return;
+        const acc = State.accountsCache[myUid] || {};
+        const dName = acc.displayName || State.user.displayName || State.user.username || 'You';
+        const uColor = Utils.nameColor(myUid) || '#ef4444';
+        
+        const nameEl = document.getElementById('sbUserDisplayName');
+        if (nameEl) {
+            nameEl.textContent = dName;
+            nameEl.style.color = uColor;
+        }
+        const colorDot = document.getElementById('sbUserColorDot');
+        if (colorDot) {
+            colorDot.style.background = uColor;
+        }
+        const avEl = document.getElementById('sbUserAvatar');
+        if (avEl) {
+            if (acc.avatar) {
+                avEl.innerHTML = `<img src="${Utils.escapeHTML(acc.avatar)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+            } else {
+                avEl.textContent = dName.charAt(0).toUpperCase();
+            }
         }
     }
 };
