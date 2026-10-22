@@ -65,6 +65,10 @@ SPDX-License-Identifier: MIT
   
   --font: 'Patrick Hand', cursive;
   --font-royal: 'Cinzel', 'Times New Roman', serif;
+  --font-tech: 'Patrick Hand', cursive;
+  --font-brand: 'Patrick Hand', cursive;
+  
+  --gutter: 120px;
   
   --mouse-x: 0;
   --mouse-y: 0;
@@ -93,6 +97,8 @@ html, body {
   width: 100%;
   min-height: 100vh;
   overflow: hidden;
+  /* Keep all page content out of the Greek gutters on wide screens */
+  padding: 0 var(--gutter);
 }
 
 body::before {
@@ -125,20 +131,20 @@ body::before {
   to { background-position: 0 120px; }
 }
 
-/* ===== Greek Side Decorations ===== */
+/* ===== Greek Side Gutters ===== */
 .greek-side {
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 110px;
+  width: var(--gutter);
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
 }
-.greek-side.left  { left: 0; }
-.greek-side.right { right: 0; }
+.greek-side.left  { left: 0; border-right: 1px solid rgba(187,0,30,0.15); }
+.greek-side.right { right: 0; border-left: 1px solid rgba(187,0,30,0.15); }
 
 .greek-col {
   position: absolute;
@@ -148,130 +154,161 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 60px;
+  gap: 34px;
 }
-.greek-side.left .greek-col  { animation: greekDrift 26s ease-in-out infinite alternate; }
-.greek-side.right .greek-col { animation: greekDriftRev 30s ease-in-out infinite alternate; }
+.greek-side.left .greek-col  { animation: greekDrift 40s ease-in-out infinite alternate; }
+.greek-side.right .greek-col { animation: greekDriftRev 46s ease-in-out infinite alternate; }
 
 .greek-symbol {
   font-family: var(--font-royal), 'Times New Roman', serif;
   font-size: 40px;
+  font-weight: 900;
   line-height: 1;
-  color: #E0001F;
+  background: linear-gradient(180deg, #ffd6dc 0%, #ff2e4d 45%, #7a0013 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(187,0,30,0.7)) drop-shadow(0 2px 0 rgba(0,0,0,0.6));
   opacity: 0.9;
-  text-shadow: 0 0 16px rgba(187, 0, 30, 0.85), 0 0 4px rgba(255, 60, 90, 0.6);
-  animation-name: greekFloatUp, greekFade;
-  animation-duration: var(--dur, 16s), var(--fdur, 14s);
-  animation-timing-function: ease-in-out, ease-in-out;
-  animation-iteration-count: infinite, infinite;
-  animation-delay: var(--delay, 0s), var(--fdelay, 0s);
-  animation-direction: alternate, normal;
+  animation-name: greekFloatUp, greekFade, greekShimmer;
+  animation-duration: var(--dur, 20s), var(--fdur, 22s), 6s;
+  animation-timing-function: ease-in-out, ease-in-out, linear;
+  animation-iteration-count: infinite, infinite, infinite;
+  animation-delay: var(--delay, 0s), var(--fdelay, 0s), 0s;
+  animation-direction: alternate, normal, normal;
 }
 .greek-side.right .greek-symbol {
-  animation-name: greekFloatDown, greekFade;
+  animation-name: greekFloatDown, greekFade, greekShimmer;
 }
-.greek-symbol.alt   { color: #D10022; font-size: 52px; font-weight: 900; text-shadow: 0 0 22px rgba(187,0,30,0.95), 0 0 6px rgba(255,80,110,0.7); }
-.greek-symbol.faint { color: #9E0019; font-size: 30px; opacity: 0.6; }
-.greek-symbol.gilt  { color: #FF2E4D; font-size: 46px; font-weight: 700; text-shadow: 0 0 18px rgba(255,46,77,0.9), 0 0 2px #fff; }
+.greek-symbol.alt   { font-size: 54px; }
+.greek-symbol.faint { font-size: 30px; opacity: 0.55; }
+.greek-symbol.gilt  { font-size: 48px; background: linear-gradient(180deg, #fff3c4 0%, #d4a017 45%, #6b4a00 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 8px rgba(212,160,23,0.5)) drop-shadow(0 2px 0 rgba(0,0,0,0.6)); }
 
 @keyframes greekFloatUp {
-  0%   { transform: translateY(50px) rotate(-4deg); }
-  100% { transform: translateY(-50px) rotate(4deg); }
+  0%   { transform: translateY(50px) rotate(-5deg); }
+  100% { transform: translateY(-50px) rotate(5deg); }
 }
 @keyframes greekFloatDown {
-  0%   { transform: translateY(-50px) rotate(4deg); }
-  100% { transform: translateY(50px) rotate(-4deg); }
+  0%   { transform: translateY(-50px) rotate(5deg); }
+  100% { transform: translateY(50px) rotate(-5deg); }
 }
-/* Mostly visible; only a brief dip, rarely */
 @keyframes greekFade {
-  0%, 82%, 100% { opacity: 0.9; }
-  90%           { opacity: 0.12; }
+  0%, 84%, 100% { opacity: 0.9; }
+  92%           { opacity: 0.15; }
+}
+@keyframes greekShimmer {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(187,0,30,0.6)) drop-shadow(0 2px 0 rgba(0,0,0,0.6)); }
+  50%      { filter: drop-shadow(0 0 16px rgba(255,80,110,0.95)) drop-shadow(0 2px 0 rgba(0,0,0,0.6)); }
 }
 @keyframes greekDrift {
   0%   { transform: translateY(0); }
-  100% { transform: translateY(-40px); }
+  100% { transform: translateY(-60px); }
 }
 @keyframes greekDriftRev {
-  0%   { transform: translateY(-40px); }
+  0%   { transform: translateY(-60px); }
   100% { transform: translateY(0); }
 }
 
 /* ===== Majestic Hero Crest ===== */
 .crest-wrap {
   position: relative;
-  width: 300px; height: 300px;
+  width: 340px; height: 340px;
   margin: 0 auto 30px;
   display: flex; align-items: center; justify-content: center;
-  filter: drop-shadow(0 0 30px rgba(187,0,30,0.35));
+  perspective: 1200px;
 }
 .crest-aura {
-  position: absolute; inset: -40px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(187,0,30,0.55) 0%, rgba(187,0,30,0.15) 40%, transparent 70%);
-  filter: blur(18px);
-  animation: auraPulse 5s ease-in-out infinite alternate;
+  position: absolute; inset: -60px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(187,0,30,0.6) 0%, rgba(187,0,30,0.18) 40%, transparent 70%);
+  filter: blur(22px);
+  animation: auraPulse 4s ease-in-out infinite alternate;
 }
-@keyframes auraPulse { 0% { opacity: 0.5; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1.08); } }
+@keyframes auraPulse { 0% { opacity: 0.45; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1.1); } }
+
+/* Spinning conic energy ring */
+.crest-energy {
+  position: absolute; inset: -14px; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255,46,77,0.95) 60deg, transparent 120deg, transparent 240deg, rgba(212,160,23,0.85) 300deg, transparent 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%, #000 66%, transparent 68%);
+          mask: radial-gradient(circle, transparent 62%, #000 64%, #000 66%, transparent 68%);
+  animation: spinCW 5s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(187,0,30,0.8));
+}
 
 .crest-ring {
   position: absolute; border-radius: 50%;
   border: 1.5px solid rgba(255, 46, 77, 0.55);
   box-shadow: 0 0 18px rgba(187,0,30,0.45), inset 0 0 14px rgba(187,0,30,0.25);
 }
-.crest-ring.r1 { inset: 0; animation: spinCW 28s linear infinite; border-style: solid; }
-.crest-ring.r2 { inset: 22px; border-style: dashed; border-color: rgba(255,255,255,0.35); animation: spinCCW 22s linear infinite; }
-.crest-ring.r3 { inset: 44px; border-width: 2px; border-color: rgba(187,0,30,0.8); animation: spinCW 14s linear infinite; }
-.crest-ring.r3::after {
+.crest-ring.r1 { inset: 0; animation: spinCW 28s linear infinite; }
+.crest-ring.r2 { inset: 26px; border-style: dashed; border-color: rgba(212,160,23,0.5); animation: spinCCW 20s linear infinite; }
+.crest-ring.r3 { inset: 52px; border-width: 2px; border-color: rgba(187,0,30,0.85); animation: spinCW 12s linear infinite; }
+.crest-ring.r4 { inset: 78px; border-style: dotted; border-color: rgba(255,255,255,0.35); animation: spinCCW 8s linear infinite; }
+
+/* Orbiting sparks on the rings */
+.crest-ring.r1::after, .crest-ring.r3::after {
   content: ''; position: absolute; top: -5px; left: 50%; width: 10px; height: 10px; margin-left: -5px;
   background: #FF2E4D; border-radius: 50%; box-shadow: 0 0 14px #FF2E4D, 0 0 28px rgba(187,0,30,0.9);
 }
+.crest-ring.r2::after {
+  content: ''; position: absolute; bottom: -4px; left: 50%; width: 8px; height: 8px; margin-left: -4px;
+  background: #ffd76a; border-radius: 50%; box-shadow: 0 0 12px #d4a017;
+}
+
 @keyframes spinCW  { to { transform: rotate(360deg); } }
 @keyframes spinCCW { to { transform: rotate(-360deg); } }
 
-/* Ornate glyph ring around the crest */
+/* Orbiting glyph ring around the crest */
 .crest-glyphs {
-  position: absolute; inset: -18px; border-radius: 50%;
-  animation: spinCW 60s linear infinite;
+  position: absolute; inset: -30px; border-radius: 50%;
+  animation: spinCW 50s linear infinite;
   pointer-events: none;
 }
 .crest-glyphs span {
   position: absolute; top: 50%; left: 50%;
-  font-family: var(--font-royal), serif; font-size: 18px; color: #FF2E4D;
-  text-shadow: 0 0 10px rgba(187,0,30,0.9);
-  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-160px);
+  font-family: var(--font-royal), serif; font-size: 22px; font-weight: 900;
+  background: linear-gradient(180deg, #fff3c4 0%, #d4a017 50%, #6b4a00 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(212,160,23,0.6));
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-200px) rotate(calc(var(--a) * -1));
 }
 
+/* Core with the 3D spinning logo */
 .crest-core {
   position: relative;
-  width: 200px; height: 200px; border-radius: 50%;
+  width: 210px; height: 210px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle at 50% 35%, rgba(60,0,10,0.9) 0%, rgba(10,0,2,0.95) 70%);
-  border: 2px solid rgba(255,46,77,0.7);
-  box-shadow: inset 0 0 40px rgba(187,0,30,0.45), 0 0 40px rgba(187,0,30,0.6);
+  background: radial-gradient(circle at 50% 35%, rgba(70,0,12,0.95) 0%, rgba(10,0,2,0.98) 70%);
+  border: 2px solid rgba(255,46,77,0.75);
+  box-shadow: inset 0 0 40px rgba(187,0,30,0.5), 0 0 45px rgba(187,0,30,0.65);
   overflow: hidden;
+  transform-style: preserve-3d;
 }
 .crest-core img {
   width: 62%; height: 62%; object-fit: contain; position: relative; z-index: 2;
   filter: drop-shadow(0 0 18px rgba(255,46,77,0.95)) drop-shadow(0 0 40px rgba(187,0,30,0.7));
-  animation: logoFloat 6s ease-in-out infinite alternate;
+  animation: logoSpin3D 9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+}
+@keyframes logoSpin3D {
+  0%   { transform: rotateY(0deg) scale(1); }
+  45%  { transform: rotateY(360deg) scale(1.06); }
+  55%  { transform: rotateY(360deg) scale(1.06); }
+  100% { transform: rotateY(720deg) scale(1); }
 }
 .crest-core::after {
   content: ''; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%;
-  background: linear-gradient(100deg, transparent 0%, rgba(255,200,210,0.35) 50%, transparent 100%);
+  background: linear-gradient(100deg, transparent 0%, rgba(255,200,210,0.4) 50%, transparent 100%);
   transform: rotate(20deg);
-  animation: sheen 6s ease-in-out infinite;
+  animation: sheen 5s ease-in-out infinite;
   z-index: 3;
 }
-@keyframes logoFloat { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-6px) scale(1.04); } }
 @keyframes sheen { 0%, 60% { left: -75%; } 100% { left: 130%; } }
 
-.crest-tag {
-  font-family: var(--font-royal), serif;
-  font-size: 13px; letter-spacing: 6px; color: rgba(255,255,255,0.55);
-  margin-top: 10px; text-transform: uppercase;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .crest-ring, .crest-glyphs, .crest-aura, .crest-core img, .crest-core::after { animation: none !important; }
+  .crest-energy, .crest-ring, .crest-glyphs, .crest-aura, .crest-core img, .crest-core::after,
+  .greek-symbol, .greek-col { animation: none !important; }
 }
 
 /* Offline Banner */
@@ -463,8 +500,6 @@ section {
   display: flex; justify-content: center; align-items: center;
   width: 100%;
 }
-
-/* Specific Application Visuals */
 
 /* Countdown Demo UI Visual */
 .demo-countdown-container {
@@ -747,7 +782,7 @@ section {
 .ann-card-body em { font-style: italic; color: rgba(255,255,255,0.92); }
 .ann-card-body u { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Contests Card (Updated for Halloween Theme) */
+/* Contests Card */
 .contests-card {
   background: radial-gradient(ellipse at top left, rgba(249, 115, 22, 0.12) 0%, rgba(14, 14, 18, 0.95) 70%);
   border: 1px solid rgba(249, 115, 22, 0.4);
@@ -908,7 +943,17 @@ section {
 .footer a:hover { color: var(--red); border-color: var(--red); }
 
 /* Responsive adjustments */
+@media (max-width: 1200px) {
+  :root { --gutter: 80px; }
+  .greek-symbol { font-size: 30px; }
+  .greek-symbol.alt { font-size: 40px; }
+  .greek-symbol.gilt { font-size: 36px; }
+  .greek-symbol.faint { font-size: 22px; }
+}
+
 @media (max-width: 900px) {
+  :root { --gutter: 0px; }
+  .greek-side { display: none; }
   .showcase-content { 
     grid-template-columns: 1fr; 
     text-align: center; 
@@ -925,20 +970,14 @@ section {
   .glass-nav { left: 12px; right: 64px; top: 12px; transform: none; justify-content: space-between; gap: 8px; padding: 8px 14px; overflow-x: auto; }
   .glass-nav a { font-size: 16px; white-space: nowrap; }
   #globalUserBtn { top: 12px; right: 12px; width: 42px; height: 42px; }
-  .greek-side { width: 50px; }
-  .greek-symbol { font-size: 24px; }
-  .greek-symbol.alt { font-size: 32px; }
-  .greek-symbol.faint { font-size: 20px; }
-  .greek-symbol.gilt { font-size: 28px; }
-  .crest-wrap { width: 240px; height: 240px; }
+  .crest-wrap { width: 260px; height: 260px; }
   .crest-core { width: 160px; height: 160px; }
-  .crest-glyphs span { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-130px); }
+  .crest-glyphs span { font-size: 16px; transform: translate(-50%, -50%) rotate(var(--a)) translateY(-150px) rotate(calc(var(--a) * -1)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .hero-3d-scene, .chat-panel, .game-shape, .floating-user, .cl-window { transform: none !important; animation: none !important; }
-  .greek-symbol, .greek-col { animation: none !important; opacity: 0.5 !important; }
 }
 
 html { scroll-padding-top: 100px; }
@@ -951,7 +990,7 @@ html { scroll-padding-top: 100px; }
 
 <div id="offlineBanner">You are currently offline. Check your network connection.</div>
 
-<!-- Greek symbol side decorations -->
+<!-- Greek symbol side gutters -->
 <div class="greek-side left"><div class="greek-col"></div></div>
 <div class="greek-side right"><div class="greek-col"></div></div>
 
@@ -988,9 +1027,11 @@ html { scroll-padding-top: 100px; }
     <!-- Majestic Crest Centerpiece -->
     <div class="crest-wrap">
       <div class="crest-aura"></div>
+      <div class="crest-energy"></div>
       <div class="crest-ring r1"></div>
       <div class="crest-ring r2"></div>
       <div class="crest-ring r3"></div>
+      <div class="crest-ring r4"></div>
       <div class="crest-glyphs">
         <span style="--a:0deg">Ω</span>
         <span style="--a:45deg">φ</span>
@@ -1333,7 +1374,7 @@ const revealObserver = new IntersectionObserver((entries, ob) => {
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
 
-// --- GREEK SIDE DECORATIONS ---
+// --- GREEK SIDE GUTTERS ---
 (function buildGreekSides() {
     const symbols = [
         'Ω', 'Ψ', 'Φ', 'Σ', 'Δ', 'Λ', 'Ξ', 'Θ', 'Π', 'Γ',
@@ -1344,13 +1385,13 @@ document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
     const cols = document.querySelectorAll('.greek-col');
 
     cols.forEach((col, colIndex) => {
-        const count = 16;
+        const count = 30;
         for (let i = 0; i < count; i++) {
             const span = document.createElement('span');
             span.className = `greek-symbol ${classes[(i + colIndex) % classes.length]}`.trim();
             span.textContent = symbols[(i * 7 + colIndex * 11) % symbols.length];
-            const dur = 14 + ((i * 2.3 + colIndex) % 8);     // 14–22s float
-            const fdur = 18 + ((i * 3.1 + colIndex) % 10);   // 18–28s fade (rare dips)
+            const dur = 18 + ((i * 2.3 + colIndex) % 10);     // 18–28s float
+            const fdur = 20 + ((i * 3.1 + colIndex) % 12);    // 20–32s fade (rare dips)
             const delay = -((i * 1.9) % dur);
             const fdelay = -((i * 2.7) % fdur);
             span.style.setProperty('--dur', `${dur}s`);
