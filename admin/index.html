@@ -205,6 +205,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         BSMS Web <span>ADMIN</span>
     </div>
     <button class="nav-btn active" onclick="Admin.switchTab('users', this)">Accounts Registry</button>
+    <button class="nav-btn" onclick="Admin.switchTab('announcements', this)">Announcements</button>
     <button class="nav-btn" onclick="Admin.switchTab('chat', this)">Chat Moderation</button>
     <button class="nav-btn" onclick="Admin.switchTab('devices', this)">Banned Devices</button>
     <button class="nav-btn" id="nav-btn-db" style="display:none;" onclick="Admin.switchTab('db', this)">Raw DB Inspector</button>
@@ -213,6 +214,54 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 </div>
 
 <div id="main">
+    <!-- Announcements Panel -->
+    <div id="announcements-panel" class="panel">
+        <div class="panel-header">
+            <h1>Announcements Manager</h1>
+            <button class="btn" onclick="Admin.loadAnnouncements()">Refresh</button>
+        </div>
+        <div id="ann-staff-banner" class="banner-mod">
+            ⚠️ <strong>Staff Note:</strong> Announcements published here appear live on the homepage for all users and visitors.
+        </div>
+        <div id="announcement-create-card" style="background:var(--panel); border:2px solid var(--border); border-radius:18px; padding:22px; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-family:var(--font-brand); font-size:24px; margin:0; color:var(--fg);">Create New Announcement</h3>
+                <span id="ann-role-badge" class="badge admin">Admin / Owner</span>
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label>Announcement Title</label>
+                <input type="text" id="ann-title" placeholder="e.g., Spring Tournament Announced! or Platform Update">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+                    <label style="margin:0;">Announcement Content (Supports Markdown: bold, underline, italics, # and ## headings)</label>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="btn sec sm" onclick="Admin.insertMarkdown('**', '**', 'bold text')"><b>B</b></button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertMarkdown('*', '*', 'italic text')"><i>I</i></button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertMarkdown('<u>', '</u>', 'underlined text')"><u>U</u></button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertMarkdown('# ', '', 'Heading 1')">H1</button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertMarkdown('## ', '', 'Heading 2')">H2</button>
+                    </div>
+                </div>
+                <textarea id="ann-content" rows="6" placeholder="Write your announcement here using Markdown...&#10;# Big Title&#10;## Subtitle&#10;This is **bold**, *italics*, and <u>underlined</u>." oninput="Admin.updateAnnouncementPreview()"></textarea>
+            </div>
+            <div>
+                <label style="display:block; font-family:var(--font-brand); font-size:17px; color:var(--fg2); margin-bottom:6px;">Live Preview</label>
+                <div id="ann-preview" style="background:var(--panel-alt); border:1px solid var(--border); border-radius:12px; padding:16px; min-height:80px; color:var(--fg); line-height:1.6;">
+                    <span style="color:var(--fg2); font-style:italic;">Live preview will appear here as you type...</span>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end;">
+                <button id="ann-submit-btn" class="btn" onclick="Admin.publishAnnouncement()">Publish Announcement</button>
+            </div>
+        </div>
+
+        <h2 style="font-family:var(--font-brand); font-size:28px; margin:20px 0 0; color:var(--fg);">Recent Announcements</h2>
+        <div id="announcements-list" style="display:flex; flex-direction:column; gap:14px;">
+            <div style="text-align:center; color:var(--fg2); padding:30px;">Loading announcements...</div>
+        </div>
+    </div>
+
     <!-- Chat Moderation Panel -->
     <div id="chat-panel" class="panel">
         <div class="panel-header">
@@ -334,7 +383,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
                     <select id="em-role" style="flex:1; min-width:130px;">
                         <option value="">User (Default)</option>
                         <option value="mod">Moderator</option>
-                        <option value="admin">Administrator</option>
+                        <option value="admin" id="em-role-admin-opt">Administrator</option>
                         <option value="owner" id="em-role-owner-opt">Owner (Single Platform Lead)</option>
                     </select>
                     <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer;">

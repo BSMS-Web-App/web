@@ -22,6 +22,7 @@ const Admin = {
         if (btnEl) btnEl.classList.add('active');
         
         if (tabId === 'users' || tabId === 'devices') this.loadUsers();
+        if (tabId === 'announcements') this.loadAnnouncements();
         if (tabId === 'db') this.loadDB();
     },
 
@@ -114,6 +115,7 @@ const Admin = {
             const modBanner = document.getElementById('mod-banner');
             const bulkBtn = document.getElementById('bulk-ban-btn');
             const navDb = document.getElementById('nav-btn-db');
+            const selectAllBox = document.getElementById('bulk-select-all');
 
             // Strictly: Only OWNER can access raw DB inspector!
             if (this.callerRole === 'owner') {
@@ -122,9 +124,16 @@ const Admin = {
                 if (navDb) navDb.style.display = 'none';
             }
 
+            // Strictly: Only OWNER can bulk ban people!
+            if (selectAllBox) {
+                selectAllBox.style.display = this.callerRole === 'owner' ? 'inline-block' : 'none';
+            }
+            if (bulkBtn && this.callerRole !== 'owner') {
+                bulkBtn.style.display = 'none';
+            }
+
             if (this.callerRole === 'mod') {
                 if (modBanner) modBanner.classList.add('show');
-                if (bulkBtn) bulkBtn.style.display = 'none';
             } else {
                 if (modBanner) modBanner.classList.remove('show');
             }
@@ -171,8 +180,8 @@ const Admin = {
             if (acc.isDeveloper) badges.push(`<span class="badge dev">Dev</span>`);
             if (acc.verified) badges.push(`<span class="badge verified">✓ Verified</span>`);
 
-            const isTargetAdminOrOwner = acc.role === 'admin' || acc.role === 'owner';
-            const canSelect = !isMod && (isOwner ? uid !== this.callerUid : !isTargetAdminOrOwner);
+            // Strictly: Only OWNER can select accounts for bulk banning!
+            const canSelect = isOwner && uid !== this.callerUid && acc.role !== 'owner';
             const isChecked = this.selectedUids.has(uid);
 
             const creatorDisp = acc.creator_session_id ? `${acc.creator_session_id.substring(0, 10)}...` : (acc.sessions ? `${Object.keys(acc.sessions)[0]?.substring(0, 10)}...` : 'N/A');
@@ -180,7 +189,7 @@ const Admin = {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="text-align:center;">
-                    <input type="checkbox" ${canSelect ? '' : 'disabled title="Protected staff accounts cannot be bulk banned"'} 
+                    <input type="checkbox" ${canSelect ? '' : 'disabled style="display:' + (isOwner ? 'inline-block' : 'none') + ';" title="Only the owner can bulk ban accounts"'} 
                            ${isChecked ? 'checked' : ''} 
                            onchange="Admin.toggleSelect('${uid}', this.checked)">
                 </td>
@@ -207,6 +216,7 @@ const Admin = {
     },
 
     toggleSelect: function(uid, isChecked) {
+        if (this.callerRole !== 'owner') return;
         if (isChecked) {
             this.selectedUids.add(uid);
         } else {
@@ -216,10 +226,11 @@ const Admin = {
     },
 
     toggleSelectAll: function(isChecked) {
+        if (this.callerRole !== 'owner') return;
         for (const [uid, acc] of Object.entries(this.usersCache)) {
             const status = acc.account_status || 'active';
             if (this.statusFilter !== 'all' && status !== this.statusFilter) continue;
-            if (acc.role === 'admin') continue; // Admins cannot be bulk banned
+            if (uid === this.callerUid || acc.role === 'owner') continue;
 
             if (isChecked) this.selectedUids.add(uid);
             else this.selectedUids.delete(uid);
@@ -235,7 +246,8 @@ const Admin = {
         if (countSpan) countSpan.innerText = count;
 
         if (btn) {
-            if (count > 0 && this.callerRole !== 'mod') {
+            // Strictly: Only OWNER can bulk ban!
+            if (count > 0 && this.callerRole === 'owner') {
                 btn.style.display = 'inline-flex';
             } else {
                 btn.style.display = 'none';
@@ -330,6 +342,23 @@ const Admin = {
         // Single-owner role option: only visible to current owner
         const ownerOpt = document.getElementById('em-role-owner-opt');
         if (ownerOpt) ownerOpt.style.display = isOwner ? 'block' : 'none';
+
+        // Strictly: Only owners can make other people admin! Admins cannot make other people admin
+        const adminOpt = document.getElementById('em-role-admin-opt');
+        if (adminOpt) {
+            if (!isOwner) {
+                if (acc.role !== 'admin') {
+                    adminOpt.style.display = 'none';
+                    adminOpt.disabled = true;
+                } else {
+                    adminOpt.style.display = 'block';
+                    adminOpt.disabled = false;
+                }
+            } else {
+                adminOpt.style.display = 'block';
+                adminOpt.disabled = false;
+            }
+        }
 
         document.getElementById('em-password-view').value = this.formatPasswordDisplay(acc.password);
         document.getElementById('em-new-password').value = '';
@@ -473,6 +502,12 @@ const Admin = {
             return;
         }
 
+        // Strictly: Only owners can make other people admin! Admins cannot make other people admin
+        if (!isOwner && roleVal === 'admin' && targetAcc.role !== 'admin') {
+            alert("Only the Server Owner can promote users to Administrator.");
+            return;
+        }
+
         const dtVal = document.getElementById('em-banexpires-dt').value;
         const expiresTs = status === 'banned' ? this.dateTimeLocalToTs(dtVal) : null;
         const reasonVal = status === 'banned' ? (document.getElementById('em-banreason').value.trim() || 'This account has been banned.') : null;
@@ -586,6 +621,262 @@ const Admin = {
         }
         await this.apiCall('updateDBNode', { path, value: parsed });
         this.loadDB();
+    },
+
+    announcementsCache: [],
+
+    loadAnnouncements: async function() {
+        const list = document.getElementById('announcements-list');
+        if (!list) return;
+        list.innerHTML = '<div style="text-align:center; color:var(--fg2); padding:30px;">Loading announcements...</div>';
+
+        // Update permissions for create card
+        const roleBadge = document.getElementById('ann-role-badge');
+        const submitBtn = document.getElementById('ann-submit-btn');
+        const annBanner = document.getElementById('ann-staff-banner');
+        if (roleBadge) {
+            roleBadge.innerText = (this.callerRole || 'staff').toUpperCase();
+            roleBadge.className = `badge ${this.callerRole === 'owner' ? 'owner' : (this.callerRole === 'admin' ? 'admin' : 'mod')}`;
+        }
+
+        if (this.callerRole === 'mod') {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Moderators: Read-Only";
+                submitBtn.classList.add('sec');
+            }
+            if (annBanner) {
+                annBanner.innerHTML = "⚠️ <strong>Moderator View (Read-Only):</strong> You can view announcements, but creating and deleting announcements requires Administrator or Owner privileges.";
+                annBanner.classList.add('show');
+            }
+        } else {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Publish Announcement";
+                submitBtn.classList.remove('sec');
+            }
+            if (annBanner) {
+                annBanner.innerHTML = "📢 <strong>Staff Notice:</strong> Published announcements are displayed on the homepage above countdowns for all users.";
+                annBanner.classList.add('show');
+            }
+        }
+
+        try {
+            const res = await fetch('/api/announcements');
+            const data = await res.json();
+            this.announcementsCache = data.announcements || [];
+            this.renderAnnouncements();
+        } catch (e) {
+            list.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load announcements: ${e.message}</div>`;
+        }
+    },
+
+    renderAnnouncements: function() {
+        const list = document.getElementById('announcements-list');
+        if (!list) return;
+
+        if (this.announcementsCache.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:var(--fg2); padding:30px; background:var(--panel); border:1px solid var(--border); border-radius:14px;">No announcements created yet. Use the form above to publish your first announcement.</div>';
+            return;
+        }
+
+        const isStaffAuth = this.callerRole === 'owner' || this.callerRole === 'admin';
+
+        list.innerHTML = this.announcementsCache.map(a => {
+            const timeStr = a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Unknown date';
+            const parsedContent = this.parseMarkdown(a.content || '');
+            const pfpHtml = a.authorAvatar ? `<img src="${a.authorAvatar}" style="width:100%; height:100%; object-fit:cover;">` : (a.authorDisplayName || a.authorUsername || 'A').charAt(0).toUpperCase();
+
+            return `
+            <div style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:12px; position:relative;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h3 style="font-family:var(--font-brand); font-size:24px; margin:0 0 6px; color:var(--fg);">${this.escapeHTML(a.title || 'Untitled Announcement')}</h3>
+                        <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--fg2);">
+                            <div style="width:26px; height:26px; border-radius:50%; border:1.5px solid var(--red); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--panel-alt); font-weight:bold;">
+                                ${pfpHtml}
+                            </div>
+                            <strong style="color:var(--fg);">${this.escapeHTML(a.authorDisplayName || a.authorUsername || 'Staff')}</strong>
+                            <span class="badge ${a.authorRole || 'admin'}">${(a.authorRole || 'staff').toUpperCase()}</span>
+                            <span>•</span>
+                            <span>${timeStr}</span>
+                        </div>
+                    </div>
+                    ${isStaffAuth ? `<button class="btn warn sm" onclick="Admin.deleteAnnouncement('${a.id}')">Delete</button>` : ''}
+                </div>
+                <div style="background:var(--panel-alt); border-radius:10px; padding:14px; color:var(--fg); font-size:13px; line-height:1.6; border-left:3px solid var(--red);">
+                    ${parsedContent}
+                </div>
+            </div>
+            `;
+        }).join('');
+    },
+
+    insertMarkdown: function(startTag, endTag, defaultText) {
+        const textarea = document.getElementById('ann-content');
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const val = textarea.value;
+
+        const selectedText = val.substring(start, end) || defaultText;
+        const replacement = startTag + selectedText + endTag;
+
+        textarea.value = val.substring(0, start) + replacement + val.substring(end);
+        textarea.focus();
+        textarea.selectionStart = start + startTag.length;
+        textarea.selectionEnd = start + startTag.length + selectedText.length;
+
+        this.updateAnnouncementPreview();
+    },
+
+    updateAnnouncementPreview: function() {
+        const preview = document.getElementById('ann-preview');
+        const content = document.getElementById('ann-content')?.value || '';
+        const title = document.getElementById('ann-title')?.value || '';
+
+        if (!preview) return;
+
+        if (!content.trim() && !title.trim()) {
+            preview.innerHTML = '<span style="color:var(--fg2); font-style:italic;">Live preview will appear here as you type...</span>';
+            return;
+        }
+
+        let html = '';
+        if (title.trim()) {
+            html += `<h2 style="font-family:var(--font-brand); font-size:24px; margin:0 0 10px; color:var(--fg);">${this.escapeHTML(title)}</h2>`;
+        }
+        html += this.parseMarkdown(content);
+        preview.innerHTML = html;
+    },
+
+    publishAnnouncement: async function() {
+        if (this.callerRole === 'mod') {
+            alert("Moderators have read-only access. Only Administrators and Owners can publish announcements.");
+            return;
+        }
+
+        const title = document.getElementById('ann-title')?.value.trim();
+        const content = document.getElementById('ann-content')?.value.trim();
+
+        if (!title) {
+            alert("Please enter an announcement title.");
+            return;
+        }
+        if (!content) {
+            alert("Please write the announcement content.");
+            return;
+        }
+
+        const sid = localStorage.getItem('session_id') || "";
+        const submitBtn = document.getElementById('ann-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Publishing...";
+        }
+
+        try {
+            const res = await fetch('/api/announcements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': sid
+                },
+                body: JSON.stringify({ action: 'create', title, content })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to publish announcement");
+            }
+
+            // Clear inputs
+            document.getElementById('ann-title').value = '';
+            document.getElementById('ann-content').value = '';
+            this.updateAnnouncementPreview();
+
+            alert("Announcement published successfully! It will now appear on the homepage.");
+            this.loadAnnouncements();
+        } catch (e) {
+            alert("Error publishing announcement: " + e.message);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Publish Announcement";
+            }
+        }
+    },
+
+    deleteAnnouncement: async function(id) {
+        if (this.callerRole === 'mod') {
+            alert("Moderators cannot delete announcements.");
+            return;
+        }
+        if (!confirm("Are you sure you want to delete this announcement? This cannot be undone.")) {
+            return;
+        }
+
+        const sid = localStorage.getItem('session_id') || "";
+        try {
+            const res = await fetch('/api/announcements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': sid
+                },
+                body: JSON.stringify({ action: 'delete', id })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to delete announcement");
+            }
+
+            this.loadAnnouncements();
+        } catch (e) {
+            alert("Error deleting announcement: " + e.message);
+        }
+    },
+
+    escapeHTML: function(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
+    parseMarkdown: function(text) {
+        if (!text) return '';
+        let escaped = this.escapeHTML(text);
+
+        // Support explicit underline <u> tags
+        escaped = escaped.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
+
+        // Headings: ## and #
+        escaped = escaped.replace(/^##\s+(.*$)/gim, '<h2 style="font-family:var(--font-brand); font-size:20px; margin:10px 0 6px; color:var(--red); font-weight:bold;">$1</h2>');
+        escaped = escaped.replace(/^#\s+(.*$)/gim, '<h1 style="font-family:var(--font-brand); font-size:24px; margin:12px 0 8px; color:var(--fg); font-weight:bold;">$1</h1>');
+
+        // Bold: **text**
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+        // Underline: __text__
+        escaped = escaped.replace(/__(.+?)__/g, '<u>$1</u>');
+
+        // Italics: *text* or _text_
+        escaped = escaped.replace(/\*([^\*]+?)\*/g, '<em>$1</em>');
+        escaped = escaped.replace(/\b_([^_]+?)_\b/g, '<em>$1</em>');
+
+        // Markdown Links: [text](https://url)
+        escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--red); text-decoration:underline;">$1</a>');
+
+        // Line breaks
+        escaped = escaped.replace(/\n/g, '<br>');
+
+        return escaped;
     }
 };
 

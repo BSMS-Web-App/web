@@ -28,9 +28,6 @@ SPDX-License-Identifier: MIT
 <!-- Account Update Checker -->
 <script src="/js/account-check.js"></script>
 
-<!-- Jelly Web Inspector -->
-<script src="https://jelly-web-inspector.vercel.app/index.js"></script>
-
 <link rel="icon" href="/img/icon.png">
 <link rel="apple-touch-icon" href="/img/app-icon.png">
 
@@ -236,7 +233,7 @@ body::before {
   background: #111; color: #777; cursor: not-allowed; border: 1px solid rgba(255,255,255,0.05); box-shadow: none; pointer-events: none;
 }
 
-/* Sections (increased padding to space them out) */
+/* Sections */
 section {
   position: relative; width: 100%; min-height: auto;
   display: flex; align-items: center; justify-content: center;
@@ -319,19 +316,6 @@ section {
   font-size: clamp(1.15rem, 2vw, 1.4rem);
   color: var(--fg2); max-width: 750px; margin: 0 auto 14px; letter-spacing: 1px;
 }
-
-/* Scroll Indicator */
-.scroll-indicator {
-  position: absolute; bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.6;
-}
-.mouse {
-  width: 26px; height: 40px; border: 2px solid rgba(255,255,255,0.7); border-radius: 15px; display: flex; justify-content: center; padding-top: 6px;
-}
-.wheel {
-  width: 4px; height: 8px; background: var(--red); border-radius: 2px;
-  animation: scrollWheel 2s infinite;
-}
-@keyframes scrollWheel { 0% { transform: translateY(0); opacity: 1;} 50% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 0;} }
 
 /* Showcase Sections Layout */
 .showcase-content {
@@ -485,28 +469,283 @@ section {
   95%, 100% { width: 0%; }
 }
 
-/* Discord Section */
-.discord-section { background: radial-gradient(ellipse at center, rgba(30, 35, 75, 0.3) 0%, var(--bg) 80%); color: #fff; text-align: center; display: block; padding-top: 60px; padding-bottom: 60px; border-top: 1px solid rgba(87, 101, 242, 0.15); border-bottom: 1px solid rgba(87, 101, 242, 0.15); }
-.discord-content { max-width: 900px; margin: 0 auto; position: relative; z-index: 2; }
-.discord-logo-wrap { width: 64px; height: 64px; background: rgba(87, 101, 242, 0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; border: 1px solid rgba(87, 101, 242, 0.3); box-shadow: 0 0 30px rgba(87, 101, 242, 0.2); }
-.discord-logo-wrap svg { width: 38px; height: 38px; fill: var(--discord-blue); }
-.discord-section h2 { font-size: clamp(2.4rem, 4vw, 3.2rem); margin-bottom: 12px; letter-spacing: 2px; }
-.discord-section p { color: rgba(255,255,255,0.7); max-width: 650px; margin: 0 auto 16px; font-size: 1.1rem; line-height: 1.6; letter-spacing: 1px;}
+/* Announcements & Contests Cards */
+.announcements-section {
+  display: block;
+  padding: 40px 16px 20px;
+  position: relative;
+  z-index: 5;
+}
+.announcements-container {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-.discord-widget-ui { background: var(--surface); border: 1px solid rgba(87, 101, 242, 0.2); border-radius: 24px; padding: 16px; margin-bottom: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 16px; transition: transform 0.3s; }
-.discord-widget-ui:hover { transform: translateY(-5px); border-color: rgba(87, 101, 242, 0.4); }
+/* Announcement Card */
+.announcement-card {
+  background: linear-gradient(135deg, rgba(20, 20, 24, 0.95) 0%, rgba(10, 10, 12, 0.98) 100%);
+  border: 1px solid rgba(187, 0, 30, 0.35);
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(187, 0, 30, 0.12);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.announcement-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(187, 0, 30, 0.6);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 35px rgba(187, 0, 30, 0.22);
+}
+.ann-badge-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ann-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(187, 0, 30, 0.15);
+  border: 1px solid rgba(187, 0, 30, 0.4);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ff6b81;
+}
+.ann-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff334b;
+  box-shadow: 0 0 8px #ff334b;
+  animation: annPulse 1.8s infinite;
+}
+@keyframes annPulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+.ann-time {
+  font-family: var(--font-tech);
+  font-size: 12px;
+  color: var(--fg2);
+}
+.ann-author-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.ann-author-pfp {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--red);
+  overflow: hidden;
+  background: #18181c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-brand);
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  flex-shrink: 0;
+}
+.ann-author-meta {
+  display: flex;
+  flex-direction: column;
+}
+.ann-author-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ann-author-name {
+  font-family: var(--font-brand);
+  font-size: 18px;
+  color: var(--fg);
+  line-height: 1.2;
+}
+.ann-role-badge {
+  font-family: var(--font-tech);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  background: rgba(187, 0, 30, 0.25);
+  color: #ff6b81;
+  border: 1px solid var(--red);
+}
+.ann-role-badge.owner {
+  background: rgba(147, 51, 234, 0.25);
+  color: #c084fc;
+  border-color: #9333ea;
+}
+.ann-author-user {
+  font-family: var(--font-tech);
+  font-size: 12px;
+  color: var(--fg2);
+}
+.ann-card-title {
+  font-family: var(--font-brand);
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+  color: #fff;
+  margin: 0 0 10px;
+  line-height: 1.3;
+}
+.ann-card-body {
+  font-family: var(--font-tech);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.7;
+  border-left: 3px solid var(--red);
+  padding-left: 14px;
+  margin-top: 6px;
+}
+.ann-card-body h1 {
+  font-family: var(--font-brand);
+  font-size: 22px;
+  color: #ffffff;
+  margin: 12px 0 6px;
+}
+.ann-card-body h2 {
+  font-family: var(--font-brand);
+  font-size: 18px;
+  color: #ff4458;
+  margin: 10px 0 4px;
+}
+.ann-card-body strong { color: #ffffff; font-weight: 700; }
+.ann-card-body em { font-style: italic; color: rgba(255,255,255,0.92); }
+.ann-card-body u { text-decoration: underline; text-underline-offset: 3px; }
 
-.discord-stats-row { display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 24px; }
-.status-dot { display: inline-block; width: 12px; height: 12px; background: #3ba55c; border-radius: 50%; box-shadow: 0 0 10px #3ba55c; animation: pOnline 2s infinite alternate; }
-@keyframes pOnline { from{ opacity: 0.6;} to{opacity: 1;} }
-
-.members-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: -10px; margin-top: 6px; }
-.member-avatar { width: 42px; height: 42px; border-radius: 50%; border: 3px solid #111; position: relative; margin-left: -15px; transition: transform 0.2s, z-index 0.2s; background: #2f3136; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-.member-avatar:first-child { margin-left: 0; }
-.member-avatar:hover { transform: translateY(-10px) scale(1.15); z-index: 10 !important; }
-.member-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.m-status { position: absolute; bottom: 0; right: 0; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #111; background: #747f8d; }
-.m-status.online { background: #3ba55c; } .m-status.idle { background: #faa61a; } .m-status.dnd { background: #ed4245; }
+/* Contests Card (Updated for Halloween Theme) */
+.contests-card {
+  background: radial-gradient(ellipse at top left, rgba(249, 115, 22, 0.12) 0%, rgba(14, 14, 18, 0.95) 70%);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(249, 115, 22, 0.15);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.contests-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249, 115, 22, 0.6);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 35px rgba(249, 115, 22, 0.25);
+}
+.contest-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.contest-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.contest-icon-img {
+  width: 24px;
+  height: 24px;
+}
+.contest-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fb923c;
+}
+.contest-sparkle { color: #fdba74; font-size: 13px; }
+.contest-title {
+  font-family: var(--font-brand);
+  font-size: clamp(1.3rem, 2.3vw, 1.7rem);
+  color: #fff;
+  margin: 0 0 8px;
+}
+.contest-desc {
+  font-family: var(--font-tech);
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+.contest-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.contest-prizes-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.prize-tag {
+  font-family: var(--font-tech);
+  font-size: 11px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e5e5e5;
+}
+.contest-coming-soon-btn {
+  font-family: var(--font-brand);
+  font-size: 16px;
+  padding: 9px 22px;
+  border-radius: 12px;
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(187, 0, 30, 0.35) 100%);
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.15);
+}
+.contest-coming-soon-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: #fb923c;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.35);
+}
+.contest-coming-soon-btn .btn-shine {
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: skewX(-20deg);
+  animation: contestShine 3.5s infinite;
+}
+@keyframes contestShine {
+  0% { left: -100%; }
+  20%, 100% { left: 200%; }
+}
 
 /* Open Source Section */
 .oss-section { flex-direction: column; text-align: center; }
@@ -588,12 +827,12 @@ html { scroll-padding-top: 100px; }
 
 <div id="main-wrapper">
   <nav class="glass-nav">
+    <a href="javascript:void(0)" onclick="scrollToSection('announcements')">Announcements</a>
     <a href="javascript:void(0)" onclick="scrollToSection('countdown')">Countdown</a>
     <a href="javascript:void(0)" onclick="scrollToSection('chat')">Chat</a>
     <a href="javascript:void(0)" onclick="scrollToSection('users')">Users</a>
     <a href="javascript:void(0)" onclick="scrollToSection('games')">Games</a>
     <a href="javascript:void(0)" onclick="scrollToSection('changelog')">Changelog</a>
-    <a href="javascript:void(0)" onclick="scrollToSection('community')">Community</a>
   </nav>
 
   <div id="globalUserBtn" onclick="handleUserIconClick()" data-ga="global_user_btn"></div>
@@ -636,6 +875,70 @@ html { scroll-padding-top: 100px; }
       <h1>Welcome to <span>BSMS Web</span></h1>
       <p>The meticulously designed, unified digital ecosystem for Boiling Springs Middle School. Connect, track, and elevate your experience.</p>
       <div id="heroAuthContainer"></div>
+    </div>
+  </section>
+
+  <!-- Announcements & Contests Area -->
+  <section class="announcements-section reveal" id="announcements">
+    <div class="announcements-container stagger">
+      <!-- Recent Announcement Card -->
+      <div class="announcement-card" id="homeRecentAnnouncementCard">
+        <div class="ann-badge-bar">
+          <div class="ann-live-pill">
+            <span class="ann-pulse-dot"></span>
+            <span>LATEST ANNOUNCEMENT</span>
+          </div>
+          <span id="homeAnnTime" class="ann-time">Loading...</span>
+        </div>
+        
+        <div id="homeAnnAuthorWrap" class="ann-author-bar">
+          <div class="ann-author-pfp" id="homeAnnPfp">?</div>
+          <div class="ann-author-meta">
+            <div class="ann-author-name-row">
+              <span id="homeAnnAuthorName" class="ann-author-name">BSMS Web Staff</span>
+              <span id="homeAnnAuthorBadge" class="ann-role-badge">OFFICIAL</span>
+            </div>
+            <span id="homeAnnAuthorUser" class="ann-author-user">@staff</span>
+          </div>
+        </div>
+
+        <h3 id="homeAnnTitle" class="ann-card-title">Checking for announcements...</h3>
+        <div id="homeAnnContent" class="ann-card-body">
+          Loading announcements...
+        </div>
+      </div>
+
+      <!-- Upcoming Contests Card -->
+      <div class="contests-card">
+        <div class="contest-header-row">
+          <div class="contest-icon-badge">
+            <img src="/img/halloween-haunt-contest/pumpkin.svg" alt="Halloween Haunt" class="contest-icon-img">
+          </div>
+          <div class="contest-status-pill">
+            <span class="contest-sparkle">✦</span>
+            <span>UPCOMING FEATURE</span>
+          </div>
+        </div>
+
+        <div class="contest-body">
+          <h3 class="contest-title">Upcoming Contest: Halloween Haunt</h3>
+          <p class="contest-desc">
+            A brand-new competitive arena is launching soon! Put your high scores, trivia mastery, and creative talents to the test against students across the school. Compete in seasonal tournaments to win exclusive profile roles, real prizes, and Bulldog Bucks. Stay tuned—the games are about to begin!
+          </p>
+        </div>
+
+        <div class="contest-footer">
+          <div class="contest-prizes-preview">
+            <span class="prize-tag">Exclusive Roles</span>
+            <span class="prize-tag">Real Prizes</span>
+            <span class="prize-tag">Bulldog Bucks</span>
+          </div>
+          <button class="contest-coming-soon-btn" onclick="window.location.href='/contests'">
+            <span>View Upcoming Contests</span>
+            <span class="btn-shine"></span>
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -735,7 +1038,7 @@ html { scroll-padding-top: 100px; }
       <div class="showcase-text">
         <h2>Changelog</h2>
         <p>A chronological record of updates, improvements, and changes to BSMS Web since it became open source.</p>
-        <a href="https://github.com/JellyfishJelly13/BSMS-Web/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="btn-cinematic" data-ga="launch_changelog">View Changelog
+        <a href="https://github.com/BSMS-Web-App/web/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="btn-cinematic" data-ga="launch_changelog">View Changelog
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
       </div>
@@ -758,32 +1061,6 @@ html { scroll-padding-top: 100px; }
     </div>
   </section>
 
-  <!-- Distinct Discord Community Area -->
-  <section class="discord-section reveal" id="community">
-    <div class="discord-content stagger">
-      <div class="discord-logo-wrap">
-        <svg viewBox="0 0 127.14 96.36">
-          <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a67.73,67.73,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.16,46,96.06,53,91.08,65.69,84.69,65.69Z"/>
-        </svg>
-      </div>
-      <h2>BSMS Web Community</h2>
-      <p>Join our exclusive Discord server. Collaborate, receive direct updates, participate in active discussions, and connect directly with the developer and student base.</p>
-      
-      <div class="discord-widget-ui" id="discordWidgetArea">
-        <div id="discordStats" class="discord-stats-row">
-          Connecting to gateway...
-        </div>
-        <div id="discordMembers" class="members-grid">
-          <!-- Fetched live members injected here -->
-        </div>
-      </div>
-      
-      <a href="https://discord.gg/xY2j6FQyt" target="_blank" rel="noopener noreferrer" class="btn-cinematic discord-btn" id="discordJoinBtn">
-        Join Server Now
-      </a>
-    </div>
-  </section>
-
   <!-- Rebuilt Open Source Finale -->
   <section class="oss-section reveal" id="oss">
     <div class="oss-content stagger">
@@ -793,7 +1070,7 @@ html { scroll-padding-top: 100px; }
       <h2>BSMS Web is Open Source</h2>
       <p>BSMS Web is architected as an open repository. Inspect the mechanics, verify the integrity, and observe the framework directly on GitHub.</p>
 
-      <a href="https://github.com/JellyfishJelly13/BSMS-Web/" target="_blank" rel="noopener noreferrer" class="btn-cinematic" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.15);" data-ga="view_github_repo">
+      <a href="https://github.com/BSMS-Web-App/" target="_blank" rel="noopener noreferrer" class="btn-cinematic" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.15);" data-ga="view_github_repo">
         View Repository
       </a>
     </div>
@@ -1031,60 +1308,127 @@ function triggerDemoCelebration() {
     demoLabel.style.color = '#FFD700'; 
 }
 
-// --- DISCORD WIDGET API INTEGRATION ---
-async function fetchDiscordCommunity() {
-    const statsArea = document.getElementById('discordStats');
-    const membersGrid = document.getElementById('discordMembers');
-    
-    // Server ID: 1559662443691642922
-    const WIDGET_URL = 'https://discord.com/api/guilds/1559662443691642922/widget.json';
-    
+// --- RECENT ANNOUNCEMENT & CONTESTS INTEGRATION ---
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function parseAnnouncementMarkdown(text) {
+    if (!text) return '';
+    let escaped = escapeHTML(text);
+
+    // Support explicit underline <u> tags
+    escaped = escaped.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
+
+    // Headings: ## and #
+    escaped = escaped.replace(/^##\s+(.*$)/gim, '<h2 style="font-family:var(--font-brand); font-size:18px; margin:10px 0 6px; color:#ff4458; font-weight:bold;">$1</h2>');
+    escaped = escaped.replace(/^#\s+(.*$)/gim, '<h1 style="font-family:var(--font-brand); font-size:22px; margin:12px 0 8px; color:#fff; font-weight:bold;">$1</h1>');
+
+    // Bold: **text**
+    escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Underline: __text__
+    escaped = escaped.replace(/__(.+?)__/g, '<u>$1</u>');
+
+    // Italics: *text* or _text_
+    escaped = escaped.replace(/\*([^\*]+?)\*/g, '<em>$1</em>');
+    escaped = escaped.replace(/\b_([^_]+?)_\b/g, '<em>$1</em>');
+
+    // Markdown Links: [text](https://url)
+    escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--red); text-decoration:underline;">$1</a>');
+
+    // Line breaks
+    escaped = escaped.replace(/\n/g, '<br>');
+
+    return escaped;
+}
+
+function formatRelativeTime(ts) {
+    if (!ts) return 'Recently';
+    const diff = Math.floor((Date.now() - Number(ts)) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return new Date(Number(ts)).toLocaleDateString();
+}
+
+async function fetchRecentAnnouncement() {
     try {
-        const response = await fetch(WIDGET_URL, { mode: 'cors' });
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
+        const res = await fetch('/api/announcements');
+        if (!res.ok) throw new Error('API response was not ok');
+        const data = await res.json();
         
-        // Presence Count Status
-        const onlineCount = data.presence_count !== undefined ? data.presence_count : '--';
-        statsArea.innerHTML = `<span class="status-dot"></span> <b>${onlineCount}</b> Members Online`;
-        
-        // Populate Avatars
-        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
-            const visibleMembers = data.members.slice(0, 12);
-            
-            let htmlBuffer = '';
-            visibleMembers.forEach((member, index) => {
-                const zIndex = 100 - index;
-                const fallbackChar = member.username ? member.username.charAt(0).toUpperCase() : '?';
-                
-                let avatarInner = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: #fff;">${fallbackChar}</div>`;
-                if (member.avatar_url) {
-                    avatarInner = `<img src="${member.avatar_url}" alt="${member.username || 'member'}"/>`;
-                }
-                
-                const sClass = member.status === 'online' ? 'online' : (member.status === 'idle' ? 'idle' : 'dnd');
-                
-                htmlBuffer += `
-                  <div class="member-avatar" style="z-index: ${zIndex};" title="${member.username}">
-                     ${avatarInner}
-                     <div class="m-status ${sClass}"></div>
-                  </div>
-                `;
-            });
-            membersGrid.innerHTML = htmlBuffer;
-        } else {
-            membersGrid.innerHTML = '<span style="font-size:16px; opacity: 0.6;">( No members currently broadcasting activity )</span>';
+        const a = data.recent || (data.announcements && data.announcements[0]);
+        const titleEl = document.getElementById('homeAnnTitle');
+        const contentEl = document.getElementById('homeAnnContent');
+        const authorNameEl = document.getElementById('homeAnnAuthorName');
+        const authorUserEl = document.getElementById('homeAnnAuthorUser');
+        const authorPfpEl = document.getElementById('homeAnnPfp');
+        const authorBadgeEl = document.getElementById('homeAnnAuthorBadge');
+        const timeEl = document.getElementById('homeAnnTime');
+
+        if (!a) {
+            if (titleEl) titleEl.innerText = "Welcome to BSMS Web";
+            if (contentEl) contentEl.innerHTML = "<p style='color:var(--fg2); margin:0;'>No announcements have been published yet. Check back soon for official updates, event notices, and tournaments!</p>";
+            if (authorNameEl) authorNameEl.innerText = "BSMS Web Staff";
+            if (authorUserEl) authorUserEl.innerText = "@staff";
+            if (authorBadgeEl) authorBadgeEl.innerText = "SYSTEM";
+            if (timeEl) timeEl.innerText = "Active";
+            return;
         }
-        
+
+        if (titleEl) titleEl.innerText = a.title || "Official Announcement";
+        if (contentEl) contentEl.innerHTML = parseAnnouncementMarkdown(a.content || "");
+        if (authorNameEl) authorNameEl.innerText = a.authorDisplayName || a.authorUsername || "Administrator";
+        if (authorUserEl) authorUserEl.innerText = `@${a.authorUsername || 'staff'}`;
+        if (authorBadgeEl) {
+            authorBadgeEl.innerText = (a.authorRole || 'ADMIN').toUpperCase();
+            authorBadgeEl.className = `ann-role-badge ${a.authorRole || 'admin'}`;
+        }
+        if (timeEl) timeEl.innerText = formatRelativeTime(a.createdAt || a.timestamp);
+
+        if (authorPfpEl) {
+            if (a.authorAvatar && a.authorAvatar.trim() !== '') {
+                authorPfpEl.innerHTML = `<img src="${escapeHTML(a.authorAvatar)}" alt="PFP" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                authorPfpEl.innerText = ((a.authorDisplayName || a.authorUsername || 'A').charAt(0)).toUpperCase();
+            }
+        }
     } catch (e) {
-        console.warn('Discord widget fetching failed or blocked. Using graceful fallback.', e);
-        statsArea.innerHTML = `<span>Community server verified & operational</span>`;
-        membersGrid.innerHTML = ``;
+        console.warn('Failed to fetch recent announcement:', e);
+        const titleEl = document.getElementById('homeAnnTitle');
+        const contentEl = document.getElementById('homeAnnContent');
+        if (titleEl) titleEl.innerText = "BSMS Web Announcements";
+        if (contentEl) contentEl.innerHTML = "<p style='color:var(--fg2); margin:0;'>Stay tuned for upcoming news, schedule reminders, and platform updates.</p>";
     }
 }
 
+function showContestNotice() {
+    const existing = document.getElementById('contestFloatingNotice');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'contestFloatingNotice';
+    toast.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(18,18,22,0.95); border:2px solid #eab308; color:#fff; padding:14px 24px; border-radius:16px; font-family:var(--font-brand); font-size:16px; z-index:9999; box-shadow:0 10px 40px rgba(0,0,0,0.8), 0 0 25px rgba(234,179,8,0.3); display:flex; align-items:center; gap:12px; pointer-events:none; transition:all 0.3s ease;';
+    toast.innerHTML = '🏆 <span><strong>Contests Starting Soon!</strong> Prepare for tournaments, roles, and Bulldog Bucks.</span>';
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
 // Start sequence when page renders
-window.addEventListener('DOMContentLoaded', fetchDiscordCommunity);
+window.addEventListener('DOMContentLoaded', fetchRecentAnnouncement);
 
 </script>
 </body>
