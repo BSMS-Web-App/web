@@ -42,7 +42,7 @@ SPDX-License-Identifier: MIT
 <script src="/js/analytics.js"></script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Cinzel:wght@400;700;900&display=swap');
 
 :root {
   --theme-rgb: 187,0,30;
@@ -64,6 +64,7 @@ SPDX-License-Identifier: MIT
   --glass-shadow: 0 8px 32px 0 rgba(0,0,0,0.5);
   
   --font: 'Patrick Hand', cursive;
+  --font-royal: 'Cinzel', 'Times New Roman', serif;
   
   --mouse-x: 0;
   --mouse-y: 0;
@@ -129,12 +130,12 @@ body::before {
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 90px;
+  width: 110px;
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
 }
 .greek-side.left  { left: 0; }
 .greek-side.right { right: 0; }
@@ -147,50 +148,130 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 46px;
+  gap: 60px;
 }
-.greek-side.left .greek-col  { animation: greekDrift 18s ease-in-out infinite alternate; }
-.greek-side.right .greek-col { animation: greekDriftRev 22s ease-in-out infinite alternate; }
+.greek-side.left .greek-col  { animation: greekDrift 26s ease-in-out infinite alternate; }
+.greek-side.right .greek-col { animation: greekDriftRev 30s ease-in-out infinite alternate; }
 
 .greek-symbol {
-  font-family: 'Times New Roman', 'Noto Serif', serif;
-  font-size: 34px;
+  font-family: var(--font-royal), 'Times New Roman', serif;
+  font-size: 40px;
   line-height: 1;
   color: #E0001F;
-  opacity: 0;
-  text-shadow: 0 0 14px rgba(187, 0, 30, 0.8);
+  opacity: 0.9;
+  text-shadow: 0 0 16px rgba(187, 0, 30, 0.85), 0 0 4px rgba(255, 60, 90, 0.6);
   animation-name: greekFloatUp, greekFade;
-  animation-duration: var(--dur, 10s), var(--dur, 10s);
+  animation-duration: var(--dur, 16s), var(--fdur, 14s);
   animation-timing-function: ease-in-out, ease-in-out;
   animation-iteration-count: infinite, infinite;
-  animation-delay: var(--delay, 0s), var(--delay, 0s);
+  animation-delay: var(--delay, 0s), var(--fdelay, 0s);
   animation-direction: alternate, normal;
 }
 .greek-side.right .greek-symbol {
   animation-name: greekFloatDown, greekFade;
 }
-.greek-symbol.alt { color: #D10022; font-size: 28px; }
-.greek-symbol.faint { color: #BB001E; font-size: 24px; }
+.greek-symbol.alt   { color: #D10022; font-size: 52px; font-weight: 900; text-shadow: 0 0 22px rgba(187,0,30,0.95), 0 0 6px rgba(255,80,110,0.7); }
+.greek-symbol.faint { color: #9E0019; font-size: 30px; opacity: 0.6; }
+.greek-symbol.gilt  { color: #FF2E4D; font-size: 46px; font-weight: 700; text-shadow: 0 0 18px rgba(255,46,77,0.9), 0 0 2px #fff; }
 
 @keyframes greekFloatUp {
-  0%   { transform: translateY(40px); }
-  100% { transform: translateY(-40px); }
+  0%   { transform: translateY(50px) rotate(-4deg); }
+  100% { transform: translateY(-50px) rotate(4deg); }
 }
 @keyframes greekFloatDown {
-  0%   { transform: translateY(-40px); }
-  100% { transform: translateY(40px); }
+  0%   { transform: translateY(-50px) rotate(4deg); }
+  100% { transform: translateY(50px) rotate(-4deg); }
 }
+/* Mostly visible; only a brief dip, rarely */
 @keyframes greekFade {
-  0%, 100% { opacity: 0; }
-  50%      { opacity: 1; }
+  0%, 82%, 100% { opacity: 0.9; }
+  90%           { opacity: 0.12; }
 }
 @keyframes greekDrift {
   0%   { transform: translateY(0); }
-  100% { transform: translateY(-30px); }
+  100% { transform: translateY(-40px); }
 }
 @keyframes greekDriftRev {
-  0%   { transform: translateY(-30px); }
+  0%   { transform: translateY(-40px); }
   100% { transform: translateY(0); }
+}
+
+/* ===== Majestic Hero Crest ===== */
+.crest-wrap {
+  position: relative;
+  width: 300px; height: 300px;
+  margin: 0 auto 30px;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 30px rgba(187,0,30,0.35));
+}
+.crest-aura {
+  position: absolute; inset: -40px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(187,0,30,0.55) 0%, rgba(187,0,30,0.15) 40%, transparent 70%);
+  filter: blur(18px);
+  animation: auraPulse 5s ease-in-out infinite alternate;
+}
+@keyframes auraPulse { 0% { opacity: 0.5; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1.08); } }
+
+.crest-ring {
+  position: absolute; border-radius: 50%;
+  border: 1.5px solid rgba(255, 46, 77, 0.55);
+  box-shadow: 0 0 18px rgba(187,0,30,0.45), inset 0 0 14px rgba(187,0,30,0.25);
+}
+.crest-ring.r1 { inset: 0; animation: spinCW 28s linear infinite; border-style: solid; }
+.crest-ring.r2 { inset: 22px; border-style: dashed; border-color: rgba(255,255,255,0.35); animation: spinCCW 22s linear infinite; }
+.crest-ring.r3 { inset: 44px; border-width: 2px; border-color: rgba(187,0,30,0.8); animation: spinCW 14s linear infinite; }
+.crest-ring.r3::after {
+  content: ''; position: absolute; top: -5px; left: 50%; width: 10px; height: 10px; margin-left: -5px;
+  background: #FF2E4D; border-radius: 50%; box-shadow: 0 0 14px #FF2E4D, 0 0 28px rgba(187,0,30,0.9);
+}
+@keyframes spinCW  { to { transform: rotate(360deg); } }
+@keyframes spinCCW { to { transform: rotate(-360deg); } }
+
+/* Ornate glyph ring around the crest */
+.crest-glyphs {
+  position: absolute; inset: -18px; border-radius: 50%;
+  animation: spinCW 60s linear infinite;
+  pointer-events: none;
+}
+.crest-glyphs span {
+  position: absolute; top: 50%; left: 50%;
+  font-family: var(--font-royal), serif; font-size: 18px; color: #FF2E4D;
+  text-shadow: 0 0 10px rgba(187,0,30,0.9);
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-160px);
+}
+
+.crest-core {
+  position: relative;
+  width: 200px; height: 200px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgba(60,0,10,0.9) 0%, rgba(10,0,2,0.95) 70%);
+  border: 2px solid rgba(255,46,77,0.7);
+  box-shadow: inset 0 0 40px rgba(187,0,30,0.45), 0 0 40px rgba(187,0,30,0.6);
+  overflow: hidden;
+}
+.crest-core img {
+  width: 62%; height: 62%; object-fit: contain; position: relative; z-index: 2;
+  filter: drop-shadow(0 0 18px rgba(255,46,77,0.95)) drop-shadow(0 0 40px rgba(187,0,30,0.7));
+  animation: logoFloat 6s ease-in-out infinite alternate;
+}
+.crest-core::after {
+  content: ''; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,200,210,0.35) 50%, transparent 100%);
+  transform: rotate(20deg);
+  animation: sheen 6s ease-in-out infinite;
+  z-index: 3;
+}
+@keyframes logoFloat { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-6px) scale(1.04); } }
+@keyframes sheen { 0%, 60% { left: -75%; } 100% { left: 130%; } }
+
+.crest-tag {
+  font-family: var(--font-royal), serif;
+  font-size: 13px; letter-spacing: 6px; color: rgba(255,255,255,0.55);
+  margin-top: 10px; text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crest-ring, .crest-glyphs, .crest-aura, .crest-core img, .crest-core::after { animation: none !important; }
 }
 
 /* Offline Banner */
@@ -338,39 +419,6 @@ section {
   animation: pulseGlow 8s ease-in-out infinite alternate;
 }
 @keyframes pulseGlow { 0% { opacity: 0.3; transform: scale(0.9); } 100% { opacity: 0.6; transform: scale(1.1); } }
-
-/* Hero Centerpiece CSS 3D Geometry */
-.hero-3d-scene {
-  width: 320px; height: 320px; margin: -20px 0 30px; scale: 0.85;
-  transform-style: preserve-3d;
-  animation: rotateCore 30s infinite linear;
-  transform: 
-    rotateX(calc(var(--mouse-y) * -10deg)) 
-    rotateY(calc(var(--mouse-x) * 10deg));
-  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.core-obj { position: absolute; inset: 0; transform-style: preserve-3d; }
-.core-ring {
-  position: absolute; inset: -30px;
-  border: 2px solid var(--red-dim); border-radius: 50%;
-  transform-style: preserve-3d;
-}
-.core-ring:nth-child(1) { transform: rotateX(75deg); border-color: rgba(187,0,30,0.7); box-shadow: 0 0 30px var(--red-glow); }
-.core-ring:nth-child(2) { transform: rotateY(75deg); }
-.core-ring:nth-child(3) { transform: rotateX(45deg) rotateY(45deg); border-style: dashed; }
-.core-cube {
-  position: absolute; inset: 40px; background: rgba(187,0,30,0.08);
-  border: 1px solid rgba(187,0,30,0.5);
-  box-shadow: 0 0 60px inset rgba(187,0,30,0.3);
-  backdrop-filter: blur(10px);
-}
-.core-cube.front  { transform: translateZ(120px); display: flex; align-items: center; justify-content: center; }
-.core-cube.back   { transform: rotateY(180deg) translateZ(120px); }
-.core-cube.right  { transform: rotateY(90deg) translateZ(120px); }
-.core-cube.left   { transform: rotateY(-90deg) translateZ(120px); }
-.core-cube.top    { transform: rotateX(90deg) translateZ(120px); }
-.core-cube.bottom { transform: rotateX(-90deg) translateZ(120px); }
-@keyframes rotateCore { 100% { transform: rotateY(360deg) rotateX(360deg); } }
 
 .hero-content h1 {
   font-size: clamp(2.4rem, 5vw, 3.8rem); margin: 0 0 10px;
@@ -877,10 +925,14 @@ section {
   .glass-nav { left: 12px; right: 64px; top: 12px; transform: none; justify-content: space-between; gap: 8px; padding: 8px 14px; overflow-x: auto; }
   .glass-nav a { font-size: 16px; white-space: nowrap; }
   #globalUserBtn { top: 12px; right: 12px; width: 42px; height: 42px; }
-  .greek-side { width: 44px; }
-  .greek-symbol { font-size: 22px; }
-  .greek-symbol.alt { font-size: 20px; }
-  .greek-symbol.faint { font-size: 18px; }
+  .greek-side { width: 50px; }
+  .greek-symbol { font-size: 24px; }
+  .greek-symbol.alt { font-size: 32px; }
+  .greek-symbol.faint { font-size: 20px; }
+  .greek-symbol.gilt { font-size: 28px; }
+  .crest-wrap { width: 240px; height: 240px; }
+  .crest-core { width: 160px; height: 160px; }
+  .crest-glyphs span { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-130px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -932,20 +984,25 @@ html { scroll-padding-top: 100px; }
 
   <section class="hero reveal" id="top">
     <div class="hero-glow"></div>
-    
-    <div class="hero-3d-scene">
-      <div class="core-obj">
-        <div class="core-ring"></div>
-        <div class="core-ring"></div>
-        <div class="core-ring"></div>
-        <div class="core-cube front">
-            <img src="/img/icon.png" alt="BSMS Web Logo" style="width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 0 20px rgba(187,0,30,0.9));">
-        </div>
-        <div class="core-cube back"></div>
-        <div class="core-cube right"></div>
-        <div class="core-cube left"></div>
-        <div class="core-cube top"></div>
-        <div class="core-cube bottom"></div>
+
+    <!-- Majestic Crest Centerpiece -->
+    <div class="crest-wrap">
+      <div class="crest-aura"></div>
+      <div class="crest-ring r1"></div>
+      <div class="crest-ring r2"></div>
+      <div class="crest-ring r3"></div>
+      <div class="crest-glyphs">
+        <span style="--a:0deg">Ω</span>
+        <span style="--a:45deg">φ</span>
+        <span style="--a:90deg">Ψ</span>
+        <span style="--a:135deg">Σ</span>
+        <span style="--a:180deg">Δ</span>
+        <span style="--a:225deg">Θ</span>
+        <span style="--a:270deg">Λ</span>
+        <span style="--a:315deg">Ξ</span>
+      </div>
+      <div class="crest-core">
+        <img src="/img/icon.png" alt="BSMS Web Logo">
       </div>
     </div>
 
@@ -1278,20 +1335,28 @@ document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
 // --- GREEK SIDE DECORATIONS ---
 (function buildGreekSides() {
-    const symbols = ['φ', 'Ω', 'Σ', 'π', 'λ', 'Δ', 'θ', 'Ψ', 'α', 'β', 'γ', 'μ', 'ω', 'Θ', 'Λ', 'Ξ'];
-    const classes = ['', 'alt', 'faint'];
+    const symbols = [
+        'Ω', 'Ψ', 'Φ', 'Σ', 'Δ', 'Λ', 'Ξ', 'Θ', 'Π', 'Γ',
+        'φ', 'ψ', 'ω', 'λ', 'θ', 'π', 'ζ', 'η', 'ξ', 'α',
+        '𝛀', '𝛷', '𝛹', '𝛴', '𝛥', '𝛬', '𝛯', '𝛩', '𝚯', '⟁'
+    ];
+    const classes = ['', 'alt', 'faint', 'gilt'];
     const cols = document.querySelectorAll('.greek-col');
 
     cols.forEach((col, colIndex) => {
-        const count = 12;
+        const count = 16;
         for (let i = 0; i < count; i++) {
             const span = document.createElement('span');
             span.className = `greek-symbol ${classes[(i + colIndex) % classes.length]}`.trim();
-            span.textContent = symbols[(i * 3 + colIndex * 5) % symbols.length];
-            const dur = 8 + ((i * 1.7 + colIndex) % 6);      // 8–14s
-            const delay = -((i * 1.3) % dur);                 // stagger start
+            span.textContent = symbols[(i * 7 + colIndex * 11) % symbols.length];
+            const dur = 14 + ((i * 2.3 + colIndex) % 8);     // 14–22s float
+            const fdur = 18 + ((i * 3.1 + colIndex) % 10);   // 18–28s fade (rare dips)
+            const delay = -((i * 1.9) % dur);
+            const fdelay = -((i * 2.7) % fdur);
             span.style.setProperty('--dur', `${dur}s`);
+            span.style.setProperty('--fdur', `${fdur}s`);
             span.style.setProperty('--delay', `${delay}s`);
+            span.style.setProperty('--fdelay', `${fdelay}s`);
             col.appendChild(span);
         }
     });
