@@ -130,7 +130,7 @@ body::before {
   top: 0;
   bottom: 0;
   width: 90px;
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
   overflow: hidden;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
@@ -156,9 +156,9 @@ body::before {
   font-family: 'Times New Roman', 'Noto Serif', serif;
   font-size: 34px;
   line-height: 1;
-  color: var(--red);
+  color: #E0001F;
   opacity: 0;
-  text-shadow: 0 0 12px var(--red-glow);
+  text-shadow: 0 0 14px rgba(187, 0, 30, 0.8);
   animation-name: greekFloatUp, greekFade;
   animation-duration: var(--dur, 10s), var(--dur, 10s);
   animation-timing-function: ease-in-out, ease-in-out;
@@ -170,7 +170,7 @@ body::before {
   animation-name: greekFloatDown, greekFade;
 }
 .greek-symbol.alt { color: #D10022; font-size: 28px; }
-.greek-symbol.faint { color: rgba(187, 0, 30, 0.6); font-size: 24px; }
+.greek-symbol.faint { color: #BB001E; font-size: 24px; }
 
 @keyframes greekFloatUp {
   0%   { transform: translateY(40px); }
@@ -182,7 +182,7 @@ body::before {
 }
 @keyframes greekFade {
   0%, 100% { opacity: 0; }
-  50%      { opacity: 0.85; }
+  50%      { opacity: 1; }
 }
 @keyframes greekDrift {
   0%   { transform: translateY(0); }
