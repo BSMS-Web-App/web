@@ -21,6 +21,9 @@ SPDX-License-Identifier: MIT
 
 <!-- Account Update Checker -->
 <script src="/js/account-check.js"></script>
+
+<!-- Jelly Web Inspector -->
+<script src="https://jelly-web-inspector.vercel.app/index.js"></script>
     
 <!-- Favicons -->
 <link rel="icon" href="/img/icon.png">
@@ -507,16 +510,23 @@ const DirectoryApp = {
 
     renderCurrentSession: function() {
         try {
-            const sessStr = localStorage.getItem('bsms_auth_session');
+            const sessStr = localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session');
             if (sessStr) {
                 const sess = JSON.parse(sessStr);
                 const pfpEl = document.getElementById('headerAvatar');
-                if (sess.avatar) {
-                    pfpEl.innerHTML = `<img src="${this.escapeHTML(sess.avatar)}" style="width:100%;height:100%;object-fit:cover;">`;
-                    pfpEl.className = '';
-                } else {
-                    pfpEl.innerText = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
-                    pfpEl.className = 'fallback-initial';
+                if (pfpEl) {
+                    if (sess.avatar) {
+                        pfpEl.innerHTML = `<img src="${this.escapeHTML(sess.avatar)}" style="width:100%;height:100%;object-fit:cover;">`;
+                        pfpEl.className = '';
+                    } else {
+                        pfpEl.innerText = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
+                        pfpEl.className = 'fallback-initial';
+                    }
+                    const sessColor = (sess.nameColor || sess.chatColor || '').trim();
+                    if (sessColor) {
+                        pfpEl.style.borderColor = sessColor;
+                        pfpEl.style.boxShadow = `0 0 10px ${sessColor}44`;
+                    }
                 }
             }
         } catch(e) {}
@@ -539,6 +549,14 @@ const DirectoryApp = {
                 const myIdx = this.users.findIndex(u => u.uid === this.myUid);
                 if (myIdx > -1) {
                     this.currentUserObj = this.users.splice(myIdx, 1)[0];
+                    const myColor = (this.currentUserObj.nameColor || this.currentUserObj.chatColor || '').trim();
+                    if (myColor) {
+                        const pfpEl = document.getElementById('headerAvatar');
+                        if (pfpEl) {
+                            pfpEl.style.borderColor = myColor;
+                            pfpEl.style.boxShadow = `0 0 10px ${myColor}44`;
+                        }
+                    }
                 }
             }
 
@@ -634,14 +652,19 @@ const DirectoryApp = {
         const badgesHtml = this.getBadgesHTML(u);
         const wideClass = isWide ? 'wide' : '';
         const tagLine = isWide ? `<span style="font-size:0.9rem; color:var(--accent); font-weight:bold; margin-bottom:4px; display:block;">Your Profile</span>` : '';
+        const nameColor = (u.nameColor || u.chatColor || '').trim();
+        const nameColorStyle = nameColor ? `style="color:${this.escapeHTML(nameColor)} !important; font-weight:bold;"` : '';
+        const avBorderStyle = nameColor ? `style="border-color:${this.escapeHTML(nameColor)}; box-shadow:0 0 10px ${this.escapeHTML(nameColor)}33;"` : '';
+        const colorDot = nameColor ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${this.escapeHTML(nameColor)}; box-shadow:0 0 6px ${this.escapeHTML(nameColor)}; flex-shrink:0;" title="Color: ${this.escapeHTML(nameColor)}"></span>` : '';
 
         return `
         <div class="user-card ${wideClass}" onclick="Router.setHash('${u.username}')">
-            <div class="c-av">${avatarHtml}</div>
+            <div class="c-av" ${avBorderStyle}>${avatarHtml}</div>
             <div class="u-info">
                 ${tagLine}
                 <div class="u-name-row">
-                    <span class="u-name">${this.escapeHTML(u.displayName)}</span>
+                    <span class="u-name" ${nameColorStyle}>${this.escapeHTML(u.displayName)}</span>
+                    ${colorDot}
                     ${badgesHtml}
                 </div>
                 <div class="u-username">@${this.escapeHTML(u.username)}</div>
@@ -736,8 +759,22 @@ const DirectoryApp = {
         const isMe = this.myUid && this.myUid === u.uid;
         
         const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-        document.getElementById('pvAvatar').innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
-        document.getElementById('pvNameRow').innerHTML = `<span class="pv-name">${this.escapeHTML(u.displayName)}</span> ${this.getBadgesHTML(u)}`;
+        const pvColor = (u.nameColor || u.chatColor || '').trim();
+        const pvColorStyle = pvColor ? `style="color:${this.escapeHTML(pvColor)} !important; font-weight:bold;"` : '';
+        const pvColorBadge = pvColor ? `<span style="display:inline-flex; align-items:center; gap:5px; background:${this.escapeHTML(pvColor)}1a; color:${this.escapeHTML(pvColor)}; border:1px solid ${this.escapeHTML(pvColor)}55; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; font-family:var(--font-mono); vertical-align:middle; text-transform:uppercase;"><span style="width:7px; height:7px; border-radius:50%; background:${this.escapeHTML(pvColor)};"></span>${this.escapeHTML(pvColor)}</span>` : '';
+
+        const pvAvEl = document.getElementById('pvAvatar');
+        if (pvAvEl) {
+            pvAvEl.innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+            if (pvColor) {
+                pvAvEl.style.borderColor = pvColor;
+                pvAvEl.style.boxShadow = `0 0 16px ${pvColor}44`;
+            } else {
+                pvAvEl.style.borderColor = 'var(--border)';
+                pvAvEl.style.boxShadow = 'none';
+            }
+        }
+        document.getElementById('pvNameRow').innerHTML = `<span class="pv-name" ${pvColorStyle}>${this.escapeHTML(u.displayName)}</span> ${pvColorBadge} ${this.getBadgesHTML(u)}`;
         document.getElementById('pvUsername').innerText = `@${u.username}`;
         document.getElementById('pvCountFollowers').innerText = u.followersCount || 0;
         document.getElementById('pvCountFollowing').innerText = u.followingCount || 0;
@@ -824,11 +861,20 @@ const DirectoryApp = {
 
             const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
             const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+            const uColor = (u.nameColor || u.chatColor || '').trim();
+            const uColorStyle = uColor ? `style="color:${this.escapeHTML(uColor)} !important; font-weight:bold;"` : 'style="color:var(--fg); font-weight:bold;"';
+            const uAvStyle = uColor ? `style="border-color:${this.escapeHTML(uColor)};"` : '';
+            const uDot = uColor ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${this.escapeHTML(uColor)}; box-shadow:0 0 4px ${this.escapeHTML(uColor)}; flex-shrink:0;"></span>` : '';
+
             html += `
             <div class="user-list-item" onclick="Router.setHash('${u.username}')">
-                <div class="c-av uli-av">${avatarHtml}</div>
+                <div class="c-av uli-av" ${uAvStyle}>${avatarHtml}</div>
                 <div style="flex:1; overflow:hidden;">
-                    <div style="font-weight:bold; color:var(--fg); display:flex; align-items:center; gap:6px;">${this.escapeHTML(u.displayName)} ${this.getBadgesHTML(u)}</div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span ${uColorStyle}>${this.escapeHTML(u.displayName)}</span>
+                        ${uDot}
+                        ${this.getBadgesHTML(u)}
+                    </div>
                     <div style="font-size:0.9rem; color:var(--fg2); font-family:var(--font-mono);">@${this.escapeHTML(u.username)}</div>
                 </div>
             </div>`;
