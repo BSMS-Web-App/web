@@ -1,8 +1,9 @@
 /*
- * BSMS Web Database Layer
- * Supports Firebase Realtime Database when FIREBASE_PRIVATE_KEY is present,
- * and seamlessly provides a local persistent JSON/in-memory fallback when offline or in dev.
+ * BSMS Web
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: MIT
  */
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
