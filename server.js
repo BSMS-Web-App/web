@@ -48,6 +48,7 @@ app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
+app.get('/raw/users.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'users.html')));
 app.get('/raw/accounts.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'accounts.html')));
 app.get('/raw/api/auth.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/auth.js')));
 app.get('/raw/api/chat.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/chat.js')));

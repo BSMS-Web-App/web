@@ -1518,11 +1518,11 @@ const Utils = {
         if (State.user && (State.user.uid === uid || State.user.username === uid)) {
             if (State.user.nameColor || State.user.chatColor) return State.user.nameColor || State.user.chatColor;
             try {
-                const s = JSON.parse(localStorage.getItem('bsms_auth_session') || '{}');
+                const s = JSON.parse(localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session') || '{}');
                 if (s.nameColor || s.chatColor) return s.nameColor || s.chatColor;
             } catch(e) {}
         }
-        return null;
+        return '#ef4444';
     },
     getBadgesHTML: (uid) => {
         if (uid === BOT_UID) return `<span class="bot-badge">Official</span>`;
@@ -4393,9 +4393,20 @@ const NameColorManager = {
             } catch(e) {}
 
             this.updateSidebarUser();
-            ChatManager.renderSidebar();
-            if (State.activeChannelId) {
-                ChatManager.renderMessages(State.activeChannelId);
+            if (window.SidebarManager && typeof SidebarManager.render === 'function') {
+                SidebarManager.render();
+            }
+            if (State.activeChannelId && State.channels[State.activeChannelId]) {
+                const activeCh = State.channels[State.activeChannelId];
+                if (activeCh.messages && typeof ChatManager.renderInitialMessages === 'function') {
+                    ChatManager.renderInitialMessages(activeCh.messages);
+                }
+            }
+            if (State.user && State.user.uid) {
+                document.querySelectorAll(`.my-msg-author, .msg-author[data-uid="${State.user.uid}"]`).forEach(el => {
+                    el.style.color = color;
+                    el.style.fontWeight = 'bold';
+                });
             }
 
             UI.closeModal('nameColorModal');
