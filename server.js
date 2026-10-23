@@ -16,7 +16,7 @@ import bugReportHandler from './api/bug-report.js';
 import exportDataHandler from './api/export-data.js';
 import profanityFilterHandler from './api/profanity-filter.js';
 import linkPreviewHandler from './api/link-preview.js';
-import announcementsHandler from './api/announcements.js';
+import chessHandler from './api/chess.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,9 +44,11 @@ app.use('/api/link-preview', (req, res) => linkPreviewHandler(req, res));
 app.use('/api/bug-report', (req, res) => bugReportHandler(req, res));
 app.use('/api/export-data', (req, res) => exportDataHandler(req, res));
 app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res));
-app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
+app.use('/api/chess', (req, res) => chessHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
+app.get('/raw/chess.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chess.html')));
+app.get('/raw/api/chess.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'api/chess.js')));
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
 app.get('/raw/users.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'users.html')));
 app.get('/raw/accounts.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'accounts.html')));
@@ -62,6 +64,7 @@ app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.joi
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
+app.get('/chess', (req, res) => res.sendFile(path.join(__dirname, 'chess.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
 app.get('/bug-report', (req, res) => res.sendFile(path.join(__dirname, 'bug-report.html')));
