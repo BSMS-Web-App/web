@@ -22,11 +22,8 @@ SPDX-License-Identifier: MIT
 <!-- Account Update Checker -->
 <script src="/js/account-check.js"></script>
 
-<!-- Vercel Web Analytics -->
-<script>
-    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+<!-- Jelly Web Inspector -->
+<script src="https://jelly-web-inspector.vercel.app/index.js"></script>
     
 <!-- Favicons -->
 <link rel="icon" href="/img/icon.png">
@@ -804,6 +801,7 @@ a { color: var(--accent); text-decoration: none; }
         <symbol id="ico-phone" viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></symbol>
         <symbol id="ico-eye-off" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></symbol>
         <symbol id="ico-palette" viewBox="0 0 24 24"><path d="M12 2C6.49 2 2 6.49 2 12c0 4.41 3.59 8 8 8 1.1 0 2-.9 2-2 0-.46-.17-.89-.46-1.22-.29-.33-.46-.77-.46-1.28 0-1.1.9-2 2-2h2.5c3.59 0 6.5-2.91 6.5-6.5C22 6.01 17.51 2 12 2zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8s1.5.67 1.5 1.5S7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4s1.5.67 1.5 1.5S10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4s1.5.67 1.5 1.5S15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></symbol>
+        <symbol id="ico-chess" viewBox="0 0 24 24"><path d="M19 22H5v-2h14v2M17.65 19H6.35l1.1-5.5h1.1a4.2 4.2 0 0 1-.55-2c0-1.85 1.2-3.4 2.9-3.85V6.5c-.6 0-1.1-.4-1.3-.95l-.6.25-.4-.9 1.8-.75V4h1.6v.15l1.8.75-.4.9-.6-.25c-.2.55-.7.95-1.3.95v1.15c1.7.45 2.9 2 2.9 3.85 0 .73-.2 1.41-.55 2h1.1l1.1 5.5z"/></symbol>
     </defs>
 </svg>
 
@@ -1122,6 +1120,44 @@ a { color: var(--accent); text-decoration: none; }
     </div>
 </div>
 
+<div id="chessChallengeModal" class="overlay" onclick="if(event.target===this) UI.closeModal('chessChallengeModal')">
+    <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.8rem;">♟️</span>
+                <h2 style="font-size:1.8rem; margin:0;">Chess Challenge</h2>
+            </div>
+            <button class="icon-btn" onclick="UI.closeModal('chessChallengeModal')" style="width:32px; height:32px;"><svg class="ic"><use href="#ico-close"></use></svg></button>
+        </div>
+        <p style="color:var(--fg2); font-size:1rem; margin-bottom:16px;">Challenge members of this conversation to a live chess match!</p>
+        
+        <label style="color:var(--fg); font-size:0.95rem; font-weight:bold; margin-bottom:6px; display:block;">Your Piece Color</label>
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <button type="button" class="btn sec chess-col-btn active" id="btnChessWhite" style="flex:1; border-color:var(--accent); background:rgba(255,255,255,0.08);" onclick="ChessChallengeManager.setColor('white')">⚪ White</button>
+            <button type="button" class="btn sec chess-col-btn" id="btnChessRandom" style="flex:1;" onclick="ChessChallengeManager.setColor('random')">🎲 Random</button>
+            <button type="button" class="btn sec chess-col-btn" id="btnChessBlack" style="flex:1;" onclick="ChessChallengeManager.setColor('black')">⚫ Black</button>
+        </div>
+
+        <label style="color:var(--fg); font-size:0.95rem; font-weight:bold; margin-bottom:6px; display:block;">Time Control</label>
+        <select id="chessTimeSelect" class="input-field" style="margin-bottom:16px;">
+            <option value="600" selected>10 Minutes (Rapid)</option>
+            <option value="300">5 Minutes (Blitz)</option>
+            <option value="180">3 Minutes (Blitz)</option>
+            <option value="0">Unlimited (Casual)</option>
+        </select>
+
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--fg); margin-bottom:20px;">
+            <input type="checkbox" id="chessIsRated" checked style="width:18px; height:18px; accent-color:var(--accent);">
+            <span>Rated match (affects chess Elo rankings)</span>
+        </label>
+
+        <div style="display:flex; gap:12px;">
+            <button class="btn sec" onclick="UI.closeModal('chessChallengeModal')">Cancel</button>
+            <button class="btn" id="btnSendChessChallenge" onclick="ChessChallengeManager.sendChallenge()">Send Challenge</button>
+        </div>
+    </div>
+</div>
+
 <div id="nameColorModal" class="overlay" onclick="if(event.target===this) UI.closeModal('nameColorModal')">
     <div class="modal-card" style="max-width: 440px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -1364,6 +1400,7 @@ a { color: var(--accent); text-decoration: none; }
                     <button class="cmp-btn send" onclick="AudioManager.sendPreview()"><svg class="ic"><use href="#ico-send"></use></svg></button>
                 </div>
 
+                <button class="cmp-btn" id="btnChess" onclick="ChessChallengeManager.openModal()" title="Challenge to Chess"><svg class="ic"><use href="#ico-chess"></use></svg></button>
                 <button class="cmp-btn" id="btnPoll" onclick="UI.openModal('pollModal')" title="Create Poll"><svg class="ic"><use href="#ico-poll"></use></svg></button>
                 <button class="cmp-btn" id="btnMic" onclick="AudioManager.startRecording()"><svg class="ic"><use href="#ico-mic"></use></svg></button>
                 <button class="cmp-btn send" id="btnSend" onclick="ComposerManager.send()" data-ga="chat_send"><svg class="ic"><use href="#ico-send"></use></svg></button>
@@ -2750,7 +2787,7 @@ const ChatManager = {
                     const m = c.messages[mid];
                     pb.style.display = 'flex';
                     pb.dataset.msgid = mid;
-                    document.getElementById('pinnedText').innerText = m.contentType === 'audio' ? "Voice message" : (m.contentType === 'file' ? "Attachment" : (m.status.deletedByMod ? "Deleted message" : (m.status.unsent ? "Unsent message" : (m.contentType === 'poll' ? m.content.pollQuestion : m.content))));
+                    document.getElementById('pinnedText').innerText = m.contentType === 'audio' ? "Voice message" : (m.contentType === 'file' ? "Attachment" : (m.status.deletedByMod ? "Deleted message" : (m.status.unsent ? "Unsent message" : (m.contentType === 'poll' ? m.content.pollQuestion : (m.contentType === 'chess' ? '♟️ Chess Challenge' : m.content)))));
                     pinnedFound = true;
                     if (State.currentRole === 'owner' || State.currentRole === 'moderator') UI.show('btnUnpinBtn');
                     else UI.hide('btnUnpinBtn');
@@ -2941,7 +2978,7 @@ const ChatManager = {
                     const repDisp = Utils.displayName(repMsg.senderUid, c);
                     const repColor = Utils.nameColor(repMsg.senderUid) || repMsg.senderColor;
                     const repColorStyle = repColor ? `style="color:${repColor}; font-weight:bold;"` : '';
-                    let repSnippet = repMsg.status?.unsent ? "Unsent message" : (repMsg.status?.deletedByMod ? "Deleted message" : (repMsg.contentType === 'text' ? repMsg.content : (repMsg.contentType === 'poll' ? repMsg.content.pollQuestion : (repMsg.contentType === 'audio' ? 'Voice message' : 'Attachment'))));
+                    let repSnippet = repMsg.status?.unsent ? "Unsent message" : (repMsg.status?.deletedByMod ? "Deleted message" : (repMsg.contentType === 'text' ? repMsg.content : (repMsg.contentType === 'poll' ? repMsg.content.pollQuestion : (repMsg.contentType === 'chess' ? '♟️ Chess Challenge' : (repMsg.contentType === 'audio' ? 'Voice message' : 'Attachment')))));
                     content += `<div class="quote-box" onclick="ScrollManager.scrollToMessage('${m.status.repliedTo}')">
                         <strong ${repColorStyle}>${Utils.escapeHTML(repDisp)}</strong>
                         ${Utils.escapeHTML(repSnippet)}
@@ -3021,6 +3058,50 @@ const ChatManager = {
                         <div class="content"><span>${Utils.escapeHTML(m.content.pollOptions[optKey])}</span><span>${pct}%</span></div>
                     </div>`;
                 }
+            } else if (m.contentType === 'chess') {
+                let chessData = m.content;
+                if (typeof chessData === 'string') {
+                    try { chessData = JSON.parse(chessData); } catch(e) { chessData = { gameId: m.content }; }
+                }
+                const gameId = chessData.gameId || '';
+                const timeSec = Number(chessData.timeControl);
+                const timeCtrl = (!isNaN(timeSec) && timeSec > 0) ? (timeSec >= 60 ? `${Math.floor(timeSec/60)}m` : `${timeSec}s`) : 'Unlimited';
+                const isRated = chessData.isRated !== false;
+                const challengerUid = chessData.challengerUid || m.senderUid;
+                const challengerAcc = State.accountsCache[challengerUid] || {};
+                const challengerName = challengerAcc.displayName || challengerAcc.username || challengerUid;
+                const challengerElo = challengerAcc.chessElo || 1200;
+                const isChallenger = State.user && State.user.uid === challengerUid;
+                
+                content += `
+                <div class="chess-card-msg" style="min-width:260px; max-width:320px; background:rgba(18,18,24,0.95); border:2px solid #BB001E; border-radius:14px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <div style="width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg, #bb001e, #680011); display:flex; align-items:center; justify-content:center; font-size:1.6rem; color:#fff; box-shadow:0 4px 12px rgba(187,0,30,0.4); flex-shrink:0;">
+                            ♟️
+                        </div>
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-weight:bold; font-size:1.1rem; color:#ffffff; line-height:1.2;">Chess Challenge</div>
+                            <div style="font-size:0.85rem; color:rgba(255,255,255,0.7);">⏱️ ${timeCtrl} • ${isRated ? 'Rated (Elo)' : 'Casual'}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.95rem; color:rgba(255,255,255,0.85); margin-bottom:12px; line-height:1.4;">
+                        <strong>${Utils.escapeHTML(challengerName)}</strong> <span style="color:#facc15; font-size:0.85rem; font-weight:bold;">[${challengerElo}]</span> issued a challenge!
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        ${!isChallenger ? `
+                        <button class="btn" style="flex:1; padding:8px 12px; font-size:0.95rem; background:#22c55e; border-color:#16a34a;" onclick="window.location.href='/chess#game/${encodeURIComponent(gameId)}'">
+                            ⚔️ Accept & Play
+                        </button>
+                        ` : `
+                        <button class="btn" style="flex:1; padding:8px 12px; font-size:0.95rem;" onclick="window.location.href='/chess#game/${encodeURIComponent(gameId)}'">
+                            ♟️ Open Board
+                        </button>
+                        `}
+                        <button class="btn sec" style="padding:8px 12px; font-size:0.95rem;" onclick="window.location.href='/chess#game/${encodeURIComponent(gameId)}'" title="Spectate game">
+                            👁️
+                        </button>
+                    </div>
+                </div>`;
             } else {
                 const urls = Utils.extractUrls(m.content);
                 const textWithLinks = Utils.linkifyText(m.content);
@@ -3349,6 +3430,13 @@ const AuthManager = {
                 UI.setLoad(95, "Opening conversation");
                 await Router.resolvePendingRoute();
                 UI.setLoad(100, "Ready");
+                if (window.location.search.includes('chess=1') || window.location.hash.includes('chess=1')) {
+                    setTimeout(() => {
+                        if (State.activeChannelId) {
+                            ChessChallengeManager.openModal();
+                        }
+                    }, 400);
+                }
                 if (window.innerWidth <= 768) {
                     if (State.activeChannelId) {
                         document.getElementById('sidebar').classList.add('hidden');
@@ -3640,6 +3728,94 @@ const ComposerManager = {
     cancelEdit: function() {
         State.editContext = null;
         document.getElementById('msgInput').innerText = localStorage.getItem('draft_' + State.activeChannelId) || "";
+    }
+};
+
+const ChessChallengeManager = {
+    chosenColor: 'white',
+    openModal: function() {
+        if (!State.activeChannelId) {
+            UI.showToast("Select a conversation first to issue a chess challenge.", "error");
+            return;
+        }
+        this.setColor('white');
+        UI.openModal('chessChallengeModal');
+    },
+    setColor: function(color) {
+        this.chosenColor = color;
+        ['White', 'Random', 'Black'].forEach(c => {
+            const btn = document.getElementById(`btnChess${c}`);
+            if (btn) {
+                if (c.toLowerCase() === color) {
+                    btn.classList.add('active');
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.style.background = 'rgba(255,255,255,0.08)';
+                } else {
+                    btn.classList.remove('active');
+                    btn.style.borderColor = '';
+                    btn.style.background = '';
+                }
+            }
+        });
+    },
+    sendChallenge: async function() {
+        if (!State.activeChannelId) return;
+        const btn = document.getElementById('btnSendChessChallenge');
+        if (btn) btn.disabled = true;
+
+        const timeControl = parseInt(document.getElementById('chessTimeSelect')?.value || '600', 10);
+        const isRated = document.getElementById('chessIsRated')?.checked !== false;
+        
+        let color = this.chosenColor || 'white';
+        if (color === 'random') {
+            color = Math.random() < 0.5 ? 'white' : 'black';
+        }
+
+        try {
+            const sid = localStorage.getItem('session_id') || "";
+            const res = await fetch('/api/chess?action=createGame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid },
+                body: JSON.stringify({
+                    creatorUid: State.user.uid,
+                    color: color,
+                    timeControl: timeControl,
+                    isRated: isRated
+                })
+            });
+            const data = await res.json();
+            if (!data.success || !data.gameId) {
+                throw new Error(data.error || "Failed to initialize chess match.");
+            }
+
+            const c = State.channels[State.activeChannelId];
+            await ApiClient.call('sendMessage', {
+                cid: c._id,
+                type: c._type,
+                contentType: 'chess',
+                content: {
+                    gameId: data.gameId,
+                    challengerUid: State.user.uid,
+                    timeControl: timeControl,
+                    isRated: isRated,
+                    creatorColor: color
+                }
+            });
+
+            AudioFX.send();
+            UI.closeModal('chessChallengeModal');
+            UI.showToast("Chess challenge sent! Opening match...", "success");
+            PollingManager.syncMessages();
+
+            setTimeout(() => {
+                window.location.href = `/chess#game/${encodeURIComponent(data.gameId)}`;
+            }, 600);
+
+        } catch(e) {
+            UI.showToast(e.message || "Failed to send chess challenge.", "error");
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     }
 };
 
