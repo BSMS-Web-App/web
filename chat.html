@@ -2598,7 +2598,7 @@ const ChatManager = {
             clearInterval(State.msgInterval);
             const freshCache = State.conversationCache[cid];
             const cacheIsFresh = freshCache && Date.now() - (freshCache.updatedAt || 0) < 10000;
-            if (!cacheIsFresh) PollingManager.syncMessages();
+            State.activeMessageLoad = cacheIsFresh ? Promise.resolve(true) : PollingManager.syncMessages();
             State.msgInterval = setInterval(PollingManager.syncMessages, cacheIsFresh ? 5000 : 2500);
         } catch (e) {
             console.error("[BSMS Web] Failed to open chat:", e);
@@ -3403,7 +3403,7 @@ const AuthManager = {
             UI.setLoad(90, "Opening conversation");
             await Router.resolvePendingRoute();
             if (State.activeChannelId) {
-                let loaded = await PollingManager.syncMessages();
+                let loaded = await (State.activeMessageLoad || PollingManager.syncMessages());
                 while (!loaded) {
                     UI.setLoad(95, "Waiting for chat data");
                     await new Promise(resolve => setTimeout(resolve, 1500));
