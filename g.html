@@ -421,7 +421,7 @@ async function pullCloudSaves() {
             const data = await res.json();
             if (data && data.saves && typeof data.saves === 'object') {
                 for (const [key, value] of Object.entries(data.saves)) {
-                    if (key && key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+                    if (key && key !== SESSION_KEY && key !== 'session_id') {
                         try {
                             localStorage.setItem(key, value);
                         } catch(e) {}
@@ -475,7 +475,7 @@ try {
     const _nativeSetItem = localStorage.setItem.bind(localStorage);
     localStorage.setItem = function(k, v) {
         _nativeSetItem(k, v);
-        if (cloudSyncDone && !isGuest && k !== SESSION_KEY && k !== 'session_id' && !k.startsWith('firebase')) {
+        if (cloudSyncDone && !isGuest && k !== SESSION_KEY && k !== 'session_id') {
             scheduleCloudSave(1000);
         }
     };
