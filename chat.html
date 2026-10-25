@@ -2642,7 +2642,7 @@ const ChatManager = {
             mv.style.setProperty('--chat-fg', c.config.theme.text || 'var(--fg)');
             mv.style.setProperty('--chat-accent', c.config.theme.accent || 'var(--accent)');
             if(c.config.theme.background) {
-                if(c.config.theme.background.startsWith('data:')) {
+                if(c.config.theme.background.startsWith('data:') || c.config.theme.background.startsWith('/api/media?')) {
                     mv.style.setProperty('--chat-wp', `url(${Utils.escapeHTML(c.config.theme.background)})`);
                     mv.style.setProperty('--chat-wp-dim', '0.55'); mv.style.setProperty('--chat-bg', 'transparent');
                 } else {
