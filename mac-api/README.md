@@ -17,7 +17,7 @@ All endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`.
 
 The service keeps a JSON snapshot plus a JSON Lines write-ahead journal. Mutations are serialized, journaled, and synced before being acknowledged. A snapshot is compacted periodically. This avoids rewriting the full database for every chat message. The snapshot and journal must be stored on persistent local storage and included in a backup plan.
 
-The service defaults to loopback-only binding on port `4901`. Do not bind it to `0.0.0.0` for public exposure. Cloudflare Tunnel should route the public hostname to `http://127.0.0.1:4901`.
+The service defaults to loopback-only binding on port `4901`. Do not bind it to `0.0.0.0` for public exposure. Cloudflare Tunnel should route the public hostname to `http://127.0.0.1:4901`. Keep the app, data, configuration, media, and logs inside `$HOME/BSMS-Web/`.
 
 ## Environment
 
