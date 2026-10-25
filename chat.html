@@ -1418,6 +1418,22 @@ const State = {
     msgInterval: null
 };
 
+document.addEventListener('error', (event) => {
+    const img = event.target;
+    if (!img || img.tagName !== 'IMG' || img.dataset.fallbackApplied === '1') return;
+    img.dataset.fallbackApplied = '1';
+    const avatar = img.closest('.c-av-inner');
+    if (!avatar) {
+        img.remove();
+        return;
+    }
+    const owner = img.closest('[data-uid]');
+    const uid = owner?.getAttribute('data-uid');
+    const account = uid ? State.accountsCache?.[uid] : null;
+    const label = account?.displayName || account?.username || '?';
+    avatar.textContent = String(label).trim().charAt(0).toUpperCase() || '?';
+}, true);
+
 const ImageViewer = {
     open: function(src) {
         if (!src) return;
@@ -1627,7 +1643,11 @@ const ApiClient = {
 
 const PollingManager = {
     start: async () => {
-        await PollingManager.syncGlobal();
+        let ready = await PollingManager.syncGlobal();
+        while (!ready) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            ready = await PollingManager.syncGlobal();
+        }
         State.syncInterval = setInterval(PollingManager.syncGlobal, 5000);
     },
     stop: () => {
@@ -1687,7 +1707,11 @@ const PollingManager = {
             }
             
             SidebarManager.render();
-        } catch(e) {}
+            return true;
+        } catch(e) {
+            console.error('[BSMS Web] Could not load conversation metadata:', e);
+            return false;
+        }
     },
     syncMessages: async () => {
         if (!State.activeChannelId) return;
