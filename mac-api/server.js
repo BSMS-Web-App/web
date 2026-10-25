@@ -19,6 +19,7 @@ const PORT = Number.parseInt(process.env.BSMS_WEB_API_PORT || '4901', 10);
 const HOST = process.env.BSMS_WEB_API_HOST || '127.0.0.1';
 const API_KEY = process.env.BSMS_WEB_API_KEY || '';
 const DATA_FILE = path.resolve(process.env.BSMS_WEB_DATA_FILE || path.join(__dirname, '..', 'data', 'db.json'));
+const MEDIA_DIR = path.resolve(process.env.BSMS_WEB_MEDIA_DIR || path.join(__dirname, '..', 'media'));
 const JOURNAL_FILE = DATA_FILE + '.journal';
 const MAX_BODY_BYTES = process.env.BSMS_WEB_API_BODY_LIMIT || '25mb';
 const COMPACT_EVERY = Number.parseInt(process.env.BSMS_WEB_COMPACT_EVERY || '1000', 10);
@@ -192,6 +193,39 @@ function requireApiKey(req, res, next) {
   }
   return next();
 }
+
+const MEDIA_TYPES = {
+  '.webm': 'audio/webm',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.mov': 'video/quicktime',
+  '.webp': 'image/webp'
+};
+
+app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+
+  try {
+    for (const [extension, mimeType] of Object.entries(MEDIA_TYPES)) {
+      const filePath = path.join(MEDIA_DIR, mediaId + extension);
+      try {
+        const contents = await fs.readFile(filePath);
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Length', String(contents.length));
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        return res.status(200).send(contents);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    }
+    return sendError(res, 404, 'Media file not found.');
+  } catch (error) {
+    console.error('[BSMS Web Mac API] Media read failed:', error.message);
+    return sendError(res, 500, 'Media read failed.');
+  }
+});
 
 app.get('/health', requireApiKey, (_req, res) => {
   res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
