@@ -103,7 +103,13 @@ export default async function handler(req, res) {
             };
 
             await newRef.set(announcement);
-            return res.status(200).json({ success: true, announcement });
+            const responseAnnouncement = {
+                ...announcement,
+                authorAvatar: announcement.authorAvatar && typeof announcement.authorAvatar === 'object' && announcement.authorAvatar.type === 'media'
+                    ? `/api/media?id=${encodeURIComponent(announcement.authorAvatar.mediaId)}`
+                    : announcement.authorAvatar
+            };
+            return res.status(200).json({ success: true, announcement: responseAnnouncement });
         }
 
         if (action === 'delete') {
