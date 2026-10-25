@@ -69,10 +69,7 @@ export default async function handler(req, res) {
                 await db.ref(`/chat/users/${uid}/status`).set('online');
                 await db.ref(`/chat/users/${uid}/lastSeen`).set(admin.database.ServerValue.TIMESTAMP);
 
-                const [sessionSnap, chatData] = await Promise.all([
-                    db.ref(`/accounts/${uid}/sessions/${sessionId}/lastActive`).once('value'),
-                    requestMacApi('GET', '/v1/chat/sync?uid=' + encodeURIComponent(uid))
-                ]);
+                const chatData = await requestMacApi('GET', '/v1/chat/sync?uid=' + encodeURIComponent(uid));
 
                 const hiddenDms = account.hidden_dms ? Object.keys(account.hidden_dms) : [];
                 return res.status(200).json({
