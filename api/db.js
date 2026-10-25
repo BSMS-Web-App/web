@@ -10,7 +10,7 @@ const BSMS_WEB_API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, ''
 const BSMS_WEB_API_KEY = process.env.BSMS_WEB_API_KEY || '';
 
 if (!BSMS_WEB_API_URL || BSMS_WEB_API_KEY.length < 32) {
-    throw new Error('[BSMS Web :: DB] BSMS_WEB_API_URL and a 32+ character BSMS_WEB_API_KEY are required. No local or Firebase fallback is available.');
+    throw new Error('[BSMS Web :: DB] BSMS_WEB_API_URL and a 32+ character BSMS_WEB_API_KEY are required. No alternate database fallback is available.');
 }
 
 async function macRequest(method, route, body) {
@@ -109,7 +109,7 @@ export const requestMacApi = (method, route, body) => macRequest(method, route, 
 
 export const db = { ref: (pathStr) => makeRemoteRef(pathStr) };
 
-// Compatibility shim for existing handlers that use Firebase's server timestamp marker.
+// Compatibility shim for handlers that use the database server-timestamp marker.
 // The Mac API resolves { ".sv": "timestamp" } before persisting it.
 export const admin = {
     database: {
