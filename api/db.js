@@ -107,13 +107,14 @@ if (BSMS_API_URL || BSMS_API_KEY) {
             orderByChild: (childPath) => ({
                 equalTo: (expectedValue) => ({
                     once: async (eventType = 'value') => {
-                        const snapshot = await makeRemoteRef(cleanPath).once(eventType);
-                        const source = snapshot.val() || {};
-                        const filtered = {};
-                        for (const [key, item] of Object.entries(source)) {
-                            if (readChild(item, childPath) === expectedValue) filtered[key] = item;
-                        }
-                        return makeSnapshot(Object.keys(filtered).length ? filtered : null);
+                        if (eventType !== 'value') throw new Error('Mac DB adapter only supports once(value).');
+                        const query = new URLSearchParams({
+                            path: cleanPath,
+                            child: String(childPath),
+                            equalTo: JSON.stringify(expectedValue)
+                        });
+                        const result = await macRequest('GET', '/v1/db/query?' + query.toString());
+                        return makeSnapshot(result.value);
                     }
                 })
             })
