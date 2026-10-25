@@ -2,9 +2,6 @@
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
- *
- * Public media proxy for content-addressed attachments.
- * The Mac API key remains server-side; media IDs are SHA-256 hashes.
  */
 const API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, '');
 const API_KEY = process.env.BSMS_WEB_API_KEY || '';
