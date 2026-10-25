@@ -2493,7 +2493,7 @@ const ChatManager = {
             State.activeType = c._type;
             State.currentRole = c.members[State.user.uid]?.role || 'member';
 
-            // Unhide DM in Firebase if reopened
+            // Unhide the direct message in the database if reopened
             if (c._type === 'dms' && State.hiddenDms.includes(cid)) {
                 State.hiddenDms = State.hiddenDms.filter(id => id !== cid);
                 ApiClient.call('unhideDM', { cid });
