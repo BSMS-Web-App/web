@@ -37,4 +37,4 @@ Do not commit real API keys or database contents.
 
 ## Migration status
 
-This is the first service component, not a production cutover. Vercel handlers are being switched to this required API. Local JSON and Firebase fallbacks are not supported. Before production, we must also implement the data import/media extraction, configure a launch service and Cloudflare Tunnel, set Preview-only Vercel environment variables, and complete the essential persistence/authentication checks.
+This service is not a production cutover yet. The shared Vercel database adapter now requires this API and has no Firebase or local JSON fallback. Before production, import and validate the existing data, extract media into a separate media directory, configure a launch service and Cloudflare Tunnel, set Preview-only Vercel environment variables, and complete persistence/authentication checks.
