@@ -2662,13 +2662,20 @@ const ChatManager = {
                 });
                 if (res && res.content) {
                     m.content = res.content;
+                    m.attachmentMimeType = res.attachmentMimeType || m.attachmentMimeType || null;
+                    m.attachmentName = res.attachmentName || m.attachmentName || null;
                 }
             }
 
-            if (typeof m.content === 'string' && (m.content.startsWith('data:image') || m.contentType === 'image')) {
+            const isImageAttachment = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) ||
+                (typeof m.content === 'string' && m.content.startsWith('data:image')) ||
+                m.contentType === 'image';
+
+            if (typeof m.content === 'string' && isImageAttachment) {
                 preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" onclick="ImageViewer.open(this.src)" title="Click to view fullscreen" style="max-width:100%; border-radius:10px; display:block; cursor:pointer;">`;
                 const image = preview.querySelector('img');
                 if (image) image.addEventListener('error', () => {
+                    m.content = null;
                     preview.innerHTML = '<div style="font-size:0.85rem;color:#ef4444;">Image could not be loaded. Check the connection and try again.</div>';
                     if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.innerText = 'Retry'; }
                 }, { once: true });
@@ -3018,7 +3025,7 @@ const ChatManager = {
                     <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
                 </div>`;
             } else if (m.contentType === 'file' || m.contentType === 'image') {
-                const isImg = typeof m.content === 'string' && m.content.startsWith('data:image') || m.contentType === 'image';
+                const isImg = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) || (typeof m.content === 'string' && m.content.startsWith('data:image')) || m.contentType === 'image';
                 const name = Utils.escapeHTML(m.attachmentName || (isImg ? 'Image Attachment' : 'File Attachment'));
                 content += `
                 <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-top:4px; max-width:320px;">
