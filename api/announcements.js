@@ -44,7 +44,10 @@ export default async function handler(req, res) {
             
             const announcements = Object.entries(data).map(([id, item]) => ({
                 id,
-                ...item
+                ...item,
+                authorAvatar: item.authorAvatar && typeof item.authorAvatar === 'object' && item.authorAvatar.type === 'media'
+                    ? `/api/media?id=${encodeURIComponent(item.authorAvatar.mediaId)}`
+                    : item.authorAvatar
             })).sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
 
             const recent = announcements.length > 0 ? announcements[0] : null;
