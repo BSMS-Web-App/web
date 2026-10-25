@@ -12,7 +12,7 @@
   [![Express](https://img.shields.io/badge/Express-5.x-black?logo=express)](https://expressjs.com/)
   [![Vercel](https://img.shields.io/badge/Hosting-Vercel-black?logo=vercel)](https://vercel.com/)
 
-  [Website](https://bsms-web.vercel.app) · [Report a Bug](https://github.com/BSMS-Web-App/web/issues) · [View Releases](https://github.com/BSMS-Web-App/web/releases)
+  [Website](https://bsms-web.com) · [Report a Bug](https://github.com/BSMS-Web-App/web/issues) · [View Releases](https://github.com/BSMS-Web-App/web/releases)
 </div>
 
 ---
