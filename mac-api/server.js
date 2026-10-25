@@ -44,7 +44,7 @@ function clone(value) {
 function parsePath(input) {
   if (typeof input !== 'string') throw new Error('Path must be a string.');
   const parts = input.split('/').filter(Boolean);
-  if (parts.some((part) => part === '.' || part === '..' || part.includes('\0'))) {
+  if (parts.some((part) => part === '.' || part === '..' || part.includes('\0') || part === '__proto__' || part === 'prototype' || part === 'constructor')) {
     throw new Error('Invalid database path.');
   }
   return parts;
@@ -228,6 +228,7 @@ app.get('/v1/db/query', requireApiKey, (req, res) => {
 app.put('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
+    if (parts.length === 0) return sendError(res, 400, 'Writing the database root is not allowed.');
     const value = resolveServerValues(req.body?.value);
     await enqueueMutation(() => commitMutation({
       op: value === null || value === undefined ? 'delete' : 'set',
@@ -244,6 +245,7 @@ app.put('/v1/db', requireApiKey, async (req, res) => {
 app.patch('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
+    if (parts.length === 0) return sendError(res, 400, 'Updating the database root is not allowed.');
     const updates = req.body?.updates;
     // Validate before queuing to return clear client errors.
     if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
@@ -274,6 +276,7 @@ app.patch('/v1/db', requireApiKey, async (req, res) => {
 app.post('/v1/db/compare-and-set', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
+    if (parts.length === 0) return sendError(res, 400, 'Root transactions are not allowed.');
     const expected = req.body?.expected ?? null;
     const value = resolveServerValues(req.body?.value);
     return await enqueueMutation(async () => {
