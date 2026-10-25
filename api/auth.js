@@ -488,7 +488,7 @@ export default async function handler(req, res) {
                             uid: id,
                             username: acc.username,
                             displayName: acc.displayName || acc.username,
-                            avatar: acc.avatar || '',
+                            avatar: mediaUrl(acc.avatar || ''),
                             bio: acc.bio || '',
                             role: acc.role || 'user',
                             verified: Boolean(acc.verified),
