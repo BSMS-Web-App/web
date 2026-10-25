@@ -7,6 +7,13 @@
 import { db, admin } from './db.js';
 import crypto from 'crypto';
 
+function mediaUrl(value) {
+    if (value && typeof value === 'object' && value.type === 'media' && /^[a-f0-9]{64}$/.test(value.mediaId || '')) {
+        return `/api/media?id=${encodeURIComponent(value.mediaId)}`;
+    }
+    return value;
+}
+
 // Secure password hashing
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
@@ -231,6 +238,7 @@ export default async function handler(req, res) {
                 });
 
                 const { password: _, ...safeProfile } = targetAcc;
+                safeProfile.avatar = mediaUrl(safeProfile.avatar);
                 return res.status(200).json({ success: true, sessionId: newSessionId, uid: targetUid, profile: safeProfile });
             }
 
@@ -272,6 +280,7 @@ export default async function handler(req, res) {
                 if (banCheck.isBanned) return res.status(403).json({ error: 'Banned.', account_status: 'banned', banType: banCheck.banType, reason: banCheck.banReason, ban_expires: banCheck.banExpires });
                 
                 const { password: _, ...safeProfile } = user.account;
+                safeProfile.avatar = mediaUrl(safeProfile.avatar);
                 return res.status(200).json({ profile: safeProfile });
             }
 
