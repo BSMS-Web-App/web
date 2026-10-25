@@ -8,6 +8,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "dotenv": "^16.6.1",
     "express": "^5.3.0"
   }
 }
