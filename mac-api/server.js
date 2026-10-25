@@ -92,6 +92,16 @@ function equalJson(a, b) {
   return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
 }
 
+function resolveServerValues(value) {
+  if (value && typeof value === 'object') {
+    if (!Array.isArray(value) && value['.sv'] === 'timestamp') return Date.now();
+    const copy = Array.isArray(value) ? [] : {};
+    for (const [key, child] of Object.entries(value)) copy[key] = resolveServerValues(child);
+    return copy;
+  }
+  return value;
+}
+
 async function writeAtomic(filePath, contents) {
   const directory = path.dirname(filePath);
   await fs.mkdir(directory, { recursive: true });
@@ -142,16 +152,22 @@ async function compactJournal() {
 async function commitMutation(record) {
   const nextSequence = sequence + 1;
   const completeRecord = { ...record, sequence: nextSequence };
+  // Validate and prepare the next state before writing anything to the journal.
+  const nextDatabase = applyRecord(clone(database), completeRecord);
   // Write-ahead log: persist the operation before publishing it in memory.
   await appendJournal(completeRecord);
-  database = applyRecord(clone(database), completeRecord);
+  database = nextDatabase;
   sequence = nextSequence;
   mutationsSinceCompact += 1;
 
   if (mutationsSinceCompact >= COMPACT_EVERY) {
-    // The snapshot includes the latest sequence, so replay safely skips older
-    // journal entries if the process stops between the snapshot and truncation.
-    await compactJournal();
+    // A compaction failure does not undo a committed journaled mutation.
+    // Keep the journal as the durable source and retry compaction later.
+    try {
+      await compactJournal();
+    } catch (error) {
+      console.error('[BSMS Mac API] Snapshot compaction failed; journal retained:', error.message);
+    }
   }
 }
 
@@ -191,7 +207,7 @@ app.get('/v1/db', requireApiKey, (req, res) => {
 app.put('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
-    const value = req.body?.value;
+    const value = resolveServerValues(req.body?.value);
     await enqueueMutation(() => commitMutation({
       op: value === null || value === undefined ? 'delete' : 'set',
       path: '/' + parts.join('/'),
@@ -212,10 +228,20 @@ app.patch('/v1/db', requireApiKey, async (req, res) => {
     if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
       return sendError(res, 400, 'Updates must be a JSON object.');
     }
+    try {
+      for (const relativePath of Object.keys(updates)) {
+        if (parsePath(relativePath).length === 0) {
+          return sendError(res, 400, 'Update paths cannot be empty.');
+        }
+      }
+    } catch {
+      return sendError(res, 400, 'Invalid update path.');
+    }
+    const resolvedUpdates = resolveServerValues(updates);
     await enqueueMutation(() => commitMutation({
       op: 'update',
       path: '/' + parts.join('/'),
-      updates
+      updates: resolvedUpdates
     }));
     return res.status(200).json({ success: true });
   } catch (error) {
@@ -228,7 +254,7 @@ app.post('/v1/db/compare-and-set', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
     const expected = req.body?.expected ?? null;
-    const value = req.body?.value;
+    const value = resolveServerValues(req.body?.value);
     return await enqueueMutation(async () => {
       const current = readAt(database, parts);
       if (!equalJson(current, expected)) {
