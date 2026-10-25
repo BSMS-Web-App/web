@@ -7,9 +7,6 @@
         return;
     }
 
-    const FIREBASE_URL =
-        `https://bsms-web-default-rtdb.firebaseio.com/config/versions/${encodeURIComponent(PAGE_NAME)}.json`;
-
     function isNewer(a, b) {
         a = a.split(".").map(Number);
         b = b.split(".").map(Number);
@@ -24,13 +21,15 @@
 
     async function checkForUpdate() {
         try {
-            const r = await fetch(FIREBASE_URL, {
+            const r = await fetch(`/api/version?name=${encodeURIComponent(PAGE_NAME)}`, {
                 cache: "no-store"
             });
 
-            const latest = (await r.text())
-                .replace(/"/g, "")
-                .trim();
+            if (!r.ok) return;
+
+            const payload = await r.json();
+            const latest = String(payload.version || "").trim();
+            if (!latest) return;
 
             if (
                 !isNewer(latest, PAGE_VERSION) ||
