@@ -3,8 +3,8 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  *
- * Internal service only. Expose it through Cloudflare Tunnel, never directly
- * expose the JSON file or bind this service to a public interface.
+ * Internal service only. Publish it through Cloudflare Tunnel; never expose
+ * the data files or bind this service directly to a public interface.
  */
 import express from 'express';
 import fs from 'node:fs/promises';
@@ -14,18 +14,16 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const PORT = Number.parseInt(process.env.BSMS_API_PORT || '4902', 10);
 const HOST = process.env.BSMS_API_HOST || '127.0.0.1';
 const API_KEY = process.env.BSMS_API_KEY || '';
-const DATA_FILE = path.resolve(
-  process.env.BSMS_DATA_FILE || path.join(__dirname, 'data', 'db.json')
-);
+const DATA_FILE = path.resolve(process.env.BSMS_DATA_FILE || path.join(__dirname, 'data', 'db.json'));
+const JOURNAL_FILE = DATA_FILE + '.journal';
 const MAX_BODY_BYTES = process.env.BSMS_API_BODY_LIMIT || '25mb';
+const COMPACT_EVERY = Number.parseInt(process.env.BSMS_COMPACT_EVERY || '1000', 10);
 
 if (API_KEY.length < 32) {
   console.error('[BSMS Mac API] BSMS_API_KEY must be at least 32 characters.');
-  process.exitCode = 1;
   throw new Error('Missing or weak BSMS_API_KEY.');
 }
 
@@ -34,6 +32,8 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: MAX_BODY_BYTES, strict: true }));
 
 let database = {};
+let sequence = 0;
+let mutationsSinceCompact = 0;
 let mutationQueue = Promise.resolve();
 
 function clone(value) {
@@ -60,22 +60,15 @@ function readAt(root, parts) {
 
 function writeAt(root, parts, value) {
   if (parts.length === 0) return value === null || value === undefined ? {} : clone(value);
-
   let current = root;
   for (let i = 0; i < parts.length - 1; i += 1) {
     const key = parts[i];
-    if (!current[key] || typeof current[key] !== 'object' || Array.isArray(current[key])) {
-      current[key] = {};
-    }
+    if (!current[key] || typeof current[key] !== 'object' || Array.isArray(current[key])) current[key] = {};
     current = current[key];
   }
-
   const last = parts[parts.length - 1];
-  if (value === null || value === undefined) {
-    delete current[last];
-  } else {
-    current[last] = clone(value);
-  }
+  if (value === null || value === undefined) delete current[last];
+  else current[last] = clone(value);
   return root;
 }
 
@@ -99,25 +92,66 @@ function equalJson(a, b) {
   return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
 }
 
-async function persist(nextValue) {
-  const directory = path.dirname(DATA_FILE);
+async function writeAtomic(filePath, contents) {
+  const directory = path.dirname(filePath);
   await fs.mkdir(directory, { recursive: true });
-  const temporary = path.join(
-    directory,
-    `.db-${process.pid}-${crypto.randomBytes(8).toString('hex')}.tmp`
-  );
+  const temporary = path.join(directory, `.tmp-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
   const handle = await fs.open(temporary, 'wx', 0o600);
   try {
-    await handle.writeFile(JSON.stringify(nextValue), 'utf8');
+    await handle.writeFile(contents, 'utf8');
     await handle.sync();
   } finally {
     await handle.close();
   }
   try {
-    await fs.rename(temporary, DATA_FILE);
+    await fs.rename(temporary, filePath);
   } catch (error) {
     await fs.rm(temporary, { force: true }).catch(() => {});
     throw error;
+  }
+}
+
+async function appendJournal(record) {
+  await fs.mkdir(path.dirname(JOURNAL_FILE), { recursive: true });
+  const handle = await fs.open(JOURNAL_FILE, 'a', 0o600);
+  try {
+    await handle.writeFile(JSON.stringify(record) + '\n', 'utf8');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+function applyRecord(root, record) {
+  if (record.op === 'set' || record.op === 'delete') {
+    return writeAt(root, parsePath(record.path), record.op === 'delete' ? null : record.value);
+  }
+  if (record.op === 'update') {
+    return applyUpdate(root, parsePath(record.path), record.updates);
+  }
+  throw new Error('Unknown journal operation: ' + record.op);
+}
+
+async function compactJournal() {
+  const snapshot = JSON.stringify({ formatVersion: 1, sequence, data: database });
+  await writeAtomic(DATA_FILE, snapshot);
+  await writeAtomic(JOURNAL_FILE, '');
+  mutationsSinceCompact = 0;
+}
+
+async function commitMutation(record) {
+  const nextSequence = sequence + 1;
+  const completeRecord = { ...record, sequence: nextSequence };
+  // Write-ahead log: persist the operation before publishing it in memory.
+  await appendJournal(completeRecord);
+  database = applyRecord(clone(database), completeRecord);
+  sequence = nextSequence;
+  mutationsSinceCompact += 1;
+
+  if (mutationsSinceCompact >= COMPACT_EVERY) {
+    // The snapshot includes the latest sequence, so replay safely skips older
+    // journal entries if the process stops between the snapshot and truncation.
+    await compactJournal();
   }
 }
 
@@ -148,8 +182,7 @@ app.get('/health', requireApiKey, (_req, res) => {
 
 app.get('/v1/db', requireApiKey, (req, res) => {
   try {
-    const value = readAt(database, parsePath(req.query.path ?? '/'));
-    return res.status(200).json({ value });
+    return res.status(200).json({ value: readAt(database, parsePath(req.query.path ?? '/')) });
   } catch (error) {
     return sendError(res, 400, error.message);
   }
@@ -159,11 +192,11 @@ app.put('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
     const value = req.body?.value;
-    await enqueueMutation(async () => {
-      const next = writeAt(clone(database), parts, value);
-      await persist(next);
-      database = next;
-    });
+    await enqueueMutation(() => commitMutation({
+      op: value === null || value === undefined ? 'delete' : 'set',
+      path: '/' + parts.join('/'),
+      value
+    }));
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('[BSMS Mac API] SET failed:', error.message);
@@ -175,17 +208,19 @@ app.patch('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
     const updates = req.body?.updates;
-    await enqueueMutation(async () => {
-      const next = applyUpdate(clone(database), parts, updates);
-      await persist(next);
-      database = next;
-    });
+    // Validate before queuing to return clear client errors.
+    if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+      return sendError(res, 400, 'Updates must be a JSON object.');
+    }
+    await enqueueMutation(() => commitMutation({
+      op: 'update',
+      path: '/' + parts.join('/'),
+      updates
+    }));
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('[BSMS Mac API] UPDATE failed:', error.message);
-    return sendError(res, 400, error.message === 'Updates must be a JSON object.'
-      ? error.message
-      : 'Database update failed.');
+    return sendError(res, 500, 'Database update failed.');
   }
 });
 
@@ -199,9 +234,11 @@ app.post('/v1/db/compare-and-set', requireApiKey, async (req, res) => {
       if (!equalJson(current, expected)) {
         return res.status(200).json({ committed: false, value: current });
       }
-      const next = writeAt(clone(database), parts, value);
-      await persist(next);
-      database = next;
+      await commitMutation({
+        op: value === null || value === undefined ? 'delete' : 'set',
+        path: '/' + parts.join('/'),
+        value
+      });
       return res.status(200).json({ committed: true, value: value ?? null });
     });
   } catch (error) {
@@ -214,11 +251,10 @@ app.delete('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.query.path ?? '');
     if (parts.length === 0) return sendError(res, 400, 'Deleting the database root is not allowed.');
-    await enqueueMutation(async () => {
-      const next = writeAt(clone(database), parts, null);
-      await persist(next);
-      database = next;
-    });
+    await enqueueMutation(() => commitMutation({
+      op: 'delete',
+      path: '/' + parts.join('/')
+    }));
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('[BSMS Mac API] DELETE failed:', error.message);
@@ -226,36 +262,70 @@ app.delete('/v1/db', requireApiKey, async (req, res) => {
   }
 });
 
-async function start() {
+async function loadDatabase() {
+  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
   try {
-    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    try {
-      const raw = await fs.readFile(DATA_FILE, 'utf8');
-      database = JSON.parse(raw);
-      if (!database || typeof database !== 'object' || Array.isArray(database)) {
-        throw new Error('Database root must be a JSON object.');
-      }
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-      database = {
-        accounts: {},
-        announcements: {},
-        banned_devices: {},
-        chat: { users: {}, conversations: { dms: {}, gcs: {} } },
-        config: { versions: {} },
-        chess: {}
-      };
-      await persist(database);
+    const raw = await fs.readFile(DATA_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.formatVersion === 1 && parsed.data && typeof parsed.data === 'object') {
+      database = parsed.data;
+      sequence = Number.isSafeInteger(parsed.sequence) ? parsed.sequence : 0;
+    } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      // Accept the existing Firebase export / data/db.json as an initial import.
+      database = parsed;
+      sequence = 0;
+    } else {
+      throw new Error('Database root must be a JSON object.');
     }
-
-    app.listen(PORT, HOST, () => {
-      console.log('[BSMS Mac API] Listening on http://' + HOST + ':' + PORT);
-      console.log('[BSMS Mac API] Persistent data file: ' + DATA_FILE);
-    });
   } catch (error) {
-    console.error('[BSMS Mac API] Startup failed:', error);
-    process.exitCode = 1;
+    if (error.code !== 'ENOENT') throw error;
+    database = {
+      accounts: {},
+      announcements: {},
+      banned_devices: {},
+      chat: { users: {}, conversations: { dms: {}, gcs: {} } },
+      config: { versions: {} },
+      chess: {}
+    };
+    sequence = 0;
+    await writeAtomic(DATA_FILE, JSON.stringify({ formatVersion: 1, sequence, data: database }));
   }
+
+  let journal = '';
+  try {
+    journal = await fs.readFile(JOURNAL_FILE, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+
+  const lines = journal.split('\n');
+  const validLines = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line.trim()) continue;
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch (error) {
+      const isLast = index === lines.length - 1 || (index === lines.length - 2 && lines.at(-1) === '');
+      if (isLast) break; // Ignore only a possibly partial final append.
+      throw new Error('Database journal is corrupt before its final line.');
+    }
+    validLines.push(line);
+    if (Number.isSafeInteger(record.sequence) && record.sequence > sequence) {
+      database = applyRecord(database, record);
+      sequence = record.sequence;
+    }
+  }
+
+  // Remove an incomplete trailing journal line if one was found.
+  const normalizedJournal = validLines.length ? validLines.join('\n') + '\n' : '';
+  if (normalizedJournal !== journal) await writeAtomic(JOURNAL_FILE, normalizedJournal);
 }
 
-await start();
+await loadDatabase();
+app.listen(PORT, HOST, () => {
+  console.log('[BSMS Mac API] Listening on http://' + HOST + ':' + PORT);
+  console.log('[BSMS Mac API] JSON snapshot: ' + DATA_FILE);
+  console.log('[BSMS Mac API] Write-ahead journal: ' + JOURNAL_FILE);
+});
