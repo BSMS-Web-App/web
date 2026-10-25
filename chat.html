@@ -1626,8 +1626,8 @@ const ApiClient = {
 };
 
 const PollingManager = {
-    start: () => {
-        PollingManager.syncGlobal();
+    start: async () => {
+        await PollingManager.syncGlobal();
         State.syncInterval = setInterval(PollingManager.syncGlobal, 5000);
     },
     stop: () => {
@@ -1701,7 +1701,9 @@ const PollingManager = {
 
             if (data && data.unauthorized) {
                 ChatManager.showUnauthorized();
-                return;
+                const spinner = document.getElementById('chatLoadingSpinner');
+                if (spinner) spinner.style.display = 'none';
+                return true;
             }
 
             if (data && data.accounts) {
@@ -1731,9 +1733,11 @@ const PollingManager = {
             }
             const spinner = document.getElementById('chatLoadingSpinner');
             if (spinner) spinner.style.display = 'none';
+            return true;
         } catch(e) {
             // Keep the loading indicator visible until data actually arrives.
             console.error('[BSMS Web] Could not load chat messages:', e);
+            return false;
         }
     }
 };
@@ -3362,27 +3366,33 @@ const AuthManager = {
             document.getElementById('loginModal').classList.remove('show');
             UI.setLoad(70, "Downloading Conversations");
 
-            PollingManager.start();
+            await PollingManager.start();
             SearchManager.init();
             ScrollManager.init();
             ContextMenu.init();
             Router.init();
             ProfileHoverManager.init();
-            
-            setTimeout(async () => {
-                UI.setLoad(95, "Opening conversation");
-                await Router.resolvePendingRoute();
-                UI.setLoad(100, "Ready");
-                if (window.innerWidth <= 768) {
-                    if (State.activeChannelId) {
-                        document.getElementById('sidebar').classList.add('hidden');
-                    } else {
-                        document.getElementById('sidebar').classList.remove('hidden');
-                    }
+
+            UI.setLoad(90, "Opening conversation");
+            await Router.resolvePendingRoute();
+            if (State.activeChannelId) {
+                let loaded = await PollingManager.syncMessages();
+                while (!loaded) {
+                    UI.setLoad(95, "Waiting for chat data");
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    loaded = await PollingManager.syncMessages();
+                }
+            }
+            UI.setLoad(100, "Ready");
+            if (window.innerWidth <= 768) {
+                if (State.activeChannelId) {
+                    document.getElementById('sidebar').classList.add('hidden');
                 } else {
                     document.getElementById('sidebar').classList.remove('hidden');
                 }
-            }, 1000);
+            } else {
+                document.getElementById('sidebar').classList.remove('hidden');
+            }
 
             const inp = document.getElementById('msgInput');
             if (inp) {
