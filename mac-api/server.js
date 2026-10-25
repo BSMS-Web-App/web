@@ -1,10 +1,7 @@
 /*
- * BSMS Web Mac Database API
+ * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
- *
- * Internal service only. Publish it through Cloudflare Tunnel; never expose
- * the data files or bind this service directly to a public interface.
  */
 import 'dotenv/config';
 import express from 'express';
@@ -399,7 +396,7 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         _id: cid,
         config,
         members,
-        messageCount: last ? 1 : 0,
+        messageCount: indexedKeys.length,
         lastMessage,
         lastMessageId: lastId
       };
@@ -457,10 +454,10 @@ app.get('/v1/chat/messages', requireApiKey, (req, res) => {
     if (message.senderUid) neededUids.add(message.senderUid);
     const media = message.content && typeof message.content === 'object' && message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
     if ((message.contentType === 'file' || message.contentType === 'image') && media) {
-      messages[id] = { ...message, content: null, hasContent: true, attachmentName: message.attachmentName || 'Attachment', senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+      messages[id] = { ...message, content: null, hasContent: true, attachmentName: message.attachmentName || 'Attachment', attachmentMimeType: message.content.mimeType || null, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
     } else {
       const content = media ? '/api/media?id=' + encodeURIComponent(message.content.mediaId) : message.content;
-      messages[id] = { ...message, content, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+      messages[id] = { ...message, content, attachmentMimeType: media ? (message.content.mimeType || null) : (typeof message.content === 'string' && message.content.startsWith('data:') ? message.content.slice(5).split(/[;,]/)[0] : null), senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
     }
   }
   const accounts = {};
