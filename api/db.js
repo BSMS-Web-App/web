@@ -105,6 +105,8 @@ function makeRemoteRef(pathStr) {
     };
 }
 
+export const requestMacApi = (method, route, body) => macRequest(method, route, body);
+
 export const db = { ref: (pathStr) => makeRemoteRef(pathStr) };
 
 // Compatibility shim for existing handlers that use Firebase's server timestamp marker.
