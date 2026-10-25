@@ -15,7 +15,7 @@ const DATA_FILE = path.join(__dirname, '../data/db.json');
 
 // Remote Mac JSON API mode. Configure BSMS_API_URL and BSMS_API_KEY only in
 // Vercel server-side environment variables; never expose either to browser code.
-const BSMS_API_URL = (process.env.BSMS_API_URL || '').replace(/\\/+$/, '');
+const BSMS_API_URL = (process.env.BSMS_API_URL || '').replace(/\/+$/, '');
 const BSMS_API_KEY = process.env.BSMS_API_KEY || '';
 let remoteDb = null;
 
