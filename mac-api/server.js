@@ -15,17 +15,17 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PORT = Number.parseInt(process.env.BSMS_API_PORT || '4902', 10);
-const HOST = process.env.BSMS_API_HOST || '127.0.0.1';
-const API_KEY = process.env.BSMS_API_KEY || '';
-const DATA_FILE = path.resolve(process.env.BSMS_DATA_FILE || path.join(__dirname, 'data', 'db.json'));
+const PORT = Number.parseInt(process.env.BSMS_WEB_API_PORT || '4901', 10);
+const HOST = process.env.BSMS_WEB_API_HOST || '127.0.0.1';
+const API_KEY = process.env.BSMS_WEB_API_KEY || '';
+const DATA_FILE = path.resolve(process.env.BSMS_WEB_DATA_FILE || path.join(__dirname, '..', 'data', 'db.json'));
 const JOURNAL_FILE = DATA_FILE + '.journal';
-const MAX_BODY_BYTES = process.env.BSMS_API_BODY_LIMIT || '25mb';
-const COMPACT_EVERY = Number.parseInt(process.env.BSMS_COMPACT_EVERY || '1000', 10);
+const MAX_BODY_BYTES = process.env.BSMS_WEB_API_BODY_LIMIT || '25mb';
+const COMPACT_EVERY = Number.parseInt(process.env.BSMS_WEB_COMPACT_EVERY || '1000', 10);
 
 if (API_KEY.length < 32) {
-  console.error('[BSMS Mac API] BSMS_API_KEY must be at least 32 characters.');
-  throw new Error('Missing or weak BSMS_API_KEY.');
+  console.error('[BSMS Web Mac API] BSMS_WEB_API_KEY must be at least 32 characters.');
+  throw new Error('Missing or weak BSMS_WEB_API_KEY.');
 }
 
 const app = express();
@@ -44,7 +44,7 @@ function clone(value) {
 function parsePath(input) {
   if (typeof input !== 'string') throw new Error('Path must be a string.');
   const parts = input.split('/').filter(Boolean);
-  if (parts.some((part) => part === '.' || part === '..' || part.includes('\\0'))) {
+  if (parts.some((part) => part === '.' || part === '..' || part.includes('\0'))) {
     throw new Error('Invalid database path.');
   }
   return parts;
@@ -167,7 +167,7 @@ async function commitMutation(record) {
     try {
       await compactJournal();
     } catch (error) {
-      console.error('[BSMS Mac API] Snapshot compaction failed; journal retained:', error.message);
+      console.error('[BSMS Web Mac API] Snapshot compaction failed; journal retained:', error.message);
     }
   }
 }
@@ -194,7 +194,7 @@ function requireApiKey(req, res, next) {
 }
 
 app.get('/health', requireApiKey, (_req, res) => {
-  res.status(200).json({ ok: true, service: 'bsms-mac-api' });
+  res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
 });
 
 app.get('/v1/db', requireApiKey, (req, res) => {
@@ -236,7 +236,7 @@ app.put('/v1/db', requireApiKey, async (req, res) => {
     }));
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('[BSMS Mac API] SET failed:', error.message);
+    console.error('[BSMS Web Mac API] SET failed:', error.message);
     return sendError(res, 500, 'Database write failed.');
   }
 });
@@ -266,7 +266,7 @@ app.patch('/v1/db', requireApiKey, async (req, res) => {
     }));
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('[BSMS Mac API] UPDATE failed:', error.message);
+    console.error('[BSMS Web Mac API] UPDATE failed:', error.message);
     return sendError(res, 500, 'Database update failed.');
   }
 });
@@ -289,7 +289,7 @@ app.post('/v1/db/compare-and-set', requireApiKey, async (req, res) => {
       return res.status(200).json({ committed: true, value: value ?? null });
     });
   } catch (error) {
-    console.error('[BSMS Mac API] TRANSACTION failed:', error.message);
+    console.error('[BSMS Web Mac API] TRANSACTION failed:', error.message);
     return sendError(res, 500, 'Database transaction failed.');
   }
 });
@@ -304,7 +304,7 @@ app.delete('/v1/db', requireApiKey, async (req, res) => {
     }));
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('[BSMS Mac API] DELETE failed:', error.message);
+    console.error('[BSMS Web Mac API] DELETE failed:', error.message);
     return sendError(res, 500, 'Database delete failed.');
   }
 });
@@ -372,7 +372,7 @@ async function loadDatabase() {
 
 await loadDatabase();
 app.listen(PORT, HOST, () => {
-  console.log('[BSMS Mac API] Listening on http://' + HOST + ':' + PORT);
-  console.log('[BSMS Mac API] JSON snapshot: ' + DATA_FILE);
-  console.log('[BSMS Mac API] Write-ahead journal: ' + JOURNAL_FILE);
+  console.log('[BSMS Web Mac API] Listening on http://' + HOST + ':' + PORT);
+  console.log('[BSMS Web Mac API] JSON snapshot: ' + DATA_FILE);
+  console.log('[BSMS Web Mac API] Write-ahead journal: ' + JOURNAL_FILE);
 });
