@@ -2583,11 +2583,11 @@ const ChatManager = {
             const cached = State.conversationCache[cid];
             if (cached && cached.messages && Object.keys(cached.messages).length > 0) {
                 c.messages = { ...cached.messages };
-                this.oldestMessageId = cached.oldestId;
-                this.hasMoreMessages = cached.hasMore;
                 const spinner = document.getElementById('chatLoadingSpinner');
                 if (spinner) spinner.style.display = 'none';
                 this.renderInitialMessages(c.messages);
+                this.oldestMessageId = cached.oldestId;
+                this.hasMoreMessages = cached.hasMore;
                 this.checkScrollForEarlier();
             } else {
                 this.resetChatLog();
