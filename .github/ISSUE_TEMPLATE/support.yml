@@ -68,7 +68,7 @@ body:
     attributes:
       label: Affected URL
       description: If relevant, provide the URL of the page where you need help.
-      placeholder: "https://bsms-web.vercel.app"
+      placeholder: "https://bsms-web.com"
     validations:
       required: false
 
