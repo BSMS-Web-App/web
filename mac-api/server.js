@@ -205,6 +205,26 @@ app.get('/v1/db', requireApiKey, (req, res) => {
   }
 });
 
+app.get('/v1/db/query', requireApiKey, (req, res) => {
+  try {
+    const pathParts = parsePath(req.query.path ?? '/');
+    const childPath = req.query.child;
+    if (typeof childPath !== 'string' || !childPath) {
+      return sendError(res, 400, 'A child path is required.');
+    }
+    const expected = JSON.parse(String(req.query.equalTo ?? 'null'));
+    const source = readAt(database, pathParts) || {};
+    const filtered = {};
+    for (const [key, item] of Object.entries(source)) {
+      const actual = readAt(item, parsePath(childPath));
+      if (equalJson(actual, expected)) filtered[key] = item;
+    }
+    return res.status(200).json({ value: Object.keys(filtered).length ? filtered : null });
+  } catch (error) {
+    return sendError(res, 400, 'Invalid database query.');
+  }
+});
+
 app.put('/v1/db', requireApiKey, async (req, res) => {
   try {
     const parts = parsePath(req.body?.path ?? '');
