@@ -37,6 +37,16 @@ let database = {};
 let sequence = 0;
 let mutationsSinceCompact = 0;
 let mutationQueue = Promise.resolve();
+const sessionIndex = new Map();
+
+function rebuildSessionIndex() {
+  sessionIndex.clear();
+  for (const [uid, account] of Object.entries(database.accounts || {})) {
+    for (const sessionId of Object.keys(account?.sessions || {})) {
+      sessionIndex.set(sessionId, uid);
+    }
+  }
+}
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -134,12 +144,30 @@ async function appendJournal(record) {
   }
 }
 
+function copyPath(root, parts) {
+  const rootCopy = Array.isArray(root) ? root.slice() : { ...(root || {}) };
+  let source = root || {};
+  let target = rootCopy;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const key = parts[i];
+    const child = source && typeof source === 'object' ? source[key] : undefined;
+    const childCopy = Array.isArray(child) ? child.slice()
+      : child && typeof child === 'object' ? { ...child } : {};
+    target[key] = childCopy;
+    source = child || {};
+    target = childCopy;
+  }
+  return rootCopy;
+}
+
 function applyRecord(root, record) {
+  const parts = parsePath(record.path);
+  const nextRoot = copyPath(root, parts);
   if (record.op === 'set' || record.op === 'delete') {
-    return writeAt(root, parsePath(record.path), record.op === 'delete' ? null : record.value);
+    return writeAt(nextRoot, parts, record.op === 'delete' ? null : record.value);
   }
   if (record.op === 'update') {
-    return applyUpdate(root, parsePath(record.path), record.updates);
+    return applyUpdate(nextRoot, parts, record.updates);
   }
   throw new Error('Unknown journal operation: ' + record.op);
 }
@@ -155,10 +183,11 @@ async function commitMutation(record) {
   const nextSequence = sequence + 1;
   const completeRecord = { ...record, sequence: nextSequence };
   // Validate and prepare the next state before writing anything to the journal.
-  const nextDatabase = applyRecord(clone(database), completeRecord);
+  const nextDatabase = applyRecord(database, completeRecord);
   // Write-ahead log: persist the operation before publishing it in memory.
   await appendJournal(completeRecord);
   database = nextDatabase;
+  if (completeRecord.path === '/accounts' || completeRecord.path.startsWith('/accounts/')) rebuildSessionIndex();
   sequence = nextSequence;
   mutationsSinceCompact += 1;
 
@@ -258,12 +287,11 @@ function numericKeySort(a, b) {
 app.get('/v1/auth/session', requireApiKey, (req, res) => {
   const sessionId = String(req.query.sessionId || '');
   if (!sessionId || sessionId.length > 512) return sendError(res, 400, 'Invalid session ID.');
-  const accounts = database.accounts || {};
-  for (const [uid, account] of Object.entries(accounts)) {
-    if (account?.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) {
-      const { password, sessions, ...safeAccount } = account;
-      return res.status(200).json({ uid, account: safeAccount });
-    }
+  const uid = sessionIndex.get(sessionId);
+  const account = uid ? database.accounts?.[uid] : null;
+  if (account?.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) {
+    const { password, sessions, ...safeAccount } = account;
+    return res.status(200).json({ uid, account: safeAccount });
   }
   return res.status(404).json({ uid: null, account: null });
 });
@@ -295,9 +323,18 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         if (allAccounts[memberUid]?.account_status !== 'banned') members[memberUid] = memberData;
       }
       const messageMap = channel.messages || {};
-      const messageIds = Object.keys(messageMap).filter((id) => messageMap[id] != null).sort(numericKeySort);
-      const lastId = messageIds.length ? messageIds[messageIds.length - 1] : null;
-      const last = lastId ? messageMap[lastId] : null;
+      let lastId = channel.config?.lastMessageId != null ? String(channel.config.lastMessageId) : '';
+      let last = lastId ? messageMap[lastId] : null;
+      if (!last) {
+        for (const [candidateId, candidate] of Object.entries(messageMap)) {
+          if (candidate == null) continue;
+          if (!last || numericKeySort(lastId, candidateId) < 0) {
+            lastId = candidateId;
+            last = candidate;
+          }
+        }
+      }
+      if (!last) lastId = null;
       const lastMessage = last ? {
         id: lastId,
         senderUid: last.senderUid || null,
@@ -323,7 +360,7 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         _id: cid,
         config,
         members,
-        messageCount: messageIds.length,
+        messageCount: last ? 1 : 0,
         lastMessage,
         lastMessageId: lastId
       };
@@ -570,6 +607,7 @@ async function loadDatabase() {
 }
 
 await loadDatabase();
+rebuildSessionIndex();
 app.listen(PORT, HOST, () => {
   console.log('[BSMS Web Mac API] Listening on http://' + HOST + ':' + PORT);
   console.log('[BSMS Web Mac API] JSON snapshot: ' + DATA_FILE);
