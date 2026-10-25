@@ -464,7 +464,7 @@ async function pushCloudSaves(keepAlive = false) {
             },
             body: JSON.stringify({ saves: dump })
         });
-        console.log("[BSMS Web :: Games] Progress successfully stored in Firebase.");
+        console.log("[BSMS Web :: Games] Progress successfully stored in the database.");
     } catch (err) {
         console.error("[BSMS Web :: Games] Failed to push cloud saves", err);
     }
@@ -622,7 +622,7 @@ async function triggerLoadGame(game) {
                         window.focus();
                     });
 
-                    // Live localStorage proxy to notify parent and persist to Firebase
+                    // Live localStorage proxy to notify parent and persist to the database
                     try {
                         const _origSet = window.localStorage.setItem.bind(window.localStorage);
                         window.localStorage.setItem = function(k, v) {
