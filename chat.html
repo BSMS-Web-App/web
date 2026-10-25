@@ -1674,7 +1674,10 @@ const PollingManager = {
             for (const [cid, channel] of Object.entries(incomingChannels)) {
                 const previous = previousChannels[cid];
                 const cached = State.conversationCache[cid];
-                channel.messages = previous?.messages || cached?.messages || {};
+                const previousMessages = previous?.messages || {};
+                channel.messages = Object.keys(previousMessages).length
+                    ? previousMessages
+                    : (cached?.messages || previousMessages);
                 if (cached) {
                     channel.messageCount = Math.max(channel.messageCount || 0, Object.keys(channel.messages).length);
                 }
