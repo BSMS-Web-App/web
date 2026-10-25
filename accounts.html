@@ -989,7 +989,7 @@ function renderAvatarPreview() {
     const container = document.getElementById('avatarPreviewContainer');
     const removeBtn = document.getElementById('removeAvatarBtn');
     if (pendingAvatarBase64) {
-        container.innerHTML = `<img src="${pendingAvatarBase64}">`;
+        container.innerHTML = `<img src="${pendingAvatarBase64}" onerror="this.onerror=null;pendingAvatarBase64=null;renderAvatarPreview()">`;
         container.style.border = "none";
         if (removeBtn) removeBtn.style.display = 'inline-block';
     } else {
