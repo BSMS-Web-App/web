@@ -97,7 +97,7 @@ export default async function handler(req, res) {
                         accountsCache[id] = { 
                             displayName: acc.displayName || acc.username || id, 
                             username: acc.username || id, 
-                            avatar: acc.account_status === 'banned' ? null : acc.avatar, // Automatically strip PFPs from banned profiles
+                            avatar: acc.account_status === 'banned' ? null : (acc.avatar && typeof acc.avatar === 'object' && acc.avatar.type === 'media' ? `/api/media?id=${encodeURIComponent(acc.avatar.mediaId)}` : acc.avatar), // Resolve extracted media references to the Vercel media proxy
                             account_status: acc.account_status,
                             ban_expires: acc.ban_expires || null,
                             role: acc.role || null,
@@ -602,10 +602,19 @@ export default async function handler(req, res) {
             case 'getAttachment': {
                 const { cid, type, msgId } = payload;
                 if (!cid || !type || !msgId) return res.status(400).json({ error: "Missing parameters." });
+                const channelSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
+                const channel = channelSnap.val();
+                if (!channel || !channel.members || !channel.members[uid]) {
+                    return res.status(403).json({ error: "Not a member of this conversation." });
+                }
                 const msgSnap = await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}`).once('value');
                 const msg = msgSnap.val();
                 if (!msg) return res.status(404).json({ error: "Message not found" });
-                return res.status(200).json({ content: msg.content, attachmentName: msg.attachmentName });
+                let content = msg.content;
+                if (content && typeof content === 'object' && content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '')) {
+                    content = `/api/media?id=${encodeURIComponent(content.mediaId)}`;
+                }
+                return res.status(200).json({ content, attachmentName: msg.attachmentName });
             }
 
             case 'hideDM': {
