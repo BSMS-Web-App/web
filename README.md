@@ -61,7 +61,16 @@ Use the following resources to learn more about BSMS Web, its history, and how t
 | Glin Profanity | Profanity detection and moderation |
 | Vercel | Hosting and deployment |
 
-## Database Architecture\n\n- The frontend remains hosted on Vercel.\n- Vercel API routes connect server-to-server to the Mac database API using `BSMS_WEB_API_URL` and `BSMS_WEB_API_KEY`. These variables must remain server-side and must never be exposed to browser code.\n- The Mac API listens on `127.0.0.1:4901` by default. Cloudflare Tunnel provides the connection from Vercel without binding the database service to a public interface.\n- The Mac API persists data in a JSON snapshot and write-ahead journal, with media stored separately. Keep the Mac online and maintain backups.\n- The root `.env.example` documents the Vercel/Express server settings. `mac-api/.env.example` documents the Mac API settings. Never commit real `.env` files, API keys, or database exports.\n- Production must have its own correctly configured environment variables before any production deployment is switched to the Mac database.\n\n## Contributing
+## Database Architecture
+
+- The frontend remains hosted on Vercel.
+- Vercel API routes connect server-to-server to the Mac database API using `BSMS_WEB_API_URL` and `BSMS_WEB_API_KEY`. These variables must remain server-side and must never be exposed to browser code.
+- The Mac API listens on `127.0.0.1:4901` by default. Cloudflare Tunnel provides the connection from Vercel without binding the database service to a public interface.
+- The Mac API persists data in a JSON snapshot and write-ahead journal, with media stored separately. Keep the Mac online and maintain backups.
+- The root `.env.example` documents the Vercel/Express server settings. `mac-api/.env.example` documents the Mac API settings. Never commit real `.env` files, API keys, or database exports.
+- Production must have its own correctly configured environment variables before any production deployment is switched to the Mac database.
+
+## Contributing
 
 Contributions, bug reports, and suggestions are welcome.
 
