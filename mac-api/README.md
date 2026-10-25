@@ -35,6 +35,6 @@ Optional:
 
 Do not commit real API keys or database contents.
 
-## Migration status
+## Deployment status
 
-This service is not a production cutover yet. The shared Vercel database adapter now requires this API and has no Firebase or local JSON fallback. Before production, import and validate the existing data, extract media into a separate media directory, configure a launch service and Cloudflare Tunnel, set Preview-only Vercel environment variables, and complete persistence/authentication checks.
+The Vercel database adapter requires this API and has no alternate database fallback. The development preview can use the Mac API through Cloudflare Tunnel when `BSMS_WEB_API_URL` and `BSMS_WEB_API_KEY` are configured in Vercel Preview environment variables. Keep the website hosted on Vercel; only the database API and its persistent files run on the Mac. Configure and verify Production environment variables separately before switching the production deployment.
