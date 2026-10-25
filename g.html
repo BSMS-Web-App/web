@@ -445,7 +445,7 @@ async function pushCloudSaves(keepAlive = false) {
         const dump = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+            if (key !== SESSION_KEY && key !== 'session_id') {
                 dump[key] = localStorage.getItem(key);
             }
         }
@@ -710,7 +710,7 @@ window.addEventListener('message', (e) => {
     if (e.data.type === 'bsms-esc') toggleInGameMenu();
     if (e.data.type === 'bsms-storage-save') {
         const { key, val } = e.data;
-        if (key && key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+        if (key && key !== SESSION_KEY && key !== 'session_id') {
             try { localStorage.setItem(key, val); } catch(err) {}
             scheduleCloudSave(600);
         }
