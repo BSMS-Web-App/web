@@ -10,7 +10,6 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js)](https://nodejs.org/)
   [![Express](https://img.shields.io/badge/Express-5.x-black?logo=express)](https://expressjs.com/)
-  [![Firebase](https://img.shields.io/badge/Database-Firebase%20RTDB-FFCA28?logo=firebase)](https://firebase.google.com/)
   [![Vercel](https://img.shields.io/badge/Hosting-Vercel-black?logo=vercel)](https://vercel.com/)
 
   [Website](https://bsms-web.vercel.app) · [Report a Bug](https://github.com/BSMS-Web-App/web/issues) · [View Releases](https://github.com/BSMS-Web-App/web/releases)
@@ -22,7 +21,7 @@
 
 **BSMS Web** is a full-stack web application that brings communication, account management, gaming, and other interactive features together in one platform.
 
-The project combines an HTML, CSS, and JavaScript frontend with a Node.js backend and Firebase Realtime Database. It is hosted on Vercel and maintained as an open-source project.
+The project combines an HTML, CSS, and JavaScript frontend with a Node.js backend. The website is hosted on Vercel, while persistent application data is handled by a JSON database API running on an always-on Mac and reached by Vercel server-side routes through Cloudflare Tunnel.
 
 ## Features
 
@@ -57,10 +56,19 @@ Use the following resources to learn more about BSMS Web, its history, and how t
 | HTML, CSS, JavaScript | Frontend and user interface |
 | Node.js | JavaScript runtime for the backend |
 | Express | HTTP server and application routing |
-| Firebase Realtime Database | Persistent application data |
-| Firebase Admin SDK | Server-side Firebase integration |
+| Mac-hosted JSON database API | Persistent application data, snapshots, and journaled writes |
+| Cloudflare Tunnel | Private connectivity between Vercel API routes and the Mac database API |
 | Glin Profanity | Profanity detection and moderation |
 | Vercel | Hosting and deployment |
+
+## Database Architecture
+
+- The frontend remains hosted on Vercel.
+- Vercel API routes connect server-to-server to the Mac database API using `BSMS_WEB_API_URL` and `BSMS_WEB_API_KEY`. These variables must remain server-side and must never be exposed to browser code.
+- The Mac API listens on `127.0.0.1:4901` by default. Cloudflare Tunnel provides the connection from Vercel without binding the database service to a public interface.
+- The Mac API persists data in a JSON snapshot and write-ahead journal, with media stored separately. Keep the Mac online and maintain backups.
+- The root `.env.example` documents the Vercel/Express server settings. `mac-api/.env.example` documents the Mac API settings. Never commit real `.env` files, API keys, or database exports.
+- Production must have its own correctly configured environment variables before any production deployment is switched to the Mac database.
 
 ## Contributing
 

@@ -4,20 +4,17 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { db, admin } from './db.js';
+import { db, admin, requestMacApi } from './db.js';
 import crypto from 'crypto';
 
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
-    const snap = await db.ref('/accounts').once('value');
-    const accounts = snap.val() || {};
-    
-    for (const [uid, acc] of Object.entries(accounts)) {
-        if (acc.sessions && acc.sessions[sessionId]) {
-            return { uid, account: acc };
-        }
+    try {
+        const result = await requestMacApi('GET', '/v1/auth/session?sessionId=' + encodeURIComponent(sessionId));
+        return result?.uid && result?.account ? { uid: result.uid, account: result.account } : null;
+    } catch {
+        return null;
     }
-    return null;
 }
 
 // Extracted Glin Profanity Checker
@@ -69,229 +66,54 @@ export default async function handler(req, res) {
 
         switch (action) {
             case 'sync': {
-                // Heartbeat to keep user online
                 await db.ref(`/chat/users/${uid}/status`).set('online');
                 await db.ref(`/chat/users/${uid}/lastSeen`).set(admin.database.ServerValue.TIMESTAMP);
 
-                const usersSnap = await db.ref('/chat/users').once('value');
-                const acctSnap = await db.ref('/accounts').once('value');
-                const convosSnap = await db.ref('/chat/conversations').once('value');
-                
-                const allAccounts = acctSnap.val() || {};
-                const rawUsers = usersSnap.val() || {};
-                const now = Date.now();
-                const usersCache = {};
-                for (const [uId, uData] of Object.entries(rawUsers)) {
-                    // If marked online but no heartbeat in 25 seconds (e.g. closed tab), evaluate as offline
-                    const isActive = uData.lastSeen && (now - uData.lastSeen < 25000);
-                    usersCache[uId] = {
-                        ...uData,
-                        status: (uData.status === 'online' && isActive) ? 'online' : 'offline'
-                    };
-                }
+                const chatData = await requestMacApi('GET', '/v1/chat/sync?uid=' + encodeURIComponent(uid));
 
-                const accountsCache = {};
-                for (const [id, acc] of Object.entries(allAccounts)) {
-                    if (acc.account_status !== 'deleted') {
-                        // Pass specific ban, role, and verification traits directly to the chat cache
-                        accountsCache[id] = { 
-                            displayName: acc.displayName || acc.username || id, 
-                            username: acc.username || id, 
-                            avatar: acc.account_status === 'banned' ? null : acc.avatar, // Automatically strip PFPs from banned profiles
-                            account_status: acc.account_status,
-                            ban_expires: acc.ban_expires || null,
-                            role: acc.role || null,
-                            verified: acc.verified || false,
-                            isDeveloper: Boolean(acc.isDeveloper),
-                            nameColor: acc.nameColor || acc.chatColor || null,
-                            chatColor: acc.nameColor || acc.chatColor || null
-                        };
-                    }
-                }
-
-                const myChannels = {};
-                const allConvos = convosSnap.val() || {};
-                
-                // Auto-join BSMS General group chat if user is not already a member
-                if (!allConvos.gcs || !allConvos.gcs['gc-general']) {
-                    const generalGc = {
-                        name: 'BSMS General',
-                        _type: 'gcs',
-                        _id: 'gc-general',
-                        config: { joinCode: 'GENERAL', allowCustomNicknames: true, lastMessageId: 100000 },
-                        members: { [uid]: { role: 'member', joinedAt: now } },
-                        messages: {}
-                    };
-                    await db.ref(`/chat/conversations/gcs/gc-general`).set(generalGc);
-                    if (!allConvos.gcs) allConvos.gcs = {};
-                    allConvos.gcs['gc-general'] = generalGc;
-                } else if (!allConvos.gcs['gc-general'].members || !allConvos.gcs['gc-general'].members[uid]) {
-                    await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({ role: 'member', joinedAt: now });
-                    if (!allConvos.gcs['gc-general'].members) allConvos.gcs['gc-general'].members = {};
-                    allConvos.gcs['gc-general'].members[uid] = { role: 'member', joinedAt: now };
-                }
-                
-                for (const type of ['dms', 'gcs']) {
-                    if (allConvos[type]) {
-                        for (const [cid, channel] of Object.entries(allConvos[type])) {
-                            if (channel.members && channel.members[uid]) {
-                                // Filter out banned accounts so they no longer appear as members
-                                const activeMembers = {};
-                                for (const [mUid, mData] of Object.entries(channel.members)) {
-                                    if (allAccounts[mUid]?.account_status !== 'banned') {
-                                        activeMembers[mUid] = mData;
-                                    }
-                                }
-
-                                let strippedMessages = {};
-                                if (channel.messages) {
-                                    let mKeys = Object.keys(channel.messages).filter(k => channel.messages[k] !== null);
-                                    if (mKeys.length > 0) {
-                                        const lastKey = mKeys[mKeys.length - 1];
-                                        const lm = channel.messages[lastKey];
-                                        if (lm && (lm.contentType === 'file' || lm.contentType === 'image')) {
-                                            strippedMessages[lastKey] = { ...lm, content: null, hasContent: true };
-                                        } else {
-                                            strippedMessages[lastKey] = lm;
-                                        }
-                                    }
-                                }
-                                let chData = { ...channel, members: activeMembers, _type: type, _id: cid, messages: strippedMessages };
-                                if (channel.members[uid].role !== 'owner' && chData.joinRequests) {
-                                    delete chData.joinRequests;
-                                }
-                                myChannels[cid] = chData;
-                            }
-                        }
-                    }
-                }
-                
-                // Hidden DMs stored in Firebase account node
                 const hiddenDms = account.hidden_dms ? Object.keys(account.hidden_dms) : [];
-                return res.status(200).json({ myUid: uid, users: usersCache, accounts: accountsCache, channels: myChannels, hiddenDms });
+                return res.status(200).json({
+                    myUid: uid,
+                    users: chatData.users || {},
+                    accounts: chatData.accounts || {},
+                    channels: chatData.channels || {},
+                    hiddenDms
+                });
             }
 
             case 'messages': {
                 const { cid, type, limit = 20, beforeId } = payload;
-                if (!cid || !type) return res.status(400).json({ error: "Missing channel data" });
-                const numLimit = parseInt(limit, 10) || 20;
-                
-                const [chSnap, acctSnap] = await Promise.all([
-                    db.ref(`/chat/conversations/${type}/${cid}`).once('value'),
-                    db.ref('/accounts').once('value')
-                ]);
-                let channel = chSnap.val();
-                const allAccounts = acctSnap.val() || {};
-                
-                // Auto-join public general chat if needed
+                if (!cid || !type || !['dms', 'gcs'].includes(type)) {
+                    return res.status(400).json({ error: 'Missing or invalid channel data.' });
+                }
+
+                // Keep the public general room join behavior without downloading any conversation history.
                 if (cid === 'gc-general') {
-                    if (!channel) {
-                        channel = {
+                    const generalSnap = await db.ref('/chat/conversations/gcs/gc-general').once('value');
+                    const general = generalSnap.val();
+                    if (!general) {
+                        await db.ref('/chat/conversations/gcs/gc-general').set({
                             name: 'BSMS General',
                             _type: 'gcs',
                             _id: 'gc-general',
                             config: { joinCode: 'GENERAL', allowCustomNicknames: true, lastMessageId: 100000 },
                             members: { [uid]: { role: 'member', joinedAt: Date.now() } },
                             messages: {}
-                        };
-                        await db.ref(`/chat/conversations/gcs/gc-general`).set(channel);
-                    } else if (!channel.members || !channel.members[uid]) {
+                        });
+                    } else if (!general.members || !general.members[uid]) {
                         await db.ref(`/chat/conversations/gcs/gc-general/members/${uid}`).set({ role: 'member', joinedAt: Date.now() });
-                        if (!channel.members) channel.members = {};
-                        channel.members[uid] = { role: 'member', joinedAt: Date.now() };
                     }
                 }
 
-                if (!channel || !channel.members || !channel.members[uid]) {
-                    return res.status(403).json({ error: "Not a member of this channel.", unauthorized: true });
-                }
-
-                // Filter out banned members
-                const activeMembers = {};
-                for (const [mUid, mData] of Object.entries(channel.members)) {
-                    if (allAccounts[mUid]?.account_status !== 'banned') {
-                        activeMembers[mUid] = mData;
-                    }
-                }
-
-                const allMsgs = channel.messages || {};
-                const allKeys = Object.keys(allMsgs).filter(k => allMsgs[k] !== null).sort((a, b) => {
-                    const na = Number(a), nb = Number(b);
-                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                    return a.localeCompare(b);
+                const query = new URLSearchParams({
+                    uid,
+                    cid: String(cid),
+                    type: String(type),
+                    limit: String(Math.max(1, Math.min(50, Number.parseInt(limit, 10) || 20)))
                 });
-
-                let selectedKeys = allKeys;
-                let hasMore = false;
-
-                if (beforeId) {
-                    const beforeIdx = allKeys.indexOf(String(beforeId));
-                    if (beforeIdx > 0) {
-                        const startIdx = Math.max(0, beforeIdx - numLimit);
-                        selectedKeys = allKeys.slice(startIdx, beforeIdx);
-                        hasMore = startIdx > 0;
-                    } else {
-                        selectedKeys = [];
-                        hasMore = false;
-                    }
-                } else if (numLimit > 0) {
-                    const startIdx = Math.max(0, allKeys.length - numLimit);
-                    selectedKeys = allKeys.slice(startIdx);
-                    hasMore = startIdx > 0;
-                }
-
-                const slicedMsgs = {};
-                for (const k of selectedKeys) {
-                    const msg = allMsgs[k];
-                    if (!msg) continue;
-                    const isBanned = allAccounts[msg.senderUid]?.account_status === 'banned';
-                    // Zero download for images/files until user clicks Load: do not return full base64 in initial payload!
-                    if (msg.contentType === 'file' || msg.contentType === 'image') {
-                        slicedMsgs[k] = {
-                            ...msg,
-                            content: null,
-                            hasContent: Boolean(msg.content),
-                            attachmentName: msg.attachmentName || 'Attachment',
-                            senderBanned: isBanned
-                        };
-                    } else {
-                        slicedMsgs[k] = {
-                            ...msg,
-                            senderBanned: isBanned
-                        };
-                    }
-                }
-
-                // Gather real accounts for senders and members so usernames are never raw UIDs
-                const neededUids = new Set(Object.keys(channel.members || {}));
-                for (const k of selectedKeys) {
-                    if (allMsgs[k]?.senderUid) neededUids.add(allMsgs[k].senderUid);
-                }
-                const chAccounts = {};
-                for (const mUid of neededUids) {
-                    const uVal = allAccounts[mUid];
-                    if (uVal) {
-                        chAccounts[mUid] = {
-                            username: uVal.username || uVal.displayName || mUid,
-                            displayName: uVal.displayName || uVal.username || mUid,
-                            avatar: uVal.account_status === 'banned' ? null : (uVal.avatar || ''),
-                            account_status: uVal.account_status || 'active',
-                            role: uVal.role || null,
-                            verified: Boolean(uVal.verified),
-                            isDeveloper: Boolean(uVal.isDeveloper),
-                            nameColor: uVal.nameColor || uVal.chatColor || null,
-                            chatColor: uVal.nameColor || uVal.chatColor || null
-                        };
-                    }
-                }
-
-                return res.status(200).json({
-                    messages: slicedMsgs,
-                    members: activeMembers,
-                    accounts: chAccounts,
-                    hasMore,
-                    oldestId: selectedKeys.length > 0 ? selectedKeys[0] : null
-                });
+                if (beforeId) query.set('beforeId', String(beforeId));
+                const result = await requestMacApi('GET', '/v1/chat/messages?' + query.toString());
+                return res.status(200).json(result);
             }
 
             case 'sendMessage': {
@@ -602,10 +424,23 @@ export default async function handler(req, res) {
             case 'getAttachment': {
                 const { cid, type, msgId } = payload;
                 if (!cid || !type || !msgId) return res.status(400).json({ error: "Missing parameters." });
+                const channelSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
+                const channel = channelSnap.val();
+                if (!channel || !channel.members || !channel.members[uid]) {
+                    return res.status(403).json({ error: "Not a member of this conversation." });
+                }
                 const msgSnap = await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}`).once('value');
                 const msg = msgSnap.val();
                 if (!msg) return res.status(404).json({ error: "Message not found" });
-                return res.status(200).json({ content: msg.content, attachmentName: msg.attachmentName });
+                let content = msg.content;
+                let attachmentMimeType = null;
+                if (content && typeof content === 'object' && content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '')) {
+                    attachmentMimeType = content.mimeType || null;
+                    content = `/api/media?id=${encodeURIComponent(content.mediaId)}`;
+                } else if (typeof content === 'string' && content.startsWith('data:')) {
+                    attachmentMimeType = content.slice(5).split(/[;,]/)[0] || null;
+                }
+                return res.status(200).json({ content, attachmentName: msg.attachmentName, attachmentMimeType });
             }
 
             case 'hideDM': {

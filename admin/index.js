@@ -102,7 +102,7 @@ const Admin = {
 
     loadUsers: async function() {
         const tbody = document.querySelector('#users-table tbody');
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Syncing with Firebase...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading accounts from database...</td></tr>';
         try {
             const data = await this.apiCall('getUsers');
             this.usersCache = data.accounts || {};

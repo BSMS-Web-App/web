@@ -12,11 +12,11 @@ import authHandler from './api/auth.js';
 import adminHandler from './api/admin.js';
 import chatHandler from './api/chat.js';
 import gamesHandler from './api/games.js';
-import bugReportHandler from './api/bug-report.js';
 import exportDataHandler from './api/export-data.js';
 import profanityFilterHandler from './api/profanity-filter.js';
 import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
+import versionHandler from './api/version.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,10 +41,10 @@ app.use('/api/games/saves', (req, res) => gamesHandler(req, res));
 app.use('/games/saves', (req, res) => gamesHandler(req, res));
 app.use('/api/games', (req, res) => gamesHandler(req, res));
 app.use('/api/link-preview', (req, res) => linkPreviewHandler(req, res));
-app.use('/api/bug-report', (req, res) => bugReportHandler(req, res));
 app.use('/api/export-data', (req, res) => exportDataHandler(req, res));
 app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res));
 app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
+app.use('/api/version', (req, res) => versionHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));

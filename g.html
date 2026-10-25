@@ -421,14 +421,14 @@ async function pullCloudSaves() {
             const data = await res.json();
             if (data && data.saves && typeof data.saves === 'object') {
                 for (const [key, value] of Object.entries(data.saves)) {
-                    if (key && key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+                    if (key && key !== SESSION_KEY && key !== 'session_id') {
                         try {
                             localStorage.setItem(key, value);
                         } catch(e) {}
                     }
                 }
             }
-            console.log("[BSMS Web :: Games] Cloud saves successfully loaded from Firebase.");
+            console.log("[BSMS Web :: Games] Cloud saves successfully loaded from the database.");
         }
         cloudSyncDone = true;
     } catch (err) {
@@ -445,7 +445,7 @@ async function pushCloudSaves(keepAlive = false) {
         const dump = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+            if (key !== SESSION_KEY && key !== 'session_id') {
                 dump[key] = localStorage.getItem(key);
             }
         }
@@ -464,7 +464,7 @@ async function pushCloudSaves(keepAlive = false) {
             },
             body: JSON.stringify({ saves: dump })
         });
-        console.log("[BSMS Web :: Games] Progress successfully stored in Firebase.");
+        console.log("[BSMS Web :: Games] Progress successfully stored in the database.");
     } catch (err) {
         console.error("[BSMS Web :: Games] Failed to push cloud saves", err);
     }
@@ -475,7 +475,7 @@ try {
     const _nativeSetItem = localStorage.setItem.bind(localStorage);
     localStorage.setItem = function(k, v) {
         _nativeSetItem(k, v);
-        if (cloudSyncDone && !isGuest && k !== SESSION_KEY && k !== 'session_id' && !k.startsWith('firebase')) {
+        if (cloudSyncDone && !isGuest && k !== SESSION_KEY && k !== 'session_id') {
             scheduleCloudSave(1000);
         }
     };
@@ -622,7 +622,7 @@ async function triggerLoadGame(game) {
                         window.focus();
                     });
 
-                    // Live localStorage proxy to notify parent and persist to Firebase
+                    // Live localStorage proxy to notify parent and persist to the database
                     try {
                         const _origSet = window.localStorage.setItem.bind(window.localStorage);
                         window.localStorage.setItem = function(k, v) {
@@ -710,7 +710,7 @@ window.addEventListener('message', (e) => {
     if (e.data.type === 'bsms-esc') toggleInGameMenu();
     if (e.data.type === 'bsms-storage-save') {
         const { key, val } = e.data;
-        if (key && key !== SESSION_KEY && key !== 'session_id' && !key.startsWith('firebase')) {
+        if (key && key !== SESSION_KEY && key !== 'session_id') {
             try { localStorage.setItem(key, val); } catch(err) {}
             scheduleCloudSave(600);
         }

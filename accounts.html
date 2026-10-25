@@ -989,7 +989,7 @@ function renderAvatarPreview() {
     const container = document.getElementById('avatarPreviewContainer');
     const removeBtn = document.getElementById('removeAvatarBtn');
     if (pendingAvatarBase64) {
-        container.innerHTML = `<img src="${pendingAvatarBase64}">`;
+        container.innerHTML = `<img src="${pendingAvatarBase64}" onerror="this.onerror=null;const p=this.parentElement;this.remove();p.textContent=(document.getElementById('profileDisplayName').value||authSession.username||'?').charAt(0).toUpperCase();p.style.border='3px solid var(--red)'">`;
         container.style.border = "none";
         if (removeBtn) removeBtn.style.display = 'inline-block';
     } else {

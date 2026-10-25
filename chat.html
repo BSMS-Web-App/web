@@ -1418,6 +1418,22 @@ const State = {
     msgInterval: null
 };
 
+document.addEventListener('error', (event) => {
+    const img = event.target;
+    if (!img || img.tagName !== 'IMG' || img.dataset.fallbackApplied === '1') return;
+    img.dataset.fallbackApplied = '1';
+    const avatar = img.closest('.c-av-inner');
+    if (!avatar) {
+        img.remove();
+        return;
+    }
+    const owner = img.closest('[data-uid]');
+    const uid = owner?.getAttribute('data-uid');
+    const account = uid ? State.accountsCache?.[uid] : null;
+    const label = account?.displayName || account?.username || '?';
+    avatar.textContent = String(label).trim().charAt(0).toUpperCase() || '?';
+}, true);
+
 const ImageViewer = {
     open: function(src) {
         if (!src) return;
@@ -1626,8 +1642,12 @@ const ApiClient = {
 };
 
 const PollingManager = {
-    start: () => {
-        PollingManager.syncGlobal();
+    start: async () => {
+        let ready = await PollingManager.syncGlobal();
+        while (!ready) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            ready = await PollingManager.syncGlobal();
+        }
         State.syncInterval = setInterval(PollingManager.syncGlobal, 5000);
     },
     stop: () => {
@@ -1649,12 +1669,23 @@ const PollingManager = {
                 }
             }
 
-            const oldMessages = State.activeChannelId && State.channels[State.activeChannelId] 
-                                ? State.channels[State.activeChannelId].messages : null;
+            const previousChannels = State.channels || {};
+            const incomingChannels = data.channels || {};
+            for (const [cid, channel] of Object.entries(incomingChannels)) {
+                const previous = previousChannels[cid];
+                const cached = State.conversationCache[cid];
+                const previousMessages = previous?.messages || {};
+                channel.messages = Object.keys(previousMessages).length
+                    ? previousMessages
+                    : (cached?.messages || previousMessages);
+                if (cached) {
+                    channel.messageCount = Math.max(channel.messageCount || 0, Object.keys(channel.messages).length);
+                }
+            }
 
-            State.usersCache = data.users || {};
-            State.accountsCache = data.accounts || {};
-            State.channels = data.channels || {};
+            State.usersCache = { ...(State.usersCache || {}), ...(data.users || {}) };
+            State.accountsCache = { ...(State.accountsCache || {}), ...(data.accounts || {}) };
+            State.channels = incomingChannels;
             if (Array.isArray(data.hiddenDms)) State.hiddenDms = data.hiddenDms;
             if (typeof NameColorManager !== 'undefined' && NameColorManager.updateSidebarUser) {
                 NameColorManager.updateSidebarUser();
@@ -1662,9 +1693,6 @@ const PollingManager = {
             
             if (State.activeChannelId && State.channels[State.activeChannelId]) {
                 const c = State.channels[State.activeChannelId];
-                if (oldMessages) {
-                    c.messages = { ...oldMessages, ...c.messages };
-                }
                 ChatManager.updateHeader();
                 ChatManager.updateReadReceipts();
                 if (State.currentRole === 'owner') GroupManager.renderRequests();
@@ -1682,7 +1710,11 @@ const PollingManager = {
             }
             
             SidebarManager.render();
-        } catch(e) {}
+            return true;
+        } catch(e) {
+            console.error('[BSMS Web] Could not load conversation metadata:', e);
+            return false;
+        }
     },
     syncMessages: async () => {
         if (!State.activeChannelId) return;
@@ -1694,12 +1726,11 @@ const PollingManager = {
             if (!data) return;
             if (State.activeChannelId !== requestedCid || State.activeChannelToken !== requestedToken) return;
 
-            const spinner = document.getElementById('chatLoadingSpinner');
-            if (spinner) spinner.style.display = 'none';
-
             if (data && data.unauthorized) {
                 ChatManager.showUnauthorized();
-                return;
+                const spinner = document.getElementById('chatLoadingSpinner');
+                if (spinner) spinner.style.display = 'none';
+                return true;
             }
 
             if (data && data.accounts) {
@@ -1717,9 +1748,23 @@ const PollingManager = {
                 ChatManager.checkScrollForEarlier();
             }
             if (data && data.members) ChatManager.renderTyping(data.members);
-        } catch(e) {
+
+            const currentChannel = State.channels[requestedCid];
+            if (currentChannel) {
+                State.conversationCache[requestedCid] = {
+                    messages: { ...(currentChannel.messages || {}) },
+                    oldestId: ChatManager.oldestMessageId,
+                    hasMore: ChatManager.hasMoreMessages,
+                    updatedAt: Date.now()
+                };
+            }
             const spinner = document.getElementById('chatLoadingSpinner');
             if (spinner) spinner.style.display = 'none';
+            return true;
+        } catch(e) {
+            // Keep the loading indicator visible until data actually arrives.
+            console.error('[BSMS Web] Could not load chat messages:', e);
+            return false;
         }
     }
 };
@@ -2070,32 +2115,21 @@ const SidebarManager = {
                 continue;
             }
 
-            // Filter out empty conversations (no messages)
-            const msgCount = c.messages ? Object.keys(c.messages).length : 0;
-            if (msgCount === 0) {
-                continue;
-            }
+            const lastM = c.lastMessage || null;
+            const msgCount = Number(c.messageCount || 0);
+            if (msgCount === 0 && !lastM && State.activeChannelId !== id) continue;
 
-            let sortTime = c.config?.createdAt || 0;
+            let sortTime = lastM?.timestamp || c.config?.createdAt || 0;
             let previewText = "New conversation";
             let unread = false;
-
-            if (c.messages) {
-                let msgs = Object.keys(c.messages).map(mid => ({mid, ...c.messages[mid]}));
-                msgs.sort((a,b) => a.timestamp - b.timestamp);
-                if (msgs.length > 0) {
-                    const lastM = msgs[msgs.length - 1];
-                    sortTime = lastM.timestamp;
-
-                    if (lastM.status?.deletedByMod) previewText = "[Deleted by Moderator]";
-                    else if (lastM.status?.unsent) previewText = "Message unsent";
-                    else if (lastM.contentType === 'audio') previewText = "Voice message";
-                    else if (lastM.contentType === 'file') previewText = "File attachment";
-                    else if (lastM.contentType === 'poll') previewText = "Poll";
-                    else previewText = Utils.escapeHTML(lastM.content);
-
-                    if (lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true)) unread = true;
-                }
+            if (lastM) {
+                if (lastM.status?.deletedByMod) previewText = "[Deleted by Moderator]";
+                else if (lastM.status?.unsent) previewText = "Message unsent";
+                else if (lastM.contentType === 'audio') previewText = "Voice message";
+                else if (lastM.contentType === 'file' || lastM.contentType === 'image') previewText = "Attachment";
+                else if (lastM.contentType === 'poll') previewText = "Poll";
+                else previewText = Utils.escapeHTML(lastM.content || '');
+                unread = lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true);
             }
             arr.push({ id, c, sortTime, preview: previewText, unread });
         }
@@ -2142,7 +2176,7 @@ const SidebarManager = {
             const nameColor = (targetUid && Utils.nameColor(targetUid)) ? `style="color:${Utils.nameColor(targetUid)}; font-weight:bold;"` : '';
 
             html += `
-            <div class="chat-row ${activeCls} ${unreadCls}" onclick="ChatManager.open('${id}')">
+            <div class="chat-row ${activeCls} ${unreadCls}" data-cid="${Utils.escapeHTML(id)}" onclick="ChatManager.open('${id}')">
                 <div ${pfpAttr}>
                     <div class="c-av-inner">${avHtml}</div>
                     ${dot}
@@ -2155,7 +2189,20 @@ const SidebarManager = {
             </div>`;
         });
 
-        list.innerHTML = html || `<div style="text-align:center; padding:24px; color:var(--fg2);">No conversations yet.</div>`;
+        const nextMarkup = html || `<div style="text-align:center; padding:24px; color:var(--fg2);">No conversations yet.</div>`;
+        if (list.innerHTML !== nextMarkup) {
+            const staging = document.createElement('div');
+            staging.innerHTML = nextMarkup;
+            const oldRows = new Map(Array.from(list.querySelectorAll('.chat-row')).map(row => [row.getAttribute('data-cid'), row]));
+            for (const nextRow of Array.from(staging.querySelectorAll('.chat-row'))) {
+                const cid = nextRow.getAttribute('data-cid');
+                const oldRow = oldRows.get(cid);
+                if (oldRow && oldRow.outerHTML === nextRow.outerHTML) {
+                    nextRow.replaceWith(oldRow);
+                }
+            }
+            list.replaceChildren(...Array.from(staging.childNodes));
+        }
     },
     togglePlusMenu: function() { document.getElementById('plusMenu').classList.toggle('show'); },
     hideMobile: function() {
@@ -2446,7 +2493,7 @@ const ChatManager = {
             State.activeType = c._type;
             State.currentRole = c.members[State.user.uid]?.role || 'member';
 
-            // Unhide DM in Firebase if reopened
+            // Unhide the direct message in the database if reopened
             if (c._type === 'dms' && State.hiddenDms.includes(cid)) {
                 State.hiddenDms = State.hiddenDms.filter(id => id !== cid);
                 ApiClient.call('unhideDM', { cid });
@@ -2536,11 +2583,11 @@ const ChatManager = {
             const cached = State.conversationCache[cid];
             if (cached && cached.messages && Object.keys(cached.messages).length > 0) {
                 c.messages = { ...cached.messages };
-                this.oldestMessageId = cached.oldestId;
-                this.hasMoreMessages = cached.hasMore;
                 const spinner = document.getElementById('chatLoadingSpinner');
                 if (spinner) spinner.style.display = 'none';
                 this.renderInitialMessages(c.messages);
+                this.oldestMessageId = cached.oldestId;
+                this.hasMoreMessages = cached.hasMore;
                 this.checkScrollForEarlier();
             } else {
                 this.resetChatLog();
@@ -2549,8 +2596,10 @@ const ChatManager = {
             }
 
             clearInterval(State.msgInterval);
-            PollingManager.syncMessages();
-            State.msgInterval = setInterval(PollingManager.syncMessages, 2500);
+            const freshCache = State.conversationCache[cid];
+            const cacheIsFresh = freshCache && Date.now() - (freshCache.updatedAt || 0) < 60000;
+            State.activeMessageLoad = cacheIsFresh ? Promise.resolve(true) : PollingManager.syncMessages();
+            State.msgInterval = setInterval(PollingManager.syncMessages, cacheIsFresh ? 5000 : 2500);
         } catch (e) {
             console.error("[BSMS Web] Failed to open chat:", e);
             UI.showToast("Failed to open chat due to a data error.", 'error');
@@ -2613,11 +2662,23 @@ const ChatManager = {
                 });
                 if (res && res.content) {
                     m.content = res.content;
+                    m.attachmentMimeType = res.attachmentMimeType || m.attachmentMimeType || null;
+                    m.attachmentName = res.attachmentName || m.attachmentName || null;
                 }
             }
 
-            if (typeof m.content === 'string' && (m.content.startsWith('data:image') || m.contentType === 'image')) {
+            const isImageAttachment = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) ||
+                (typeof m.content === 'string' && m.content.startsWith('data:image')) ||
+                m.contentType === 'image';
+
+            if (typeof m.content === 'string' && isImageAttachment) {
                 preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" onclick="ImageViewer.open(this.src)" title="Click to view fullscreen" style="max-width:100%; border-radius:10px; display:block; cursor:pointer;">`;
+                const image = preview.querySelector('img');
+                if (image) image.addEventListener('error', () => {
+                    m.content = null;
+                    preview.innerHTML = '<div style="font-size:0.85rem;color:#ef4444;">Image could not be loaded. Check the connection and try again.</div>';
+                    if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.innerText = 'Retry'; }
+                }, { once: true });
             } else {
                 preview.innerHTML = `<div style="font-size:0.85rem; color:var(--fg2); word-break:break-all;">Attachment loaded. <a href="${Utils.escapeHTML(m.content)}" download="${Utils.escapeHTML(m.attachmentName || 'download')}" style="color:var(--accent); text-decoration:underline;">Download File</a></div>`;
             }
@@ -2642,7 +2703,7 @@ const ChatManager = {
             mv.style.setProperty('--chat-fg', c.config.theme.text || 'var(--fg)');
             mv.style.setProperty('--chat-accent', c.config.theme.accent || 'var(--accent)');
             if(c.config.theme.background) {
-                if(c.config.theme.background.startsWith('data:')) {
+                if(c.config.theme.background.startsWith('data:') || c.config.theme.background.startsWith('/api/media?')) {
                     mv.style.setProperty('--chat-wp', `url(${Utils.escapeHTML(c.config.theme.background)})`);
                     mv.style.setProperty('--chat-wp-dim', '0.55'); mv.style.setProperty('--chat-bg', 'transparent');
                 } else {
@@ -2807,11 +2868,17 @@ const ChatManager = {
 
             if (existingEl) {
                 const old = c.messages[mid];
-                if (JSON.stringify(old) !== JSON.stringify(m)) {
+                // Preserve already-loaded attachment URLs when polling intentionally omits their content.
+                if (old?.content && !m.content && m.hasContent) m.content = old.content;
+                const oldVisual = old ? { ...old, readReceipts: undefined } : null;
+                const newVisual = { ...m, readReceipts: undefined };
+                if (JSON.stringify(oldVisual) !== JSON.stringify(newVisual)) {
                     c.messages[mid] = m;
                     existingEl.outerHTML = this.buildMessageHTML(mid, m);
                     if (m.contentType === 'audio' && !m.status?.unsent && !m.status?.deletedByMod) AudioManager.bindPlayer(mid);
                     if(ScrollManager.observer) ScrollManager.observer.observe(document.getElementById(`msg-${mid}`));
+                } else {
+                    c.messages[mid] = { ...old, ...m, content: old?.content || m.content };
                 }
             } else {
                 let foundTemp = null;
@@ -2958,7 +3025,7 @@ const ChatManager = {
                     <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
                 </div>`;
             } else if (m.contentType === 'file' || m.contentType === 'image') {
-                const isImg = typeof m.content === 'string' && m.content.startsWith('data:image') || m.contentType === 'image';
+                const isImg = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) || (typeof m.content === 'string' && m.content.startsWith('data:image')) || m.contentType === 'image';
                 const name = Utils.escapeHTML(m.attachmentName || (isImg ? 'Image Attachment' : 'File Attachment'));
                 content += `
                 <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-top:4px; max-width:320px;">
@@ -3338,27 +3405,33 @@ const AuthManager = {
             document.getElementById('loginModal').classList.remove('show');
             UI.setLoad(70, "Downloading Conversations");
 
-            PollingManager.start();
+            await PollingManager.start();
             SearchManager.init();
             ScrollManager.init();
             ContextMenu.init();
             Router.init();
             ProfileHoverManager.init();
-            
-            setTimeout(async () => {
-                UI.setLoad(95, "Opening conversation");
-                await Router.resolvePendingRoute();
-                UI.setLoad(100, "Ready");
-                if (window.innerWidth <= 768) {
-                    if (State.activeChannelId) {
-                        document.getElementById('sidebar').classList.add('hidden');
-                    } else {
-                        document.getElementById('sidebar').classList.remove('hidden');
-                    }
+
+            UI.setLoad(90, "Opening conversation");
+            await Router.resolvePendingRoute();
+            if (State.activeChannelId) {
+                let loaded = await (State.activeMessageLoad || PollingManager.syncMessages());
+                while (!loaded) {
+                    UI.setLoad(95, "Waiting for chat data");
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    loaded = await PollingManager.syncMessages();
+                }
+            }
+            UI.setLoad(100, "Ready");
+            if (window.innerWidth <= 768) {
+                if (State.activeChannelId) {
+                    document.getElementById('sidebar').classList.add('hidden');
                 } else {
                     document.getElementById('sidebar').classList.remove('hidden');
                 }
-            }, 1000);
+            } else {
+                document.getElementById('sidebar').classList.remove('hidden');
+            }
 
             const inp = document.getElementById('msgInput');
             if (inp) {

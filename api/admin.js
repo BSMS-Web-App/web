@@ -4,27 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import admin from 'firebase-admin';
+import { db } from './db.js';
 import crypto from 'crypto';
-
-if (!admin.apps.length) {
-    try {
-        if (!process.env.FIREBASE_PRIVATE_KEY) {
-            throw new Error("FIREBASE_PRIVATE_KEY is missing from environment variables.");
-        }
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-            }),
-            databaseURL: process.env.FIREBASE_DATABASE_URL
-        });
-    } catch (err) {
-        console.error("[BSMS Web :: Admin] Firebase Init Error:", err.message);
-    }
-}
-const db = admin.apps.length ? admin.database() : null;
 
 // Matches auth.js password hashing
 function hashPassword(password) {
@@ -81,8 +62,14 @@ export default async function handler(req, res) {
                     db.ref('/accounts').once('value'),
                     db.ref('/banned_devices').once('value')
                 ]);
+                const accounts = accountsSnap.val() || {};
+                for (const account of Object.values(accounts)) {
+                    if (account.avatar && typeof account.avatar === 'object' && account.avatar.type === 'media' && /^[a-f0-9]{64}$/.test(account.avatar.mediaId || '')) {
+                        account.avatar = `/api/media?id=${encodeURIComponent(account.avatar.mediaId)}`;
+                    }
+                }
                 return res.status(200).json({
-                    accounts: accountsSnap.val() || {},
+                    accounts,
                     banned_devices: devicesSnap.val() || {},
                     callerRole: callerRole,
                     callerUid: staffUser.uid
