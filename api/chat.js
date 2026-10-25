@@ -433,10 +433,14 @@ export default async function handler(req, res) {
                 const msg = msgSnap.val();
                 if (!msg) return res.status(404).json({ error: "Message not found" });
                 let content = msg.content;
+                let attachmentMimeType = null;
                 if (content && typeof content === 'object' && content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '')) {
+                    attachmentMimeType = content.mimeType || null;
                     content = `/api/media?id=${encodeURIComponent(content.mediaId)}`;
+                } else if (typeof content === 'string' && content.startsWith('data:')) {
+                    attachmentMimeType = content.slice(5).split(/[;,]/)[0] || null;
                 }
-                return res.status(200).json({ content, attachmentName: msg.attachmentName });
+                return res.status(200).json({ content, attachmentName: msg.attachmentName, attachmentMimeType });
             }
 
             case 'hideDM': {
