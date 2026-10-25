@@ -156,7 +156,20 @@ export default async function handler(req, res) {
                                         }
                                     }
                                 }
-                                let chData = { ...channel, members: activeMembers, _type: type, _id: cid, messages: strippedMessages };
+                                let channelForClient = channel;
+                                if (channel.config?.theme?.background && typeof channel.config.theme.background === 'object' && channel.config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(channel.config.theme.background.mediaId || '')) {
+                                    channelForClient = {
+                                        ...channel,
+                                        config: {
+                                            ...channel.config,
+                                            theme: {
+                                                ...channel.config.theme,
+                                                background: `/api/media?id=${encodeURIComponent(channel.config.theme.background.mediaId)}`
+                                            }
+                                        }
+                                    };
+                                }
+                                let chData = { ...channelForClient, members: activeMembers, _type: type, _id: cid, messages: strippedMessages };
                                 if (channel.members[uid].role !== 'owner' && chData.joinRequests) {
                                     delete chData.joinRequests;
                                 }
