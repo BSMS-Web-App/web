@@ -187,7 +187,7 @@ async function commitMutation(record) {
   // Write-ahead log: persist the operation before publishing it in memory.
   await appendJournal(completeRecord);
   database = nextDatabase;
-  if (completeRecord.path === '/accounts' || completeRecord.path.startsWith('/accounts/')) rebuildSessionIndex();
+  if (completeRecord.path === '/accounts' || /^\/accounts\/[^/]+$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/sessions(?:\/[^/]+)?$/.test(completeRecord.path)) rebuildSessionIndex();
   sequence = nextSequence;
   mutationsSinceCompact += 1;
 
