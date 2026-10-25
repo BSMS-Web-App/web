@@ -38,6 +38,47 @@ let sequence = 0;
 let mutationsSinceCompact = 0;
 let mutationQueue = Promise.resolve();
 const sessionIndex = new Map();
+const messageKeyIndex = new Map();
+
+function messageIndexKey(type, cid) {
+  return type + '/' + cid;
+}
+
+function indexConversation(type, cid, source = database) {
+  const messages = source.chat?.conversations?.[type]?.[cid]?.messages || {};
+  const keys = Object.keys(messages).filter((id) => messages[id] != null).sort(numericKeySort);
+  messageKeyIndex.set(messageIndexKey(type, cid), keys);
+}
+
+function rebuildMessageKeyIndex() {
+  messageKeyIndex.clear();
+  const conversations = database.chat?.conversations || {};
+  for (const type of ['dms', 'gcs']) {
+    for (const cid of Object.keys(conversations[type] || {})) indexConversation(type, cid);
+  }
+}
+
+function refreshMessageKeyIndex(record, source = database) {
+  const parts = parsePath(record.path);
+  if (parts[0] !== 'chat' || parts[1] !== 'conversations' || !['dms', 'gcs'].includes(parts[2]) || !parts[3]) return;
+  const [type, cid] = [parts[2], parts[3]];
+  if (parts.length <= 4 || parts[4] === 'messages' && parts.length <= 5) {
+    indexConversation(type, cid, source);
+    return;
+  }
+  if (parts[4] !== 'messages' || parts.length !== 6) return;
+  const key = messageIndexKey(type, cid);
+  const messages = source.chat?.conversations?.[type]?.[cid]?.messages || {};
+  const keys = messageKeyIndex.get(key) || [];
+  const position = keys.indexOf(parts[5]);
+  if (messages[parts[5]] == null) {
+    if (position >= 0) keys.splice(position, 1);
+  } else if (position < 0) {
+    keys.push(parts[5]);
+    keys.sort(numericKeySort);
+  }
+  messageKeyIndex.set(key, keys);
+}
 
 function rebuildSessionIndex() {
   sessionIndex.clear();
@@ -188,6 +229,7 @@ async function commitMutation(record) {
   await appendJournal(completeRecord);
   database = nextDatabase;
   if (completeRecord.path === '/accounts' || /^\/accounts\/[^/]+$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/sessions(?:\/[^/]+)?$/.test(completeRecord.path)) rebuildSessionIndex();
+  refreshMessageKeyIndex(completeRecord, database);
   sequence = nextSequence;
   mutationsSinceCompact += 1;
 
@@ -323,18 +365,15 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         if (allAccounts[memberUid]?.account_status !== 'banned') members[memberUid] = memberData;
       }
       const messageMap = channel.messages || {};
-      let lastId = channel.config?.lastMessageId != null ? String(channel.config.lastMessageId) : '';
+      const indexedKeys = messageKeyIndex.get(messageIndexKey(type, cid)) || [];
+      let lastId = indexedKeys.length ? indexedKeys[indexedKeys.length - 1] : null;
       let last = lastId ? messageMap[lastId] : null;
-      if (!last) {
-        for (const [candidateId, candidate] of Object.entries(messageMap)) {
-          if (candidate == null) continue;
-          if (!last || numericKeySort(lastId, candidateId) < 0) {
-            lastId = candidateId;
-            last = candidate;
-          }
-        }
+      if (!last && Object.keys(messageMap).length) {
+        indexConversation(type, cid);
+        const refreshedKeys = messageKeyIndex.get(messageIndexKey(type, cid)) || [];
+        lastId = refreshedKeys.length ? refreshedKeys[refreshedKeys.length - 1] : null;
+        last = lastId ? messageMap[lastId] : null;
       }
-      if (!last) lastId = null;
       const lastMessage = last ? {
         id: lastId,
         senderUid: last.senderUid || null,
@@ -386,7 +425,11 @@ app.get('/v1/chat/messages', requireApiKey, (req, res) => {
     if (allAccounts[memberUid]?.account_status !== 'banned') activeMembers[memberUid] = memberData;
   }
   const allMsgs = channel.messages || {};
-  const allKeys = Object.keys(allMsgs).filter((id) => allMsgs[id] != null).sort(numericKeySort);
+  let allKeys = messageKeyIndex.get(messageIndexKey(type, cid));
+  if (!allKeys) {
+    indexConversation(type, cid);
+    allKeys = messageKeyIndex.get(messageIndexKey(type, cid)) || [];
+  }
   const parsedLimit = Number.parseInt(String(req.query.limit || '20'), 10);
   const limit = Math.max(1, Math.min(50, Number.isFinite(parsedLimit) ? parsedLimit : 20));
   const beforeId = req.query.beforeId ? String(req.query.beforeId) : '';
@@ -608,6 +651,7 @@ async function loadDatabase() {
 
 await loadDatabase();
 rebuildSessionIndex();
+rebuildMessageKeyIndex();
 app.listen(PORT, HOST, () => {
   console.log('[BSMS Web Mac API] Listening on http://' + HOST + ':' + PORT);
   console.log('[BSMS Web Mac API] JSON snapshot: ' + DATA_FILE);
