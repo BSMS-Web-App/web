@@ -62,8 +62,14 @@ export default async function handler(req, res) {
                     db.ref('/accounts').once('value'),
                     db.ref('/banned_devices').once('value')
                 ]);
+                const accounts = accountsSnap.val() || {};
+                for (const account of Object.values(accounts)) {
+                    if (account.avatar && typeof account.avatar === 'object' && account.avatar.type === 'media' && /^[a-f0-9]{64}$/.test(account.avatar.mediaId || '')) {
+                        account.avatar = `/api/media?id=${encodeURIComponent(account.avatar.mediaId)}`;
+                    }
+                }
                 return res.status(200).json({
-                    accounts: accountsSnap.val() || {},
+                    accounts,
                     banned_devices: devicesSnap.val() || {},
                     callerRole: callerRole,
                     callerUid: staffUser.uid
