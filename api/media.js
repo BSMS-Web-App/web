@@ -6,8 +6,6 @@
  * Public media proxy for content-addressed attachments.
  * The Mac API key remains server-side; media IDs are SHA-256 hashes.
  */
-import crypto from 'node:crypto';
-
 const API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, '');
 const API_KEY = process.env.BSMS_WEB_API_KEY || '';
 
