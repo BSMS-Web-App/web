@@ -597,7 +597,7 @@ async function loadDatabase() {
       database = parsed.data;
       sequence = Number.isSafeInteger(parsed.sequence) ? parsed.sequence : 0;
     } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      // Accept the existing Firebase export / data/db.json as an initial import.
+      // Accept the existing legacy export / data/db.json as an initial import.
       database = parsed;
       sequence = 0;
     } else {
