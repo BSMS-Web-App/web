@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+import { db } from './db.js';
+
 export default async function handler(req, res) {
 
   /*
@@ -27,56 +29,12 @@ export default async function handler(req, res) {
 
   try {
 
-    /*
-     * ==========================================
-     * ENVIRONMENT
-     * ==========================================
-     *
-     * These values stay on Vercel's server.
-     *
-     * FIREBASE_DATABASE_URL:
-     * https://bsms-web-default-rtdb.firebaseio.com
-     *
-     * FIREBASE_AUTH_TOKEN:
-     * Firebase REST authentication credential
-     *
-     * Neither value is ever sent to the browser.
-     */
-
-    const databaseURL =
-      process.env.FIREBASE_DATABASE_URL;
-
-    const authToken =
-      process.env.FIREBASE_AUTH_TOKEN;
-
-
-    if (!databaseURL) {
-
-      console.error(
-        'Missing FIREBASE_DATABASE_URL environment variable.'
-      );
-
-      return res.status(500).json({
+    if (!db) {
+      return res.status(503).json({
         success: false,
-        error: 'Firebase database configuration is missing.'
+        error: 'Database unavailable.'
       });
-
     }
-
-
-    if (!authToken) {
-
-      console.error(
-        'Missing FIREBASE_AUTH_TOKEN environment variable.'
-      );
-
-      return res.status(500).json({
-        success: false,
-        error: 'Vercel backend authentication responded with a status of 500 ()'
-      });
-
-    }
-
 
     /*
      * ==========================================
@@ -213,127 +171,20 @@ export default async function handler(req, res) {
 
     /*
      * ==========================================
-     * SANITIZE DATABASE URL
+     * WRITE REPORT TO SHARED DATABASE
      * ==========================================
      */
-
-    const cleanDatabaseURL =
-      databaseURL.replace(/\/+$/, '');
-
-
-    /*
-     * ==========================================
-     * CREATE REPORT
-     * ==========================================
-     *
-     * Firebase POST automatically generates
-     * a unique ID.
-     */
-
-    const report = {
-
-      name:
-        name || null,
-
-      area,
-
-      summary,
-
-      details:
-        details || null,
-
-      username:
-        username || null,
-
-      sessionId:
-        sessionId || null,
-
-      createdAt:
-        new Date().toISOString()
-
-    };
-
-
-    /*
-     * ==========================================
-     * WRITE TO FIREBASE
-     * ==========================================
-     */
-
-    const firebaseURL =
-      `${cleanDatabaseURL}/bug-reports.json?auth=${encodeURIComponent(authToken)}`;
-
-
-    const firebaseResponse =
-      await fetch(
-        firebaseURL,
-        {
-          method:'POST',
-
-          headers:{
-            'Content-Type':
-              'application/json'
-          },
-
-          body:
-            JSON.stringify(report)
-        }
-      );
-
-
-    const firebaseText =
-      await firebaseResponse.text();
-
-
-    let firebaseData = null;
-
-    try {
-
-      firebaseData =
-        JSON.parse(firebaseText);
-
-    } catch {
-
-      firebaseData = null;
-
-    }
-
-
-    /*
-     * ==========================================
-     * FIREBASE ERROR
-     * ==========================================
-     */
-
-    if (!firebaseResponse.ok) {
-
-      console.error(
-        'Firebase bug report error:',
-        firebaseResponse.status,
-        firebaseText
-      );
-
-      return res.status(500).json({
-        success: false,
-        error: 'Firebase could not save the bug report.'
-      });
-
-    }
-
+    const reportRef = db.ref('/bug-reports').push();
+    await reportRef.set(report);
 
     /*
      * ==========================================
      * SUCCESS
      * ==========================================
      */
-
     return res.status(200).json({
-
       success: true,
-
-      id:
-        firebaseData?.name || null
-
+      id: reportRef.key || null
     });
 
 
