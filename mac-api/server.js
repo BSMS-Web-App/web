@@ -416,8 +416,8 @@ app.get('/v1/chat/messages', requireApiKey, (req, res) => {
   const type = String(req.query.type || '');
   if (!uid || !cid || !['dms', 'gcs'].includes(type)) return sendError(res, 400, 'Missing or invalid channel data.');
   const channel = database.chat?.conversations?.[type]?.[cid];
-  if (cid === 'gc-general' && !channel) return res.status(403).json({ error: 'General conversation is not initialized.', unauthorized: true });
-  if (!channel?.members?.[uid]) return res.status(403).json({ error: 'Not a member of this channel.', unauthorized: true });
+  if (cid === 'gc-general' && !channel) return res.status(200).json({ error: 'General conversation is not initialized.', unauthorized: true });
+  if (!channel?.members?.[uid]) return res.status(200).json({ error: 'Not a member of this channel.', unauthorized: true });
 
   const allAccounts = database.accounts || {};
   const activeMembers = {};
