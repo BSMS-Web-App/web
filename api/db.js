@@ -13,11 +13,122 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_FILE = path.join(__dirname, '../data/db.json');
 
+// Remote Mac JSON API mode. Configure BSMS_API_URL and BSMS_API_KEY only in
+// Vercel server-side environment variables; never expose either to browser code.
+const BSMS_API_URL = (process.env.BSMS_API_URL || '').replace(/\\/+$/, '');
+const BSMS_API_KEY = process.env.BSMS_API_KEY || '';
+let remoteDb = null;
+
+if (BSMS_API_URL || BSMS_API_KEY) {
+    if (!BSMS_API_URL || BSMS_API_KEY.length < 32) {
+        throw new Error('[BSMS Web :: DB] BSMS_API_URL and a 32+ character BSMS_API_KEY are both required.');
+    }
+
+    async function macRequest(method, route, body) {
+        const response = await fetch(BSMS_API_URL + route, {
+            method,
+            headers: {
+                'Authorization': 'Bearer ' + BSMS_API_KEY,
+                ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+            signal: AbortSignal.timeout(15000)
+        });
+
+        const text = await response.text();
+        let data = {};
+        try { data = text ? JSON.parse(text) : {}; } catch {}
+        if (!response.ok) {
+            throw new Error('[BSMS Web :: DB] Mac API returned HTTP ' + response.status + ': ' + (data.error || 'Request failed.'));
+        }
+        return data;
+    }
+
+    function makeSnapshot(value) {
+        const copy = value === undefined ? null : JSON.parse(JSON.stringify(value));
+        return {
+            val: () => copy,
+            exists: () => copy !== null && copy !== undefined
+        };
+    }
+
+    function readChild(value, childPath) {
+        let current = value;
+        for (const part of childPath.split('/').filter(Boolean)) {
+            if (current === null || current === undefined || typeof current !== 'object') return undefined;
+            current = current[part];
+        }
+        return current;
+    }
+
+    function makeRemoteRef(pathStr) {
+        const cleanPath = '/' + String(pathStr || '').split('/').filter(Boolean).join('/');
+        return {
+            once: async (eventType = 'value') => {
+                if (eventType !== 'value') throw new Error('Mac DB adapter only supports once("value").');
+                const result = await macRequest('GET', '/v1/db?path=' + encodeURIComponent(cleanPath));
+                return makeSnapshot(result.value);
+            },
+            set: async (value) => {
+                await macRequest('PUT', '/v1/db', { path: cleanPath, value });
+            },
+            update: async (updates) => {
+                await macRequest('PATCH', '/v1/db', { path: cleanPath, updates });
+            },
+            remove: async () => {
+                await macRequest('DELETE', '/v1/db?path=' + encodeURIComponent(cleanPath));
+            },
+            push: () => {
+                const key = '-N' + Date.now().toString(36) + crypto.randomBytes(6).toString('hex');
+                return {
+                    key,
+                    set: async (value) => {
+                        await macRequest('PUT', '/v1/db', { path: cleanPath + '/' + key, value });
+                    }
+                };
+            },
+            transaction: async (updateFn) => {
+                // Compare-and-set keeps transaction updates atomic across concurrent requests.
+                for (let attempt = 0; attempt < 50; attempt += 1) {
+                    const currentSnapshot = await makeRemoteRef(cleanPath).once('value');
+                    const current = currentSnapshot.val();
+                    const next = updateFn(current);
+                    const result = await macRequest('POST', '/v1/db/compare-and-set', {
+                        path: cleanPath,
+                        expected: current,
+                        value: next
+                    });
+                    if (result.committed) {
+                        return { committed: true, snapshot: makeSnapshot(result.value) };
+                    }
+                }
+                throw new Error('Mac DB transaction could not commit after repeated concurrent updates.');
+            },
+            orderByChild: (childPath) => ({
+                equalTo: (expectedValue) => ({
+                    once: async (eventType = 'value') => {
+                        const snapshot = await makeRemoteRef(cleanPath).once(eventType);
+                        const source = snapshot.val() || {};
+                        const filtered = {};
+                        for (const [key, item] of Object.entries(source)) {
+                            if (readChild(item, childPath) === expectedValue) filtered[key] = item;
+                        }
+                        return makeSnapshot(Object.keys(filtered).length ? filtered : null);
+                    }
+                })
+            })
+        };
+    }
+
+    remoteDb = { ref: (pathStr) => makeRemoteRef(pathStr) };
+    console.log('[BSMS Web :: DB] Using authenticated Mac JSON API.');
+}
+
 // Try Firebase Admin first
 let adminInstance = null;
 let realFirebaseDb = null;
 
-if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID) {
+if (!remoteDb && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID) {
     try {
         const adminMod = await import('firebase-admin');
         const admin = adminMod.default || adminMod;
@@ -241,10 +352,10 @@ const fallbackDb = {
 
 const adminMock = {
     apps: [{}],
-    database: () => realFirebaseDb || fallbackDb
+    database: () => remoteDb || realFirebaseDb || fallbackDb
 };
 adminMock.database.ServerValue = { TIMESTAMP: { '.sv': 'timestamp' } };
 
-export const db = realFirebaseDb || fallbackDb;
+export const db = remoteDb || realFirebaseDb || fallbackDb;
 export const admin = adminInstance || adminMock;
 export default { db, admin };
