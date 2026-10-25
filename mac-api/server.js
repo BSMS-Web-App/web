@@ -231,6 +231,168 @@ app.get('/health', requireApiKey, (_req, res) => {
   res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
 });
 
+
+function publicAccount(uid, account) {
+  const avatar = account?.account_status === 'banned' ? null : account?.avatar;
+  return {
+    username: account?.username || uid,
+    displayName: account?.displayName || account?.username || uid,
+    avatar: avatar && typeof avatar === 'object' && avatar.type === 'media' && /^[a-f0-9]{64}$/.test(avatar.mediaId || '')
+      ? '/api/media?id=' + encodeURIComponent(avatar.mediaId) : (avatar || ''),
+    account_status: account?.account_status || 'active',
+    ban_expires: account?.ban_expires || null,
+    role: account?.role || null,
+    verified: Boolean(account?.verified),
+    isDeveloper: Boolean(account?.isDeveloper),
+    nameColor: account?.nameColor || account?.chatColor || null,
+    chatColor: account?.nameColor || account?.chatColor || null
+  };
+}
+
+function numericKeySort(a, b) {
+  const na = Number(a), nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+  return String(a).localeCompare(String(b));
+}
+
+app.get('/v1/auth/session', requireApiKey, (req, res) => {
+  const sessionId = String(req.query.sessionId || '');
+  if (!sessionId || sessionId.length > 512) return sendError(res, 400, 'Invalid session ID.');
+  const accounts = database.accounts || {};
+  for (const [uid, account] of Object.entries(accounts)) {
+    if (account?.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) {
+      const { password, sessions, ...safeAccount } = account;
+      return res.status(200).json({ uid, account: safeAccount });
+    }
+  }
+  return res.status(404).json({ uid: null, account: null });
+});
+
+app.get('/v1/chat/sync', requireApiKey, (req, res) => {
+  const uid = String(req.query.uid || '');
+  if (!uid || uid.length > 256) return sendError(res, 400, 'Invalid user ID.');
+  const allAccounts = database.accounts || {};
+  const rawUsers = database.chat?.users || {};
+  const allConvos = database.chat?.conversations || {};
+  const now = Date.now();
+  const users = {};
+  for (const [userId, user] of Object.entries(rawUsers)) {
+    users[userId] = {
+      ...user,
+      status: user?.status === 'online' && user.lastSeen && now - user.lastSeen < 25000 ? 'online' : 'offline'
+    };
+  }
+  const accounts = {};
+  for (const [accountId, account] of Object.entries(allAccounts)) {
+    if (account?.account_status !== 'deleted') accounts[accountId] = publicAccount(accountId, account);
+  }
+  const channels = {};
+  for (const type of ['dms', 'gcs']) {
+    for (const [cid, channel] of Object.entries(allConvos[type] || {})) {
+      if (!channel?.members || !channel.members[uid]) continue;
+      const members = {};
+      for (const [memberUid, memberData] of Object.entries(channel.members)) {
+        if (allAccounts[memberUid]?.account_status !== 'banned') members[memberUid] = memberData;
+      }
+      const messageMap = channel.messages || {};
+      const messageIds = Object.keys(messageMap).filter((id) => messageMap[id] != null).sort(numericKeySort);
+      const lastId = messageIds.length ? messageIds[messageIds.length - 1] : null;
+      const last = lastId ? messageMap[lastId] : null;
+      const lastMessage = last ? {
+        id: lastId,
+        senderUid: last.senderUid || null,
+        timestamp: last.timestamp || 0,
+        contentType: last.contentType || 'text',
+        content: ['text'].includes(last.contentType || 'text') ? String(last.content || '').slice(0, 180) : null,
+        status: {
+          unsent: Boolean(last.status?.unsent),
+          deletedByMod: Boolean(last.status?.deletedByMod)
+        },
+        readReceipts: last.readReceipts || {}
+      } : null;
+      const config = { ...(channel.config || {}) };
+      if (config.theme?.background && typeof config.theme.background === 'object' && config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(config.theme.background.mediaId || '')) {
+        config.theme = { ...config.theme, background: '/api/media?id=' + encodeURIComponent(config.theme.background.mediaId) };
+      }
+      if (config.icon && typeof config.icon === 'object' && config.icon.type === 'media' && /^[a-f0-9]{64}$/.test(config.icon.mediaId || '')) {
+        config.icon = '/api/media?id=' + encodeURIComponent(config.icon.mediaId);
+      }
+      const channelData = {
+        name: channel.name || '',
+        _type: type,
+        _id: cid,
+        config,
+        members,
+        messageCount: messageIds.length,
+        lastMessage,
+        lastMessageId: lastId
+      };
+      if (channel.members[uid]?.role === 'owner' && channel.joinRequests) channelData.joinRequests = channel.joinRequests;
+      channels[cid] = channelData;
+    }
+  }
+  return res.status(200).json({ users, accounts, channels });
+});
+
+app.get('/v1/chat/messages', requireApiKey, (req, res) => {
+  const uid = String(req.query.uid || '');
+  const cid = String(req.query.cid || '');
+  const type = String(req.query.type || '');
+  if (!uid || !cid || !['dms', 'gcs'].includes(type)) return sendError(res, 400, 'Missing or invalid channel data.');
+  const channel = database.chat?.conversations?.[type]?.[cid];
+  if (cid === 'gc-general' && !channel) return res.status(403).json({ error: 'General conversation is not initialized.', unauthorized: true });
+  if (!channel?.members?.[uid]) return res.status(403).json({ error: 'Not a member of this channel.', unauthorized: true });
+
+  const allAccounts = database.accounts || {};
+  const activeMembers = {};
+  for (const [memberUid, memberData] of Object.entries(channel.members || {})) {
+    if (allAccounts[memberUid]?.account_status !== 'banned') activeMembers[memberUid] = memberData;
+  }
+  const allMsgs = channel.messages || {};
+  const allKeys = Object.keys(allMsgs).filter((id) => allMsgs[id] != null).sort(numericKeySort);
+  const parsedLimit = Number.parseInt(String(req.query.limit || '20'), 10);
+  const limit = Math.max(1, Math.min(50, Number.isFinite(parsedLimit) ? parsedLimit : 20));
+  const beforeId = req.query.beforeId ? String(req.query.beforeId) : '';
+  let selectedKeys;
+  let hasMore = false;
+  if (beforeId) {
+    const beforeIndex = allKeys.indexOf(beforeId);
+    if (beforeIndex > 0) {
+      const start = Math.max(0, beforeIndex - limit);
+      selectedKeys = allKeys.slice(start, beforeIndex);
+      hasMore = start > 0;
+    } else {
+      selectedKeys = [];
+    }
+  } else {
+    const start = Math.max(0, allKeys.length - limit);
+    selectedKeys = allKeys.slice(start);
+    hasMore = start > 0;
+  }
+  const messages = {};
+  const neededUids = new Set(Object.keys(channel.members || {}));
+  for (const id of selectedKeys) {
+    const message = allMsgs[id];
+    if (!message) continue;
+    if (message.senderUid) neededUids.add(message.senderUid);
+    const media = message.content && typeof message.content === 'object' && message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
+    if ((message.contentType === 'file' || message.contentType === 'image') && media) {
+      messages[id] = { ...message, content: null, hasContent: true, attachmentName: message.attachmentName || 'Attachment', senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+    } else {
+      const content = media ? '/api/media?id=' + encodeURIComponent(message.content.mediaId) : message.content;
+      messages[id] = { ...message, content, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+    }
+  }
+  const accounts = {};
+  for (const memberUid of neededUids) {
+    if (allAccounts[memberUid]) accounts[memberUid] = publicAccount(memberUid, allAccounts[memberUid]);
+  }
+  return res.status(200).json({
+    messages, members: activeMembers, accounts, hasMore,
+    oldestId: selectedKeys.length ? selectedKeys[0] : null
+  });
+});
+
 app.get('/v1/db', requireApiKey, (req, res) => {
   try {
     return res.status(200).json({ value: readAt(database, parsePath(req.query.path ?? '/')) });
