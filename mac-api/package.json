@@ -1,9 +1,9 @@
 {
-  "name": "bsms-web-mac-api",
+  "name": "bsms-web-mac-database-api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Private JSON database API for BSMS Web running on the Mac mini",
+  "description": "Private JSON database API for BSMS Web on the Mac mini",
   "scripts": {
     "start": "node server.js"
   },
