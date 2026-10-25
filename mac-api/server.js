@@ -6,6 +6,7 @@
  * Internal service only. Publish it through Cloudflare Tunnel; never expose
  * the data files or bind this service directly to a public interface.
  */
+import 'dotenv/config';
 import express from 'express';
 import fs from 'node:fs/promises';
 import path from 'node:path';
