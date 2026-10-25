@@ -2597,7 +2597,7 @@ const ChatManager = {
 
             clearInterval(State.msgInterval);
             const freshCache = State.conversationCache[cid];
-            const cacheIsFresh = freshCache && Date.now() - (freshCache.updatedAt || 0) < 10000;
+            const cacheIsFresh = freshCache && Date.now() - (freshCache.updatedAt || 0) < 60000;
             State.activeMessageLoad = cacheIsFresh ? Promise.resolve(true) : PollingManager.syncMessages();
             State.msgInterval = setInterval(PollingManager.syncMessages, cacheIsFresh ? 5000 : 2500);
         } catch (e) {
