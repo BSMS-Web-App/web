@@ -7,7 +7,7 @@ This service is intended to run on the always-on Mac mini. Vercel API routes wil
 All endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`.
 
 - `GET /health` — authenticated service health.
-- `GET /v1/db?path=/accounts/example` — read a Firebase-style path; response is `{"value": ...}`.
+- `GET /v1/db?path=/accounts/example` — read a slash-delimited database path; response is `{"value": ...}`.
 - `PUT /v1/db` — set a path; JSON body `{"path":"/path","value":{}}`. A null value deletes the path.
 - `PATCH /v1/db` — update relative child paths; JSON body `{"path":"/path","updates":{"child":value}}`.
 - `POST /v1/db/compare-and-set` — atomic compare-and-set used to implement transaction retries; JSON body `{"path":"/path","expected":oldValue,"value":newValue}`.
