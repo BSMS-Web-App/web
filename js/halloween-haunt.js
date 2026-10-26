@@ -106,7 +106,7 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
 // Game Loop & Init
 // ------------------------------------------------------------------
 async function initGame() {
-    const data = await apiCall('/state');
+    const data = await apiCall('?action=state');
     if (!data) return;
     
     gameState = data.state;
@@ -141,7 +141,7 @@ function updateTimer() {
 async function syncCrew() {
     if (!gameState || !isContestActive || !gameState.crewUnlocked) return;
     // Pings server to claim active-play crew rewards.
-    const res = await apiCall('/crew-sync', 'POST');
+    const res = await apiCall('?action=crew-sync', 'POST');
     if (res) {
         gameState = res.state;
         updateUI();
@@ -164,7 +164,7 @@ async function handleBasketClick(e) {
     collectCooldown = true;
     
     // Server validation is authoritative
-    const res = await apiCall('/collect', 'POST');
+    const res = await apiCall('?action=collect', 'POST');
     if (res) {
         gameState = res.state;
         updateUI();
@@ -250,7 +250,7 @@ function renderIndex(container) {
 }
 
 async function renderShops(container) {
-    const data = await apiCall('/shops');
+    const data = await apiCall('?action=shops');
     if (!data) { container.innerHTML = 'Error loading shops.'; return; }
     
     let html = `<div style="margin-bottom:15px; color:var(--fg2);">Offers refresh in <span id="shop-timer" style="color:var(--orange);">...</span></div>`;
@@ -270,7 +270,7 @@ async function renderShops(container) {
 }
 
 window.executeSellAll = async function() {
-    const res = await apiCall('/sell', 'POST', { action: 'sell_all' });
+    const res = await apiCall('?action=sell', 'POST', {});
     if(res) {
         gameState = res.state;
         updateUI();
@@ -309,7 +309,7 @@ function renderUpgrades(container) {
 }
 
 window.executeUpgrade = async function(type) {
-    const res = await apiCall('/upgrade', 'POST', { type });
+    const res = await apiCall('?action=upgrade', 'POST', { type });
     if(res) {
         gameState = res.state;
         updateUI();
@@ -367,7 +367,7 @@ function renderCrew(container) {
 }
 
 window.executeCrew = async function(action, index=0) {
-    const res = await apiCall('/crew-action', 'POST', { action, index });
+    const res = await apiCall('?action=crew-action', 'POST', { action, index });
     if(res) {
         gameState = res.state;
         updateUI();
@@ -389,7 +389,7 @@ function renderStats(container) {
 }
 
 async function renderLeaderboard(container) {
-    const res = await apiCall('/leaderboard');
+    const res = await apiCall('?action=leaderboard');
     if(!res) { container.innerHTML = 'Failed to load rankings.'; return; }
     
     let html = `<div style="display:flex; flex-direction:column; gap:8px;">`;
