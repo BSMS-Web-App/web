@@ -391,7 +391,7 @@ async function initGame() {
         window.halloweenHauntTimerStarted = true;
         setInterval(updateTimer, 1000);
     }
-    if(!window.halloweenHauntOnlineIntervalsStarted){window.halloweenHauntOnlineIntervalsStarted=true;setInterval(syncCrew,12000);setInterval(refreshLeaderboard,60000);}
+    if(!window.halloweenHauntOnlineIntervalsStarted){window.halloweenHauntOnlineIntervalsStarted=true;setInterval(syncCrew,3000);setInterval(refreshLeaderboard,60000);}
     hideLoadingScreen();
     maybeShowWelcomeGuide();
 }
