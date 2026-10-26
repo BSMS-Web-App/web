@@ -188,7 +188,7 @@ function enterOfflineMode() {
     gameState = {
         accountId: 'offline-local',
         displayName: 'Offline Player',
-        cash: 0,
+        cash: Math.max(0, Number(saved.cash) || 0),
         currentBasketCount: Math.max(0, Math.min(50, Number(saved.currentBasketCount) || 0)),
         basketCapacity: 50,
         upgrades: { power: { level: 0 } },
@@ -276,11 +276,26 @@ function handleBasketClick(e) {
     if (!isEventActive) { showToast("Event is not active."); return; }
 
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
-    const confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
+    let confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
     const pendingCandy = (pendingClicks + retryBatchClicks + inFlightClicks) * perClick;
     if (confirmed + pendingCandy >= Number(gameState.basketCapacity || 0)) {
-        showToast("Basket is full! Sell candy to make room.");
-        return;
+        if (offlineMode && confirmed > 0) {
+            // Offline practice has no shop API, so sell a full basket locally to keep the game playable.
+            gameState.cash = Math.max(0, Number(gameState.cash) || 0) + confirmed;
+            gameState.currentBasketCount = 0;
+            confirmed = 0;
+            try {
+                localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify({
+                    currentBasketCount: 0,
+                    cash: gameState.cash,
+                    updatedAt: Date.now()
+                }));
+            } catch (_) {}
+            showToast('Offline practice: sold a basket locally. This cash will not sync online.');
+        } else {
+            showToast("Basket is full! Sell candy to make room.");
+            return;
+        }
     }
 
     // Immediate feedback: never wait for the network before animating a click.
@@ -295,6 +310,7 @@ function handleBasketClick(e) {
         try {
             localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify({
                 currentBasketCount: gameState.currentBasketCount,
+                cash: gameState.cash,
                 updatedAt: Date.now()
             }));
         } catch (_) {}
