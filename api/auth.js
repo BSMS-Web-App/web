@@ -6,7 +6,16 @@
 
 import { db, admin } from './db.js';
 import crypto from 'crypto';
-import { isContentFlagged as checkProfanity } from './moderation.js';
+import { moderateContent } from './moderation.js';
+
+async function rejectFlaggedContent(res, value, label) {
+    const result = await moderateContent(value);
+    if (!result.flagged) return null;
+    return res.status(400).json({
+        error: `${label} was blocked by moderation: ${result.reason}`,
+        moderation: { flagged: true, reasons: result.reasons, categories: result.categories || [], sources: result.sources || [] }
+    });
+}
 
 function mediaUrl(value) {
     if (value && typeof value === 'object' && value.type === 'media' && /^[a-f0-9]{64}$/.test(value.mediaId || '')) {
@@ -113,7 +122,8 @@ export default async function handler(req, res) {
                 const validUserRegex = /^[a-zA-Z0-9_.-]+$/;
                 if (!validUserRegex.test(username)) return res.status(400).json({ error: 'Username contains invalid characters.' });
                 
-                if (await checkProfanity(username)) return res.status(400).json({ error: 'Username contains profane language.' });
+                const usernameModerationResponse = await rejectFlaggedContent(res, username, 'Username');
+                if (usernameModerationResponse) return usernameModerationResponse;
 
                 const accountsSnap = await db.ref('/accounts').once('value');
                 const accounts = accountsSnap.val() || {};
@@ -269,11 +279,13 @@ export default async function handler(req, res) {
                 const updates = {};
                 
                 if (displayName !== undefined) {
-                    if (await checkProfanity(displayName)) return res.status(400).json({ error: 'Display name contains profane language.' });
+                    const displayNameModerationResponse = await rejectFlaggedContent(res, displayName, 'Display name');
+                    if (displayNameModerationResponse) return displayNameModerationResponse;
                     updates['displayName'] = displayName;
                 }
                 if (bio !== undefined) {
-                    if (await checkProfanity(bio)) return res.status(400).json({ error: 'Bio contains profane language.' });
+                    const bioModerationResponse = await rejectFlaggedContent(res, bio, 'Bio');
+                    if (bioModerationResponse) return bioModerationResponse;
                     updates['bio'] = bio;
                 }
                 if (email !== undefined) updates['email'] = email;
@@ -333,7 +345,8 @@ export default async function handler(req, res) {
                 }
 
                 if (!/^[a-zA-Z0-9_-]{3,20}$/.test(newUsername)) return res.status(400).json({ error: 'Invalid username format.' });
-                if (await checkProfanity(newUsername)) return res.status(400).json({ error: 'Username contains profane language.' });
+                const newUsernameModerationResponse = await rejectFlaggedContent(res, newUsername, 'Username');
+                if (newUsernameModerationResponse) return newUsernameModerationResponse;
                 
                 const snap = await db.ref('/accounts').once('value');
                 const allAccs = snap.val() || {};
