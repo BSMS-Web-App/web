@@ -167,7 +167,25 @@ export default async function handler(req,res) {
   if(req.method==='OPTIONS') return res.status(204).end();
   if(!['GET','POST'].includes(req.method)) return res.status(405).json({error:'Method not allowed.'});
   const action=String(req.query?.action || (typeof req.body==='object'&&req.body?.action) || 'state');
-  const auth=await authenticate(req).catch(e=>{console.error('[Haunt] Auth error',e);return null;});
+
+  // Lightweight diagnostic endpoint. Never returns account data or secrets.
+  if (action === 'health') {
+    try {
+      await db.ref('/accounts').once('value');
+      return res.status(200).json({ ok: true, database: 'reachable', api: 'halloween-haunt' });
+    } catch (error) {
+      console.error('[Haunt] Health check failed:', error);
+      return res.status(503).json({ ok: false, database: 'unavailable', error: 'The game API cannot reach the Mac database. Check Vercel environment variables and the Cloudflare Tunnel.' });
+    }
+  }
+
+  let auth;
+  try {
+    auth = await authenticate(req);
+  } catch (error) {
+    console.error('[Haunt] Auth/database error:', error);
+    return res.status(503).json({ error: 'The game API cannot reach the account database. Check the Mac API and Cloudflare Tunnel.' });
+  }
   if(!auth) return res.status(401).json({error:'Please sign in to play Halloween Haunt.'});
   if(auth.error) return res.status(auth.status).json({error:auth.error});
   const now=Date.now(), status=contestStatus(now);
