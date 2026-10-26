@@ -239,7 +239,7 @@ export default async function handler(req,res) {
         if(type==='autoSell' && u.level) player.crewUnlocked=player.crew.length>0;
         response={state:publicState(player,root,now),purchased:type,cost};
       } else if(action==='crew-action') {
-        const act=String(req.body?.crewAction||req.body?.actionType||'');const idx=Number.isInteger(req.body?.index)?req.body.index:-1;
+        const act=String(req.body?.crewAction||req.body?.actionType||req.body?.action||'');const idx=Number.isInteger(req.body?.index)?req.body.index:-1;
         if(act==='hire'){
           if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};actionResponse=response; return root;}
           if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};actionResponse=response; return root;}
@@ -270,7 +270,7 @@ export default async function handler(req,res) {
               player.stats.crewCollected++;player.stats.totalCollected++;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;
               if(!player.discovered.includes(c.id))player.discovered.push(c.id);
               if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected++;if(c.rarity==='Legendary')player.stats.legendaryCollected++;
-              player.inventory[c.id]=(player.inventory[c.id]||0)+1;count();
+              count();
             }
             if(player.upgrades.autoSell.level && crew.inventoryCount>=crew.capacity){
               let earned=0,sold=0;
