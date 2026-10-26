@@ -122,8 +122,8 @@ export default async function handler(req, res) {
                 } else if (contentType === 'poll') {
                     const pollQuestionModerationResponse = await rejectFlaggedContent(res, content.pollQuestion, 'Poll question');
                     if (pollQuestionModerationResponse) return pollQuestionModerationResponse;
-                    if (Array.isArray(content.pollOptions)) {
-                        for (const option of content.pollOptions) {
+                    if (content.pollOptions && typeof content.pollOptions === 'object') {
+                        for (const option of Object.values(content.pollOptions)) {
                             const pollOptionModerationResponse = await rejectFlaggedContent(res, option, 'Poll option');
                             if (pollOptionModerationResponse) return pollOptionModerationResponse;
                         }
