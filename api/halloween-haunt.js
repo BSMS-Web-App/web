@@ -305,7 +305,7 @@ export default async function handler(req,res) {
         const clickCount = Math.min(50, Math.max(1, Math.floor(Number(req.body?.clickCount) || 1)));
         const requested = Math.min(MAX_CLICK_RATE, 1 + (player.upgrades.power.level || 0));
         const room = Math.max(0, player.basketCapacity - count());
-        if (room <= 0) { response = { error: 'Your basket is full. Sell candy to make room.', status: 409 }; actionResponse = response; return root; }
+        if (room <= 0) { response = { state: publicState(player,root,now), collected: 0, basketFull: true }; actionResponse = response; return root; }
         const drops = [];
         for (let i = 0; i < Math.min(requested * clickCount, room); i++) {
           const c=rollCandy(player.upgrades.luck.level||0);
@@ -321,19 +321,15 @@ export default async function handler(req,res) {
       } else if(action==='shops') {
         response={state:publicState(player,root,now)};
       } else if(action==='sell') {
-        const selected=Array.isArray(req.body?.selected)?req.body.selected.filter(id=>CANDY.some(c=>c.id===id)):null;
-        const shopId=typeof req.body?.shopId==='string'?req.body.shopId:null;
-        if(shopId && !SHOPS.some(s=>s.id===shopId)){response={error:'Invalid shop.',status:400};actionResponse=response; return root;}
         let earned=0,sold=0,receipts=[];
         for(const candy of CANDY){
-          if(selected && !selected.includes(candy.id)) continue;
           const qty=Math.max(0,Math.floor(player.inventory[candy.id]||0));if(!qty)continue;
-          const shop=shopId?SHOPS.find(s=>s.id===shopId):bestShopFor(candy.id,root.meta.offers);
-          const unit=root.meta.offers[shop.id][candy.id], subtotal=unit*qty;
+          const shop=bestShopFor(candy.id,root.meta.offers);
+          const unit=root.meta.offers[shop.id][candy.id],subtotal=unit*qty;
           earned+=subtotal;sold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:'basket'});
           player.inventory[candy.id]=0;
         }
-        if(!sold){response={error:'You have no matching candy to sell.',status:409};actionResponse=response; return root;}
+        if(!sold){response={state:publicState(player,root,now),earned:0,sold:0,receipts:[],nothingToSell:true};actionResponse=response;return root;}
         credit(earned);player.stats.totalSold+=sold;count();response={state:publicState(player,root,now),earned,sold,receipts};
       } else if(action==='upgrade') {
         const type=String(req.body?.type||'');const cfg=UPGRADE_CONFIG[type],u=player.upgrades[type];
@@ -344,7 +340,6 @@ export default async function handler(req,res) {
         player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;u.level++;
         u.nextCost=u.level>=cfg.max?-1:Math.floor(cfg.baseCost*Math.pow(1.62,u.level));
         if(type==='capacity')player.basketCapacity=Math.min(500,player.basketCapacity+10);
-        if(type==='autoSell' && u.level) player.crewUnlocked=player.crew.length>0;
         response={state:publicState(player,root,now),purchased:type,cost};
       } else if(action==='crew-action') {
         const act=String(req.body?.crewAction||req.body?.actionType||req.body?.action||'');const idx=Number.isInteger(req.body?.index)?req.body.index:-1;
