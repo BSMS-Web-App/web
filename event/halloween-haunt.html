@@ -9,7 +9,7 @@ SPDX-License-Identifier: MIT
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <meta name="description" content="Compete in the BSMS Web Halloween Haunt! Collect candy, upgrade your crew, and climb the leaderboard."/>
-<meta name="theme-color" content="#FF7A18">
+<meta name="theme-color" content="#030303">
 <meta name="color-scheme" content="dark">
 <title>Halloween Haunt - BSMS Web</title>
 
@@ -27,182 +27,89 @@ SPDX-License-Identifier: MIT
 <script src="/js/analytics.js"></script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Patrick+Hand&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 :root {
-  --orange: #FF7A18;
-  --orange-glow: rgba(255, 122, 24, 0.4);
-  --purple: #7C3AED;
-  --purple-glow: rgba(124, 58, 237, 0.3);
-  --bg: #120D18;
-  --surface: #1a1523;
-  --fg: #ffffff;
-  --fg2: rgba(255, 255, 255, 0.75);
-  --border: rgba(255, 122, 24, 0.2);
-  --glass-bg: rgba(26, 21, 35, 0.65);
-  --glass-border: rgba(255, 122, 24, 0.15);
-  --font: 'Patrick Hand', cursive;
-  --font-spooky: 'Creepster', cursive;
+  --red:#BB001E; --red-hot:#D10022; --red-glow:rgba(187,0,30,.38);
+  --orange:#FF7A18; --orange-glow:rgba(255,122,24,.22);
+  --bg:#030303; --surface:#0a0a0a; --surface-raised:rgba(18,18,20,.82);
+  --fg:#fff; --fg2:rgba(255,255,255,.72); --border:rgba(255,255,255,.1);
+  --glass-bg:rgba(15,15,15,.66); --glass-border:rgba(255,255,255,.12);
+  --glass-shadow:0 8px 32px rgba(0,0,0,.5); --font:'Patrick Hand',cursive;
 }
-
-*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg); color: var(--fg); font-family: var(--font);
-  width: 100vw; height: 100vh; overflow: hidden; font-size: 20px;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+body{min-height:100vh;width:100%;overflow-x:hidden;overflow-y:auto;background:var(--bg);color:var(--fg);font:20px/1.45 var(--font);padding:105px 18px 125px}
+body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,rgba(187,0,30,.12),transparent 52%),radial-gradient(ellipse at 85% 85%,rgba(255,122,24,.055),transparent 40%)}
+.ambient-particles{position:fixed;inset:0;z-index:-1;opacity:.18;pointer-events:none;background-image:radial-gradient(var(--red-glow) 1px,transparent 1.5px);background-size:60px 60px;transform:perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px);animation:moveParticles 22s linear infinite;mask-image:linear-gradient(to bottom,transparent,black 40%,transparent);-webkit-mask-image:linear-gradient(to bottom,transparent,black 40%,transparent)}
+@keyframes moveParticles{from{background-position:0 0}to{background-position:0 120px}}
+#offlineBanner{position:fixed;top:0;left:0;width:100%;background:var(--red-hot);color:#fff;text-align:center;padding:10px;z-index:10000;transform:translateY(-110%);transition:transform .3s}
+#offlineBanner.show{transform:translateY(0)}
+.haunt-header{position:fixed;top:14px;left:50%;transform:translateX(-50%);width:min(1200px,calc(100% - 28px));padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--glass-bg);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--glass-border);border-radius:22px;box-shadow:var(--glass-shadow);z-index:100}
+.header-brand h1{font:inherit;font-size:clamp(23px,3vw,31px);font-weight:bold;color:#fff;letter-spacing:.3px;text-shadow:0 0 22px var(--red-glow)}
+.header-brand h1::first-letter{color:var(--red-hot)}
+.header-stats{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.stat-pill{background:rgba(255,255,255,.045);border:1px solid var(--border);padding:7px 13px;border-radius:14px;font-size:19px;color:var(--fg2);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.stat-pill span.cash{color:#fff;font-weight:bold}
+.stat-pill span.timer{color:#ff6478;font-size:17px}
+.game-container{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 220px);width:100%;position:relative;isolation:isolate}
+.basket-wrapper{position:relative;cursor:pointer;transform-style:preserve-3d;transition:transform .12s cubic-bezier(.16,1,.3,1);filter:drop-shadow(0 18px 45px rgba(187,0,30,.16));touch-action:manipulation}
+.basket-wrapper:hover{transform:translateY(-4px) scale(1.025)}
+.basket-wrapper:active{transform:scale(.96) translateY(4px)}
+.pumpkin-svg{width:clamp(190px,30vw,290px);height:auto;max-height:290px}
+.basket-status{text-align:center;margin-top:5px;font-size:23px;color:var(--fg2);min-width:min(320px,90vw)}
+.basket-bar-bg{width:min(280px,80vw);height:11px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.06);border-radius:10px;margin:10px auto;overflow:hidden}
+.basket-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),#ff5268);width:0%;transition:width .25s;box-shadow:0 0 14px var(--red-glow)}
+.action-nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:5px;max-width:calc(100vw - 24px);background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);padding:9px;border-radius:22px;box-shadow:0 10px 45px rgba(0,0,0,.7);z-index:100;flex-wrap:wrap;justify-content:center}
+.action-btn{background:transparent;border:1px solid transparent;color:var(--fg2);font:inherit;font-size:18px;cursor:pointer;padding:8px 13px;border-radius:13px;transition:background .2s,color .2s,border-color .2s}
+.action-btn:hover,.action-btn:focus-visible,.action-btn.active{background:rgba(187,0,30,.16);border-color:rgba(187,0,30,.35);color:#fff;outline:none}
+.falling-candy{position:absolute;width:40px;height:40px;object-fit:contain;pointer-events:none;z-index:50;animation:candyDrop 1.2s cubic-bezier(.3,0,.7,1) forwards}
+@keyframes candyDrop{0%{transform:translateY(-50px) scale(.5) rotate(0);opacity:0}20%{opacity:1;transform:translateY(-10px) scale(1.2) rotate(45deg)}100%{transform:translateY(150px) scale(.8) rotate(180deg);opacity:0}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:2000;opacity:0;visibility:hidden;transition:opacity .22s,visibility .22s}
+.modal-overlay.show{opacity:1;visibility:visible}
+.haunt-modal{background:rgba(10,10,11,.96);border:1px solid var(--glass-border);border-radius:24px;width:min(1050px,100%);max-height:min(86vh,900px);display:flex;flex-direction:column;box-shadow:0 25px 90px rgba(0,0,0,.75),0 0 35px rgba(187,0,30,.08);transform:translateY(14px) scale(.99);transition:transform .22s;overflow:hidden}
+.modal-overlay.show .haunt-modal{transform:translateY(0) scale(1)}
+.modal-header{padding:17px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;background:rgba(255,255,255,.025)}
+.modal-header h2{font:inherit;font-size:27px;font-weight:bold;color:#fff;letter-spacing:.2px}
+.modal-header h2::first-letter{color:var(--red-hot)}
+.modal-close{background:rgba(255,255,255,.04);border:1px solid var(--border);width:38px;height:38px;border-radius:12px;color:var(--fg2);font:inherit;font-size:27px;cursor:pointer;transition:all .2s}
+.modal-close:hover{background:rgba(187,0,30,.16);color:#fff;border-color:rgba(187,0,30,.4)}
+.modal-body{padding:22px;overflow:auto;overscroll-behavior:contain;flex:1;min-height:0}
+.candy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.candy-card{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:16px;padding:13px;text-align:center;cursor:pointer;transition:transform .2s,border-color .2s,background .2s;overflow-wrap:anywhere}
+.candy-card:hover{transform:translateY(-2px);border-color:rgba(187,0,30,.5);background:rgba(187,0,30,.055)}
+.candy-card.locked img{filter:brightness(0) opacity(.3)}
+.candy-card img{width:62px;height:62px;object-fit:contain;margin-bottom:8px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.candy-card .qty{font-size:16px;color:var(--fg2)}
+.upgrade-list{display:flex;flex-direction:column;gap:12px}
+.upgrade-row{display:flex;justify-content:space-between;align-items:center;gap:16px;background:rgba(255,255,255,.025);padding:16px;border-radius:16px;border:1px solid var(--border)}
+.buy-btn{background:linear-gradient(135deg,var(--red),#820014);color:#fff;border:1px solid rgba(255,255,255,.1);padding:9px 18px;border-radius:13px;font:inherit;font-size:18px;cursor:pointer;box-shadow:0 5px 18px rgba(187,0,30,.2);transition:transform .15s,filter .15s;white-space:nowrap}
+.buy-btn:hover{filter:brightness(1.13);transform:translateY(-1px)}
+.buy-btn:active{transform:scale(.97)}
+.buy-btn:disabled{background:#242426;color:#777;box-shadow:none;cursor:not-allowed;transform:none}
+#toast-container{position:fixed;top:92px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:10px;width:min(370px,calc(100vw - 36px));pointer-events:none}
+.toast{background:rgba(12,12,14,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-left:4px solid var(--red-hot);padding:12px 17px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.5);color:#fff;font-size:18px;animation:slideIn .25s ease-out forwards}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+button,select,input{font-family:var(--font)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #ff6478;outline-offset:2px}
+table{border-collapse:collapse}
+th,td{padding:9px 8px}
+@media(max-width:760px){
+ body{padding:125px 10px 165px}
+ .haunt-header{top:8px;width:calc(100% - 16px);padding:10px 12px;align-items:flex-start;flex-direction:column;gap:8px;border-radius:18px}
+ .header-stats{justify-content:flex-start;gap:7px;width:100%}
+ .stat-pill{font-size:17px;padding:5px 9px}
+ .stat-pill span.timer{font-size:15px}
+ .game-container{min-height:calc(100vh - 280px)}
+ .action-nav{bottom:8px;width:calc(100% - 16px);max-width:none;border-radius:18px;padding:7px;gap:4px}
+ .action-btn{font-size:16px;padding:7px 10px}
+ .modal-overlay{padding:8px}
+ .haunt-modal{max-height:calc(100dvh - 16px);border-radius:19px}
+ .modal-header{padding:13px 15px}
+ .modal-body{padding:14px}
+ .candy-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+ .upgrade-row{align-items:flex-start;flex-direction:column}
 }
-
-/* Ambient Halloween Particles */
-.ambient-particles {
-  position: fixed; inset: 0; z-index: -1; opacity: 0.2; pointer-events: none;
-  background-image: radial-gradient(var(--orange-glow) 1.5px, transparent 1.5px);
-  background-size: 60px 60px;
-  transform: perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px);
-  animation: moveParticles 25s linear infinite;
-  mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
-}
-@keyframes moveParticles {
-  from { background-position: 0 0; }
-  to { background-position: 0 120px; }
-}
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background: radial-gradient(circle at 50% 50%, rgba(124,58,237,0.1) 0%, transparent 60%),
-              radial-gradient(circle at 50% 100%, rgba(255,122,24,0.08) 0%, transparent 60%);
-}
-
-/* Top Navigation */
-.haunt-header {
-  position: fixed; top: 0; left: 0; width: 100%; padding: 15px 24px;
-  display: flex; justify-content: space-between; align-items: center;
-  background: linear-gradient(180deg, var(--bg) 0%, transparent 100%);
-  z-index: 100;
-}
-.header-brand h1 { font-family: var(--font-spooky); color: var(--orange); font-size: 32px; text-shadow: 0 0 15px var(--orange-glow); letter-spacing: 2px;}
-.header-stats { display: flex; gap: 20px; align-items: center; }
-.stat-pill {
-  background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border); padding: 6px 16px; border-radius: 20px;
-  font-size: 22px; color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  display: flex; align-items: center; gap: 8px;
-}
-.stat-pill span.cash { color: #F5C451; font-weight: bold; }
-.stat-pill span.timer { color: var(--orange); font-family: monospace; font-size: 18px; }
-
-/* Main Game Area */
-.game-container {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100vh; width: 100vw; position: relative;
-}
-.basket-wrapper {
-  position: relative; cursor: pointer; transform-style: preserve-3d;
-  transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.basket-wrapper:active { transform: scale(0.95) translateY(5px); }
-.pumpkin-svg { width: 300px; height: 300px; filter: drop-shadow(0 15px 30px rgba(255, 122, 24, 0.3)); }
-.basket-status {
-  text-align: center; margin-top: -20px;
-  font-size: 24px; color: var(--fg2); text-shadow: 0 4px 10px rgba(0,0,0,0.8);
-}
-.basket-bar-bg {
-  width: 250px; height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin: 10px auto; overflow: hidden;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
-}
-.basket-bar-fill {
-  height: 100%; background: linear-gradient(90deg, var(--orange), #FF9A3D); width: 0%; transition: width 0.3s;
-}
-
-/* Floating Navigation Menu */
-.action-nav {
-  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 12px;
-  background: var(--glass-bg); backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 40px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 100; flex-wrap: wrap; justify-content: center;
-}
-.action-btn {
-  background: transparent; border: none; color: var(--fg2); font-family: var(--font);
-  font-size: 20px; cursor: pointer; padding: 6px 14px; border-radius: 20px;
-  transition: all 0.2s;
-}
-.action-btn:hover, .action-btn.active {
-  background: rgba(255,122,24,0.15); color: #fff; text-shadow: 0 0 10px var(--orange-glow);
-}
-
-/* Falling Candy Animation */
-.falling-candy {
-  position: absolute; width: 40px; height: 40px; object-fit: contain; pointer-events: none; z-index: 50;
-  animation: candyDrop 1.2s cubic-bezier(0.3, 0, 0.7, 1) forwards;
-}
-@keyframes candyDrop {
-  0% { transform: translateY(-50px) scale(0.5) rotate(0deg); opacity: 0; }
-  20% { opacity: 1; transform: translateY(-10px) scale(1.2) rotate(45deg); }
-  100% { transform: translateY(150px) scale(0.8) rotate(180deg); opacity: 0; }
-}
-
-/* Modals */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
-  display: flex; align-items: center; justify-content: center; z-index: 2000;
-  opacity: 0; visibility: hidden; transition: all 0.3s;
-}
-.modal-overlay.show { opacity: 1; visibility: visible; }
-.haunt-modal {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 24px;
-  width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px var(--purple-glow);
-  transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.modal-overlay.show .haunt-modal { transform: translateY(0) scale(1); }
-.modal-header {
-  padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
-  display: flex; justify-content: space-between; align-items: center;
-}
-.modal-header h2 { font-family: var(--font-spooky); font-size: 28px; color: var(--purple); letter-spacing: 1px; }
-.modal-close { background: none; border: none; color: var(--fg2); font-size: 28px; cursor: pointer; transition: color 0.2s; }
-.modal-close:hover { color: #fff; }
-.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
-
-/* Grid systems & Cards */
-.candy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; }
-.candy-card {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
-  padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;
-}
-.candy-card:hover { border-color: var(--orange); background: rgba(255,122,24,0.05); }
-.candy-card.locked img { filter: brightness(0) opacity(0.3); }
-.candy-card img { width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
-.candy-card .qty { font-size: 16px; color: var(--fg2); }
-
-.upgrade-list { display: flex; flex-direction: column; gap: 12px; }
-.upgrade-row {
-  display: flex; justify-content: space-between; align-items: center;
-  background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
-}
-.buy-btn {
-  background: linear-gradient(135deg, var(--orange), #D95C00); color: #fff;
-  border: none; padding: 8px 20px; border-radius: 12px; font-family: var(--font); font-size: 18px;
-  cursor: pointer; box-shadow: 0 4px 15px var(--orange-glow); transition: transform 0.1s;
-}
-.buy-btn:active { transform: scale(0.95); }
-.buy-btn:disabled { background: #333; color: #888; box-shadow: none; cursor: not-allowed; }
-
-/* Toasts */
-#toast-container { position: fixed; top: 80px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-.toast {
-  background: var(--surface); border-left: 4px solid var(--orange); padding: 12px 20px;
-  border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.6); color: #fff; font-size: 18px;
-  animation: slideIn 0.3s ease-out forwards;
-}
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* Responsive */
-@media (max-width: 600px) {
-  .haunt-header { padding: 10px; flex-direction: column; gap: 10px; }
-  .action-nav { bottom: 15px; padding: 8px; gap: 5px; width: 95%; }
-  .action-btn { font-size: 16px; padding: 4px 8px; }
-}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
