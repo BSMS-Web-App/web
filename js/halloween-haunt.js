@@ -53,6 +53,16 @@ let gameState = null;
 let currentModal = null;
 let offerRefreshTime = 0;
 let isContestActive = false;
+let leaderboardCache = [];
+let pendingClicks = 0;
+let inFlightClicks = 0;
+let retryBatchClicks = 0;
+let pendingRetryRequestId = null;
+let collectInFlight = false;
+let collectFlushTimer = null;
+let shopTimerInterval = null;
+let shopRefreshInFlight = false;
+const PRELOADED_CANDY_IMAGES = new Map();
 
 // Helpers
 function showToast(msg) {
@@ -120,29 +130,61 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
 // ------------------------------------------------------------------
 // Game Loop & Init
 // ------------------------------------------------------------------
+async function preloadCandyImages() {
+    const jobs = CANDY_CATALOG.map(candy => new Promise(resolve => {
+        const image = new Image();
+        PRELOADED_CANDY_IMAGES.set(candy.id, image);
+        image.onload = () => resolve({ id: candy.id, ok: true });
+        image.onerror = () => resolve({ id: candy.id, ok: false });
+        image.src = IMG_BASE + candy.file;
+        if (image.complete) resolve({ id: candy.id, ok: image.naturalWidth > 0 });
+    }));
+    return Promise.all(jobs);
+}
+
+function setLoadingMessage(message) {
+    const label = document.getElementById('loadingMessage');
+    if (label) label.textContent = message;
+}
+
+function hideLoadingScreen() {
+    const screen = document.getElementById('gameLoadingScreen');
+    if (!screen) return;
+    screen.classList.add('hidden');
+    setTimeout(() => screen.remove(), 350);
+}
+
 async function initGame() {
+    const retryButton = document.getElementById('loadingRetry');
+    if (retryButton) retryButton.hidden = true;
+    setLoadingMessage('Loading your game, shops, collection, and candy artwork…');
+
     const data = await apiCall('?action=state');
-    if (!data) {
-        // Distinguish an unavailable Mac DB/tunnel from a player-session issue.
-        const health = await apiCall('?action=health');
-        if (health?.ok) {
-            showToast("Game service is online, but player state did not load. Refresh once; if it persists, check Vercel Runtime Logs.");
-        }
+    if (!data?.state) {
+        setLoadingMessage('The game could not finish loading. Check your connection and try again.');
+        if (retryButton) retryButton.hidden = false;
         return;
     }
-    if (!data.state) {
-        showToast("The game API responded without player state. Please refresh and check Vercel Runtime Logs if this continues.");
+
+    // Create/load the player first so the initial leaderboard includes this account.
+    const [leaderboard] = await Promise.all([
+        apiCall('?action=leaderboard'),
+        preloadCandyImages(),
+        document.fonts?.ready || Promise.resolve()
+    ]);
+    if (!leaderboard || !Array.isArray(leaderboard.rankings)) {
+        setLoadingMessage('Your game loaded, but the leaderboard could not load. Retry to finish loading everything.');
+        if (retryButton) retryButton.hidden = false;
         return;
     }
 
     gameState = data.state;
+    leaderboardCache = leaderboard.rankings;
     updateUI();
     updateTimer();
-    
-    // Heartbeat timers
     setInterval(updateTimer, 1000);
-    // Crew sync every 20 seconds of ACTIVE page time (prevents offline cheating)
-    setInterval(syncCrew, 20000); 
+    setInterval(syncCrew, 20000);
+    hideLoadingScreen();
 }
 
 function updateTimer() {
@@ -168,32 +210,73 @@ async function syncCrew() {
 // ------------------------------------------------------------------
 // Actions
 // ------------------------------------------------------------------
-let collectCooldown = false;
-async function handleBasketClick(e) {
-    if (!gameState) { showToast("Halloween Haunt is still connecting. Check the game API message above."); return; }
+function handleBasketClick(e) {
+    if (!gameState) { showToast("Halloween Haunt is still connecting."); return; }
     if (!isContestActive) { showToast("Contest is not active."); return; }
-    if (collectCooldown) return;
-    if (gameState.currentBasketCount >= gameState.basketCapacity) {
+
+    const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
+    const confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
+    const pendingCandy = (pendingClicks + retryBatchClicks + inFlightClicks) * perClick;
+    if (confirmed + pendingCandy >= Number(gameState.basketCapacity || 0)) {
         showToast("Basket is full! Sell candy to make room.");
         return;
     }
 
-    collectCooldown = true;
-    
-    // Server validation is authoritative
-    const res = await apiCall('?action=collect', 'POST');
-    if (res) {
-        gameState = res.state;
-        updateUI();
-        
-        // Optimistic visual feedback based on authoritative result
-        if (res.drops && res.drops.length > 0) {
-            res.drops.forEach((dropId, i) => {
-                setTimeout(() => spawnFallingCandy(dropId, e.clientX, e.clientY), i * 100);
-            });
+    // Immediate feedback: never wait for the network before animating a click.
+    const preview = CANDY_CATALOG[Math.floor(Math.random() * CANDY_CATALOG.length)];
+    spawnFallingCandy(preview.id, e.clientX, e.clientY);
+    pendingClicks += 1;
+    updateUI();
+
+    if (collectFlushTimer) clearTimeout(collectFlushTimer);
+    collectFlushTimer = setTimeout(flushCollectQueue, 45);
+}
+
+async function flushCollectQueue() {
+    if (collectInFlight || (!pendingRetryRequestId && pendingClicks <= 0) || !gameState) return;
+    collectInFlight = true;
+    const retrying = Boolean(pendingRetryRequestId);
+    const batch = retrying ? retryBatchClicks : Math.min(50, pendingClicks);
+    if (!retrying) pendingClicks -= batch;
+    inFlightClicks = batch;
+    const requestId = pendingRetryRequestId || (crypto.randomUUID ? crypto.randomUUID() : `collect-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    let succeeded = false;
+    try {
+        const res = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId });
+        if (res?.state) {
+            succeeded = true;
+            pendingRetryRequestId = null;
+            retryBatchClicks = 0;
+            gameState = res.state;
+            inFlightClicks = 0;
+            updateUI();
+            const retry = document.getElementById('collectRetry');
+            if (retry) retry.hidden = true;
+        } else {
+            // Keep failed clicks separate from newer clicks and reuse the ID on retry.
+            // A committed-but-lost response is then replayed without double counting.
+            if (!retrying) {
+                pendingRetryRequestId = requestId;
+                retryBatchClicks = batch;
+            }
+            inFlightClicks = 0;
+            updateUI();
+            const retry = document.getElementById('collectRetry');
+            if (retry) retry.hidden = false;
+        }
+    } finally {
+        collectInFlight = false;
+        if (succeeded && pendingClicks > 0) {
+            if (collectFlushTimer) clearTimeout(collectFlushTimer);
+            collectFlushTimer = setTimeout(flushCollectQueue, 0);
         }
     }
-    setTimeout(() => { collectCooldown = false; }, 150);
+}
+
+function retryCollectQueue() {
+    const retry = document.getElementById('collectRetry');
+    if (retry) retry.hidden = true;
+    flushCollectQueue();
 }
 
 function spawnFallingCandy(candyId, originX, originY) {
@@ -230,14 +313,16 @@ function spawnFallingCandy(candyId, originX, originY) {
 function updateUI() {
     document.getElementById('ui-cash').innerText = formatCash(gameState.cash);
     
-    const count = gameState.currentBasketCount;
+    const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
     const cap = gameState.basketCapacity;
+    const count = Math.min(cap, Number(gameState.currentBasketCount || 0) + (pendingClicks + retryBatchClicks + inFlightClicks) * perClick);
     document.getElementById('ui-capacity-text').innerText = `${count} / ${cap}`;
     document.getElementById('ui-capacity-bar').style.width = `${Math.min(100, (count/cap)*100)}%`;
 }
 
 function openModal(type) {
     currentModal = type;
+    document.querySelectorAll('.action-btn').forEach(button => button.classList.toggle('active', button.getAttribute('onclick') === `openModal('${type}')`));
     document.getElementById('hauntModalOverlay').classList.add('show');
     const titleEl = document.getElementById('modalTitle');
     const bodyEl = document.getElementById('modalBody');
@@ -253,6 +338,11 @@ function openModal(type) {
 
 function closeModal() {
     currentModal = null;
+    if (shopTimerInterval) {
+        clearInterval(shopTimerInterval);
+        shopTimerInterval = null;
+    }
+    document.querySelectorAll('.action-btn').forEach(button => button.classList.remove('active'));
     document.getElementById('hauntModalOverlay').classList.remove('show');
 }
 
@@ -268,11 +358,35 @@ function renderIndex(container) {
     };
     container.querySelector('#indexRarity').addEventListener('change',draw);container.querySelector('#indexProgress').addEventListener('change',draw);draw();
 }
-async function renderShops(container) {
-    const data=await apiCall('?action=shops');if(!data?.state){container.innerHTML='<p>Could not load shop offers.</p>';return;}
-    gameState=data.state;updateUI();const s=data.state,seconds=Math.max(0,Math.ceil((s.offerRefreshAt-Date.now())/1000)),options=s.shops.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+function renderShops(container) {
+    const s = gameState;
+    const seconds = Math.max(0, Math.ceil((s.offerRefreshAt - Date.now()) / 1000));
+    const options = s.shops.map(x => `<option value="${x.id}">${escapeHTML(x.name)}</option>`).join('');
     container.innerHTML=`<div style="margin-bottom:15px;color:var(--fg2)">Shared offers refresh in <strong id="shop-timer" style="color:var(--orange)">${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}</strong>. Everyone sees the same offers.</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px"><label for="sellShop">Sell to:</label><select id="sellShop" style="background:#201a28;color:white;padding:8px;border-radius:10px;font:inherit"><option value="best">Best price for each candy</option>${options}</select><button class="buy-btn" onclick="executeSellAll()">Sell All Inventory</button><button class="buy-btn" onclick="executeSellSelected()">Sell Selected</button></div><p style="font-size:16px;color:var(--fg2);margin-bottom:12px">Select candies below. Best-price selling routes each candy to the highest-paying shop. Crew inventory is included.</p><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:16px;min-width:560px"><thead><tr style="text-align:left;color:var(--orange)"><th style="padding:8px">Select</th><th>Candy</th><th>Basket</th><th>Crew</th><th>Best offer</th><th>Shop comparison</th></tr></thead><tbody>${CANDY_CATALOG.map(c=>{const crew=(s.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(s.inventory[c.id]||0),prices=s.shops.map(shop=>({name:shop.name,price:Number(shop.prices[c.id]||0)})).sort((a,b)=>b.price-a.price);return `<tr style="border-top:1px solid rgba(255,255,255,.08)"><td style="padding:8px"><input class="sellCandyCheck" type="checkbox" value="${c.id}" ${qty+crew===0?'disabled':''} aria-label="Select ${c.name}"></td><td>${c.name}<div style="font-size:13px;color:var(--fg2)">${c.rarity}</div></td><td>${qty}</td><td>${crew}</td><td style="color:#F5C451">${formatCash(prices[0]?.price||0)}</td><td>${prices.map(p=>`<span style="display:inline-block;margin:2px 5px 2px 0;white-space:nowrap">${p.name}: ${formatCash(p.price)}</span>`).join('')}</td></tr>`;}).join('')}</tbody></table></div>`;
-    const tick=()=>{const el=document.getElementById('shop-timer');if(!el||currentModal!=='shops')return;const left=Math.max(0,Math.ceil((s.offerRefreshAt-Date.now())/1000));el.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;};tick();
+    if (shopTimerInterval) clearInterval(shopTimerInterval);
+    let refreshRequestedFor = 0;
+    const tick = async () => {
+        const el = document.getElementById('shop-timer');
+        if (!el || currentModal !== 'shops') return;
+        const left = Math.max(0, Math.ceil((gameState.offerRefreshAt - Date.now()) / 1000));
+        el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+        if (left === 0 && refreshRequestedFor !== gameState.offerRefreshAt && !shopRefreshInFlight) {
+            refreshRequestedFor = gameState.offerRefreshAt;
+            shopRefreshInFlight = true;
+            try {
+                const refreshed = await apiCall('?action=shops');
+                if (refreshed?.state && currentModal === 'shops') {
+                    gameState = refreshed.state;
+                    updateUI();
+                    renderShops(document.getElementById('modalBody'));
+                }
+            } finally {
+                shopRefreshInFlight = false;
+            }
+        }
+    };
+    tick();
+    shopTimerInterval = setInterval(tick, 1000);
 }
 window.executeSellAll = async function() {
     const shop=document.getElementById('sellShop')?.value || 'best';
@@ -389,14 +503,12 @@ function renderStats(container) {
     const rows=[['Current cash',formatCash(gameState.cash)],['Highest cash balance',formatCash(s.highScore||0)],['Lifetime cash earned',formatCash(s.lifetimeCash||0)],['Total cash spent',formatCash(s.cashSpent||0)],['Lifetime candy collected',Number(s.totalCollected||0).toLocaleString()],['Candy sold',Number(s.totalSold||0).toLocaleString()],['Basket clicks',Number(s.totalClicks||0).toLocaleString()],['Rare and epic collected',Number(s.rareCollected||0).toLocaleString()],['Legendary collected',Number(s.legendaryCollected||0).toLocaleString()],['Upgrades purchased',Number(s.upgradesBought||0).toLocaleString()],['Crew candy collected',Number(s.crewCollected||0).toLocaleString()],['Crew candy sold',Number(s.crewSold||0).toLocaleString()],['Candy in basket',basket.toLocaleString()],['Candy held by crew',crew.toLocaleString()],['Candy Index',`${gameState.discovered.length}/${CANDY_CATALOG.length} (${progress}%)`]];
     container.innerHTML=`<div style="display:flex;flex-direction:column;gap:0;color:var(--fg2);font-size:18px">${rows.map(([label,value])=>`<div style="display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span>${label}</span><strong style="color:#fff;text-align:right">${value}</strong></div>`).join('')}</div>`;
 }
-async function renderLeaderboard(container) {
-    const res = await apiCall('?action=leaderboard');
-    if(!res) { container.innerHTML = 'Failed to load rankings.'; return; }
-    
+function renderLeaderboard(container) {
+    const rankings = leaderboardCache;
     let html = `<div style="display:flex; flex-direction:column; gap:8px;">`;
     html += `<div style="font-size:14px; color:var(--orange); margin-bottom:10px;">Ranked entirely by CURRENT CASH. Spend wisely!</div>`;
     
-    res.rankings.forEach((r, i) => {
+    rankings.forEach((r, i) => {
         const isMe = r.accountId === gameState.accountId;
         html += `
             <div style="display:flex; justify-content:space-between; padding:12px; background:rgba(255,255,255,${isMe? '0.1' : '0.03'}); border-radius:8px; border:1px solid ${isMe? 'var(--orange)' : 'transparent'};">
@@ -411,3 +523,5 @@ async function renderLeaderboard(container) {
 
 // Bootstrap
 window.addEventListener('DOMContentLoaded', initGame);
+window.retryHalloweenHauntLoad = initGame;
+window.retryHalloweenHauntCollect = retryCollectQueue;

@@ -216,11 +216,12 @@ export default async function handler(req,res) {
       const count=()=>{player.currentBasketCount=Object.values(player.inventory).reduce((a,n)=>a+Math.max(0,Number(n)||0),0);return player.currentBasketCount;};
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
       if(action==='collect') {
-        const requested=Math.min(MAX_CLICK_RATE,1+(player.upgrades.power.level||0));
-        const room=Math.max(0,player.basketCapacity-count());
-        if(room<=0){response= {error:'Your basket is full. Sell candy to make room.',status:409};actionResponse=response; return root;}
-        const drops=[];
-        for(let i=0;i<Math.min(requested,room);i++){
+        const clickCount = Math.min(50, Math.max(1, Math.floor(Number(req.body?.clickCount) || 1)));
+        const requested = Math.min(MAX_CLICK_RATE, 1 + (player.upgrades.power.level || 0));
+        const room = Math.max(0, player.basketCapacity - count());
+        if (room <= 0) { response = { error: 'Your basket is full. Sell candy to make room.', status: 409 }; actionResponse = response; return root; }
+        const drops = [];
+        for (let i = 0; i < Math.min(requested * clickCount, room); i++) {
           const c=rollCandy(player.upgrades.luck.level||0);
           player.inventory[c.id]=(player.inventory[c.id]||0)+1;
           player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;
@@ -230,7 +231,7 @@ export default async function handler(req,res) {
           if(!player.discovered.includes(c.id)) player.discovered.push(c.id);
           drops.push(c.id);
         }
-        player.stats.totalClicks++; count(); response={state:publicState(player,root,now),drops};
+        player.stats.totalClicks += clickCount; count(); response={state:publicState(player,root,now),drops};
       } else if(action==='shops') {
         response={state:publicState(player,root,now)};
       } else if(action==='sell') {

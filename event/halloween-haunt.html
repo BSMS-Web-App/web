@@ -87,6 +87,17 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;ba
 .buy-btn:active{transform:scale(.97)}
 .buy-btn:disabled{background:#242426;color:#777;box-shadow:none;cursor:not-allowed;transform:none}
 #toast-container{position:fixed;top:92px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:10px;width:min(370px,calc(100vw - 36px));pointer-events:none}
+#gameLoadingScreen{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(3,3,3,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);transition:opacity .3s,visibility .3s}
+#gameLoadingScreen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.loading-card{width:min(430px,100%);padding:30px 24px;text-align:center;background:rgba(18,18,20,.9);border:1px solid rgba(255,255,255,.12);border-radius:24px;box-shadow:0 20px 80px rgba(0,0,0,.7),0 0 35px rgba(187,0,30,.12)}
+.loading-mark{width:54px;height:54px;margin:0 auto 18px;border:4px solid rgba(255,255,255,.12);border-top-color:var(--red-hot);border-radius:50%;animation:hauntSpin .8s linear infinite}
+.loading-card h2{font-size:27px;margin-bottom:8px}
+.loading-card p{font-size:18px;color:var(--fg2)}
+.loading-retry{margin-top:16px;background:linear-gradient(135deg,var(--red),#820014);border:0;border-radius:12px;padding:10px 18px;color:white;font:inherit;font-size:18px;cursor:pointer}
+.loading-retry[hidden]{display:none}
+#collectRetry{position:fixed;bottom:145px;left:50%;transform:translateX(-50%);z-index:150;background:var(--red);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:9px 14px;color:#fff;font:inherit;font-size:16px;box-shadow:0 8px 24px #0008}
+#collectRetry[hidden]{display:none}
+@keyframes hauntSpin{to{transform:rotate(360deg)}}
 .toast{background:rgba(12,12,14,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-left:4px solid var(--red-hot);padding:12px 17px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.5);color:#fff;font-size:18px;animation:slideIn .25s ease-out forwards}
 @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 button,select,input{font-family:var(--font)}
@@ -114,6 +125,16 @@ th,td{padding:9px 8px}
 </head>
 <body>
 
+<div id="gameLoadingScreen" role="status" aria-live="polite">
+  <div class="loading-card">
+    <div class="loading-mark" aria-hidden="true"></div>
+    <h2>Halloween Haunt</h2>
+    <p id="loadingMessage">Loading your game, shops, collection, and candy artwork…</p>
+    <button id="loadingRetry" class="loading-retry" hidden onclick="window.retryHalloweenHauntLoad()">Retry loading</button>
+  </div>
+</div>
+<button id="collectRetry" hidden onclick="window.retryHalloweenHauntCollect()">Retry saving candy clicks</button>
+
 <div id="offlineBanner" style="position:fixed;top:0;width:100%;background:#D10022;color:#fff;text-align:center;padding:8px;z-index:9999;display:none;">You are currently offline.</div>
 
 <!-- Ambient BG -->
@@ -130,7 +151,7 @@ th,td{padding:9px 8px}
 </header>
 
 <main class="game-container">
-  <div class="basket-wrapper" id="basketHitbox" onclick="handleBasketClick(event)">
+  <div class="basket-wrapper" id="basketHitbox" role="button" tabindex="0" aria-label="Collect candy by clicking the pumpkin" onclick="handleBasketClick(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleBasketClick(event)}">
     <svg viewBox="0 0 100 100" class="pumpkin-svg">
        <ellipse cx="50" cy="55" rx="40" ry="35" fill="#FF7A18" stroke="#D95C00" stroke-width="4"/>
        <path d="M45,20 Q50,10 60,15 L55,25 Z" fill="#2E7D32"/>
