@@ -186,6 +186,10 @@ export default async function handler(req,res) {
       const player=normalizePlayer(root.players[auth.uid],auth.uid,account,now);
       root.players[auth.uid]=player;
       let response={state:publicState(player,root,now)};
+      const requestId=typeof req.body?.requestId==='string' && /^[a-zA-Z0-9_-]{8,100}$/.test(req.body.requestId) ? req.body.requestId : null;
+      player.recentRequests ||= {};
+      for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
+      if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
       if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
       if(status.status!=='active') {
         response.error=status.status==='upcoming'?'Halloween Haunt has not started yet.':'Halloween Haunt has ended. Final standings are locked.';
@@ -296,6 +300,7 @@ export default async function handler(req,res) {
       } else {
         response={error:'Unknown Halloween Haunt action.',status:404};
       }
+      if(requestId && !response.error) player.recentRequests[requestId]=now;
       player.updatedAt=now;actionResponse=response; return root;
     });
     const result=transaction.snapshot?.val();
