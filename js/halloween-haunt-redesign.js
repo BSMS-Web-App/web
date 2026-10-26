@@ -40,7 +40,14 @@
   const baseOpenModal=window.openModal;
   window.openModal=function(type){
     if(type==='settings'){openSettings();return;}
-    if(typeof baseOpenModal==='function')return baseOpenModal.apply(this,arguments);
+    if(typeof baseOpenModal==='function'){
+      const result=baseOpenModal.apply(this,arguments);
+      if(type==='crew'){
+        const title=document.getElementById('modalTitle');if(title)title.textContent='Trick-or-Treat Crew';
+        renderCrewDashboard(document.getElementById('modalBody'));
+      }
+      return result;
+    }
   };
   function timeLeft(ms) { const n=Math.max(0,Math.ceil(ms/1000));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0'); }
   function renderCrewDashboard(container) {
@@ -90,5 +97,33 @@
     if(!document.getElementById('hh-ghost-layer')){const layer=document.createElement('div');layer.id='hh-ghost-layer';layer.setAttribute('aria-hidden','true');layer.innerHTML=Array.from({length:7},(_,i)=>'<span style="--i:'+i+'">👻</span>').join('');document.body.appendChild(layer);}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSettingsEntry,{once:true});else initSettingsEntry();
+  let autoSellTimer=null;
+  let autoSellPending=false;
+  const baseUpdateUI=window.updateUI;
+  window.updateUI=function(){
+    if(typeof baseUpdateUI==='function')baseUpdateUI.apply(this,arguments);
+    const state=typeof gameState!=='undefined'?gameState:null;
+    if(!state)return;
+    const cap=Math.max(1,Number(state.basketCapacity||50));
+    const count=Object.values(state.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
+    const enabled=Number(state.upgrades?.autoSell?.level||0)>0;
+    if(!enabled||count<cap){
+      if(autoSellTimer){clearTimeout(autoSellTimer);autoSellTimer=null;}
+      autoSellPending=false;return;
+    }
+    if(!autoSellTimer&&!autoSellPending){
+      autoSellPending=true;
+      autoSellTimer=setTimeout(async()=>{
+        autoSellTimer=null;
+        const latest=typeof gameState!=='undefined'?gameState:null;
+        const latestCount=Object.values(latest?.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
+        if(latest&&Number(latest.upgrades?.autoSell?.level||0)>0&&latestCount>=Math.max(1,Number(latest.basketCapacity||50))){
+          if(getPrefs().autoSell!==false&&typeof window.showToast==='function')window.showToast('Auto Sell — your full basket is being sold at the best prices.');
+          await window.executeSellAll?.();
+        }
+        autoSellPending=false;
+      },1000);
+    }
+  };
   setInterval(()=>{if(typeof currentModal!=='undefined'&&currentModal==='crew'&&typeof gameState!=='undefined'&&gameState){const body=document.getElementById('modalBody');if(body)renderCrewDashboard(body);}},1000);
 })();
