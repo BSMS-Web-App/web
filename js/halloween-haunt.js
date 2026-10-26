@@ -396,6 +396,10 @@ async function syncCrew() {
 function handleBasketClick(e) {
     if (!gameState) { showToast("Halloween Haunt is still connecting."); return; }
     if (!isEventActive) { showToast("Event is not active."); return; }
+    if (offlineMode && offlineSyncInFlight) {
+        showToast('Saving offline progress. Please wait a moment.');
+        return;
+    }
 
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
     let confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
@@ -775,36 +779,80 @@ window.addEventListener('visibilitychange', () => {
 });
 async function syncPendingOfflineClicks() {
     if (offlineSyncInFlight) return false;
-    const saved = readOfflineProgress();
+    let saved = readOfflineProgress();
     let remaining = Math.max(0, Math.floor(Number(saved.offlineClicks) || 0));
     if (!remaining) return true;
-    if (!navigator.onLine) return false;
+    if (!navigator.onLine || !getSessionHash()) return false;
+
     offlineSyncInFlight = true;
     updateOfflineCard('syncing');
     try {
         while (remaining > 0) {
             if (!navigator.onLine) throw new Error('Connection lost during sync.');
-            let stateResult = await apiCall('?action=state');
+
+            const stateResult = await apiCall('?action=state');
             if (!stateResult?.state) throw new Error('Could not load the online game state.');
             gameState = stateResult.state;
             activeSessionHash = getSessionHash();
-            const owned = Object.values(gameState.inventory || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
-            const capacity = Math.max(0, Number(gameState.basketCapacity) || 0);
-            const room = Math.max(0, capacity - owned);
-            if (room <= 0) throw new Error('Your online basket is full. Sell candy to make room for offline progress to sync.');
-            const perClick = Math.max(1, Math.min(50, 1 + Number(gameState.upgrades?.power?.level || 0)));
-            const clicksThatFit = Math.max(1, Math.floor(room / perClick));
-            const batch = Math.min(50, remaining, clicksThatFit);
-            const requestId = 'offline-sync-' + getSessionHash() + '-' + (saved.updatedAt || 0) + '-' + (remaining - batch) + '-' + batch;
-            const result = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId });
+
+            let batch;
+            let requestId;
+            const pendingBatch = Math.floor(Number(saved.pendingSyncBatch) || 0);
+            // Persist a batch ID and size before sending it. If the server commits
+            // but the response is lost, retry that exact request instead of
+            // recalculating a smaller batch from the changed basket capacity.
+            if (typeof saved.pendingSyncRequestId === 'string' &&
+                saved.pendingSyncRemaining === remaining &&
+                pendingBatch >= 1 && pendingBatch <= 50) {
+                batch = pendingBatch;
+                requestId = saved.pendingSyncRequestId;
+            } else {
+                const owned = Object.values(gameState.inventory || {}).reduce(
+                    (sum, qty) => sum + Math.max(0, Number(qty) || 0), 0
+                );
+                const capacity = Math.max(0, Number(gameState.basketCapacity) || 0);
+                const room = Math.max(0, capacity - owned);
+                if (room <= 0) {
+                    throw new Error('Your online basket is full. Sell candy to make room for offline progress to sync.');
+                }
+                const perClick = Math.max(1, Math.min(50, 1 + Number(gameState.upgrades?.power?.level || 0)));
+                const clicksThatFit = Math.max(1, Math.floor(room / perClick));
+                batch = Math.min(50, remaining, clicksThatFit);
+                requestId = 'offline-sync-' + getSessionHash() + '-' +
+                    (saved.updatedAt || 0) + '-' + remaining + '-' + batch;
+                saved.pendingSyncRequestId = requestId;
+                saved.pendingSyncBatch = batch;
+                saved.pendingSyncRemaining = remaining;
+                if (!writeOfflineProgress(saved)) {
+                    throw new Error('Could not save the retry-safe sync record on this device.');
+                }
+            }
+
+            const result = await apiCall('?action=collect', 'POST', {
+                clickCount: batch,
+                requestId
+            });
             if (!result?.state) throw new Error('The server did not confirm the offline clicks.');
-            remaining -= batch;
+
+            remaining = Math.max(0, remaining - batch);
             saved.offlineClicks = remaining;
+            delete saved.pendingSyncRequestId;
+            delete saved.pendingSyncBatch;
+            delete saved.pendingSyncRemaining;
             saved.updatedAt = Date.now();
-            if (!writeOfflineProgress(saved)) throw new Error('Could not update the local sync record.');
+            if (!writeOfflineProgress(saved)) {
+                // The pending request record was persisted before sending. If this
+                // write fails, the same request ID remains available for replay.
+                throw new Error('Could not update the local sync record.');
+            }
             gameState = result.state;
+            activeSessionHash = getSessionHash();
         }
+
         saved.offlineClicks = 0;
+        delete saved.pendingSyncRequestId;
+        delete saved.pendingSyncBatch;
+        delete saved.pendingSyncRemaining;
         saved.updatedAt = Date.now();
         writeOfflineProgress(saved);
         if (gameState && !offlineMode) {
@@ -818,7 +866,9 @@ async function syncPendingOfflineClicks() {
         console.warn('[Halloween Haunt] Offline progress sync is pending:', error);
         updateOfflineCard('failed');
         return false;
-    } finally { offlineSyncInFlight = false; }
+    } finally {
+        offlineSyncInFlight = false;
+    }
 }
 
 window.addEventListener('online', async () => {
