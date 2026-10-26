@@ -52,6 +52,24 @@ const CANDY_CATALOG = [
 let gameState = null;
 let offlineMode = false;
 const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
+let offlineSyncInFlight = false;
+
+function readOfflineProgress() {
+    try { return JSON.parse(localStorage.getItem(OFFLINE_PROGRESS_KEY) || '{}') || {}; }
+    catch (_) { return {}; }
+}
+
+function updateOfflineCard(mode, detail = '') {
+    const card = document.getElementById('offlineBanner');
+    if (!card) return;
+    if (mode === 'hidden') { card.style.display = 'none'; card.innerHTML = ''; return; }
+    const syncing = mode === 'syncing';
+    const failed = mode === 'failed';
+    const title = syncing ? 'Connection restored — saving progress' : failed ? 'Still waiting to sync' : 'No internet connection';
+    const message = syncing ? 'Your saved offline candy clicks are being added to your online game automatically.' : failed ? 'Your progress is still saved on this device. We’ll retry automatically when the game server is reachable.' : 'You can keep playing. Your progress is saved on this device and will sync automatically when your connection returns.';
+    card.style.display = 'block';
+    card.innerHTML = '<div class="offline-card-title"><span aria-hidden="true">' + (syncing ? '↻' : failed ? '!' : '⌁') + '</span><span>' + title + '</span></div><p>' + message + '</p><p class="offline-card-status">' + (detail || 'Offline practice cash stays on this device and does not affect your online account or leaderboard.') + '</p>';
+}
 
 function saveOfflineProgress() {
     if (!offlineMode || !gameState) return true;
@@ -59,6 +77,7 @@ function saveOfflineProgress() {
         version: 1,
         currentBasketCount: Math.max(0, Math.min(Number(gameState.basketCapacity) || 50, Number(gameState.currentBasketCount) || 0)),
         cash: Math.max(0, Number(gameState.cash) || 0),
+        offlineClicks: Math.max(0, Math.floor(Number(readOfflineProgress().offlineClicks) || 0)),
         updatedAt: Date.now()
     };
     try {
@@ -204,10 +223,7 @@ function hideLoadingScreen() {
 
 function enterOfflineMode() {
     offlineMode = true;
-    let saved = {};
-    try {
-        saved = JSON.parse(localStorage.getItem(OFFLINE_PROGRESS_KEY) || '{}') || {};
-    } catch (_) {}
+    const saved = readOfflineProgress();
     gameState = {
         accountId: 'offline-local',
         displayName: 'Offline Player',
@@ -222,11 +238,7 @@ function enterOfflineMode() {
         candyInventory: {}
     };
     leaderboardCache = [];
-    const banner = document.getElementById('offlineBanner');
-    if (banner) {
-        banner.textContent = 'Offline practice mode — progress saves on this device automatically. It does not sync to your online account.';
-        banner.style.display = 'block';
-    }
+    updateOfflineCard(navigator.onLine ? 'failed' : 'offline');
     document.querySelector('.hero-cash-label')?.replaceChildren(document.createTextNode('Offline Practice'));
     updateUI();
     updateTimer();
@@ -243,6 +255,15 @@ async function initGame() {
     const retryButton = document.getElementById('loadingRetry');
     if (retryButton) retryButton.hidden = true;
     setLoadingMessage('Loading your game, shops, collection, and candy artwork…');
+
+    if (navigator.onLine && !offlineSyncInFlight) {
+        const synced = await syncPendingOfflineClicks();
+        if (!synced) {
+            await enterOfflineMode();
+            updateOfflineCard('failed');
+            return;
+        }
+    }
 
     const data = await apiCall('?action=state');
     if (!data?.state) {
@@ -263,8 +284,7 @@ async function initGame() {
     offlineMode = false;
     gameState = data.state;
     leaderboardCache = leaderboard.rankings;
-    const banner = document.getElementById('offlineBanner');
-    if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+    updateOfflineCard(navigator.onLine ? 'hidden' : 'offline');
     updateUI();
     updateTimer();
     if (!window.halloweenHauntTimerStarted) {
@@ -324,6 +344,13 @@ function handleBasketClick(e) {
             Number(gameState.basketCapacity) || 50,
             confirmed + perClick
         );
+        const saved = readOfflineProgress();
+        saved.offlineClicks = Math.max(0, Math.floor(Number(saved.offlineClicks) || 0)) + 1;
+        saved.currentBasketCount = gameState.currentBasketCount;
+        saved.cash = Math.max(0, Number(gameState.cash) || 0);
+        saved.updatedAt = Date.now();
+        try { localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(saved)); }
+        catch (error) { console.warn('[Halloween Haunt] Could not save offline click queue:', error); }
         saveOfflineProgress();
         updateUI();
         return;
@@ -664,18 +691,59 @@ window.addEventListener('pagehide', saveOfflineProgress);
 window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') saveOfflineProgress();
 });
-window.addEventListener('online', () => {
-    if (offlineMode) {
-        const banner = document.getElementById('offlineBanner');
-        if (banner) banner.textContent = 'You are back online. Your offline practice progress is saved on this device; reload to return to your online account.';
-    }
+async function syncPendingOfflineClicks() {
+    if (offlineSyncInFlight) return false;
+    const saved = readOfflineProgress();
+    let remaining = Math.max(0, Math.floor(Number(saved.offlineClicks) || 0));
+    if (!remaining) return true;
+    if (!navigator.onLine) return false;
+    offlineSyncInFlight = true;
+    updateOfflineCard('syncing');
+    try {
+        while (remaining > 0) {
+            if (!navigator.onLine) throw new Error('Connection lost during sync.');
+            let stateResult = await apiCall('?action=state');
+            if (!stateResult?.state) throw new Error('Could not load the online game state.');
+            gameState = stateResult.state;
+            const owned = Object.values(gameState.inventory || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+            if (owned >= Number(gameState.basketCapacity || 0)) {
+                const sold = await apiCall('?action=sell', 'POST', {});
+                if (!sold?.state) throw new Error('Could not make room for synced candy.');
+                gameState = sold.state;
+            }
+            const batch = Math.min(50, remaining);
+            const result = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId: 'offline-sync-' + (saved.updatedAt || 0) + '-' + (remaining - batch) + '-' + batch });
+            if (!result?.state) throw new Error('The server did not confirm the offline clicks.');
+            remaining -= batch;
+            saved.offlineClicks = remaining;
+            saved.updatedAt = Date.now();
+            try { localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(saved)); }
+            catch (_) { throw new Error('Could not update the local sync record.'); }
+            gameState = result.state;
+        }
+        saved.offlineClicks = 0;
+        saved.updatedAt = Date.now();
+        try { localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(saved)); } catch (_) {}
+        return true;
+    } catch (error) {
+        console.warn('[Halloween Haunt] Offline progress sync is pending:', error);
+        updateOfflineCard('failed');
+        return false;
+    } finally { offlineSyncInFlight = false; }
+}
+
+window.addEventListener('online', async () => {
+    updateOfflineCard('syncing');
+    const synced = await syncPendingOfflineClicks();
+    if (synced) { offlineMode = false; await initGame(); }
+    else updateOfflineCard('failed');
 });
-window.addEventListener('offline', () => {
-    const banner = document.getElementById('offlineBanner');
-    if (banner) {
-        banner.textContent = offlineMode
-            ? 'Offline practice mode — progress saves on this device automatically. It does not sync to your online account.'
-            : 'You are offline. Reload Halloween Haunt to enter offline practice mode.';
-        banner.style.display = 'block';
+window.addEventListener('offline', () => updateOfflineCard('offline'));
+setInterval(() => {
+    if (navigator.onLine && !offlineSyncInFlight) {
+        const saved = readOfflineProgress();
+        if (Number(saved.offlineClicks) > 0) syncPendingOfflineClicks().then(synced => {
+            if (synced && offlineMode) { offlineMode = false; initGame(); }
+        });
     }
-});
+}, 10000);
