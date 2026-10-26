@@ -168,6 +168,7 @@ function offlineSyncProjection(state) {
   return {
     accountId:state?.accountId||state?.uid||null,
     cash:Number(state?.cash)||0,
+    feedCandy:Math.max(0,Math.floor(Number(state?.feedCandy)||0)),
     inventory:Object.fromEntries(CANDY.map(c=>[c.id,Math.max(0,Math.floor(Number(state?.inventory?.[c.id])||0))])),
     discovered:[...new Set(Array.isArray(state?.discovered)?state.discovered.filter(id=>CANDY.some(c=>c.id===id)):[])].sort(),
     lifetimeCollected:Object.fromEntries(CANDY.map(c=>[c.id,Math.max(0,Math.floor(Number(state?.lifetimeCollected?.[c.id])||0))])),
@@ -181,8 +182,8 @@ function offlineSyncProjection(state) {
 }
 function validateOfflineSnapshot(state,uid) {
   if(!state||typeof state!=='object'||state.accountId!==uid)return 'Offline progress does not match the signed-in account.';
-  const cash=Number(state.cash),capacity=Number(state.basketCapacity);
-  if(!Number.isSafeInteger(cash)||cash<0||cash>1000000000||!Number.isSafeInteger(capacity)||capacity<1||capacity>500)return 'Offline cash or basket capacity is invalid.';
+  const cash=Number(state.cash),capacity=Number(state.basketCapacity),feedCandy=Number(state.feedCandy||0);
+  if(!Number.isSafeInteger(cash)||cash<0||cash>1000000000||!Number.isSafeInteger(capacity)||capacity<1||capacity>500||!Number.isSafeInteger(feedCandy)||feedCandy<0||feedCandy>1000000000)return 'Offline cash, basket capacity, or Candy Reserve is invalid.';
   let basketCount=0;
   for(const candy of CANDY){
     const qty=Number(state.inventory?.[candy.id]||0),lifetime=Number(state.lifetimeCollected?.[candy.id]||0);
@@ -197,8 +198,8 @@ function validateOfflineSnapshot(state,uid) {
     const value=Number(state.stats?.[key]||0);if(!Number.isSafeInteger(value)||value<0||value>1000000000)return 'Offline statistics are invalid.';
   }
   for(const crew of state.crew){
-    if(!crew||typeof crew!=='object'||!crew.id||!Number.isSafeInteger(Number(crew.capacity))||Number(crew.capacity)<1||Number(crew.capacity)>100||!crew.inventory||typeof crew.inventory!=='object')return 'Offline crew data is invalid.';
-    for(const candy of CANDY){const qty=Number(crew.inventory[candy.id]||0);if(!Number.isSafeInteger(qty)||qty<0||qty>100)return 'Offline crew inventory is invalid.';}
+    if(!crew||typeof crew!=='object'||!crew.id||!Number.isSafeInteger(Number(crew.capacity))||Number(crew.capacity)<1||Number(crew.capacity)>500||!crew.inventory||typeof crew.inventory!=='object')return 'Offline crew data is invalid.';
+    for(const candy of CANDY){const qty=Number(crew.inventory[candy.id]||0);if(!Number.isSafeInteger(qty)||qty<0||qty>500)return 'Offline crew inventory is invalid.';}
   }
   return null;
 }
@@ -273,6 +274,7 @@ export default async function handler(req,res) {
         const deltaError=validateOfflineDelta(baseline,local);
         if(deltaError){response={error:deltaError,status:409};actionResponse=response;return root;}
         player.cash=local.cash;
+        player.feedCandy=Math.max(0,Math.floor(Number(local.feedCandy)||0));
         player.inventory=Object.fromEntries(CANDY.map(c=>[c.id,local.inventory[c.id]||0]));
         player.discovered=[...new Set(local.discovered)];
         player.lifetimeCollected=Object.fromEntries(CANDY.map(c=>[c.id,local.lifetimeCollected[c.id]||0]));
