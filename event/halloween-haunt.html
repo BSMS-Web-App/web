@@ -704,21 +704,20 @@ tr:hover td { background: rgba(255, 255, 255, 0.06); }
   cursor: pointer;
 }
 
-/* Offline connection card on the event home screen */
-#offlineBanner {
-  width: min(760px, 100%);
-  margin: 0 auto 24px;
-  padding: 18px 22px;
-  border: 1px solid rgba(255, 122, 24, 0.55);
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(76, 35, 8, 0.96), rgba(35, 12, 48, 0.96));
-  color: #fff;
-  text-align: left;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 0 24px rgba(255, 122, 24, 0.08);
-}
-#offlineBanner .offline-card-title { display:flex; align-items:center; gap:10px; margin-bottom:6px; color:#FFB36B; font-size:1.1rem; font-weight:900; }
-#offlineBanner p { color:#eadff3; line-height:1.5; }
-#offlineBanner .offline-card-status { margin-top:8px; color:#c9b6d9; font-size:.9rem; }
+/* Compact red server connection warning */
+#offlineBanner{width:min(760px,100%);margin:0 auto 16px;padding:9px 13px;border:1px solid rgba(255,85,100,.8);border-radius:12px;background:linear-gradient(135deg,rgba(112,15,25,.98),rgba(64,8,17,.98));color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 20px rgba(0,0,0,.28);}
+#offlineBanner .offline-card-title{display:flex;align-items:center;gap:9px;color:#fff;font-size:1rem;font-weight:850;margin:0;}
+#offlineBanner .offline-card-title svg{flex:none;}
+#offlineBanner .offline-learn-more{border:1px solid rgba(255,255,255,.7);border-radius:9px;padding:7px 11px;background:#fff;color:#8d101d;font:inherit;font-weight:800;cursor:pointer;white-space:nowrap;}
+#offlineBanner .offline-learn-more:hover{background:#ffe7e9;}
+.offline-help-overlay{position:fixed;inset:0;z-index:26000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease;}
+.offline-help-overlay.show{opacity:1;visibility:visible;}
+.offline-help-card{width:min(440px,100%);padding:24px;border:1px solid rgba(255,76,76,.55);border-radius:18px;background:linear-gradient(145deg,#291218,#100d13);color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.offline-help-card h2{margin:0 0 12px;font-size:1.35rem;}
+.offline-help-card p{color:#f1dfe2;line-height:1.6;margin:0 0 12px;}
+.offline-help-card .offline-help-close{margin-top:8px;width:100%;border:0;border-radius:10px;padding:11px 14px;background:#c51f32;color:#fff;font:inherit;font-weight:800;cursor:pointer;}
+.offline-leaderboard-note{padding:18px;border:1px solid rgba(255,76,76,.35);border-radius:12px;background:rgba(112,15,25,.12);}
+.offline-leaderboard-note p{color:var(--fg2);}
 
 /* Tutorial / Welcome Guide */
 #welcomeGuideOverlay {
@@ -1153,6 +1152,12 @@ body {
   </div>
 </div>
 
+<div id="offlineHelpOverlay" class="offline-help-overlay" role="dialog" aria-modal="true" aria-labelledby="offlineHelpTitle" onclick="if(event.target===this)closeOfflineHelp()">
+<div class="offline-help-card"><h2 id="offlineHelpTitle">Server Connection Failed</h2>
+<p>Your internet connection may be unavailable, or the game server may not be responding.</p>
+<p>You can keep playing. Candy, cash, upgrades, crew, the Candy Index, and stats are saved locally on this device and remain available after refreshing or reopening the game.</p>
+<p>Offline changes stay on this device. They are not automatically merged into your online account or leaderboard when the connection returns.</p>
+<button type="button" class="offline-help-close" onclick="closeOfflineHelp()">Got it</button></div></div>
 <div id="toast-container"></div>
 <div id="welcomeGuideOverlay" aria-live="polite"></div>
 
@@ -1167,6 +1172,7 @@ body {
         .catch(error => console.warn('[Halloween Haunt] Offline support could not be enabled:', error));
     });
   }
+  window.addEventListener('keydown',event=>{if(event.key==='Escape')window.closeOfflineHelp?.();});
 </script>
 
 </body>

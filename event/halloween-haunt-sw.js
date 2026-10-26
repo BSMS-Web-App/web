@@ -5,7 +5,7 @@
  *
  * Halloween Haunt-only offline cache.
  */
-const CACHE_NAME = 'bsms-halloween-haunt-v4';
+const CACHE_NAME = 'bsms-halloween-haunt-v5';
 const CORE_ASSETS = [
   '/event/halloween-haunt.html',
   '/js/halloween-haunt.js',
