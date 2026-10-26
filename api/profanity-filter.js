@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { isContentFlagged } from './moderation.js';
+import { moderateContent } from './moderation.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -33,11 +33,22 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Invalid characters or formatting detected.' });
         }
 
-        if (await isContentFlagged(text)) {
-            return res.status(400).json({ success: false, clean: false, error: 'Content was flagged by moderation.' });
+        const moderation = await moderateContent(text);
+        if (moderation.flagged) {
+            return res.status(400).json({
+                success: false,
+                clean: false,
+                error: `Content was blocked by moderation: ${moderation.reason}`,
+                moderation: {
+                    flagged: true,
+                    reasons: moderation.reasons,
+                    categories: moderation.categories || [],
+                    sources: moderation.sources || []
+                }
+            });
         }
 
-        return res.status(200).json({ success: true, clean: true });
+        return res.status(200).json({ success: true, clean: true, moderation: { flagged: false, sources: moderation.sources || [] } });
     } catch (err) {
         console.error('[BSMS Web :: API] Text moderation failed.');
         return res.status(500).json({ error: 'Unable to validate text right now.' });
