@@ -118,6 +118,7 @@ async function initGame() {
     
     gameState = data.state;
     updateUI();
+    updateTimer();
     
     // Heartbeat timers
     setInterval(updateTimer, 1000);
@@ -126,12 +127,12 @@ async function initGame() {
 }
 
 function updateTimer() {
-    const now=Date.now(), start=new Date(START_Z).getTime(), end=new Date(DEADLINE_Z).getTime();
-    const timer=document.getElementById('ui-timer'), label=timer?.previousSibling;
-    const format=(diff)=>{const t=Math.max(0,Math.floor(diff/1000)),d=Math.floor(t/86400),h=Math.floor((t%86400)/3600),m=Math.floor((t%3600)/60),s=t%60;const clock=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');return d>0?d+'d '+clock:clock;};
-    if(now<start){isContestActive=false;if(label)label.textContent='Starts in: ';if(timer)timer.innerText=format(start-now);return;}
-    if(now>=end){isContestActive=false;if(label)label.textContent='Contest ended: ';if(timer)timer.innerText='FINAL';return;}
-    isContestActive=true;if(label)label.textContent='Ends in: ';if(timer)timer.innerText=format(end-now);
+    // TEST MODE: contest is always active while backend testing is underway.
+    isContestActive = true;
+    const label = document.getElementById('ui-timer')?.previousSibling;
+    const timer = document.getElementById('ui-timer');
+    if (label) label.textContent = 'TEST MODE · ';
+    if (timer) timer.textContent = 'ALWAYS ACTIVE';
 }
 
 async function syncCrew() {
