@@ -263,12 +263,13 @@ export default async function handler(req,res) {
       for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
       if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
-      if(action==='offline-sync') {
+      if(action==='offline-sync' || action==='offline-sync-resolve') {
+        const resolvingConflict=action==='offline-sync-resolve';
         const baseline=req.body?.baselineState, local=req.body?.localState;
         const invalid=validateOfflineSnapshot(local,auth.uid);
         if(invalid){response={error:invalid,status:400};actionResponse=response;return root;}
         if(!baseline||baseline.accountId!==auth.uid){response={error:'The saved online baseline does not match this account.',status:409};actionResponse=response;return root;}
-        if(JSON.stringify(offlineSyncProjection(publicState(player,root,now)))!==JSON.stringify(offlineSyncProjection(baseline))){
+        if(!resolvingConflict && JSON.stringify(offlineSyncProjection(publicState(player,root,now)))!==JSON.stringify(offlineSyncProjection(baseline))){
           response={error:'Your online game changed since this offline session began. Offline progress remains saved locally to avoid overwriting newer online progress.',status:409};actionResponse=response;return root;
         }
         const deltaError=validateOfflineDelta(baseline,local);
@@ -289,7 +290,7 @@ export default async function handler(req,res) {
         for(const key of ['highScore','lifetimeCash','cashSpent','totalClicks','totalCollected','totalSold','rareCollected','legendaryCollected','upgradesBought','crewCollected','crewSold'])player.stats[key]=Math.floor(Number(local.stats?.[key])||0);
         player.stats.highScore=Math.max(player.stats.highScore,player.cash);
         player.lastCrewSync=now;
-        response={state:publicState(player,root,now),syncedOfflineProgress:true};
+        response={state:publicState(player,root,now),syncedOfflineProgress:true,resolvedConflict:resolvingConflict};
       } else if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
       if(action==='crew-pause') {
         player.lastCrewSync=now;
