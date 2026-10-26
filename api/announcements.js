@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { isContentFlagged } from './moderation.js';
 
 // Verify session belongs to an owner or admin
 async function verifyStaff(sessionId) {
@@ -83,6 +84,10 @@ export default async function handler(req, res) {
             }
             if (!content) {
                 return res.status(400).json({ error: "Announcement content is required." });
+            }
+
+            if (await isContentFlagged(title) || await isContentFlagged(content)) {
+                return res.status(400).json({ error: "Announcement content was flagged by moderation." });
             }
 
             const newRef = db.ref('/announcements').push();
