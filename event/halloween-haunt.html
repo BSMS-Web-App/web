@@ -52,6 +52,8 @@ SPDX-License-Identifier: MIT
 
 html, body {
   overflow-x: hidden;
+  /* Prevent iOS Safari's double-tap zoom during rapid game clicks; pinch zoom remains available. */
+  touch-action: manipulation;
 }
 
 body {
