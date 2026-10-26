@@ -50,6 +50,8 @@ const CANDY_CATALOG = [
 
 // Active State
 let gameState = null;
+let offlineMode = false;
+const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
 let currentModal = null;
 let offerRefreshTime = 0;
 let isEventActive = false;
@@ -177,6 +179,43 @@ function hideLoadingScreen() {
     setTimeout(() => screen.remove(), 350);
 }
 
+function enterOfflineMode() {
+    offlineMode = true;
+    let saved = {};
+    try {
+        saved = JSON.parse(localStorage.getItem(OFFLINE_PROGRESS_KEY) || '{}') || {};
+    } catch (_) {}
+    gameState = {
+        accountId: 'offline-local',
+        displayName: 'Offline Player',
+        cash: 0,
+        currentBasketCount: Math.max(0, Math.min(50, Number(saved.currentBasketCount) || 0)),
+        basketCapacity: 50,
+        upgrades: { power: { level: 0 } },
+        startsAt: Date.parse(START_Z),
+        endsAt: Date.parse(DEADLINE_Z),
+        crew: [],
+        discovered: [],
+        candyInventory: {}
+    };
+    leaderboardCache = [];
+    const banner = document.getElementById('offlineBanner');
+    if (banner) {
+        banner.textContent = 'Offline practice mode — pumpkin clicks are saved on this device only and will not sync to your online account.';
+        banner.style.display = 'block';
+    }
+    document.querySelector('.hero-cash-label')?.replaceChildren(document.createTextNode('Offline Practice'));
+    updateUI();
+    updateTimer();
+    if (!window.halloweenHauntTimerStarted) {
+        window.halloweenHauntTimerStarted = true;
+        setInterval(updateTimer, 1000);
+    }
+    preloadCandyImages();
+    hideLoadingScreen();
+    maybeShowWelcomeGuide();
+}
+
 async function initGame() {
     const retryButton = document.getElementById('loadingRetry');
     if (retryButton) retryButton.hidden = true;
@@ -184,28 +223,31 @@ async function initGame() {
 
     const data = await apiCall('?action=state');
     if (!data?.state) {
-        setLoadingMessage('The game could not finish loading. Check your connection and try again.');
-        if (retryButton) retryButton.hidden = false;
+        await enterOfflineMode();
         return;
     }
 
-    // Create/load the player first so the initial leaderboard includes this account.
     const [leaderboard] = await Promise.all([
         apiCall('?action=leaderboard'),
         preloadCandyImages(),
         document.fonts?.ready || Promise.resolve()
     ]);
     if (!leaderboard || !Array.isArray(leaderboard.rankings)) {
-        setLoadingMessage('Your game loaded, but the leaderboard could not load. Retry to finish loading everything.');
-        if (retryButton) retryButton.hidden = false;
+        await enterOfflineMode();
         return;
     }
 
+    offlineMode = false;
     gameState = data.state;
     leaderboardCache = leaderboard.rankings;
+    const banner = document.getElementById('offlineBanner');
+    if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
     updateUI();
     updateTimer();
-    setInterval(updateTimer, 1000);
+    if (!window.halloweenHauntTimerStarted) {
+        window.halloweenHauntTimerStarted = true;
+        setInterval(updateTimer, 1000);
+    }
     setInterval(syncCrew, 12000);
     setInterval(refreshLeaderboard, 60000);
     hideLoadingScreen();
@@ -244,6 +286,22 @@ function handleBasketClick(e) {
     // Immediate feedback: never wait for the network before animating a click.
     const preview = CANDY_CATALOG[Math.floor(Math.random() * CANDY_CATALOG.length)];
     spawnFallingCandy(preview.id, e.clientX, e.clientY);
+
+    if (offlineMode) {
+        gameState.currentBasketCount = Math.min(
+            Number(gameState.basketCapacity) || 50,
+            confirmed + perClick
+        );
+        try {
+            localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify({
+                currentBasketCount: gameState.currentBasketCount,
+                updatedAt: Date.now()
+            }));
+        } catch (_) {}
+        updateUI();
+        return;
+    }
+
     pendingClicks += 1;
     updateUI();
 
@@ -348,6 +406,10 @@ async function refreshLeaderboard() {
 }
 
 function openModal(type) {
+    if (offlineMode) {
+        showToast('Shops, upgrades, crew, stats, and leaderboard require an internet connection.');
+        return;
+    }
     currentModal = type;
     document.querySelectorAll('.action-btn').forEach(button => button.classList.toggle('active', button.getAttribute('onclick') === `openModal('${type}')`));
     document.getElementById('hauntModalOverlay').classList.add('show');
