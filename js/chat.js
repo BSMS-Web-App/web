@@ -254,7 +254,7 @@ const ApiClient = {
                 // Channel membership error - return payload so caller can handle UI gracefully
                 return data;
             }
-            if (res.status === 400 && data.error && data.error.includes("filter")) {
+            if (res.status === 400 && data.error && (data.error.includes("filter") || data.moderation?.flagged)) {
                 const inp = document.getElementById('msgInput');
                 if (inp) {
                     inp.style.borderColor = '#ef4444'; inp.style.animation = 'none'; void inp.offsetWidth;
