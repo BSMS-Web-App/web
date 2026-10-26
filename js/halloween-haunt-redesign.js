@@ -1,3 +1,8 @@
+/*
+ * BSMS Web
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: MIT
+ */
 /* Halloween Haunt UI reliability layer.
    Kept separate from the game engine so the settings entry and redesigned crew cards
    remain available even if a non-critical enhancement in the main script fails. */
