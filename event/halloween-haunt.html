@@ -59,7 +59,7 @@ SPDX-License-Identifier: MIT
 <div id="hh-prize-callout" class="hh-prize-callout"><span class="hh-badge">PRIZES</span><h3>First Place Prize</h3><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p></div>
 <div id="hh-prize-modal" class="hh-prize-modal" role="dialog" aria-modal="true" aria-labelledby="hhPrizeModalTitle" hidden><section class="hh-prize-modal-card"><button type="button" class="hh-prize-close" id="hhPrizeClose" aria-label="Close First Place Prize popup" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button><span class="hh-badge">PRIZES</span><h2 id="hhPrizeModalTitle">First Place Prize</h2><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p><button type="button" class="buy-btn" id="hhPrizeGotIt">Got it</button></section></div>
 
-<script>(function(){const modal=document.getElementById('hh-prize-modal'),button=document.getElementById('hhPrizeGotIt'),closeButton=document.getElementById('hhPrizeClose');if(!modal||!button)return;const close=()=>{modal.hidden=true;try{localStorage.setItem('hh_prize_notice_seen_v1','1')}catch{}};button.addEventListener('click',close);closeButton?.addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)close()});try{if(localStorage.getItem('hh_prize_notice_seen_v1')!=='1')modal.hidden=false}catch{modal.hidden=false}})();</script>
+<script src="/js/halloween-haunt-page.js"></script>
 <main class="game-container">
   <section id="offlineBanner" role="status" aria-live="polite" style="display:none;"></section>
   <div class="hero-cash" aria-live="polite">
@@ -206,17 +206,7 @@ SPDX-License-Identifier: MIT
 <!-- Event Logic script -->
 <script src="/js/halloween-haunt.js"></script>
 <script src="/js/halloween-haunt-redesign.js"></script>
-<script>
-  // Offline support is scoped to Halloween Haunt only.
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/event/halloween-haunt-sw.js', { scope: '/event/' })
-        .then(() => console.info('[Halloween Haunt] Offline support ready.'))
-        .catch(error => console.warn('[Halloween Haunt] Offline support could not be enabled:', error));
-    });
-  }
-  window.addEventListener('keydown',event=>{if(event.key==='Escape')window.closeOfflineHelp?.();});
-</script>
+<script src="/js/halloween-haunt-offline.js"></script>
 
 </body>
 </html>
