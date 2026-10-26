@@ -770,9 +770,9 @@ window.addEventListener('DOMContentLoaded', initGame);
 window.retryHalloweenHauntLoad = initGame;
 window.retryHalloweenHauntCollect = retryCollectQueue;
 
-let crewExitSent=false;
-function sellCrewCandyOnExit(){if(crewExitSent||!gameState||!gameState.crew?.length)return;crewExitSent=true;const sessionId=localStorage.getItem('session_id')||'';if(!sessionId)return;const deviceId=localStorage.getItem('device_id')||sessionId;const payload={requestId:'crew-exit-'+Date.now()+'-'+Math.random().toString(36).slice(2)};try{fetch(API_BASE+'?action=crew-exit',{method:'POST',keepalive:true,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Session-ID':sessionId,'X-Device-ID':deviceId},body:JSON.stringify(payload)}).catch(()=>{});}catch{}}
-window.addEventListener('pagehide',sellCrewCandyOnExit);
+let crewPauseSent=false;
+function pauseCrewOnExit(){if(crewPauseSent||!gameState||!gameState.crew?.length||offlineMode)return;crewPauseSent=true;const sessionId=localStorage.getItem('session_id')||'';if(!sessionId)return;const deviceId=localStorage.getItem('device_id')||sessionId;const payload={requestId:'crew-pause-'+Date.now()+'-'+Math.random().toString(36).slice(2)};try{fetch(API_BASE+'?action=crew-pause',{method:'POST',keepalive:true,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Session-ID':sessionId,'X-Device-ID':deviceId},body:JSON.stringify(payload)}).catch(()=>{});}catch{}}
+window.addEventListener('pagehide',pauseCrewOnExit);
 
 window.addEventListener('pagehide', saveOfflineProgress);
 window.addEventListener('visibilitychange', () => {
