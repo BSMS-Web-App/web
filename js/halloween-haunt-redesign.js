@@ -78,16 +78,11 @@
     container.querySelectorAll('[data-hh-crew]').forEach(b=>b.addEventListener('click',()=>window.executeCrew?.(b.dataset.hhCrew,Number(b.dataset.index))));
   }
   window.renderCrew=renderCrewDashboard;
+  // The core action handler now shows immediate optimistic feedback; avoid a second delayed toast.
   const baseUpgrade=window.executeUpgrade;
-  window.executeUpgrade=async function(type){
-    const before=typeof gameState!=='undefined'&&gameState?Number(gameState.upgrades?.[type]?.level||0):0;
+  window.executeUpgrade=function(type){
     if(typeof baseUpgrade!=='function')return;
-    const result=await baseUpgrade.apply(this,arguments);
-    if(typeof gameState!=='undefined'&&gameState&&Number(gameState.upgrades?.[type]?.level||0)>before){
-      const prefs=getPrefs();
-      if(prefs.upgradeBought!==false&&typeof window.showToast==='function')window.showToast((type==='autoSell'?'Auto Sell unlocked':'Upgrade purchased')+' — your upgrade is ready.');
-    }
-    return result;
+    return baseUpgrade.apply(this,arguments);
   };
   function initSettingsEntry(){
     const nav=document.querySelector('.action-nav');if(!nav)return;
@@ -145,6 +140,7 @@
     const crewButton=nav?.querySelector('button[onclick="openModal(\'crew\')"]');
     if(crewButton){
       crewButton.classList.toggle('hh-crew-alert',asleep.length>0);
+      crewButton.setAttribute('aria-label',asleep.length?'Crew — '+asleep.length+' member'+(asleep.length===1?'':'s')+' asleep and need waking':'Crew');
       let dot=crewButton.querySelector('.hh-alert-dot');
       if(asleep.length&&!dot){dot=document.createElement('span');dot.className='hh-alert-dot';dot.setAttribute('aria-label','Crew members need waking');crewButton.appendChild(dot);}
       if(!asleep.length&&dot)dot.remove();
