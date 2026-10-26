@@ -6,7 +6,16 @@
 
 import { db, admin, requestMacApi } from './db.js';
 import crypto from 'crypto';
-import { isContentFlagged as checkProfanity } from './moderation.js';
+import { moderateContent } from './moderation.js';
+
+async function rejectFlaggedContent(res, value, label = 'Content') {
+    const result = await moderateContent(value);
+    if (!result.flagged) return null;
+    return res.status(400).json({
+        error: `${label} was blocked by moderation: ${result.reason}`,
+        moderation: { flagged: true, reasons: result.reasons, categories: result.categories || [], sources: result.sources || [] }
+    });
+}
 
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
@@ -108,12 +117,21 @@ export default async function handler(req, res) {
                 if (contentType === 'text') {
                     const validTextRegex = /^[\x20-\x7E\p{Emoji}\s]*$/u;
                     if (!validTextRegex.test(content)) return res.status(400).json({ error: 'Invalid characters or formatting detected.' });
-                    if (await checkProfanity(content)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
+                    const messageModerationResponse = await rejectFlaggedContent(res, content, 'Message');
+                    if (messageModerationResponse) return messageModerationResponse;
                 } else if (contentType === 'poll') {
-                    if (await checkProfanity(content.pollQuestion)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
+                    const pollQuestionModerationResponse = await rejectFlaggedContent(res, content.pollQuestion, 'Poll question');
+                    if (pollQuestionModerationResponse) return pollQuestionModerationResponse;
+                    if (Array.isArray(content.pollOptions)) {
+                        for (const option of content.pollOptions) {
+                            const pollOptionModerationResponse = await rejectFlaggedContent(res, option, 'Poll option');
+                            if (pollOptionModerationResponse) return pollOptionModerationResponse;
+                        }
+                    }
                 } else if (contentType === 'invite') {
                     if (typeof content === 'object' && content.groupName) {
-                        if (await checkProfanity(content.groupName)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
+                        const inviteNameModerationResponse = await rejectFlaggedContent(res, content.groupName, 'Group name');
+                        if (inviteNameModerationResponse) return inviteNameModerationResponse;
                     }
                 }
 
@@ -179,7 +197,8 @@ export default async function handler(req, res) {
                 } else if (msgAction === 'pin' && isMod) {
                     await msgRef.update({ 'status/pinned': !(msg.status?.pinned || false) });
                 } else if (msgAction === 'edit' && isMine && msg.contentType === 'text') {
-                    if (await checkProfanity(content)) return res.status(400).json({ error: "Content flagged by profanity filter." });
+                    const editedMessageModerationResponse = await rejectFlaggedContent(res, content, 'Edited message');
+                    if (editedMessageModerationResponse) return editedMessageModerationResponse;
                     await msgRef.update({ content: content, 'status/edited': true });
                 } else if (msgAction === 'react' && emoji) {
                     const rxRef = db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}/reactions/${uid}`);
@@ -244,7 +263,8 @@ export default async function handler(req, res) {
             case 'createGroup': {
                 const { name, joinCode, requireApproval, icon } = payload;
                 if (!name || name.length < 3 || name.length > 30) return res.status(400).json({ error: "Group name must be 3-30 characters." });
-                if (await checkProfanity(name)) return res.status(400).json({ error: "Content flagged by profanity filter." });
+                const groupNameModerationResponse = await rejectFlaggedContent(res, name, 'Group name');
+                if (groupNameModerationResponse) return groupNameModerationResponse;
 
                 const finalCode = joinCode || crypto.randomBytes(3).toString('hex').toUpperCase();
                 
@@ -336,7 +356,8 @@ export default async function handler(req, res) {
                 switch (gAction) {
                     case 'rename':
                         if (!isOwner) return res.status(403).json({ error: "Unauthorized" });
-                        if (await checkProfanity(value)) return res.status(400).json({ error: "Content flagged by profanity filter." });
+                        const groupTextModerationResponse = await rejectFlaggedContent(res, value, 'Group text');
+                        if (groupTextModerationResponse) return groupTextModerationResponse;
                         await db.ref(`/chat/conversations/gcs/${cid}/name`).set(value);
                         break;
                     case 'updateConfig':
@@ -374,7 +395,10 @@ export default async function handler(req, res) {
                         break;
                     case 'saveNickname':
                         if (group.config?.allowCustomNicknames === false) return res.status(400).json({ error: "Nicknames disabled" });
-                        if (value && await checkProfanity(value)) return res.status(400).json({ error: "Content flagged by profanity filter." });
+                        if (value) {
+                            const groupConfigModerationResponse = await rejectFlaggedContent(res, value, 'Group setting');
+                            if (groupConfigModerationResponse) return groupConfigModerationResponse;
+                        }
                         await db.ref(`/chat/conversations/gcs/${cid}/members/${uid}/nickname`).set(value || null);
                         break;
                     case 'requestJoin':
