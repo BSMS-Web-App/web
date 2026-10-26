@@ -3,17 +3,16 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
-/*
- * BSMS Web
- * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
- *
- * Halloween Haunt-only offline cache.
- */
-const CACHE_NAME = 'bsms-halloween-haunt-v7';
+/* Halloween Haunt-only offline cache. */
+const CACHE_NAME = 'bsms-halloween-haunt-v8';
 const CORE_ASSETS = [
   '/event/halloween-haunt.html',
+  '/css/styles.css',
+  '/css/halloween-haunt.css',
   '/js/halloween-haunt.js',
+  '/js/halloween-haunt-page.js',
+  '/js/halloween-haunt-offline.js',
+  '/js/halloween-haunt-redesign.js',
   '/js/ban-check.js',
   '/js/account-check.js',
   '/img/icon.png',
