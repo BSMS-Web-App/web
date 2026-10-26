@@ -217,16 +217,29 @@ export default async function handler(req,res) {
         const shopId=typeof req.body?.shopId==='string'?req.body.shopId:null;
         if(shopId && !SHOPS.some(s=>s.id===shopId)){response={error:'Invalid shop.',status:400};actionResponse=response; return root;}
         let earned=0,sold=0,receipts=[];
-        for(const c of CANDY){
-          if(selected && !selected.includes(c.id)) continue;
-          const qty=Math.max(0,Math.floor(player.inventory[c.id]||0));if(!qty)continue;
-          const shop=shopId?SHOPS.find(s=>s.id===shopId):bestShopFor(c.id,root.meta.offers);
-          const unit=root.meta.offers[shop.id][c.id], subtotal=unit*qty;
-          earned+=subtotal;sold+=qty;receipts.push({candyId:c.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal});
-          player.inventory[c.id]=0;
+        for(const candy of CANDY){
+          if(selected && !selected.includes(candy.id)) continue;
+          const qty=Math.max(0,Math.floor(player.inventory[candy.id]||0));if(!qty)continue;
+          const shop=shopId?SHOPS.find(s=>s.id===shopId):bestShopFor(candy.id,root.meta.offers);
+          const unit=root.meta.offers[shop.id][candy.id], subtotal=unit*qty;
+          earned+=subtotal;sold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:'basket'});
+          player.inventory[candy.id]=0;
+        }
+        let crewSold=0;
+        for(const crew of player.crew){
+          crew.inventory ||= {};
+          for(const candy of CANDY){
+            if(selected && !selected.includes(candy.id)) continue;
+            const qty=Math.max(0,Math.floor(crew.inventory[candy.id]||0));if(!qty)continue;
+            const shop=shopId?SHOPS.find(s=>s.id===shopId):bestShopFor(candy.id,root.meta.offers);
+            const unit=root.meta.offers[shop.id][candy.id], subtotal=unit*qty;
+            earned+=subtotal;sold+=qty;crewSold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:crew.id});
+            crew.inventory[candy.id]=0;
+          }
+          crew.inventoryCount=Object.values(crew.inventory).reduce((a,n)=>a+(Number(n)||0),0);
         }
         if(!sold){response={error:'You have no matching candy to sell.',status:409};actionResponse=response; return root;}
-        credit(earned);player.stats.totalSold+=sold;count();response={state:publicState(player,root,now),earned,sold,receipts};
+        credit(earned);player.stats.totalSold+=sold;player.stats.crewSold+=crewSold;count();response={state:publicState(player,root,now),earned,sold,receipts};
       } else if(action==='upgrade') {
         const type=String(req.body?.type||'');const cfg=UPGRADE_CONFIG[type],u=player.upgrades[type];
         if(!cfg||!u){response={error:'Unknown upgrade.',status:400};actionResponse=response; return root;}
