@@ -3,7 +3,7 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Patrick+Hand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
 
