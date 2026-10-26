@@ -913,6 +913,79 @@ tr:hover td { background: rgba(255, 255, 255, 0.06); }
   .buy-btn { width: 100%; }
 }
 
+
+/* Compact play area: keep cash, pumpkin, and basket progress in one viewport. */
+body {
+  padding: 82px 16px 96px;
+}
+
+.game-container {
+  min-height: calc(100svh - 178px);
+  min-height: calc(100vh - 178px);
+  gap: clamp(8px, 1.5vh, 14px);
+  padding: 6px 0;
+}
+
+.hero-cash {
+  margin-bottom: 0;
+  padding: 8px 24px;
+  border-radius: 20px;
+}
+
+.hero-cash-label {
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  margin-bottom: 2px;
+}
+
+.hero-cash .cash {
+  font-size: clamp(34px, 5vw, 56px);
+  letter-spacing: 1px;
+}
+
+.pumpkin-svg {
+  width: clamp(132px, 24vh, 210px);
+  max-height: 26svh;
+}
+
+.basket-status {
+  margin-top: 0;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+}
+
+.basket-status span {
+  font-size: 1rem;
+}
+
+.basket-bar-bg {
+  width: min(250px, 72vw);
+  height: 10px;
+  margin: 6px auto 0;
+}
+
+@media (max-height: 700px) {
+  body { padding-top: 72px; padding-bottom: 88px; }
+  .game-container { min-height: calc(100svh - 160px); min-height: calc(100vh - 160px); gap: 6px; }
+  .hero-cash { padding: 5px 18px; }
+  .hero-cash-label { font-size: 0.65rem; }
+  .hero-cash .cash { font-size: clamp(30px, 4.5vw, 44px); }
+  .pumpkin-svg { width: clamp(118px, 20vh, 155px); }
+  .basket-status { font-size: 0.75rem; }
+  .basket-bar-bg { height: 8px; margin-top: 4px; }
+}
+
+@media (max-width: 420px) {
+  .haunt-header { padding: 10px 12px; }
+  .header-brand h1 { font-size: 21px; letter-spacing: 1px; }
+  .stat-pill { gap: 5px; padding: 5px 8px; font-size: 0.76rem; }
+  .stat-pill .timer { font-size: 0.95em; }
+  .hero-cash { padding: 7px 20px; }
+  .hero-cash .cash { font-size: 36px; }
+  .pumpkin-svg { width: clamp(132px, 22vh, 175px); }
+  .action-nav { bottom: 8px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
