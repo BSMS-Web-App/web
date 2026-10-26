@@ -8,7 +8,7 @@
 const START_Z = '2026-10-26T04:00:00Z'; // Oct 26 2026, 12:00 AM EDT
 const DEADLINE_Z = '2026-10-30T19:10:00Z'; // Oct 30 2026, 3:10 PM EDT
 const API_BASE = '/api/halloween-haunt';
-const IMG_BASE = '/img/halloween-haunt-contest/candy/';
+const IMG_BASE = '/img/halloween-haunt-event/candy/';
 
 // The EXACT Candy Catalog mappings requested
 const CANDY_CATALOG = [
@@ -52,7 +52,7 @@ const CANDY_CATALOG = [
 let gameState = null;
 let currentModal = null;
 let offerRefreshTime = 0;
-let isContestActive = false;
+let isEventActive = false;
 let leaderboardCache = [];
 let pendingClicks = 0;
 let inFlightClicks = 0;
@@ -206,23 +206,17 @@ async function initGame() {
     updateUI();
     updateTimer();
     setInterval(updateTimer, 1000);
-    setInterval(syncCrew, 20000);
-    setInterval(refreshLeaderboard, 30000);
+    setInterval(syncCrew, 12000);
+    setInterval(refreshLeaderboard, 60000);
     hideLoadingScreen();
     maybeShowWelcomeGuide();
 }
 
-function updateTimer() {
-    // TEST MODE: contest is always active while backend testing is underway.
-    isContestActive = true;
-    const label = document.getElementById('ui-timer')?.previousSibling;
-    const timer = document.getElementById('ui-timer');
-    if (label) label.textContent = 'TEST MODE · ';
-    if (timer) timer.textContent = 'ALWAYS ACTIVE';
-}
+function updateTimer(){if(!gameState)return;const now=Date.now(),start=Number(gameState.startsAt||Date.parse(START_Z)),end=Number(gameState.endsAt||Date.parse(DEADLINE_Z));isEventActive=now>=start&&now<end;const timer=document.getElementById('ui-timer'),label=timer?.previousSibling;if(!timer)return;if(now<start){if(label)label.textContent='Starts in: ';timer.textContent=eventDuration(start-now);}else if(now<end){if(label)label.textContent='Ends in: ';timer.textContent=eventDuration(end-now);}else{if(label)label.textContent='';timer.textContent='EVENT ENDED';}}
+function eventDuration(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return d>0?d+'d '+h+'h '+m+'m '+s+'s':String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 
 async function syncCrew() {
-    if (!gameState || !isContestActive || !gameState.crewUnlocked) return;
+    if (!gameState || !isEventActive || !gameState.crewUnlocked || document.visibilityState==='hidden') return;
     // Pings server to claim active-play crew rewards.
     const res = await apiCall('?action=crew-sync', 'POST');
     if (res) {
@@ -237,7 +231,7 @@ async function syncCrew() {
 // ------------------------------------------------------------------
 function handleBasketClick(e) {
     if (!gameState) { showToast("Halloween Haunt is still connecting."); return; }
-    if (!isContestActive) { showToast("Contest is not active."); return; }
+    if (!isEventActive) { showToast("Event is not active."); return; }
 
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
     const confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
@@ -572,3 +566,7 @@ window.changeWelcomeGuide=changeWelcomeGuide;window.finishWelcomeGuide=finishWel
 window.addEventListener('DOMContentLoaded', initGame);
 window.retryHalloweenHauntLoad = initGame;
 window.retryHalloweenHauntCollect = retryCollectQueue;
+
+let crewExitSent=false;
+function sellCrewCandyOnExit(){if(crewExitSent||!gameState||!gameState.crew?.length)return;crewExitSent=true;const sessionId=localStorage.getItem('session_id')||'';if(!sessionId)return;const deviceId=localStorage.getItem('device_id')||sessionId;const payload={requestId:'crew-exit-'+Date.now()+'-'+Math.random().toString(36).slice(2)};try{fetch(API_BASE+'?action=crew-exit',{method:'POST',keepalive:true,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Session-ID':sessionId,'X-Device-ID':deviceId},body:JSON.stringify(payload)}).catch(()=>{});}catch{}}
+window.addEventListener('pagehide',sellCrewCandyOnExit);

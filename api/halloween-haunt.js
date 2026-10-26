@@ -3,7 +3,7 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  *
- * Halloween Haunt authoritative contest API.
+ * Halloween Haunt authoritative event API.
  * All economy changes are server-calculated and committed through the Mac DB CAS transaction.
  */
 import { db } from './db.js';
@@ -112,16 +112,17 @@ function ensureMeta(root, now) {
   root.players ||= {};
   return root;
 }
-function contestStatus(now) {
-  // TEST MODE: keep the contest active regardless of the calendar. Restore date checks before launch.
-  return {status:'active',startsAt:START,endsAt:END,serverTime:now,testMode:true};
+function eventstatus(now) {
+  // TEST MODE: keep the event active regardless of the calendar. Restore date checks before launch.
+  const status=now<START?'upcoming':now<END?'active':'ended';
+  return {status,startsAt:START,endsAt:END,serverTime:now,testMode:false};
 }
 function publicState(p, root, now) {
   const offers=root.meta.offers;
   const bestPrices={};
   for(const c of CANDY) bestPrices[c.id]=Math.max(...SHOPS.map(s=>offers[s.id][c.id]));
   return {
-    ...contestStatus(now), accountId:p.uid, displayName:p.displayName, cash:p.cash,
+    ...eventstatus(now), accountId:p.uid, displayName:p.displayName, cash:p.cash,
     inventory:{...p.inventory}, discovered:[...p.discovered], lifetimeCollected:{...p.lifetimeCollected},
     currentBasketCount:p.currentBasketCount,basketCapacity:p.basketCapacity,
     upgrades:JSON.parse(JSON.stringify(p.upgrades)),crew:JSON.parse(JSON.stringify(p.crew)),
@@ -179,23 +180,18 @@ export default async function handler(req,res) {
     }
   }
 
-  let auth;
-  try {
-    auth = await authenticate(req);
-  } catch (error) {
-    console.error('[Haunt] Auth/database error:', error);
-    return res.status(503).json({ error: 'The game API cannot reach the account database. Check the Mac API and Cloudflare Tunnel.' });
-  }
-  if(!auth) return res.status(401).json({error:'Please sign in to play Halloween Haunt.'});
-  if(auth.error) return res.status(auth.status).json({error:auth.error});
-  const now=Date.now(), status=contestStatus(now);
-  try {
-    if(action==='leaderboard') {
+  const now=Date.now(), status=eventStatus(now);
+  if(action==='leaderboard') {
+    try {
       const root=ensureMeta((await db.ref(ROOT).once('value')).val()||{},now);
-      const rankings=Object.values(root.players).map(p=>({accountId:p.uid,displayName:String(p.displayName||'Player').slice(0,40),cash:Math.max(0,Math.floor(Number(p.cash)||0))}))
-        .sort((a,b)=>b.cash-a.cash || a.displayName.localeCompare(b.displayName)).slice(0,100);
+      const rankings=Object.values(root.players).map(p=>({accountId:p.uid,displayName:String(p.displayName||'Player').slice(0,40),cash:Math.max(0,Math.floor(Number(p.cash)||0))})).sort((a,b)=>b.cash-a.cash || a.displayName.localeCompare(b.displayName)).slice(0,100);
       return res.status(200).json({rankings,...status});
-    }
+    } catch(error) { console.error('[Haunt] Public event leaderboard failed:',error); return res.status(503).json({error:'The event leaderboard is temporarily unavailable.'}); }
+  }
+  let auth;
+  try { auth=await authenticate(req); } catch(error) { console.error('[Haunt] Auth/database error:',error); return res.status(503).json({error:'The game API cannot reach the account database. Check the Mac API and Cloudflare Tunnel.'}); }
+  if(!auth)return res.status(401).json({error:'Please sign in to play Halloween Haunt.'});
+  if(auth.error)return res.status(auth.status).json({error:auth.error});
     let actionResponse = null;
     const transaction=await db.ref(ROOT).transaction(current=>{
       const root=ensureMeta(current||{},now);
@@ -208,6 +204,12 @@ export default async function handler(req,res) {
       for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
       if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
       if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
+      if(action==='crew-exit') {
+        let earned=0,sold=0;
+        for(const crew of player.crew){crew.inventory ||= {};for(const candy of CANDY){const qty=Math.max(0,Math.floor(Number(crew.inventory[candy.id])||0));if(!qty)continue;const shop=bestShopFor(candy.id,root.meta.offers);earned+=qty*root.meta.offers[shop.id][candy.id];sold+=qty;crew.inventory[candy.id]=0;}crew.inventoryCount=Object.values(crew.inventory).reduce((sum,n)=>sum+(Number(n)||0),0);}
+        if(sold){credit(earned);player.stats.totalSold+=sold;player.stats.crewSold+=sold;}
+        actionResponse={state:publicState(player,root,now),crewExitSold:sold,crewExitEarned:earned};player.updatedAt=now;return root;
+      }
       if(status.status!=='active') {
         response.error=status.status==='upcoming'?'Halloween Haunt has not started yet.':'Halloween Haunt has ended. Final standings are locked.';
         response.status=status.status==='upcoming'?425:410;
@@ -300,14 +302,13 @@ export default async function handler(req,res) {
             for(let n=0;n<ticks;n++){
               const crewCount=Object.values(crew.inventory||{}).reduce((a,b)=>a+(Number(b)||0),0);
               if(crewCount>=crew.capacity)break;
-              if(count()>=player.basketCapacity)break;
               const c=rollCandy(player.upgrades.luck.level||0);crew.inventory ||= {};crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=crewCount+1;
               player.stats.crewCollected++;player.stats.totalCollected++;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;
               if(!player.discovered.includes(c.id))player.discovered.push(c.id);
               if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected++;if(c.rarity==='Legendary')player.stats.legendaryCollected++;
               count();
             }
-            if(player.upgrades.autoSell.level && crew.inventoryCount>=crew.capacity){
+            if(crew.inventoryCount>=crew.capacity || (player.upgrades.autoSell.level && crew.inventoryCount>0)){
               let earned=0,sold=0;
               for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}
               if(earned){credit(earned);player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;}
