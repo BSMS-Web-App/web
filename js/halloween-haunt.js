@@ -62,7 +62,17 @@ let collectInFlight = false;
 let collectFlushTimer = null;
 let shopTimerInterval = null;
 let shopRefreshInFlight = false;
+let actionInFlight = false;
+let helpSection = 0;
 const PRELOADED_CANDY_IMAGES = new Map();
+const HELP_SECTIONS = [
+ {title:"Welcome to Halloween Haunt",body:"Click the pumpkin to collect candy. Candy goes into your basket until it reaches capacity. Sell candy at Local Shops to earn cash, then spend that cash on upgrades and helpers."},
+ {title:"Cash, Basket & Candy",body:"Your green cash total is shown above the pumpkin. The basket meter shows how much candy you can hold. Candy has different rarities and sale values. The Candy Index tracks what you have discovered and collected."},
+ {title:"Local Shops",body:"Local Shops buy candy in your basket. Compare offers, choose a shop or use best-price selling, then sell all or selected candy. Shared offers rotate when the countdown reaches zero."},
+ {title:"Upgrades",body:"Basket Capacity lets you hold more candy. Click Power increases candy collected per click. Candy Luck improves your odds of rarer candy, but the rarest candy remains very hard to find. Auto-Sell unlocks crew auto-selling."},
+ {title:"Trick-or-Treat Crew",body:"Hire helpers to collect candy while you actively play. Upgrade their speed to collect more often and their capacity to let them hold more candy."},
+ {title:"Stats & Leaderboard",body:"Stats tracks your progress and lifetime activity. The leaderboard ranks players by current cash, so spending cash can change your position. Keep collecting, selling, and upgrading!"}
+];
 
 // Helpers
 function showToast(msg) {
@@ -76,6 +86,19 @@ function showToast(msg) {
 
 function getCandyObj(id) { return CANDY_CATALOG.find(c => c.id === id); }
 function formatCash(num) { return '$' + Math.floor(num).toLocaleString(); }
+function cloneGameState(value) { return JSON.parse(JSON.stringify(value)); }
+function renderCurrentModal() {
+ const body=document.getElementById('modalBody'); if(!body||!currentModal||!gameState)return;
+ if(currentModal==='shops')renderShops(body);else if(currentModal==='upgrades')renderUpgrades(body);else if(currentModal==='crew')renderCrew(body);else if(currentModal==='index')renderIndex(body);else if(currentModal==='stats')renderStats(body);else if(currentModal==='leaderboard')renderLeaderboard(body);
+}
+async function performOptimisticAction(endpoint,payload,mutate,successMessage) {
+ if(actionInFlight)return;actionInFlight=true;const previous=cloneGameState(gameState);
+ try {mutate(gameState);updateUI();renderCurrentModal();const result=await apiCall(endpoint,'POST',payload);
+  if(!result||!result.state){gameState=previous;updateUI();renderCurrentModal();return;}
+  gameState=result.state;updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));
+ }catch(error){gameState=previous;updateUI();renderCurrentModal();console.error('[Halloween Haunt] Optimistic action failed:',error);}
+ finally{actionInFlight=false;}
+}
 function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll(String.fromCharCode(34), '&quot;').replaceAll(String.fromCharCode(39), '&#39;'); }
 
 
@@ -186,6 +209,7 @@ async function initGame() {
     setInterval(syncCrew, 20000);
     setInterval(refreshLeaderboard, 30000);
     hideLoadingScreen();
+    maybeShowWelcomeGuide();
 }
 
 function updateTimer() {
@@ -281,31 +305,15 @@ function retryCollectQueue() {
 }
 
 function spawnFallingCandy(candyId, originX, originY) {
-    const candy = getCandyObj(candyId);
-    if(!candy) return;
-    const el = document.createElement('img');
-    el.src = IMG_BASE + candy.file;
-    el.className = 'falling-candy rarity-' + candy.rarity.toLowerCase();
-    const rarityStyle = {
-        common: { filter: 'drop-shadow(0 3px 5px rgba(255,255,255,.2))', width: '34px', height: '34px' },
-        uncommon: { filter: 'drop-shadow(0 0 8px rgba(70,220,120,.65))', width: '38px', height: '38px' },
-        rare: { filter: 'drop-shadow(0 0 10px rgba(70,150,255,.8))', width: '42px', height: '42px' },
-        epic: { filter: 'drop-shadow(0 0 13px rgba(170,80,255,.9))', width: '46px', height: '46px' },
-        legendary: { filter: 'drop-shadow(0 0 16px rgba(255,190,50,1))', width: '50px', height: '50px' }
-    }[candy.rarity.toLowerCase()];
-    if (rarityStyle) Object.assign(el.style, rarityStyle);
-
-    // Fall around the center of the basket
-    const basketRect = document.getElementById('basketHitbox').getBoundingClientRect();
-    // Absolute-positioned candy uses document coordinates, so account for page scrolling.
-    const startX = window.scrollX + basketRect.left + (basketRect.width / 2) + ((Math.random() - 0.5) * 80) - 20;
-    const startY = window.scrollY + basketRect.top + basketRect.height * 0.22;
-
-    el.style.left = `${startX}px`;
-    el.style.top = `${startY}px`;
-    el.onerror = function() { this.src = '/img/icon.png'; }; // fallback
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1200);
+ const candy=getCandyObj(candyId);if(!candy)return;
+ const el=document.createElement('img');el.src=IMG_BASE+candy.file;el.className='falling-candy rarity-'+candy.rarity.toLowerCase();
+ const styles={common:['drop-shadow(0 4px 7px rgba(255,255,255,.25))',48],uncommon:['drop-shadow(0 0 10px rgba(70,220,120,.65))',52],rare:['drop-shadow(0 0 12px rgba(70,150,255,.8))',56],epic:['drop-shadow(0 0 15px rgba(170,80,255,.9))',60],legendary:['drop-shadow(0 0 18px rgba(255,190,50,1))',66]};
+ const style=styles[candy.rarity.toLowerCase()];if(style){el.style.filter=style[0];el.style.width=style[1]+'px';el.style.height=style[1]+'px';}
+ const basket=document.getElementById('basketHitbox');if(!basket)return;const rect=basket.getBoundingClientRect();
+ const x=window.scrollX+rect.left+rect.width/2+(Math.random()-.5)*70;const y=window.scrollY+rect.top+rect.height*.22;
+ const drift=(Math.random()<.5?-1:1)*(90+Math.random()*180);const lift=-(35+Math.random()*65);
+ el.style.left=x+'px';el.style.top=y+'px';el.style.setProperty('--candy-drift',drift+'px');el.style.setProperty('--candy-lift',lift+'px');
+ el.onerror=function(){this.src='/img/icon.png';};document.body.appendChild(el);setTimeout(()=>el.remove(),1450);
 }
 
 // ------------------------------------------------------------------
@@ -414,14 +422,13 @@ function renderShops(container) {
     shopTimerInterval = setInterval(tick, 1000);
 }
 window.executeSellAll = async function() {
-    const shop=document.getElementById('sellShop')?.value || 'best';
-    const res = await apiCall('?action=sell', 'POST', shop==='best' ? {} : {shopId:shop});
-    if(res) {
-        gameState = res.state;
-        updateUI();
-        showToast(`Sold ${res.sold || 0} candies for ${formatCash(res.earned || 0)}.`);
-        if(currentModal === 'shops') closeModal();
-    }
+ const shopId=document.getElementById('sellShop')?.value||'best';
+ await performOptimisticAction('?action=sell',shopId==='best'?{}:{shopId},state=>{
+  let earned=0;for(const candy of CANDY_CATALOG){const qty=Math.max(0,Number(state.inventory[candy.id])||0);if(!qty)continue;
+   const shop=shopId==='best'?[...state.shops].sort((a,b)=>Number(b.prices[candy.id]||0)-Number(a.prices[candy.id]||0))[0]:state.shops.find(x=>x.id===shopId);
+   earned+=qty*Number(shop?.prices?.[candy.id]||0);state.inventory[candy.id]=0;
+  }state.cash=Number(state.cash||0)+earned;
+ },r=>'Sold '+(r.sold||0)+' candies for '+formatCash(r.earned||0)+'.');
 }
 
 function renderUpgrades(container) {
@@ -440,7 +447,7 @@ function renderUpgrades(container) {
         html += `
             <div class="upgrade-row">
                 <div>
-                    <h3 style="color:#fff;">${u.name} (Lvl ${u.data.level})</h3>
+                    <div class="upgrade-title-row"><h3 style="color:#fff;">${u.name}</h3><span class="level-badge">LEVEL ${u.data.level}</span></div>
                     <div style="color:var(--fg2); font-size:16px;">${u.desc}</div>
                 </div>
                 <button class="buy-btn" ${(!canAfford || maxed) ? 'disabled' : ''} onclick="executeUpgrade('${u.id}')">
@@ -453,16 +460,21 @@ function renderUpgrades(container) {
     container.innerHTML = html;
 }
 
-window.executeSellSelected=async function(){const selected=Array.from(document.querySelectorAll('.sellCandyCheck:checked')).map(el=>el.value);if(!selected.length){showToast('Select at least one candy to sell.');return;}const shop=document.getElementById('sellShop')?.value||'best',payload={selected};if(shop!=='best')payload.shopId=shop;const res=await apiCall('?action=sell','POST',payload);if(res){gameState=res.state;updateUI();showToast(`Sold ${res.sold||0} candies for ${formatCash(res.earned||0)}.`);renderShops(document.getElementById('modalBody'));}};
+window.executeSellSelected=async function(){
+ const selected=Array.from(document.querySelectorAll('.sellCandyCheck:checked')).map(el=>el.value);if(!selected.length){showToast('Select at least one candy to sell.');return;}
+ const shopId=document.getElementById('sellShop')?.value||'best',payload={selected};if(shopId!=='best')payload.shopId=shopId;
+ await performOptimisticAction('?action=sell',payload,state=>{
+  let earned=0;for(const id of selected){const qty=Math.max(0,Number(state.inventory[id])||0);const shop=shopId==='best'?[...state.shops].sort((a,b)=>Number(b.prices[id]||0)-Number(a.prices[id]||0))[0]:state.shops.find(x=>x.id===shopId);earned+=qty*Number(shop?.prices?.[id]||0);state.inventory[id]=0;}state.cash=Number(state.cash||0)+earned;
+ },r=>'Sold '+(r.sold||0)+' candies for '+formatCash(r.earned||0)+'.');
+};
 
-window.executeUpgrade = async function(type) {
-    const res = await apiCall('?action=upgrade', 'POST', { type });
-    if(res) {
-        gameState = res.state;
-        updateUI();
-        showToast("Upgrade purchased!");
-        if(currentModal === 'upgrades') renderUpgrades(document.getElementById('modalBody'));
-    }
+window.executeUpgrade=async function(type){
+ await performOptimisticAction('?action=upgrade',{type},state=>{
+  const u=state.upgrades[type];if(!u||u.nextCost<0||state.cash<u.nextCost)return;
+  const cost=u.nextCost;state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;u.level++;
+  const base={capacity:45,power:60,luck:90,autoSell:250}[type],max={capacity:30,power:20,luck:15,autoSell:1}[type];u.nextCost=u.level>=max?-1:Math.floor(base*Math.pow(1.62,u.level));
+  if(type==='capacity')state.basketCapacity=Math.min(500,state.basketCapacity+10);if(type==='autoSell'&&u.level)state.crewUnlocked=state.crew.length>0;
+ },()=>'Upgrade purchased!');
 }
 
 function renderCrew(container) {
@@ -514,13 +526,15 @@ function renderCrew(container) {
     container.innerHTML = html;
 }
 
-window.executeCrew = async function(action, index=0) {
-    const res = await apiCall('?action=crew-action', 'POST', { action, index });
-    if(res) {
-        gameState = res.state;
-        updateUI();
-        if(currentModal === 'crew') renderCrew(document.getElementById('modalBody'));
-    }
+window.executeCrew=async function(action,index=0){
+ await performOptimisticAction('?action=crew-action',{action,index},state=>{
+  state.stats ||= {};
+  if(action==='hire'){if(state.crew.length>=5||state.cash<state.crewHireCost)return;const cost=state.crewHireCost;state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.crewUnlocked=true;state.crew.push({id:'helper-'+(state.crew.length+1),speedLevel:0,capacityLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:12000,speedUpgradeCost:75,capUpgradeCost:65,lastActionAt:Date.now()});state.crewHireCost=Math.floor(state.crewHireCost*1.85);return;}
+  const c=state.crew[index];if(!c)return;const speed=action==='upgrade_speed',cost=speed?Math.floor(75*Math.pow(1.7,c.speedLevel||0)):Math.floor(65*Math.pow(1.65,c.capacityLevel||0));if(state.cash<cost)return;
+  state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;
+  if(speed){c.speedLevel=(c.speedLevel||0)+1;c.intervalMs=Math.max(2500,Math.floor(12000*Math.pow(.82,c.speedLevel)));c.speedUpgradeCost=c.speedLevel>=8?-1:Math.floor(75*Math.pow(1.7,c.speedLevel));}
+  else{c.capacityLevel=(c.capacityLevel||0)+1;c.capacity=Math.min(100,10+c.capacityLevel*10);c.capUpgradeCost=c.capacityLevel>=9?-1:Math.floor(65*Math.pow(1.65,c.capacityLevel));}
+ },r=>r.hired?'Helper hired!':'Crew upgrade purchased!');
 }
 
 function renderStats(container) {
@@ -546,6 +560,14 @@ function renderLeaderboard(container) {
     container.innerHTML = html;
 }
 
+function maybeShowWelcomeGuide(){let seen=false;try{seen=localStorage.getItem('halloween_haunt_guide_seen_v1')==='1'}catch{}if(seen)return;helpSection=0;renderWelcomeGuide()}
+function renderWelcomeGuide(){
+ const s=HELP_SECTIONS[helpSection],last=helpSection===HELP_SECTIONS.length-1,overlay=document.getElementById('welcomeGuideOverlay');if(!overlay)return;
+ overlay.innerHTML='<div class="welcome-guide-card" role="dialog" aria-modal="true" aria-labelledby="welcomeGuideTitle"><div class="welcome-guide-kicker">HALLOWEEN HAUNT · QUICK GUIDE</div><div class="welcome-guide-progress">SECTION '+(helpSection+1)+' OF '+HELP_SECTIONS.length+'</div><h2 id="welcomeGuideTitle">'+s.title+'</h2><p>'+s.body+'</p><div class="welcome-guide-dots">'+HELP_SECTIONS.map((_,i)=>'<span class="'+(i===helpSection?'active':'')+'"></span>').join('')+'</div><div class="welcome-guide-controls"><button class="guide-btn secondary" '+(helpSection===0?'disabled':'')+' onclick="changeWelcomeGuide(-1)">Previous</button><button class="guide-btn" onclick="changeWelcomeGuide(1)">'+(last?'Start playing':'Next')+'</button></div><button class="guide-skip" onclick="finishWelcomeGuide()">Skip guide</button></div>';overlay.classList.add('show');
+}
+function changeWelcomeGuide(direction){if(helpSection===HELP_SECTIONS.length-1&&direction>0){finishWelcomeGuide();return}helpSection=Math.max(0,Math.min(HELP_SECTIONS.length-1,helpSection+direction));renderWelcomeGuide()}
+function finishWelcomeGuide(){try{localStorage.setItem('halloween_haunt_guide_seen_v1','1')}catch{}document.getElementById('welcomeGuideOverlay')?.classList.remove('show')}
+window.changeWelcomeGuide=changeWelcomeGuide;window.finishWelcomeGuide=finishWelcomeGuide;
 // Bootstrap
 window.addEventListener('DOMContentLoaded', initGame);
 window.retryHalloweenHauntLoad = initGame;
