@@ -99,11 +99,55 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSettingsEntry,{once:true});else initSettingsEntry();
   let autoSellTimer=null;
   let autoSellPending=false;
+  const baseShowToast=window.showToast;
+  window.showToast=function(message){
+    const msg=String(message||'');
+    const lower=msg.toLowerCase();
+    let category=null;
+    if(lower.includes('basket is full')||lower.includes('basket full'))category='basketFull';
+    else if(lower.includes('auto sell'))category='autoSell';
+    else if(lower.includes('sold ')||lower.includes('selling candy'))category='candySold';
+    else if(lower.includes('asleep')||lower.includes('needs waking'))category='crewAsleep';
+    else if(lower.includes('new rarity')||lower.includes('discovered a '))category='newRarity';
+    else if(lower.includes('upgrade purchased')||lower.includes('upgrade unlocked'))category='upgradeBought';
+    else if(lower.includes('crew member hired')||lower.includes('hired!'))category='crewHired';
+    else if(lower.includes('crew member fed')||lower.includes('fed for 20 minutes'))category='crewFed';
+    if(category&&getPrefs()[category]===false)return;
+    if(typeof baseShowToast==='function')return baseShowToast.apply(this,arguments);
+  };
+  const initialDiscovered=new Set();
+  let hasInitialDiscoverySnapshot=false;
+  const lastSleepState=new Map();
   const baseUpdateUI=window.updateUI;
   window.updateUI=function(){
     if(typeof baseUpdateUI==='function')baseUpdateUI.apply(this,arguments);
     const state=typeof gameState!=='undefined'?gameState:null;
     if(!state)return;
+    const discovered=Array.isArray(state.discovered)?state.discovered:[];
+    if(!hasInitialDiscoverySnapshot){discovered.forEach(id=>initialDiscovered.add(id));hasInitialDiscoverySnapshot=true;}
+    else {
+      for(const id of discovered){
+        if(initialDiscovered.has(id))continue;
+        initialDiscovered.add(id);
+        const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);
+        if(candy&&getPrefs().newRarity!==false&&typeof window.showToast==='function')window.showToast('New rarity discovered: '+candy.rarity+' candy!');
+      }
+    }
+    const crew=Array.isArray(state.crew)?state.crew:[];
+    const asleep=crew.filter(worker=>worker.asleep);
+    const nav=document.querySelector('.action-nav');
+    const crewButton=nav?.querySelector('button[onclick="openModal(\'crew\')"]');
+    if(crewButton){
+      crewButton.classList.toggle('hh-crew-alert',asleep.length>0);
+      let dot=crewButton.querySelector('.hh-alert-dot');
+      if(asleep.length&&!dot){dot=document.createElement('span');dot.className='hh-alert-dot';dot.setAttribute('aria-label','Crew members need waking');crewButton.appendChild(dot);}
+      if(!asleep.length&&dot)dot.remove();
+    }
+    for(let i=0;i<crew.length;i++){
+      const worker=crew[i],wasAsleep=lastSleepState.get(worker.id||String(i));
+      if(worker.asleep&&wasAsleep===false&&getPrefs().crewAsleep!==false&&typeof window.showToast==='function')window.showToast('Crew member asleep: '+(worker.name||CREW_ROSTER[i]||('Worker '+(i+1)))+' needs waking.');
+      lastSleepState.set(worker.id||String(i),!!worker.asleep);
+    }
     const cap=Math.max(1,Number(state.basketCapacity||50));
     const count=Object.values(state.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
     const enabled=Number(state.upgrades?.autoSell?.level||0)>0;
