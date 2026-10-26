@@ -240,7 +240,7 @@ function formatCash(num) { return '$' + Math.floor(num).toLocaleString(); }
 function cloneGameState(value) { return JSON.parse(JSON.stringify(value)); }
 function renderCurrentModal() {
  const body=document.getElementById('modalBody'); if(!body||!currentModal||!gameState)return;
- if(currentModal==='shops')renderShops(body);else if(currentModal==='upgrades')renderUpgrades(body);else if(currentModal==='crew')renderCrew(body);else if(currentModal==='index')renderIndex(body);else if(currentModal==='stats')renderStats(body);else if(currentModal==='leaderboard')renderLeaderboard(body);
+ if(currentModal==='shops')renderShops(body);else if(currentModal==='upgrades')renderUpgrades(body);else if(currentModal==='crew'){if(typeof window.renderCrew==='function')window.renderCrew(body);else renderCrew(body);}else if(currentModal==='index')renderIndex(body);else if(currentModal==='stats')renderStats(body);else if(currentModal==='leaderboard')renderLeaderboard(body);
 }
 async function performOptimisticAction(endpoint,payload,mutate,successMessage) {
  if(actionInFlight)return;actionInFlight=true;const previous=cloneGameState(gameState);
@@ -424,7 +424,7 @@ async function syncCrew(){
    if(crew.inventoryCount>=cap&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);
    if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){const sold=sellCrewOffline(crew);if(sold)changed=true;}
   }
-  if(changed){saveOfflineProgress();updateUI();if(currentModal==='crew')renderCrew();if(currentModal==='shops')renderShops(document.getElementById('modalBody'));if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));}
+  if(changed){saveOfflineProgress();updateUI();if(currentModal==='crew'){if(typeof window.renderCrew==='function')window.renderCrew(document.getElementById('modalBody'));else renderCrew();}if(currentModal==='shops')renderShops(document.getElementById('modalBody'));if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));}
   return;
  }
  const res=await apiCall('?action=crew-sync','POST');if(res?.state){gameState=res.state;activeSessionHash=getSessionHash();saveLastKnownOnlineState();updateUI();if(currentModal==='crew')renderCrew();}
