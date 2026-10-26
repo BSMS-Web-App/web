@@ -482,17 +482,17 @@ function handleBasketClick(e) {
         return;
     }
 
-    // Immediate feedback: never wait for the network before animating a click.
-    const preview = CANDY_CATALOG[Math.floor(Math.random() * CANDY_CATALOG.length)];
-    spawnFallingCandy(preview.id, e.clientX, e.clientY);
-
     if(offlineMode){
         const room=Math.max(0,Number(gameState.basketCapacity||50)-recalculateBasketCount()),amount=Math.min(room,perClick);
         if(amount<=0){showToast('Basket is full. Sell candy to make room.');return;}
-        for(let n=0;n<amount;n++)recordOfflineCandy(chooseOfflineCandy(),1);
+        for(let n=0;n<amount;n++){const candy=chooseOfflineCandy();recordOfflineCandy(candy,1);spawnFallingCandy(candy.id,e.clientX,e.clientY);}
         gameState.stats.totalClicks=Number(gameState.stats.totalClicks||0)+1;recalculateBasketCount();saveOfflineProgress();updateUI();
         if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));return;
     }
+
+    // Online drops use the candy IDs returned by the server, never a random preview.
+    // The cash/basket feedback remains instant while the selected candy animates
+    // as soon as the authoritative collect response arrives.
 
     pendingClicks += 1;
     updateUI();
@@ -518,6 +518,9 @@ async function flushCollectQueue() {
             retryBatchClicks = 0;
             gameState = res.state;
             inFlightClicks = 0;
+            const actualDrops=Array.isArray(res.drops)?res.drops:[];
+            // Keep the animation light when a large queued batch returns.
+            actualDrops.slice(0,12).forEach((id,index)=>setTimeout(()=>spawnFallingCandy(id),index*35));
             updateUI();
             const retry = document.getElementById('collectRetry');
             if (retry) retry.hidden = true;
