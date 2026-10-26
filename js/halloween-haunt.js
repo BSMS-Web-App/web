@@ -52,7 +52,24 @@ const CANDY_CATALOG = [
 let gameState = null;
 let offlineMode = false;
 const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
+const LAST_KNOWN_STATE_KEY = 'halloween_haunt_last_known_state_v1';
 let offlineSyncInFlight = false;
+
+function readLastKnownOnlineState() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(LAST_KNOWN_STATE_KEY) || 'null');
+        return saved && typeof saved === 'object' && saved.state && typeof saved.state === 'object' ? saved.state : null;
+    } catch (_) { return null; }
+}
+
+function saveLastKnownOnlineState() {
+    if (offlineMode || !gameState || !gameState.accountId || gameState.accountId === 'offline-local') return;
+    try {
+        localStorage.setItem(LAST_KNOWN_STATE_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), state: gameState }));
+    } catch (error) {
+        console.warn('[Halloween Haunt] Could not save last known online stats locally:', error);
+    }
+}
 
 function readOfflineProgress() {
     try { return JSON.parse(localStorage.getItem(OFFLINE_PROGRESS_KEY) || '{}') || {}; }
@@ -226,18 +243,24 @@ function hideLoadingScreen() {
 function enterOfflineMode() {
     offlineMode = true;
     const saved = readOfflineProgress();
+    const lastKnown = readLastKnownOnlineState();
+    const restored = lastKnown ? cloneGameState(lastKnown) : {};
+    const lastBasket = Math.max(0, Number(restored.currentBasketCount) || Object.values(restored.inventory || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0));
     gameState = {
-        accountId: 'offline-local',
-        displayName: 'Offline Player',
-        cash: Math.max(0, Number(saved.cash) || 0),
-        currentBasketCount: Math.max(0, Math.min(50, Number(saved.currentBasketCount) || 0)),
-        basketCapacity: 50,
-        upgrades: { power: { level: 0 } },
-        startsAt: Date.parse(START_Z),
-        endsAt: Date.parse(DEADLINE_Z),
-        crew: [],
-        discovered: [],
-        candyInventory: {}
+        ...restored,
+        accountId: restored.accountId || 'offline-local',
+        displayName: restored.displayName || 'Offline Player',
+        cash: Math.max(0, Number(saved.cash ?? restored.cash) || 0),
+        currentBasketCount: Math.max(0, Math.min(Number(restored.basketCapacity) || 50, Number(saved.currentBasketCount ?? lastBasket) || 0)),
+        basketCapacity: Math.max(1, Number(restored.basketCapacity) || 50),
+        upgrades: restored.upgrades || { power: { level: 0 } },
+        startsAt: Number(restored.startsAt) || Date.parse(START_Z),
+        endsAt: Number(restored.endsAt) || Date.parse(DEADLINE_Z),
+        crew: Array.isArray(restored.crew) ? restored.crew : [],
+        discovered: Array.isArray(restored.discovered) ? restored.discovered : [],
+        candyInventory: restored.candyInventory || {},
+        inventory: restored.inventory || {},
+        stats: restored.stats || {}
     };
     leaderboardCache = [];
     updateOfflineCard(navigator.onLine ? 'failed' : 'offline');
@@ -431,6 +454,8 @@ function spawnFallingCandy(candyId, originX, originY) {
 // UI Rendering
 // ------------------------------------------------------------------
 function updateUI() {
+    if (!gameState) return;
+    saveLastKnownOnlineState();
     document.getElementById('ui-cash').innerText = formatCash(gameState.cash);
 
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
