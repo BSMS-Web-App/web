@@ -74,17 +74,17 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 // ------------------------------------------------------------------
 async function apiCall(endpoint, method = 'GET', payload = null) {
     const sessionId = localStorage.getItem('session_id') || '';
-    if (!sessionId) {
-        showToast("Error: Not logged in. Redirecting...");
-        setTimeout(() => window.location.href='/accounts', 1500);
+    const isHealthCheck = endpoint.includes('action=health');
+    if (!sessionId && !isHealthCheck) {
+        showToast("Please sign in to play Halloween Haunt.");
         return null;
     }
 
-    const headers = {
-        'Content-Type': 'application/json',
-        'X-Session-ID': sessionId,
-        'X-Device-ID': sessionId
-    };
+    const headers = { 'Content-Type': 'application/json' };
+    if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+        headers['X-Device-ID'] = localStorage.getItem('device_id') || sessionId;
+    }
 
     const requestPayload = method === 'POST' && payload && typeof payload === 'object'
         ? { ...payload, requestId: payload.requestId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`) }
@@ -96,9 +96,17 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
             headers,
             body: requestPayload ? JSON.stringify(requestPayload) : null
         });
-        const data = await res.json();
+        const responseText = await res.text();
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch {
+            console.error('[Halloween Haunt] Non-JSON API response:', res.status, responseText.slice(0, 500));
+            showToast(`Game API returned HTTP ${res.status}. Check the Vercel function logs.`);
+            return null;
+        }
         if (!res.ok) {
-            showToast(data.error || "An error occurred.");
+            showToast(data.error || `Game API returned HTTP ${res.status}.`);
             return null;
         }
         return data;
@@ -114,8 +122,19 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
 // ------------------------------------------------------------------
 async function initGame() {
     const data = await apiCall('?action=state');
-    if (!data) return;
-    
+    if (!data) {
+        // Distinguish an unavailable Mac DB/tunnel from a player-session issue.
+        const health = await apiCall('?action=health');
+        if (health?.ok) {
+            showToast("Game service is online, but player state did not load. Refresh once; if it persists, check Vercel Runtime Logs.");
+        }
+        return;
+    }
+    if (!data.state) {
+        showToast("The game API responded without player state. Please refresh and check Vercel Runtime Logs if this continues.");
+        return;
+    }
+
     gameState = data.state;
     updateUI();
     updateTimer();
@@ -151,6 +170,7 @@ async function syncCrew() {
 // ------------------------------------------------------------------
 let collectCooldown = false;
 async function handleBasketClick(e) {
+    if (!gameState) { showToast("Halloween Haunt is still connecting. Check the game API message above."); return; }
     if (!isContestActive) { showToast("Contest is not active."); return; }
     if (collectCooldown) return;
     if (gameState.currentBasketCount >= gameState.basketCapacity) {
@@ -193,9 +213,10 @@ function spawnFallingCandy(candyId, originX, originY) {
 
     // Fall around the center of the basket
     const basketRect = document.getElementById('basketHitbox').getBoundingClientRect();
-    const startX = basketRect.left + (basketRect.width / 2) + ((Math.random() - 0.5) * 80) - 20;
-    const startY = basketRect.top - 20;
-    
+    // Absolute-positioned candy uses document coordinates, so account for page scrolling.
+    const startX = window.scrollX + basketRect.left + (basketRect.width / 2) + ((Math.random() - 0.5) * 80) - 20;
+    const startY = window.scrollY + basketRect.top + basketRect.height * 0.22;
+
     el.style.left = `${startX}px`;
     el.style.top = `${startY}px`;
     el.onerror = function() { this.src = '/img/icon.png'; }; // fallback
