@@ -116,6 +116,7 @@
     if(typeof baseShowToast==='function')return baseShowToast.apply(this,arguments);
   };
   const initialDiscovered=new Set();
+  const initialRarities=new Set();
   let hasInitialDiscoverySnapshot=false;
   const lastSleepState=new Map();
   const baseUpdateUI=window.updateUI;
@@ -124,13 +125,18 @@
     const state=typeof gameState!=='undefined'?gameState:null;
     if(!state)return;
     const discovered=Array.isArray(state.discovered)?state.discovered:[];
-    if(!hasInitialDiscoverySnapshot){discovered.forEach(id=>initialDiscovered.add(id));hasInitialDiscoverySnapshot=true;}
-    else {
+    if(!hasInitialDiscoverySnapshot){
+      discovered.forEach(id=>{initialDiscovered.add(id);const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);if(candy)initialRarities.add(candy.rarity);});
+      hasInitialDiscoverySnapshot=true;
+    } else {
       for(const id of discovered){
         if(initialDiscovered.has(id))continue;
         initialDiscovered.add(id);
         const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);
-        if(candy&&getPrefs().newRarity!==false&&typeof window.showToast==='function')window.showToast('New rarity discovered: '+candy.rarity+' candy!');
+        if(candy&&!initialRarities.has(candy.rarity)){
+          initialRarities.add(candy.rarity);
+          if(getPrefs().newRarity!==false&&typeof window.showToast==='function')window.showToast('New rarity unlocked: '+candy.rarity+'!');
+        }
       }
     }
     const crew=Array.isArray(state.crew)?state.crew:[];
