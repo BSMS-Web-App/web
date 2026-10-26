@@ -184,6 +184,7 @@ async function initGame() {
     updateTimer();
     setInterval(updateTimer, 1000);
     setInterval(syncCrew, 20000);
+    setInterval(refreshLeaderboard, 30000);
     hideLoadingScreen();
 }
 
@@ -312,12 +313,36 @@ function spawnFallingCandy(candyId, originX, originY) {
 // ------------------------------------------------------------------
 function updateUI() {
     document.getElementById('ui-cash').innerText = formatCash(gameState.cash);
-    
+
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
     const cap = gameState.basketCapacity;
     const count = Math.min(cap, Number(gameState.currentBasketCount || 0) + (pendingClicks + retryBatchClicks + inFlightClicks) * perClick);
     document.getElementById('ui-capacity-text').innerText = `${count} / ${cap}`;
     document.getElementById('ui-capacity-bar').style.width = `${Math.min(100, (count/cap)*100)}%`;
+    syncOwnLeaderboardEntry();
+}
+
+function syncOwnLeaderboardEntry() {
+    if (!gameState || !Array.isArray(leaderboardCache)) return;
+    const me = leaderboardCache.find(entry => entry.accountId === gameState.accountId);
+    const ownEntry = {
+        accountId: gameState.accountId,
+        displayName: gameState.displayName || me?.displayName || 'Player',
+        cash: Math.max(0, Math.floor(Number(gameState.cash) || 0))
+    };
+    if (me) Object.assign(me, ownEntry);
+    else leaderboardCache.push(ownEntry);
+    leaderboardCache.sort((a, b) => b.cash - a.cash || String(a.displayName).localeCompare(String(b.displayName)));
+    leaderboardCache = leaderboardCache.slice(0, 100);
+    if (currentModal === 'leaderboard') renderLeaderboard(document.getElementById('modalBody'));
+}
+
+async function refreshLeaderboard() {
+    const res = await apiCall('?action=leaderboard');
+    if (!res || !Array.isArray(res.rankings)) return;
+    leaderboardCache = res.rankings;
+    syncOwnLeaderboardEntry();
+    if (currentModal === 'leaderboard') renderLeaderboard(document.getElementById('modalBody'));
 }
 
 function openModal(type) {
