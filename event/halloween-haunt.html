@@ -1158,6 +1158,16 @@ body {
 
 <!-- Event Logic script -->
 <script src="/js/halloween-haunt.js"></script>
+<script>
+  // Offline support is scoped to Halloween Haunt only.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/event/halloween-haunt-sw.js', { scope: '/event/' })
+        .then(() => console.info('[Halloween Haunt] Offline support ready.'))
+        .catch(error => console.warn('[Halloween Haunt] Offline support could not be enabled:', error));
+    });
+  }
+</script>
 
 </body>
 </html>
