@@ -289,11 +289,10 @@ export default async function handler(req,res) {
         player.lastCrewSync=now;
         response={state:publicState(player,root,now),syncedOfflineProgress:true};
       } else if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
-      if(action==='crew-exit') {
-        let earned=0,sold=0;
-        for(const crew of player.crew){crew.inventory ||= {};for(const candy of CANDY){const qty=Math.max(0,Math.floor(Number(crew.inventory[candy.id])||0));if(!qty)continue;const shop=bestShopFor(candy.id,root.meta.offers);earned+=qty*root.meta.offers[shop.id][candy.id];sold+=qty;crew.inventory[candy.id]=0;}crew.inventoryCount=Object.values(crew.inventory).reduce((sum,n)=>sum+(Number(n)||0),0);}
-        if(sold){credit(earned);player.stats.totalSold+=sold;player.stats.crewSold+=sold;}
-        actionResponse={state:publicState(player,root,now),crewExitSold:sold,crewExitEarned:earned};player.updatedAt=now;return root;
+      if(action==='crew-pause') {
+        player.lastCrewSync=now;
+        for(const crew of player.crew||[])crew.lastActionAt=now;
+        actionResponse={state:publicState(player,root,now),crewPaused:true};player.updatedAt=now;return root;
       }
       if(status.status!=='active') {
         response.error=status.status==='upcoming'?'Halloween Haunt has not started yet.':'Halloween Haunt has ended. Final standings are locked.';
