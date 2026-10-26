@@ -174,8 +174,16 @@ function spawnFallingCandy(candyId, originX, originY) {
     if(!candy) return;
     const el = document.createElement('img');
     el.src = IMG_BASE + candy.file;
-    el.className = 'falling-candy';
-    
+    el.className = 'falling-candy rarity-' + candy.rarity.toLowerCase();
+    const rarityStyle = {
+        common: { filter: 'drop-shadow(0 3px 5px rgba(255,255,255,.2))', width: '34px', height: '34px' },
+        uncommon: { filter: 'drop-shadow(0 0 8px rgba(70,220,120,.65))', width: '38px', height: '38px' },
+        rare: { filter: 'drop-shadow(0 0 10px rgba(70,150,255,.8))', width: '42px', height: '42px' },
+        epic: { filter: 'drop-shadow(0 0 13px rgba(170,80,255,.9))', width: '46px', height: '46px' },
+        legendary: { filter: 'drop-shadow(0 0 16px rgba(255,190,50,1))', width: '50px', height: '50px' }
+    }[candy.rarity.toLowerCase()];
+    if (rarityStyle) Object.assign(el.style, rarityStyle);
+
     // Fall around the center of the basket
     const basketRect = document.getElementById('basketHitbox').getBoundingClientRect();
     const startX = basketRect.left + (basketRect.width / 2) + ((Math.random() - 0.5) * 80) - 20;
