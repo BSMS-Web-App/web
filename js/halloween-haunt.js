@@ -153,13 +153,11 @@ function recordOfflineCandy(candy,amount=1){
  if(candy.rarity==='Legendary')gameState.stats.legendaryCollected=Number(gameState.stats.legendaryCollected||0)+amount;
 }
 function offlinePrice(id,shopId='best'){const shops=gameState?.shops||[];return shopId==='best'?Math.max(0,...shops.map(s=>Number(s.prices?.[id])||0)):Math.max(0,Number(shops.find(s=>s.id===shopId)?.prices?.[id])||0);}
-function sellOfflineCandy(selected=null,shopId='best'){
- let earned=0,sold=0,crewSold=0;
- for(const c of CANDY_CATALOG){if(selected&&!selected.includes(c.id))continue;const qty=Math.max(0,Math.floor(Number(gameState.inventory?.[c.id])||0));if(qty){earned+=qty*offlinePrice(c.id,shopId);sold+=qty;gameState.inventory[c.id]=0;}
-  for(const crew of gameState.crew||[]){crew.inventory||={};const q=Math.max(0,Math.floor(Number(crew.inventory[c.id])||0));if(q){earned+=q*offlinePrice(c.id,shopId);sold+=q;crewSold+=q;crew.inventory[c.id]=0;}crew.inventoryCount=Object.values(crew.inventory).reduce((n,v)=>n+Math.max(0,Number(v)||0),0);}
- }
- if(sold){gameState.cash=Number(gameState.cash||0)+earned;gameState.stats||=createDefaultStats();gameState.stats.totalSold=Number(gameState.stats.totalSold||0)+sold;gameState.stats.crewSold=Number(gameState.stats.crewSold||0)+crewSold;gameState.stats.lifetimeCash=Number(gameState.stats.lifetimeCash||0)+earned;gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),gameState.cash);}
- recalculateBasketCount();return {sold,earned,crewSold};
+function sellOfflineCandy(){
+ let earned=0,sold=0;
+ for(const c of CANDY_CATALOG){const qty=Math.max(0,Math.floor(Number(gameState.inventory?.[c.id])||0));if(qty){earned+=qty*offlinePrice(c.id,'best');sold+=qty;gameState.inventory[c.id]=0;}}
+ if(sold){gameState.cash=Number(gameState.cash||0)+earned;gameState.stats||=createDefaultStats();gameState.stats.totalSold=Number(gameState.stats.totalSold||0)+sold;gameState.stats.lifetimeCash=Number(gameState.stats.lifetimeCash||0)+earned;gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),gameState.cash);}
+ recalculateBasketCount();return {sold,earned};
 }
 function rotateOfflineShopOffers(){
  if(!offlineMode||!gameState)return;
@@ -222,7 +220,7 @@ const PRELOADED_CANDY_IMAGES = new Map();
 const HELP_SECTIONS = [
  {title:"Welcome to Halloween Haunt",body:"Click the pumpkin to collect candy. Candy goes into your basket until it reaches capacity. Sell candy at Local Shops to earn cash, then spend that cash on upgrades and helpers."},
  {title:"Cash, Basket & Candy",body:"Your green cash total is shown above the pumpkin. The basket meter shows how much candy you can hold. Candy has different rarities and sale values. The Candy Index tracks what you have discovered and collected."},
- {title:"Local Shops",body:"Local Shops buy candy in your basket. Compare offers, choose a shop or use best-price selling, then sell all or selected candy. Shared offers rotate when the countdown reaches zero."},
+ {title:"Shops",body:"The Shops tab sells all candy in your player basket at once. The game automatically sends each candy type to whichever shop pays the most. You cannot select a shop or sell only part of your basket."},
  {title:"Upgrades",body:"Basket Capacity lets you hold more candy. Click Power increases candy collected per click. Candy Luck improves your odds of rarer candy, but the rarest candy remains very hard to find. Auto-Sell unlocks crew auto-selling."},
  {title:"Trick-or-Treat Crew",body:"Hire helpers to collect candy while you actively play. Upgrade their speed to collect more often and their capacity to let them hold more candy."},
  {title:"Stats & Leaderboard",body:"Stats tracks your progress and lifetime activity. The leaderboard ranks players by current cash, so spending cash can change your position. Keep collecting, selling, and upgrading!"}
@@ -250,7 +248,7 @@ async function performOptimisticAction(endpoint,payload,mutate,successMessage) {
  try{
   if(offlineMode){
    const action=String(endpoint.split('action=')[1]||'').split('&')[0];
-   if(action==='sell'){const result=sellOfflineCandy(Array.isArray(payload?.selected)?payload.selected:null,payload?.shopId||'best');if(!result.sold){showToast('There is no matching candy to sell.');return;}saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));return;}
+   if(action==='sell'){const result=sellOfflineCandy();if(!result.sold){showToast('There is no matching candy to sell.');return;}saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));return;}
    mutate(gameState);recalculateBasketCount();gameState.stats||=createDefaultStats();gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),Number(gameState.cash||0));saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage({state:gameState,hired:payload?.action==='hire'}));return;
   }
   mutate(gameState);updateUI();renderCurrentModal();const result=await apiCall(endpoint,'POST',payload);
@@ -642,14 +640,6 @@ function renderUpgrades(container) {
  container.innerHTML='<div class="hh-upgrade-grid">'+list.map(u=>'<section class="hh-card-ui"><div class="hh-card-heading"><h3>'+u.name+'</h3><span class="hh-badge">'+(u.one?(u.level>0?'UNLOCKED':'ONE-TIME UNLOCK'):'LEVEL '+u.level)+'</span></div><p class="hh-muted">'+u.desc+'</p><button class="buy-btn" data-hh-player-upgrade="'+u.id+'" '+(u.level>0&&u.one?'disabled':Number(gameState.cash)<u.cost?'disabled':'')+'>'+(u.level>0&&u.one?'Unlocked':u.cost===-1?'MAXED':'Buy · '+formatCash(u.cost))+'</button></section>').join('')+'</div>';
  container.querySelectorAll('[data-hh-player-upgrade]').forEach(b=>b.addEventListener('click',()=>window.executeUpgrade(b.dataset.hhPlayerUpgrade)));
 }
-window.executeSellSelected=async function(){
- const selected=Array.from(document.querySelectorAll('.sellCandyCheck:checked')).map(el=>el.value);if(!selected.length){showToast('Select at least one candy to sell.');return;}
- const shopId=document.getElementById('sellShop')?.value||'best',payload={selected};if(shopId!=='best')payload.shopId=shopId;
- await performOptimisticAction('?action=sell',payload,state=>{
-  let earned=0;for(const id of selected){const qty=Math.max(0,Number(state.inventory[id])||0);const shop=shopId==='best'?[...state.shops].sort((a,b)=>Number(b.prices[id]||0)-Number(a.prices[id]||0))[0]:state.shops.find(x=>x.id===shopId);earned+=qty*Number(shop?.prices?.[id]||0);state.inventory[id]=0;}state.cash=Number(state.cash||0)+earned;
- },r=>'Sold '+(r.sold||0)+' candies for '+formatCash(r.earned||0)+'.');
-};
-
 window.executeUpgrade=async function(type){
  const cost=type==='autoSell'?5000:Number(gameState?.upgrades?.[type]?.nextCost||0);
  if(type==='autoSell'&&Number(gameState?.upgrades?.autoSell?.level||0)>0){showToast('Auto Sell is already unlocked.');return;}
