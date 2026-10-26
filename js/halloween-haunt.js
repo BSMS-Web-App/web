@@ -84,11 +84,15 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         'X-Device-ID': sessionId
     };
 
+    const requestPayload = method === 'POST' && payload && typeof payload === 'object'
+        ? { ...payload, requestId: payload.requestId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`) }
+        : payload;
+
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             method,
             headers,
-            body: payload ? JSON.stringify(payload) : null
+            body: requestPayload ? JSON.stringify(requestPayload) : null
         });
         const data = await res.json();
         if (!res.ok) {
