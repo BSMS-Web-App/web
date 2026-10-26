@@ -997,6 +997,37 @@ body {
   }
 }
 .hh-card-ui,.hh-crew-card{background:linear-gradient(145deg,#261437f2,#10081bf5);border:1px solid #ba7dff44;border-radius:18px;padding:16px;margin:0 0 14px}.hh-card-heading,.hh-crew-top,.hh-level-line,.hh-progress-label{display:flex;align-items:center;justify-content:space-between;gap:12px}.hh-badge{display:inline-flex;border-radius:99px;padding:4px 9px;font-size:10px;font-weight:900;letter-spacing:.08em;background:#9d4edd30;border:1px solid #9d4edd70;color:#d8b4fe}.hh-muted{color:var(--text-muted);font-size:14px;line-height:1.6;margin:8px 0}.hh-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}.hh-stat-card{border:1px solid #ffffff18;background:#ffffff08;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px}.hh-stat-card small{color:var(--text-muted);font-size:12px}.hh-stat-card strong{color:#fff;font-size:21px}.hh-help-btn{width:30px;height:30px;border-radius:50%;border:1px solid #ffffff55;background:#9d4edd33;color:#fff;font-weight:900;cursor:pointer}.hh-help-overlay{position:fixed;inset:0;z-index:10000;background:#040109dd;backdrop-filter:blur(9px);display:grid;place-items:center;padding:20px}.hh-help-card{max-width:440px;width:100%;padding:26px;border:1px solid #ba7dff66;border-radius:22px;background:#170c24}.hh-help-card h2{color:#fff;margin:12px 0}.hh-help-card p{line-height:1.7;color:#d6c9e2;margin-bottom:20px}.hh-crew-grid,.hh-upgrade-grid,.hh-item-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin:14px 0}.hh-crew-card.is-asleep{border-color:#ff334faa;box-shadow:0 0 22px #ff304f20}.hh-progress{height:8px;background:#ffffff19;border-radius:99px;overflow:hidden}.hh-progress i{display:block;height:100%;background:linear-gradient(90deg,#9d4edd,#ff9f43)}.hh-upgrade-mini,.hh-candy-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #ffffff18;border-radius:12px}.hh-upgrade-mini span,.hh-candy-row span{display:flex;flex-direction:column;color:#fff;font-size:13px}.hh-upgrade-mini small,.hh-candy-row small{color:var(--text-muted);font-size:12px}.hh-setting-row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #ffffff18;cursor:pointer}.hh-setting-row span{display:flex;flex-direction:column;gap:3px}.hh-setting-row small{color:var(--text-muted);font-size:12px}.hh-setting-row input{width:20px;height:20px;accent-color:#a855f7}.hh-crew-alert{position:relative!important;animation:hhPulse 1s infinite!important;border-color:#ff334f!important}.hh-alert-dot{position:absolute;right:8px;top:7px;width:8px;height:8px;border-radius:50%;background:#ff304f;box-shadow:0 0 10px #ff304f}#hh-ghost-layer{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:.32}#hh-ghost-layer span{position:absolute;left:calc(var(--i)*13%);top:calc(12% + var(--i)*10%);font-size:26px;animation:hhGhostFly calc(17s + var(--i)*2s) linear infinite;animation-delay:calc(var(--i)*-2.5s);filter:drop-shadow(0 0 9px #c296ff99)}@keyframes hhGhostFly{0%{transform:translate(-30px,30px);opacity:0}15%,85%{opacity:.8}100%{transform:translate(180px,-110px);opacity:0}}@keyframes hhPulse{50%{box-shadow:0 0 0 3px #ff304f40}}.hh-prize-callout{margin:18px auto;padding:18px;max-width:1100px;border:1px solid #f9731688;border-radius:16px;background:linear-gradient(135deg,#f973161f,#9d4edd1f);position:relative;z-index:5}.hh-prize-callout h3{color:#fff;margin:8px 0}.hh-prize-callout p{line-height:1.6}.hh-prize-callout strong{color:#fdba74}.falling-candy{width:112px!important;height:112px!important}</style>
+
+<style id="hh-redesign-reliability">
+.hh-card-ui,.hh-crew-card{background:linear-gradient(145deg,#261437f2,#10081bf5);border:1px solid #ba7dff44;border-radius:18px;padding:16px;margin:0 0 14px}
+.hh-card-heading,.hh-crew-top,.hh-level-line,.hh-progress-label{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hh-badge{display:inline-flex;align-items:center;border:1px solid #ba7dff77;background:#8b5cf622;color:#e7d5ff;border-radius:999px;padding:4px 9px;font-size:.72rem;font-weight:900;letter-spacing:.06em}
+.hh-muted{color:#b9aac8;font-size:.92rem;margin-top:7px}
+.hh-summary-grid,.hh-crew-grid,.hh-upgrade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:12px 0}
+.hh-stat-card,.hh-upgrade-mini{background:#ffffff08;border:1px solid #ffffff15;border-radius:14px;padding:12px}
+.hh-stat-card small,.hh-upgrade-mini small{display:block;color:#b9aac8;font-size:.8rem}
+.hh-stat-card strong{display:block;font-size:1.3rem;margin-top:4px}
+.hh-crew-card{margin:0;min-width:0}
+.hh-crew-card.is-asleep{border-color:#ff515f99;box-shadow:0 0 0 1px #ff515f33}
+.hh-crew-card h3{font-size:1.25rem;margin:6px 0}
+.hh-progress{height:9px;border-radius:99px;background:#ffffff16;overflow:hidden;margin-top:6px}
+.hh-progress i{display:block;height:100%;background:linear-gradient(90deg,#a855f7,#ff7a18);border-radius:99px}
+.hh-help-btn{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border:1px solid #d7b4ff88;border-radius:50%;background:#7e22ce22;color:#f1ddff;font-weight:900;cursor:pointer;flex:none}
+.hh-help-overlay{position:fixed;inset:0;z-index:30000;background:#000b;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px}
+.hh-help-card{width:min(440px,100%);padding:24px;border:1px solid #ba7dff88;border-radius:20px;background:#160b21;color:#f0e6fa;box-shadow:0 20px 70px #0009}
+.hh-help-card h2{margin:10px 0}.hh-help-card p{line-height:1.6;color:#d3c4e2;margin:0 0 16px}
+.hh-setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid #ffffff12}
+.hh-setting-row span{display:flex;flex-direction:column}.hh-setting-row small{color:#b9aac8;font-size:.82rem}
+.hh-setting-row input{width:20px;height:20px;accent-color:#a855f7;flex:none}
+.hh-upgrade-mini{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px}.hh-upgrade-mini .buy-btn{padding:8px 10px;font-size:.9rem}
+.hh-crew-alert{color:#fff!important;animation:hhCrewFlash .9s steps(2,start) infinite!important;background:#8e1725!important}
+.hh-alert-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff334c;margin-left:4px;box-shadow:0 0 9px #ff334c}
+@keyframes hhCrewFlash{to{background:#5e0b17;box-shadow:0 0 18px #ff334c}}
+#hh-ghost-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+#hh-ghost-layer span{position:absolute;left:-10%;top:calc((var(--i) + 1)*11%);font-size:26px;opacity:.16;animation:hhGhostFly calc(18s + var(--i)*3s) linear infinite;animation-delay:calc(var(--i)*-2s)}
+@keyframes hhGhostFly{from{transform:translateX(-10vw) translateY(0)}to{transform:translateX(120vw) translateY(-35px)}}
+@media(max-width:600px){.hh-crew-grid,.hh-upgrade-grid,.hh-summary-grid{grid-template-columns:1fr}.hh-crew-card{padding:13px}}
+</style>
 </head>
 <body>
 
@@ -1132,6 +1163,11 @@ body {
     </svg>
     <span>Leaders</span>
   </button>
+  <button class="action-btn" data-hhsettings="1" onclick="openModal('settings')" aria-label="Settings">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.8.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1l-.2.1-2.9-1.7.1-.2a1.7 1.7 0 0 0-.3-1.8l-.1-.1v-3.4l.2-.1a1.7 1.7 0 0 0 1-1.6l-.1-.2 1.7-2.9.2.1a1.7 1.7 0 0 0 1.8-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1l.2-.1 2.9 1.7-.1.2a1.7 1.7 0 0 0 .3 1.8l.1.1z"></path>
+    </svg><span>Settings</span>
+  </button>
 </div>
 
 <!-- Modal Templates (Content injected by JS) -->
@@ -1163,6 +1199,7 @@ body {
 
 <!-- Event Logic script -->
 <script src="/js/halloween-haunt.js"></script>
+<script src="/js/halloween-haunt-redesign.js"></script>
 <script>
   // Offline support is scoped to Halloween Haunt only.
   if ('serviceWorker' in navigator) {
