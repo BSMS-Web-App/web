@@ -110,7 +110,7 @@ function ensureMeta(root, now) {
     root.meta.offers=offersForWindow(windowStart);
   }
   root.players ||= {};
-  return root;
+  actionResponse=response; return root;
 }
 function contestStatus(now) {
   if(now<START) return {status:'upcoming',startsAt:START,endsAt:END,serverTime:now};
@@ -179,24 +179,25 @@ export default async function handler(req,res) {
         .sort((a,b)=>b.cash-a.cash || a.displayName.localeCompare(b.displayName)).slice(0,100);
       return res.status(200).json({rankings,...status});
     }
+    let actionResponse = null;
     const transaction=await db.ref(ROOT).transaction(current=>{
       const root=ensureMeta(current||{},now);
       const account=auth.account;
       const player=normalizePlayer(root.players[auth.uid],auth.uid,account,now);
       root.players[auth.uid]=player;
       let response={state:publicState(player,root,now)};
-      if(action==='state') { player.updatedAt=now; return root; }
+      if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
       if(status.status!=='active') {
         response.error=status.status==='upcoming'?'Halloween Haunt has not started yet.':'Halloween Haunt has ended. Final standings are locked.';
         response.status=status.status==='upcoming'?425:410;
-        return root;
+        actionResponse=response; return root;
       }
       const count=()=>{player.currentBasketCount=Object.values(player.inventory).reduce((a,n)=>a+Math.max(0,Number(n)||0),0);return player.currentBasketCount;};
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
       if(action==='collect') {
         const requested=Math.min(MAX_CLICK_RATE,1+(player.upgrades.power.level||0));
         const room=Math.max(0,player.basketCapacity-count());
-        if(room<=0){response= {error:'Your basket is full. Sell candy to make room.',status:409};return root;}
+        if(room<=0){response= {error:'Your basket is full. Sell candy to make room.',status:409};actionResponse=response; return root;}
         const drops=[];
         for(let i=0;i<Math.min(requested,room);i++){
           const c=rollCandy(player.upgrades.luck.level||0);
@@ -214,7 +215,7 @@ export default async function handler(req,res) {
       } else if(action==='sell') {
         const selected=Array.isArray(req.body?.selected)?req.body.selected.filter(id=>CANDY.some(c=>c.id===id)):null;
         const shopId=typeof req.body?.shopId==='string'?req.body.shopId:null;
-        if(shopId && !SHOPS.some(s=>s.id===shopId)){response={error:'Invalid shop.',status:400};return root;}
+        if(shopId && !SHOPS.some(s=>s.id===shopId)){response={error:'Invalid shop.',status:400};actionResponse=response; return root;}
         let earned=0,sold=0,receipts=[];
         for(const c of CANDY){
           if(selected && !selected.includes(c.id)) continue;
@@ -224,14 +225,14 @@ export default async function handler(req,res) {
           earned+=subtotal;sold+=qty;receipts.push({candyId:c.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal});
           player.inventory[c.id]=0;
         }
-        if(!sold){response={error:'You have no matching candy to sell.',status:409};return root;}
+        if(!sold){response={error:'You have no matching candy to sell.',status:409};actionResponse=response; return root;}
         credit(earned);player.stats.totalSold+=sold;count();response={state:publicState(player,root,now),earned,sold,receipts};
       } else if(action==='upgrade') {
         const type=String(req.body?.type||'');const cfg=UPGRADE_CONFIG[type],u=player.upgrades[type];
-        if(!cfg||!u){response={error:'Unknown upgrade.',status:400};return root;}
-        if(u.level>=cfg.max){response={error:'This upgrade is already maxed.',status:409};return root;}
+        if(!cfg||!u){response={error:'Unknown upgrade.',status:400};actionResponse=response; return root;}
+        if(u.level>=cfg.max){response={error:'This upgrade is already maxed.',status:409};actionResponse=response; return root;}
         const cost=Math.floor(cfg.baseCost*Math.pow(1.62,u.level));
-        if(player.cash<cost){response={error:'Not enough cash for this upgrade.',status:409};return root;}
+        if(player.cash<cost){response={error:'Not enough cash for this upgrade.',status:409};actionResponse=response; return root;}
         player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;u.level++;
         u.nextCost=u.level>=cfg.max?-1:Math.floor(cfg.baseCost*Math.pow(1.62,u.level));
         if(type==='capacity')player.basketCapacity=Math.min(500,player.basketCapacity+10);
@@ -240,16 +241,16 @@ export default async function handler(req,res) {
       } else if(action==='crew-action') {
         const act=String(req.body?.crewAction||req.body?.actionType||'');const idx=Number.isInteger(req.body?.index)?req.body.index:-1;
         if(act==='hire'){
-          if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};return root;}
-          if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};return root;}
+          if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};actionResponse=response; return root;}
+          if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};actionResponse=response; return root;}
           const cost=player.crewHireCost;player.cash-=cost;player.stats.cashSpent+=cost;player.crewUnlocked=true;
           player.crew.push({id:'helper-'+(player.crew.length+1),speedLevel:0,capacityLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:12000,speedUpgradeCost:75,capUpgradeCost:65,lastActionAt:now});
           player.crewHireCost=Math.floor(player.crewHireCost*1.85);response={state:publicState(player,root,now),hired:true,cost};
         } else {
-          const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};return root;}
-          const isSpeed=act==='upgrade_speed',isCap=act==='upgrade_cap';if(!isSpeed&&!isCap){response={error:'Unknown crew action.',status:400};return root;}
+          const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};actionResponse=response; return root;}
+          const isSpeed=act==='upgrade_speed',isCap=act==='upgrade_cap';if(!isSpeed&&!isCap){response={error:'Unknown crew action.',status:400};actionResponse=response; return root;}
           const cost=isSpeed?Math.floor(75*Math.pow(1.7,crew.speedLevel||0)):Math.floor(65*Math.pow(1.65,crew.capacityLevel||0));
-          if(player.cash<cost){response={error:'Not enough cash.',status:409};return root;}
+          if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response; return root;}
           player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;
           if(isSpeed){crew.speedLevel=(crew.speedLevel||0)+1;crew.intervalMs=Math.max(2500,Math.floor(12000*Math.pow(.82,crew.speedLevel)));crew.speedUpgradeCost=crew.speedLevel>=8?-1:Math.floor(75*Math.pow(1.7,crew.speedLevel));}
           else {crew.capacityLevel=(crew.capacityLevel||0)+1;crew.capacity=Math.min(100,10+crew.capacityLevel*10);crew.capUpgradeCost=crew.capacityLevel>=9?-1:Math.floor(65*Math.pow(1.65,crew.capacityLevel));}
@@ -282,27 +283,17 @@ export default async function handler(req,res) {
       } else {
         response={error:'Unknown Halloween Haunt action.',status:404};
       }
-      player.updatedAt=now;return root;
+      player.updatedAt=now;actionResponse=response; return root;
     });
     const result=transaction.snapshot?.val();
-    // Response is re-derived from committed data to ensure the UI reflects the actual persisted state.
-    const root=ensureMeta(result||{},Date.now());
-    const player=normalizePlayer(root.players[auth.uid],auth.uid,auth.account,Date.now());
-    root.players[auth.uid]=player;
-    let out;
-    if(action==='leaderboard') out={rankings:Object.values(root.players).map(p=>({accountId:p.uid,displayName:p.displayName,cash:p.cash})).sort((a,b)=>b.cash-a.cash).slice(0,100),...contestStatus(Date.now())};
-    else {
-      // Recover action-specific response metadata from a one-shot result saved by the transaction callback.
-      out=transaction.__response || null;
-      // Transaction adapters return only the committed snapshot; build state-only fallback for state-like actions.
-      if(!out) out={state:publicState(player,root,Date.now())};
+    if (!transaction.committed) return res.status(503).json({error:'Could not commit your progress. Please retry.'});
+    if (!actionResponse) {
+      const root=ensureMeta(result||{},Date.now());
+      const player=normalizePlayer(root.players[auth.uid],auth.uid,auth.account,Date.now());
+      actionResponse={state:publicState(player,root,Date.now())};
     }
-    // The CAS adapter doesn't expose callback response, so action result metadata is reconstructed below where needed.
-    // All operations are committed atomically; clients refresh state to reconcile.
-    if(out.error) return res.status(out.status||400).json({error:out.error});
-    if(action==='collect') return res.status(200).json({state:publicState(player,root,Date.now()),drops:[]});
-    if(action==='sell') return res.status(200).json({state:publicState(player,root,Date.now()),earned:0,sold:0});
-    return res.status(200).json({state:publicState(player,root,Date.now()),success:true});
+    if (actionResponse.error) return res.status(actionResponse.status || 400).json({error:actionResponse.error});
+    return res.status(200).json(actionResponse);
   } catch(error) {
     console.error('[Haunt] Request failed:',error);
     return res.status(500).json({error:'Halloween Haunt could not save your progress. Please try again.'});
