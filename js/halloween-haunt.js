@@ -66,7 +66,7 @@ function showToast(msg) {
 
 function getCandyObj(id) { return CANDY_CATALOG.find(c => c.id === id); }
 function formatCash(num) { return '$' + Math.floor(num).toLocaleString(); }
-function escapeHTML(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
+function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
 
 
 // ------------------------------------------------------------------
@@ -390,7 +390,6 @@ async function renderLeaderboard(container) {
 // Bootstrap
 window.addEventListener('DOMContentLoaded', initGame);
  + Math.floor(num).toLocaleString(); }
-function escapeHTML(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 // ------------------------------------------------------------------
 // API Communication
