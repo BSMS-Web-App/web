@@ -54,26 +54,76 @@ let offlineMode = false;
 const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
 const LAST_KNOWN_STATE_KEY = 'halloween_haunt_last_known_state_v1';
 let offlineSyncInFlight = false;
+let activeSessionHash = null;
+
+// Keep saved game data separate for each signed-in session. Never use a
+// shared anonymous key: this browser may be used by more than one account.
+function getSessionHash() {
+    try {
+        const sessionId = localStorage.getItem('session_id') || '';
+        if (!sessionId) return null;
+        let hash = 2166136261;
+        for (let i = 0; i < sessionId.length; i++) {
+            hash ^= sessionId.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0).toString(36);
+    } catch (_) { return null; }
+}
+
+function getSessionStorageKey(baseKey) {
+    const hash = getSessionHash();
+    return hash ? baseKey + ':' + hash : null;
+}
 
 function readLastKnownOnlineState() {
+    const key = getSessionStorageKey(LAST_KNOWN_STATE_KEY);
+    const sessionHash = getSessionHash();
+    if (!key || !sessionHash) return null;
     try {
-        const saved = JSON.parse(localStorage.getItem(LAST_KNOWN_STATE_KEY) || 'null');
-        return saved && typeof saved === 'object' && saved.state && typeof saved.state === 'object' ? saved.state : null;
+        const saved = JSON.parse(localStorage.getItem(key) || 'null');
+        if (!saved || saved.version !== 2 || saved.sessionHash !== sessionHash ||
+            !saved.state || typeof saved.state !== 'object' ||
+            !saved.state.accountId || saved.state.accountId === 'offline-local') return null;
+        return saved.state;
     } catch (_) { return null; }
 }
 
 function saveLastKnownOnlineState() {
-    if (offlineMode || !gameState || !gameState.accountId || gameState.accountId === 'offline-local') return;
+    const key = getSessionStorageKey(LAST_KNOWN_STATE_KEY);
+    const sessionHash = getSessionHash();
+    if (offlineMode || !key || !sessionHash || activeSessionHash !== sessionHash ||
+        !gameState || !gameState.accountId || gameState.accountId === 'offline-local') return false;
     try {
-        localStorage.setItem(LAST_KNOWN_STATE_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), state: gameState }));
+        localStorage.setItem(key, JSON.stringify({ version: 2, sessionHash, savedAt: Date.now(), state: gameState }));
+        return true;
     } catch (error) {
         console.warn('[Halloween Haunt] Could not save last known online stats locally:', error);
+        return false;
     }
 }
 
 function readOfflineProgress() {
-    try { return JSON.parse(localStorage.getItem(OFFLINE_PROGRESS_KEY) || '{}') || {}; }
-    catch (_) { return {}; }
+    const key = getSessionStorageKey(OFFLINE_PROGRESS_KEY);
+    const sessionHash = getSessionHash();
+    if (!key || !sessionHash) return {};
+    try {
+        const saved = JSON.parse(localStorage.getItem(key) || '{}') || {};
+        return saved.sessionHash === sessionHash ? saved : {};
+    } catch (_) { return {}; }
+}
+
+function writeOfflineProgress(saved) {
+    const key = getSessionStorageKey(OFFLINE_PROGRESS_KEY);
+    const sessionHash = getSessionHash();
+    if (!key || !sessionHash) return false;
+    try {
+        localStorage.setItem(key, JSON.stringify({ ...saved, version: 2, sessionHash }));
+        return true;
+    } catch (error) {
+        console.warn('[Halloween Haunt] Could not save offline progress:', error);
+        return false;
+    }
 }
 
 function updateOfflineCard(mode, detail = '') {
@@ -98,13 +148,13 @@ function saveOfflineProgress() {
         updatedAt: Date.now()
     };
     try {
-        localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(snapshot));
+        if (!writeOfflineProgress(snapshot)) throw new Error('Session-scoped storage is unavailable.');
         return true;
     } catch (error) {
         console.warn('[Halloween Haunt] Offline save failed:', error);
         const banner = document.getElementById('offlineBanner');
         if (banner) {
-            banner.textContent = 'Offline practice is running, but this browser could not save progress on this device. Check Safari storage settings.';
+            banner.textContent = 'Offline practice is running, but this browser could not save progress for this session. Keep this tab open until the connection returns and check browser storage settings.';
             banner.style.display = 'block';
         }
         return false;
@@ -244,6 +294,7 @@ function enterOfflineMode() {
     offlineMode = true;
     const saved = readOfflineProgress();
     const lastKnown = readLastKnownOnlineState();
+    activeSessionHash = getSessionHash();
     const restored = lastKnown ? cloneGameState(lastKnown) : {};
     const lastBasket = Math.max(0, Number(restored.currentBasketCount) || Object.values(restored.inventory || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0));
     gameState = {
@@ -298,19 +349,19 @@ async function initGame() {
         return;
     }
 
+    // Save authoritative state before optional requests such as the leaderboard.
+    // A leaderboard outage must not block the player's online game.
+    offlineMode = false;
+    gameState = data.state;
+    activeSessionHash = getSessionHash();
+    saveLastKnownOnlineState();
+
     const [leaderboard] = await Promise.all([
         apiCall('?action=leaderboard'),
         preloadCandyImages(),
         document.fonts?.ready || Promise.resolve()
     ]);
-    if (!leaderboard || !Array.isArray(leaderboard.rankings)) {
-        await enterOfflineMode();
-        return;
-    }
-
-    offlineMode = false;
-    gameState = data.state;
-    leaderboardCache = leaderboard.rankings;
+    leaderboardCache = Array.isArray(leaderboard?.rankings) ? leaderboard.rankings : [];
     const queuedOfflineClicks = Math.max(0, Math.floor(Number(readOfflineProgress().offlineClicks) || 0));
     updateOfflineCard(!navigator.onLine ? 'offline' : queuedOfflineClicks > 0 ? 'failed' : 'hidden');
     updateUI();
@@ -377,8 +428,9 @@ function handleBasketClick(e) {
         saved.currentBasketCount = gameState.currentBasketCount;
         saved.cash = Math.max(0, Number(gameState.cash) || 0);
         saved.updatedAt = Date.now();
-        try { localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(saved)); }
-        catch (error) { console.warn('[Halloween Haunt] Could not save offline click queue:', error); }
+        if (!writeOfflineProgress(saved)) {
+            updateOfflineCard('failed', 'This browser could not persist offline progress for this signed-in session. Keep this tab open until the connection returns.');
+        }
         saveOfflineProgress();
         updateUI();
         return;
@@ -735,6 +787,7 @@ async function syncPendingOfflineClicks() {
             let stateResult = await apiCall('?action=state');
             if (!stateResult?.state) throw new Error('Could not load the online game state.');
             gameState = stateResult.state;
+            activeSessionHash = getSessionHash();
             const owned = Object.values(gameState.inventory || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
             const capacity = Math.max(0, Number(gameState.basketCapacity) || 0);
             const room = Math.max(0, capacity - owned);
@@ -742,18 +795,24 @@ async function syncPendingOfflineClicks() {
             const perClick = Math.max(1, Math.min(50, 1 + Number(gameState.upgrades?.power?.level || 0)));
             const clicksThatFit = Math.max(1, Math.floor(room / perClick));
             const batch = Math.min(50, remaining, clicksThatFit);
-            const result = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId: 'offline-sync-' + (saved.updatedAt || 0) + '-' + (remaining - batch) + '-' + batch });
+            const requestId = 'offline-sync-' + getSessionHash() + '-' + (saved.updatedAt || 0) + '-' + (remaining - batch) + '-' + batch;
+            const result = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId });
             if (!result?.state) throw new Error('The server did not confirm the offline clicks.');
             remaining -= batch;
             saved.offlineClicks = remaining;
             saved.updatedAt = Date.now();
-            try { localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(saved)); }
-            catch (_) { throw new Error('Could not update the local sync record.'); }
+            if (!writeOfflineProgress(saved)) throw new Error('Could not update the local sync record.');
             gameState = result.state;
         }
         saved.offlineClicks = 0;
         saved.updatedAt = Date.now();
-        try { localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(saved)); } catch (_) {}
+        writeOfflineProgress(saved);
+        if (gameState && !offlineMode) {
+            activeSessionHash = getSessionHash();
+            saveLastKnownOnlineState();
+            updateUI();
+            renderCurrentModal();
+        }
         return true;
     } catch (error) {
         console.warn('[Halloween Haunt] Offline progress sync is pending:', error);
@@ -768,7 +827,10 @@ window.addEventListener('online', async () => {
     if (synced) { offlineMode = false; await initGame(); }
     else updateOfflineCard('failed');
 });
-window.addEventListener('offline', () => updateOfflineCard('offline'));
+window.addEventListener('offline', () => {
+    if (gameState && !offlineMode) saveLastKnownOnlineState();
+    updateOfflineCard('offline');
+});
 setInterval(() => {
     if (navigator.onLine && !offlineSyncInFlight) {
         const saved = readOfflineProgress();
