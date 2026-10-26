@@ -182,6 +182,13 @@ window.openOfflineHelp=openOfflineHelp;window.closeOfflineHelp=closeOfflineHelp;
 function saveOfflineProgress() {
     if (!offlineMode || !gameState) return true;
     const previous=readOfflineProgress();
+    // If gameplay changes after a sync request may have reached the server,
+    // discard that request ID. A retry with the old ID could otherwise replay
+    // the earlier snapshot and accidentally discard these newer local changes.
+    if (previous.pendingFullSyncRequestId && previous.localState &&
+        JSON.stringify(previous.localState) !== JSON.stringify(gameState)) {
+        delete previous.pendingFullSyncRequestId;
+    }
     const snapshot={...previous,version:2,localState:cloneGameState(gameState),hasLocalChanges:true,currentBasketCount:recalculateBasketCount(gameState),cash:Math.max(0,Number(gameState.cash)||0),offlineClicks:0,updatedAt:Date.now()};
     try {
         if (!writeOfflineProgress(snapshot)) throw new Error('Session-scoped storage is unavailable.');
