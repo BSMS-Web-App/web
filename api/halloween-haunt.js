@@ -110,12 +110,11 @@ function ensureMeta(root, now) {
     root.meta.offers=offersForWindow(windowStart);
   }
   root.players ||= {};
-  actionResponse=response; return root;
+  return root;
 }
 function contestStatus(now) {
-  if(now<START) return {status:'upcoming',startsAt:START,endsAt:END,serverTime:now};
-  if(now>=END) return {status:'ended',startsAt:START,endsAt:END,serverTime:now};
-  return {status:'active',startsAt:START,endsAt:END,serverTime:now};
+  // TEST MODE: keep the contest active regardless of the calendar. Restore date checks before launch.
+  return {status:'active',startsAt:START,endsAt:END,serverTime:now,testMode:true};
 }
 function publicState(p, root, now) {
   const offers=root.meta.offers;
