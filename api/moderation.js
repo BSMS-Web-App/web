@@ -4,38 +4,34 @@
  * SPDX-License-Identifier: MIT
  */
 
-const BLOCKED_TERMS = [
-  'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
-  'nigger', 'nigga', 'faggot', 'fag', 'cock', 'pussy', 'whore',
-  'slut', 'bastard', 'retard'
-];
+import { checkProfanity as glinCheckProfanity } from 'glin-profanity';
 
-function localModeration(input) {
-  const normalized = input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/[.,\/#!$%^&*;:{}=\-_\x60~()]/g, '')
-    .replace(/\s+/g, '')
-    .replace(/@/g, 'a')
-    .replace(/\$/g, 's')
-    .replace(/0/g, 'o')
-    .replace(/1/g, 'i')
-    .replace(/3/g, 'e')
-    .replace(/4/g, 'a')
-    .replace(/5/g, 's')
-    .replace(/7/g, 't')
-    .toLowerCase();
+const GLIN_OPTIONS = Object.freeze({
+  allLanguages: true,
+  detectLeetspeak: true,
+  leetspeakLevel: 'aggressive',
+  normalizeUnicode: true,
+  severityLevels: true,
+  cacheResults: true,
+  maxCacheSize: 1000
+});
 
-  return BLOCKED_TERMS.some(term => normalized.includes(term));
+function runGlinModeration(input) {
+  const result = glinCheckProfanity(input, GLIN_OPTIONS);
+  if (!result || typeof result.containsProfanity !== 'boolean') {
+    throw new Error('Glin Profanity returned an invalid result');
+  }
+  return result.containsProfanity;
 }
 
-async function openAIModeration(input) {
+async function runOpenAIModeration(input) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { available: false, flagged: false };
+  if (!apiKey) {
+    return { available: false, flagged: false };
+  }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeout = setTimeout(() => controller.abort(), 7000);
 
   try {
     const response = await fetch('https://api.openai.com/v1/moderations', {
@@ -68,40 +64,44 @@ async function openAIModeration(input) {
 }
 
 /**
- * Returns true when content should be rejected.
- * If one moderation system fails, use the result from the working system.
- * If both systems fail, reject the content (fail closed).
+ * Check user-generated text with both Glin Profanity and OpenAI Moderation.
+ *
+ * Policy:
+ * - Reject if either system flags the content.
+ * - If one system fails, use the working system's result.
+ * - If both systems fail, reject (fail closed).
  */
 export async function isContentFlagged(value) {
   if (typeof value !== 'string') return true;
+
   const input = value.trim();
   if (!input) return false;
   if (input.length > 10000) return true;
 
-  let localAvailable = false;
-  let localFlagged = false;
+  let glinAvailable = false;
+  let glinFlagged = false;
   try {
-    localFlagged = localModeration(input);
-    localAvailable = true;
-  } catch (error) {
-    console.warn('[BSMS Web] Local moderation check failed.');
+    glinFlagged = runGlinModeration(input);
+    glinAvailable = true;
+  } catch {
+    console.warn('[BSMS Web] Glin Profanity check failed.');
   }
 
   let openAIAvailable = false;
   let openAIFlagged = false;
   try {
-    const result = await openAIModeration(input);
+    const result = await runOpenAIModeration(input);
     openAIAvailable = result.available;
     openAIFlagged = result.flagged;
-  } catch (error) {
+  } catch {
     console.warn('[BSMS Web] OpenAI moderation request failed.');
   }
 
-  if (localAvailable && localFlagged) return true;
+  if (glinAvailable && glinFlagged) return true;
   if (openAIAvailable && openAIFlagged) return true;
 
-  if (localAvailable || openAIAvailable) return false;
+  if (glinAvailable || openAIAvailable) return false;
 
-  console.error('[BSMS Web] All moderation checks failed; rejecting content.');
+  console.error('[BSMS Web] Both moderation systems failed; rejecting content.');
   return true;
 }
