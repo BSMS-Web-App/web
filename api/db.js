@@ -9,11 +9,14 @@ import crypto from 'node:crypto';
 const BSMS_WEB_API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, '');
 const BSMS_WEB_API_KEY = process.env.BSMS_WEB_API_KEY || '';
 
-if (!BSMS_WEB_API_URL || BSMS_WEB_API_KEY.length < 32) {
-    throw new Error('[BSMS Web :: DB] BSMS_WEB_API_URL and a 32+ character BSMS_WEB_API_KEY are required. No alternate database fallback is available.');
+function assertMacApiConfig() {
+    if (!BSMS_WEB_API_URL || BSMS_WEB_API_KEY.length < 32) {
+        throw new Error('[BSMS Web :: DB] Missing BSMS_WEB_API_URL or BSMS_WEB_API_KEY (minimum 32 characters).');
+    }
 }
 
 async function macRequest(method, route, body) {
+    assertMacApiConfig();
     let response;
     try {
         response = await fetch(BSMS_WEB_API_URL + route, {
