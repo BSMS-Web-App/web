@@ -608,67 +608,31 @@ function renderIndex(container) {
     container.querySelector('#indexRarity').addEventListener('change',draw);container.querySelector('#indexProgress').addEventListener('change',draw);draw();
 }
 function renderShops(container) {
-    const s = gameState;
-    const seconds = Math.max(0, Math.ceil((s.offerRefreshAt - Date.now()) / 1000));
-    const options = s.shops.map(x => `<option value="${x.id}">${escapeHTML(x.name)}</option>`).join('');
-    container.innerHTML=`<div style="margin-bottom:15px;color:var(--fg2)">Shared offers refresh in <strong id="shop-timer" style="color:var(--orange)">${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}</strong>. Everyone sees the same offers.</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px"><label for="sellShop">Sell to:</label><select id="sellShop" style="background:#201a28;color:white;padding:8px;border-radius:10px;font:inherit"><option value="best">Best price for each candy</option>${options}</select><button class="buy-btn" onclick="executeSellAll()">Sell All Inventory</button><button class="buy-btn" onclick="executeSellSelected()">Sell Selected</button></div><p style="font-size:16px;color:var(--fg2);margin-bottom:12px">Select candies below. Best-price selling routes each candy to the highest-paying shop. Crew inventory is included.</p><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:16px;min-width:560px"><thead><tr style="text-align:left;color:var(--orange)"><th style="padding:8px">Select</th><th>Candy</th><th>Basket</th><th>Crew</th><th>Best offer</th><th>Shop comparison</th></tr></thead><tbody>${CANDY_CATALOG.map(c=>{const crew=(s.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(s.inventory[c.id]||0),prices=s.shops.map(shop=>({name:shop.name,price:Number(shop.prices[c.id]||0)})).sort((a,b)=>b.price-a.price);return `<tr style="border-top:1px solid rgba(255,255,255,.08)"><td style="padding:8px"><input class="sellCandyCheck" type="checkbox" value="${c.id}" ${qty+crew===0?'disabled':''} aria-label="Select ${c.name}"></td><td>${c.name}<div style="font-size:13px;color:var(--fg2)">${c.rarity}</div></td><td>${qty}</td><td>${crew}</td><td style="color:#F5C451">${formatCash(prices[0]?.price||0)}</td><td>${prices.map(p=>`<span style="display:inline-block;margin:2px 5px 2px 0;white-space:nowrap">${p.name}: ${formatCash(p.price)}</span>`).join('')}</td></tr>`;}).join('')}</tbody></table></div>`;
-    if (shopTimerInterval) clearInterval(shopTimerInterval);
-    let refreshRequestedFor = 0;
-    const tick = async () => {
-        const el = document.getElementById('shop-timer');
-        if (!el || currentModal !== 'shops') return;
-        const left = Math.max(0, Math.ceil((gameState.offerRefreshAt - Date.now()) / 1000));
-        el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-        if(left===0&&refreshRequestedFor!==gameState.offerRefreshAt&&!shopRefreshInFlight){
-            refreshRequestedFor=gameState.offerRefreshAt;
-            if(offlineMode){rotateOfflineShopOffers();updateUI();if(currentModal==='shops')renderShops(document.getElementById('modalBody'));return;}
-            shopRefreshInFlight=true;
-            try{const refreshed=await apiCall('?action=shops');if(refreshed?.state&&currentModal==='shops'){gameState=refreshed.state;activeSessionHash=getSessionHash();saveLastKnownOnlineState();updateUI();renderShops(document.getElementById('modalBody'));}}
-            finally{shopRefreshInFlight=false;}
-        }
-    };
-    tick();
-    shopTimerInterval = setInterval(tick, 1000);
+ const s=gameState,inventory=s.inventory||{},rows=CANDY_CATALOG.map(c=>{const qty=Math.max(0,Number(inventory[c.id])||0),prices=(s.shops||[]).map(shop=>({name:shop.name,price:Number(shop.prices?.[c.id]||0)})).sort((a,b)=>b.price-a.price),best=prices[0]?.price||0;return {c,qty,best,total:qty*best};}).filter(x=>x.qty>0);
+ const count=rows.reduce((n,x)=>n+x.qty,0),total=rows.reduce((n,x)=>n+x.total,0),seconds=Math.max(0,Math.ceil((Number(s.offerRefreshAt||Date.now())-Date.now())/1000));
+ container.innerHTML='<section class="hh-card-ui"><div class="hh-card-heading"><h3>Sell all your candy</h3><span class="hh-badge">BEST PRICE AUTOMATICALLY</span></div><p class="hh-muted">Your entire player basket is sold in one transaction. The game automatically chooses the highest-paying shop for each candy. You cannot choose a shop or sell only selected candy.</p><div class="hh-summary-grid"><div class="hh-stat-card"><small>Candy in basket</small><strong>'+count.toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Estimated payout</small><strong>'+formatCash(total)+'</strong></div><div class="hh-stat-card"><small>Offers refresh in</small><strong>'+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')+'</strong></div></div><button class="buy-btn" id="hhSellAllButton" '+(count===0?'disabled':'')+'>Sell All Candy · '+formatCash(total)+'</button></section><section class="hh-card-ui"><div class="hh-card-heading"><h3>Sale breakdown</h3><span class="hh-badge">'+rows.length+' CANDY TYPES</span></div>'+(rows.length?'<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:9px">Candy</th><th style="text-align:right;padding:9px">Quantity</th><th style="text-align:right;padding:9px">Best price each</th><th style="text-align:right;padding:9px">Subtotal</th></tr></thead><tbody>'+rows.map(x=>'<tr style="border-top:1px solid #ffffff16"><td style="padding:9px">'+escapeHTML(x.c.name)+'<div class="hh-muted">'+escapeHTML(x.c.rarity)+'</div></td><td style="text-align:right;padding:9px">'+x.qty+'</td><td style="text-align:right;padding:9px">'+formatCash(x.best)+'</td><td style="text-align:right;padding:9px">'+formatCash(x.total)+'</td></tr>').join('')+'</tbody><tfoot><tr><th colspan="3" style="text-align:right;padding:10px">Estimated total</th><th style="text-align:right;padding:10px">'+formatCash(total)+'</th></tr></tfoot></table></div>':'<p class="hh-muted">Your basket is empty. Click the pumpkin to collect candy.</p>')+'</section>';
+ container.querySelector('#hhSellAllButton')?.addEventListener('click',()=>window.executeSellAll());
 }
 window.executeSellAll = async function() {
- const shopId=document.getElementById('sellShop')?.value||'best';
- await performOptimisticAction('?action=sell',shopId==='best'?{}:{shopId},state=>{
-  let earned=0;for(const candy of CANDY_CATALOG){const qty=Math.max(0,Number(state.inventory[candy.id])||0);if(!qty)continue;
-   const shop=shopId==='best'?[...state.shops].sort((a,b)=>Number(b.prices[candy.id]||0)-Number(a.prices[candy.id]||0))[0]:state.shops.find(x=>x.id===shopId);
-   earned+=qty*Number(shop?.prices?.[candy.id]||0);state.inventory[candy.id]=0;
-  }state.cash=Number(state.cash||0)+earned;
- },r=>'Sold '+(r.sold||0)+' candies for '+formatCash(r.earned||0)+'.');
+ const count=Object.values(gameState?.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
+ if(!count){showToast('Your basket is empty. Collect candy before selling.');return;}
+ await performOptimisticAction('?action=sell',{},state=>{
+  let earned=0;
+  for(const candy of CANDY_CATALOG){const qty=Math.max(0,Number(state.inventory[candy.id])||0);if(!qty)continue;const shop=[...(state.shops||[])].sort((a,b)=>Number(b.prices?.[candy.id]||0)-Number(a.prices?.[candy.id]||0))[0];earned+=qty*Number(shop?.prices?.[candy.id]||0);state.inventory[candy.id]=0;}
+  state.cash=Number(state.cash||0)+earned;state.currentBasketCount=0;
+ },r=>'Sold '+(r.sold||count)+' candies for '+formatCash(r.earned||0)+'.');
 }
-
 function renderUpgrades(container) {
-    const upg = gameState.upgrades;
-    const list = [
-        { id: 'capacity', name: 'Basket Capacity', desc: 'Hold more candy', data: upg.capacity },
-        { id: 'power', name: 'Click Power', desc: 'More candy per click', data: upg.power },
-        { id: 'luck', name: 'Candy Luck', desc: 'Higher chance for rare drops', data: upg.luck },
-        { id: 'autoSell', name: 'Auto-Sell', desc: 'Crew automatically sells when full', data: upg.autoSell }
-    ];
-
-    let html = `<div class="upgrade-list">`;
-    list.forEach(u => {
-        const canAfford = gameState.cash >= u.data.nextCost;
-        const maxed = u.data.nextCost === -1;
-        html += `
-            <div class="upgrade-row">
-                <div>
-                    <div class="upgrade-title-row"><h3 style="color:#fff;">${u.name}</h3><span class="level-badge">LEVEL ${u.data.level}</span></div>
-                    <div style="color:var(--fg2); font-size:16px;">${u.desc}</div>
-                </div>
-                <button class="buy-btn" ${(!canAfford || maxed) ? 'disabled' : ''} onclick="executeUpgrade('${u.id}')">
-                    ${maxed ? 'MAXED' : formatCash(u.data.nextCost)}
-                </button>
-            </div>
-        `;
-    });
-    html += `</div>`;
-    container.innerHTML = html;
+ const upg=gameState.upgrades||{};
+ const list=[
+  {id:'capacity',name:'Basket Capacity',desc:'Increase how much candy you can carry.',cost:Number(upg.capacity?.nextCost??45),level:Number(upg.capacity?.level||0),one:false},
+  {id:'power',name:'Click Power',desc:'Collect more candy with each pumpkin click.',cost:Number(upg.power?.nextCost??60),level:Number(upg.power?.level||0),one:false},
+  {id:'luck',name:'Candy Luck',desc:'Improve your chance of finding rarer candy.',cost:Number(upg.luck?.nextCost??90),level:Number(upg.luck?.level||0),one:false},
+  {id:'autoSell',name:'Auto Sell',desc:'One-time unlock for $5,000. When your player basket reaches capacity, wait one second and the whole basket sells automatically to the best-paying shop.',cost:5000,level:Number(upg.autoSell?.level||0),one:true}
+ ];
+ container.innerHTML='<div class="hh-upgrade-grid">'+list.map(u=>'<section class="hh-card-ui"><div class="hh-card-heading"><h3>'+u.name+'</h3><span class="hh-badge">'+(u.one?(u.level>0?'UNLOCKED':'ONE-TIME UNLOCK'):'LEVEL '+u.level)+'</span></div><p class="hh-muted">'+u.desc+'</p><button class="buy-btn" data-hh-player-upgrade="'+u.id+'" '+(u.level>0&&u.one?'disabled':Number(gameState.cash)<u.cost?'disabled':'')+'>'+(u.level>0&&u.one?'Unlocked':u.cost===-1?'MAXED':'Buy · '+formatCash(u.cost))+'</button></section>').join('')+'</div>';
+ container.querySelectorAll('[data-hh-player-upgrade]').forEach(b=>b.addEventListener('click',()=>window.executeUpgrade(b.dataset.hhPlayerUpgrade)));
 }
-
 window.executeSellSelected=async function(){
  const selected=Array.from(document.querySelectorAll('.sellCandyCheck:checked')).map(el=>el.value);if(!selected.length){showToast('Select at least one candy to sell.');return;}
  const shopId=document.getElementById('sellShop')?.value||'best',payload={selected};if(shopId!=='best')payload.shopId=shopId;
@@ -678,14 +642,18 @@ window.executeSellSelected=async function(){
 };
 
 window.executeUpgrade=async function(type){
+ const cost=type==='autoSell'?5000:Number(gameState?.upgrades?.[type]?.nextCost||0);
+ if(type==='autoSell'&&Number(gameState?.upgrades?.autoSell?.level||0)>0){showToast('Auto Sell is already unlocked.');return;}
+ if(Number(gameState?.cash||0)<cost){showToast('You need '+formatCash(cost)+' to buy this upgrade.');return;}
  await performOptimisticAction('?action=upgrade',{type},state=>{
-  const u=state.upgrades[type];if(!u||u.nextCost<0||state.cash<u.nextCost)return;
-  const cost=u.nextCost;state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;u.level++;
-  const base={capacity:45,power:60,luck:90,autoSell:250}[type],max={capacity:30,power:20,luck:15,autoSell:1}[type];u.nextCost=u.level>=max?-1:Math.floor(base*Math.pow(1.62,u.level));
-  if(type==='capacity')state.basketCapacity=Math.min(500,state.basketCapacity+10);if(type==='autoSell'&&u.level)state.crewUnlocked=state.crew.length>0;
+  const u=state.upgrades?.[type];if(!u)return;
+  const actualCost=type==='autoSell'?5000:Number(u.nextCost||cost);
+  if(type==='autoSell'&&Number(u.level||0)>0)return;
+  if(Number(state.cash)<actualCost)return;
+  state.cash-=actualCost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+actualCost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;u.level=type==='autoSell'?1:Number(u.level||0)+1;u.nextCost=type==='autoSell'?-1:Math.floor(({capacity:45,power:60,luck:90}[type]||60)*Math.pow(1.62,u.level));
+  if(type==='capacity')state.basketCapacity=Math.min(500,Number(state.basketCapacity||50)+10);
  },()=>'Upgrade purchased!');
 }
-
 function renderCrew(container) {
     if(!container) container = document.getElementById('modalBody');
     if(!gameState.crewUnlocked) {
@@ -736,16 +704,35 @@ function renderCrew(container) {
 }
 
 window.executeCrew=async function(action,index=0){
+ const names=['Jack','Misty','Boo','Candy','Pumpkin','Raven','Cocoa','Hex','Maple','Ember','Cobweb','Midnight','Toffee','Salem','Patches','Wick','Hocus','Mallow','Fable','Trick'];
+ const worker=gameState?.crew?.[index];
+ if(action==='hire'){
+  if((gameState.crew||[]).length>=20){showToast('Your crew is already at the maximum of 20.');return;}
+  if(Number(gameState.cash)<Number(gameState.crewHireCost)){showToast('You need '+formatCash(gameState.crewHireCost)+' to hire the next crew member.');return;}
+ } else if(!worker){showToast('That crew member could not be found.');return;}
+ if(action==='feed'){
+  const need=10*Number(gameState.basketCapacity||50),held=Object.values(gameState.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
+  if(Number(worker.fedUntil||0)>Date.now()){showToast('This crew member is already fed.');return;}
+  if(held<need){showToast('You need '+need+' candy to feed '+(worker.name||names[index])+'.');return;}
+ }
+ const upgradeMap={upgrade_capacity:'capacityLevel',upgrade_power:'powerLevel',upgrade_luck:'luckLevel',upgrade_speed:'speedLevel',upgrade_awake:'awakeLevel'};
+ const bases={capacityLevel:65,powerLevel:80,luckLevel:95,speedLevel:75,awakeLevel:100};
+ const mults={capacityLevel:1.65,powerLevel:1.65,luckLevel:1.65,speedLevel:1.7,awakeLevel:1.8},key=upgradeMap[action];
+ if(key){const cost=Math.floor(bases[key]*Math.pow(mults[key],Number(worker[key]||0)));if(Number(gameState.cash)<cost){showToast('You need '+formatCash(cost)+' for this upgrade.');return;}}
  await performOptimisticAction('?action=crew-action',{action,index},state=>{
   state.stats ||= {};
-  if(action==='hire'){if(state.crew.length>=5||state.cash<state.crewHireCost)return;const cost=state.crewHireCost;state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.crewUnlocked=true;state.crew.push({id:'helper-'+(state.crew.length+1),speedLevel:0,capacityLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:12000,speedUpgradeCost:75,capUpgradeCost:65,lastActionAt:Date.now()});state.crewHireCost=Math.floor(state.crewHireCost*1.85);return;}
-  const c=state.crew[index];if(!c)return;const speed=action==='upgrade_speed',cost=speed?Math.floor(75*Math.pow(1.7,c.speedLevel||0)):Math.floor(65*Math.pow(1.65,c.capacityLevel||0));if(state.cash<cost)return;
-  state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;
-  if(speed){c.speedLevel=(c.speedLevel||0)+1;c.intervalMs=Math.max(2500,Math.floor(12000*Math.pow(.82,c.speedLevel)));c.speedUpgradeCost=c.speedLevel>=8?-1:Math.floor(75*Math.pow(1.7,c.speedLevel));}
-  else{c.capacityLevel=(c.capacityLevel||0)+1;c.capacity=Math.min(100,10+c.capacityLevel*10);c.capUpgradeCost=c.capacityLevel>=9?-1:Math.floor(65*Math.pow(1.65,c.capacityLevel));}
- },r=>r.hired?'Helper hired!':'Crew upgrade purchased!');
+  if(action==='hire'){
+   const i=state.crew.length,cost=Number(state.crewHireCost||180);
+   state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.crewUnlocked=true;
+   state.crew.push({id:'helper-'+(i+1),name:names[i]||('Worker '+(i+1)),speedLevel:0,capacityLevel:0,powerLevel:0,luckLevel:0,awakeLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:20000,asleep:false,awakeMs:0,fedUntil:0,lastActionAt:Date.now(),workMs:0,collectedCount:0,moneyEarned:0});
+   state.crewHireCost=Math.floor(cost*1.85);return;
+  }
+  const c=state.crew[index];if(!c)return;
+  if(action==='wake'){c.asleep=false;c.awakeMs=0;c.lastActionAt=Date.now();return;}
+  if(action==='feed'){const need=10*Number(state.basketCapacity||50);let rem=need;for(const candy of CANDY_CATALOG){const take=Math.min(rem,Number(state.inventory[candy.id]||0));state.inventory[candy.id]=Number(state.inventory[candy.id]||0)-take;rem-=take;if(rem<=0)break;}state.currentBasketCount=Math.max(0,Number(state.currentBasketCount||0)-need);c.fedUntil=Date.now()+1200000;c.asleep=false;c.awakeMs=0;return;}
+  if(key){const cost=Math.floor(bases[key]*Math.pow(mults[key],Number(c[key]||0)));state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;c[key]=Number(c[key]||0)+1;if(key==='capacityLevel')c.capacity=Math.min(500,10+c.capacityLevel*10);if(key==='speedLevel')c.intervalMs=Math.max(2000,20000-2000*c.speedLevel);}
+ },r=>r.hired?'Crew member hired!':action==='feed'?'Crew member fed for 20 minutes.':action==='wake'?'Crew member is awake.':'Crew upgrade purchased!');
 }
-
 function renderStats(container) {
     const s=gameState.stats||{},basket=Object.values(gameState.inventory||{}).reduce((a,n)=>a+Number(n||0),0),crew=(gameState.crew||[]).reduce((a,h)=>a+Number(h.inventoryCount||0),0),progress=Math.round(gameState.discovered.length/CANDY_CATALOG.length*100);
     const rows=[['Current cash',formatCash(gameState.cash)],['Highest cash balance',formatCash(s.highScore||0)],['Lifetime cash earned',formatCash(s.lifetimeCash||0)],['Total cash spent',formatCash(s.cashSpent||0)],['Lifetime candy collected',Number(s.totalCollected||0).toLocaleString()],['Candy sold',Number(s.totalSold||0).toLocaleString()],['Basket clicks',Number(s.totalClicks||0).toLocaleString()],['Rare and epic collected',Number(s.rareCollected||0).toLocaleString()],['Legendary collected',Number(s.legendaryCollected||0).toLocaleString()],['Upgrades purchased',Number(s.upgradesBought||0).toLocaleString()],['Crew candy collected',Number(s.crewCollected||0).toLocaleString()],['Crew candy sold',Number(s.crewSold||0).toLocaleString()],['Candy in basket',basket.toLocaleString()],['Candy held by crew',crew.toLocaleString()],['Candy Index',`${gameState.discovered.length}/${CANDY_CATALOG.length} (${progress}%)`]];
