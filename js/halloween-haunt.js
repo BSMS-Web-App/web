@@ -219,12 +219,10 @@ let actionInFlight = false;
 let helpSection = 0;
 const PRELOADED_CANDY_IMAGES = new Map();
 const HELP_SECTIONS = [
- {title:"Welcome to Halloween Haunt",body:"Click the pumpkin to collect candy. Candy goes into your basket until it reaches capacity. Sell candy at Local Shops to earn cash, then spend that cash on upgrades and helpers."},
- {title:"Cash, Basket & Candy",body:"Your green cash total is shown above the pumpkin. The basket meter shows how much candy you can hold. Candy has different rarities and sale values. The Candy Index tracks what you have discovered and collected."},
- {title:"Shops",body:"The Shops tab sells all candy in your player basket at once. The game automatically sends each candy type to whichever shop pays the most. You cannot select a shop or sell only part of your basket."},
- {title:"Upgrades",body:"Basket Capacity lets you hold more candy. Click Power increases candy collected per click. Candy Luck improves your odds of rarer candy, but the rarest candy remains very hard to find. Auto-Sell unlocks crew auto-selling."},
- {title:"Trick-or-Treat Crew",body:"Hire helpers to collect candy while you actively play. Upgrade their speed to collect more often and their capacity to let them hold more candy."},
- {title:"Stats & Leaderboard",body:"Stats tracks your progress and lifetime activity. The leaderboard ranks players by current cash, so spending cash can change your position. Keep collecting, selling, and upgrading!"}
+ {title:"Collect Candy",body:"Click the pumpkin to collect candy. Your basket has a capacity limit. Candy has different rarities, and the Candy Index records the types you discover."},
+ {title:"Sell All Candy",body:"Open Shops to sell everything in your player basket at once. The game automatically sends each candy type to the shop offering the best price. You cannot pick a shop or sell only selected candy."},
+ {title:"Upgrade Your Progress",body:"Basket Capacity lets you carry more candy, Click Power gives you more candy per click, and Candy Luck improves your chance of finding rarer candy. Auto Sell is a one-time $5,000 unlock that sells your full basket one second after it fills."},
+ {title:"Manage Your Crew",body:"Hire up to 20 named crew members. They collect candy while the game is open and automatically sell a full basket after 20 seconds to the best-paying shop. They fall asleep after five minutes and must be woken manually. Your Candy Reserve grows as candy is collected; feeding costs 10 times your basket capacity and boosts a crew member for 20 minutes. Use Settings to control notifications or replay this guide."}
 ];
 
 // Helpers
