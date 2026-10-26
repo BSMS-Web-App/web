@@ -1054,7 +1054,11 @@ body {
   </div>
 </header>
 
-<div id="hh-prize-callout" class="hh-prize-callout"><span class="hh-badge">PRIZES</span><h3>First Place Prize</h3><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p></div><main class="game-container">
+<div id="hh-prize-callout" class="hh-prize-callout"><span class="hh-badge">PRIZES</span><h3>First Place Prize</h3><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p></div>
+<div id="hh-prize-modal" class="hh-prize-modal" role="dialog" aria-modal="true" aria-labelledby="hhPrizeModalTitle" hidden><section class="hh-prize-modal-card"><span class="hh-badge">PRIZES</span><h2 id="hhPrizeModalTitle">First Place Prize</h2><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p><button type="button" class="buy-btn" id="hhPrizeGotIt">Got it</button></section></div>
+<style>.hh-prize-modal[hidden]{display:none!important}.hh-prize-modal{position:fixed;inset:0;z-index:50000;display:flex;align-items:center;justify-content:center;padding:18px;background:#05020bdc;backdrop-filter:blur(9px)}.hh-prize-modal-card{width:min(520px,100%);padding:26px;border:1px solid #f9731688;border-radius:22px;background:linear-gradient(145deg,#25112f,#100912);box-shadow:0 24px 90px #000b;text-align:center}.hh-prize-modal-card h2{color:#fff;margin:12px 0}.hh-prize-modal-card p{color:#e9dced;line-height:1.65;margin-bottom:20px}.hh-prize-modal-card strong{color:#fdba74}</style>
+<script>(function(){const modal=document.getElementById('hh-prize-modal'),button=document.getElementById('hhPrizeGotIt');if(!modal||!button)return;const close=()=>{modal.hidden=true;try{localStorage.setItem('hh_prize_notice_seen_v1','1')}catch{}};button.addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)close()});try{if(localStorage.getItem('hh_prize_notice_seen_v1')!=='1')modal.hidden=false}catch{modal.hidden=false}})();</script>
+<main class="game-container">
   <section id="offlineBanner" role="status" aria-live="polite" style="display:none;"></section>
   <div class="hero-cash" aria-live="polite">
     <span class="hero-cash-label">Your Cash</span>
