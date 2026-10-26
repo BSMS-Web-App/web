@@ -112,7 +112,7 @@ function ensureMeta(root, now) {
   root.players ||= {};
   return root;
 }
-function eventstatus(now) {
+function eventStatus(now) {
   // TEST MODE: keep the event active regardless of the calendar. Restore date checks before launch.
   const status=now<START?'upcoming':now<END?'active':'ended';
   return {status,startsAt:START,endsAt:END,serverTime:now,testMode:false};
@@ -122,7 +122,7 @@ function publicState(p, root, now) {
   const bestPrices={};
   for(const c of CANDY) bestPrices[c.id]=Math.max(...SHOPS.map(s=>offers[s.id][c.id]));
   return {
-    ...eventstatus(now), accountId:p.uid, displayName:p.displayName, cash:p.cash,
+    ...eventStatus(now), accountId:p.uid, displayName:p.displayName, cash:p.cash,
     inventory:{...p.inventory}, discovered:[...p.discovered], lifetimeCollected:{...p.lifetimeCollected},
     currentBasketCount:p.currentBasketCount,basketCapacity:p.basketCapacity,
     upgrades:JSON.parse(JSON.stringify(p.upgrades)),crew:JSON.parse(JSON.stringify(p.crew)),
@@ -192,6 +192,7 @@ export default async function handler(req,res) {
   try { auth=await authenticate(req); } catch(error) { console.error('[Haunt] Auth/database error:',error); return res.status(503).json({error:'The game API cannot reach the account database. Check the Mac API and Cloudflare Tunnel.'}); }
   if(!auth)return res.status(401).json({error:'Please sign in to play Halloween Haunt.'});
   if(auth.error)return res.status(auth.status).json({error:auth.error});
+  try {
     let actionResponse = null;
     const transaction=await db.ref(ROOT).transaction(current=>{
       const root=ensureMeta(current||{},now);
