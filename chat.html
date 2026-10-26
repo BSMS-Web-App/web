@@ -1647,7 +1647,7 @@ const PollingManager = {
             await new Promise(resolve => setTimeout(resolve, 1500));
             ready = await PollingManager.syncGlobal();
         }
-        State.syncInterval = setInterval(() => { if (!document.hidden) PollingManager.syncGlobal(); }, 15000);
+        State.syncInterval = setInterval(PollingManager.syncGlobal, 5000);
     },
     stop: () => {
         clearInterval(State.syncInterval);
