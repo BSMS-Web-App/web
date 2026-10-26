@@ -282,16 +282,14 @@ body::before {
   object-fit: contain;
   pointer-events: none;
   z-index: 50;
-  animation: candyDrop 1.45s cubic-bezier(.2, .65, .35, 1) forwards;
+  animation: candyDrop .55s cubic-bezier(.2, .65, .35, 1) forwards;
   will-change: transform, opacity;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
 }
 
 @keyframes candyDrop {
-  0% { transform: translate(0,0) scale(.65) rotate(0); opacity: 0; }
-  12% { opacity: 1; transform: translate(0,0) scale(1.15) rotate(25deg); }
-  35% { transform: translate(var(--candy-drift),var(--candy-lift)) scale(1.05) rotate(100deg); opacity: 1; }
-  100% { transform: translate(calc(var(--candy-drift) * 1.35), 250px) scale(.85) rotate(260deg); opacity: 0; }
+  0% { transform: translate(0,0) scale(.9) rotate(0); opacity: 1; }
+  100% { transform: translate(calc(var(--candy-drift) * .35), 110px) scale(.85) rotate(100deg); opacity: 0; }
 }
 
 /* Action Navigation Dock */
