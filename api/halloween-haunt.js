@@ -203,6 +203,7 @@ export default async function handler(req,res) {
       player.recentRequests ||= {};
       for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
       if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
+      const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
       if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
       if(action==='crew-exit') {
         let earned=0,sold=0;
@@ -216,7 +217,6 @@ export default async function handler(req,res) {
         actionResponse=response; return root;
       }
       const count=()=>{player.currentBasketCount=Object.values(player.inventory).reduce((a,n)=>a+Math.max(0,Number(n)||0),0);return player.currentBasketCount;};
-      const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
       if(action==='collect') {
         const clickCount = Math.min(50, Math.max(1, Math.floor(Number(req.body?.clickCount) || 1)));
         const requested = Math.min(MAX_CLICK_RATE, 1 + (player.upgrades.power.level || 0));
