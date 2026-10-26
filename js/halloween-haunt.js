@@ -242,19 +242,48 @@ function renderCurrentModal() {
  const body=document.getElementById('modalBody'); if(!body||!currentModal||!gameState)return;
  if(currentModal==='shops')renderShops(body);else if(currentModal==='upgrades')renderUpgrades(body);else if(currentModal==='crew'){if(typeof window.renderCrew==='function')window.renderCrew(body);else renderCrew(body);}else if(currentModal==='index')renderIndex(body);else if(currentModal==='stats')renderStats(body);else if(currentModal==='leaderboard')renderLeaderboard(body);
 }
-async function performOptimisticAction(endpoint,payload,mutate,successMessage) {
- if(actionInFlight)return;actionInFlight=true;const previous=cloneGameState(gameState);
- try{
-  if(offlineMode){
-   const action=String(endpoint.split('action=')[1]||'').split('&')[0];
-   if(action==='sell'){const result=sellOfflineCandy();if(!result.sold){showToast('There is no matching candy to sell.');return;}saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));return;}
-   mutate(gameState);recalculateBasketCount();gameState.stats||=createDefaultStats();gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),Number(gameState.cash||0));saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage({state:gameState,hired:payload?.action==='hire'}));return;
+let pendingOptimisticActions=0;
+let actionQueuePromise=Promise.resolve();
+let lastAuthoritativeActionState=null;
+
+function performOptimisticAction(endpoint,payload,mutate,successMessage) {
+ if(!gameState)return Promise.resolve();
+ const action=String(endpoint.split('action=')[1]||'').split('&')[0];
+ if(offlineMode){
+  if(action==='sell'){const result=sellOfflineCandy();if(!result.sold){showToast('There is no matching candy to sell.');return Promise.resolve();}saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));return Promise.resolve(result);}
+  mutate(gameState);recalculateBasketCount();gameState.stats||=createDefaultStats();gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),Number(gameState.cash||0));saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage({state:gameState,hired:payload?.action==='hire'}));return Promise.resolve(gameState);
+ }
+ // Optimistically update the interface before starting any network work. Actions
+ // are serialized in the background so server transactions cannot race each other.
+ if(pendingOptimisticActions===0)lastAuthoritativeActionState=cloneGameState(gameState);
+ let optimisticResult={state:gameState,hired:payload?.action==='hire'};
+ if(action==='sell'){
+  let sold=0,earned=0;
+  for(const candy of CANDY_CATALOG){const qty=Math.max(0,Math.floor(Number(gameState.inventory?.[candy.id])||0));if(!qty)continue;const shop=[...(gameState.shops||[])].sort((a,b)=>Number(b.prices?.[candy.id]||0)-Number(a.prices?.[candy.id]||0))[0];sold+=qty;earned+=qty*Math.max(0,Number(shop?.prices?.[candy.id]||0));}
+  optimisticResult={...optimisticResult,sold,earned};
+ }
+ mutate(gameState);
+ recalculateBasketCount();
+ updateUI();
+ renderCurrentModal();
+ if(successMessage){try{const message=successMessage(optimisticResult);if(message)showToast(message);}catch(error){console.warn('[Halloween Haunt] Could not create optimistic success notice:',error);}}
+ pendingOptimisticActions++;
+ actionQueuePromise=actionQueuePromise.then(async()=>{
+  try{
+   const result=await apiCall(endpoint,'POST',payload);
+   if(result?.state)lastAuthoritativeActionState=cloneGameState(result.state);
+  }catch(error){console.error('[Halloween Haunt] Action request failed:',error);}
+ }).catch(error=>console.error('[Halloween Haunt] Action queue failed:',error)).finally(()=>{
+  pendingOptimisticActions=Math.max(0,pendingOptimisticActions-1);
+  if(pendingOptimisticActions===0){
+   if(lastAuthoritativeActionState)gameState=cloneGameState(lastAuthoritativeActionState);
+   activeSessionHash=getSessionHash();
+   saveLastKnownOnlineState();
+   updateUI();
+   renderCurrentModal();
   }
-  mutate(gameState);updateUI();renderCurrentModal();const result=await apiCall(endpoint,'POST',payload);
-  if(!result||!result.state){gameState=previous;updateUI();renderCurrentModal();return;}
-  gameState=result.state;activeSessionHash=getSessionHash();saveLastKnownOnlineState();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));
- }catch(error){gameState=previous;updateUI();renderCurrentModal();console.error('[Halloween Haunt] Action failed:',error);}
- finally{actionInFlight=false;}
+ });
+ return actionQueuePromise;
 }
 function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll(String.fromCharCode(34), '&quot;').replaceAll(String.fromCharCode(39), '&#39;'); }
 
@@ -522,8 +551,12 @@ function retryCollectQueue() {
 function spawnFallingCandy(candyId, originX, originY) {
  const candy=getCandyObj(candyId);if(!candy)return;
  const el=document.createElement('img');el.src=IMG_BASE+candy.file;el.className='falling-candy rarity-'+candy.rarity.toLowerCase();
- const styles={common:['drop-shadow(0 4px 7px rgba(255,255,255,.25))',48],uncommon:['drop-shadow(0 0 10px rgba(70,220,120,.65))',52],rare:['drop-shadow(0 0 12px rgba(70,150,255,.8))',56],epic:['drop-shadow(0 0 15px rgba(170,80,255,.9))',60],legendary:['drop-shadow(0 0 18px rgba(255,190,50,1))',66]};
- const style=styles[candy.rarity.toLowerCase()];if(style){el.style.filter=style[0];el.style.width=style[1]+'px';el.style.height=style[1]+'px';}
+ const colors={common:'#ddd',uncommon:'#45d483',rare:'#4c9dff',epic:'#b66aff',legendary:'#ffc94a',mythic:'#ff5ca8'};
+ const sizes={common:48,uncommon:52,rare:56,epic:60,legendary:66,mythic:70};
+ const color=colors[candy.rarity.toLowerCase()]||'#ddd',size=sizes[candy.rarity.toLowerCase()]||52;
+ el.style.setProperty('--rarity-color',color);
+ el.style.filter='drop-shadow(0 0 2px '+color+') drop-shadow(0 0 7px '+color+') drop-shadow(0 0 14px '+color+'aa)';
+ el.style.width=size+'px';el.style.height=size+'px';
  const basket=document.getElementById('basketHitbox');if(!basket)return;const rect=basket.getBoundingClientRect();
  const x=window.scrollX+rect.left+rect.width/2+(Math.random()-.5)*70;const y=window.scrollY+rect.top+rect.height*.22;
  const drift=(Math.random()<.5?-1:1)*(90+Math.random()*180);const lift=-(35+Math.random()*65);
@@ -609,7 +642,7 @@ function renderIndex(container) {
     const grid=container.querySelector('#candyIndexGrid');
     const draw=()=>{const rarity=container.querySelector('#indexRarity').value, progress=container.querySelector('#indexProgress').value;
       const list=CANDY_CATALOG.filter(c=>{const found=gameState.discovered.includes(c.id),crew=(gameState.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(gameState.inventory[c.id]||0)+crew;return (rarity==='all'||c.rarity===rarity)&&(progress==='all'||(progress==='unlocked'&&found)||(progress==='locked'&&!found)||(progress==='owned'&&qty>0));});
-      grid.innerHTML=list.map(c=>{const found=gameState.discovered.includes(c.id),crew=(gameState.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(gameState.inventory[c.id]||0)+crew,lifetime=Number((gameState.lifetimeCollected||{})[c.id]||0),best=gameState.candyCatalog?.find(x=>x.id===c.id)?.bestPrice||c.baseValue||0;return `<div class="candy-card ${found?'':'locked'}" style="cursor:default"><img loading="lazy" src="${IMG_BASE}${c.file}" alt="${found?c.name:'Undiscovered candy'}" onerror="this.style.visibility='hidden'"><div>${found?c.name:'???'}</div><div class="qty">${c.rarity}</div><div class="qty">Owned: ${qty}</div><div class="qty">Lifetime: ${lifetime}</div><div class="qty">Best: ${formatCash(best)}</div></div>`;}).join('')||'<p>No candies match these filters.</p>';
+      grid.innerHTML=list.map(c=>{const found=gameState.discovered.includes(c.id),crew=(gameState.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(gameState.inventory[c.id]||0)+crew,lifetime=Number((gameState.lifetimeCollected||{})[c.id]||0),best=gameState.candyCatalog?.find(x=>x.id===c.id)?.bestPrice||c.baseValue||0;return `<div class="candy-card rarity-${c.rarity.toLowerCase()} ${found?'':'locked'}" style="cursor:default;--rarity-color:${({Common:'#ddd',Uncommon:'#45d483',Rare:'#4c9dff',Epic:'#b66aff',Legendary:'#ffc94a',Mythic:'#ff5ca8'})[c.rarity]||'#ddd'}"><img loading="lazy" src="${IMG_BASE}${c.file}" alt="${found?c.name:'Undiscovered candy'}" onerror="this.style.visibility='hidden'"><div>${found?c.name:'???'}</div><div class="qty">${c.rarity}</div><div class="qty">Owned: ${qty}</div><div class="qty">Lifetime: ${lifetime}</div><div class="qty">Best: ${formatCash(best)}</div></div>`;}).join('')||'<p>No candies match these filters.</p>';
     };
     container.querySelector('#indexRarity').addEventListener('change',draw);container.querySelector('#indexProgress').addEventListener('change',draw);draw();
 }
@@ -744,7 +777,7 @@ function renderLeaderboard(container) {
     rankings.forEach((r, i) => {
         const isMe = r.accountId === gameState.accountId;
         html += `
-            <div style="display:flex; justify-content:space-between; padding:12px; background:rgba(255,255,255,${isMe? '0.1' : '0.03'}); border-radius:8px; border:1px solid ${isMe? 'var(--orange)' : 'transparent'};">
+            <div class="hh-leaderboard-row ${i===0?'is-first-place':''}" style="display:flex; justify-content:space-between; padding:12px; background:rgba(255,255,255,${isMe? '0.1' : '0.03'}); border-radius:8px; border:1px solid ${i===0?'#ffd84d':isMe?'var(--orange)':'transparent'};">
                 <div><span style="color:var(--fg2); margin-right:10px;">#${i+1}</span> <span style="color:#fff; font-weight:bold;">${escapeHTML(r.displayName)}</span></div>
                 <div style="color:#F5C451; font-weight:bold;">${formatCash(r.cash)}</div>
             </div>
