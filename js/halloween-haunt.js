@@ -877,18 +877,58 @@ async function syncPendingOfflineClicks() {
     }
 }
 
-window.addEventListener('online',async()=>{
- const saved=readOfflineProgress();
- if(saved.hasLocalChanges&&saved.localState){updateOfflineCard('failed');showToast('Connection restored. Offline progress remains saved locally and has not been merged into your online account.');return;}
- updateOfflineCard('failed');const synced=await syncPendingOfflineClicks();if(synced){offlineMode=false;await initGame();}else updateOfflineCard('offline');
+
+async function syncOfflineGameProgress() {
+    if (offlineSyncInFlight || !navigator.onLine || !getSessionHash()) return false;
+    const saved = readOfflineProgress();
+    if (!saved.hasLocalChanges || !saved.localState) return syncPendingOfflineClicks();
+    const baseline = readLastKnownOnlineState();
+    const localState = saved.localState;
+    if (!baseline?.accountId || baseline.accountId === 'offline-local' || localState.accountId !== baseline.accountId) {
+        showToast('This offline session has no matching saved online account state. Your progress remains saved on this device.');
+        return false;
+    }
+    offlineSyncInFlight = true;
+    updateOfflineCard('syncing');
+    try {
+        const requestId = saved.pendingFullSyncRequestId || ('offline-state-' + getSessionHash() + '-' + String(saved.updatedAt || 0));
+        if (!saved.pendingFullSyncRequestId) {
+            saved.pendingFullSyncRequestId = requestId;
+            if (!writeOfflineProgress(saved)) throw new Error('Could not save the retry-safe sync record.');
+        }
+        const result = await apiCall('?action=offline-sync', 'POST', { requestId, baselineState: baseline, localState });
+        if (!result?.state) throw new Error('The server did not confirm the offline progress sync.');
+        gameState = result.state;
+        offlineMode = false;
+        activeSessionHash = getSessionHash();
+        const key = getSessionStorageKey(OFFLINE_PROGRESS_KEY);
+        if (key) { try { localStorage.removeItem(key); } catch (error) { console.warn('[Halloween Haunt] Synced progress, but could not clear the local queue:', error); } }
+        saveLastKnownOnlineState();
+        updateOfflineCard('hidden');
+        updateUI();
+        renderCurrentModal();
+        showToast('Offline progress synced to your online account.');
+        return true;
+    } catch (error) {
+        console.warn('[Halloween Haunt] Offline progress sync is pending:', error);
+        updateOfflineCard('failed');
+        showToast(error?.message || 'Offline progress is still saved locally and will retry when the server is available.');
+        return false;
+    } finally { offlineSyncInFlight = false; }
+}
+
+window.addEventListener('online', async () => {
+    updateOfflineCard('syncing');
+    const synced = await syncOfflineGameProgress();
+    if (synced) { offlineMode = false; await initGame(); }
+    else updateOfflineCard('failed');
 });
 window.addEventListener('pagehide',()=>{if(offlineMode&&gameState)saveOfflineProgress();});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&offlineMode&&gameState)saveOfflineProgress();});
 window.addEventListener('offline',()=>{if(gameState&&!offlineMode){saveLastKnownOnlineState();enterOfflineMode();}updateOfflineCard('offline');});
 setInterval(() => {
-    if (navigator.onLine && !offlineSyncInFlight) {
-        const saved = readOfflineProgress();
-        if (Number(saved.offlineClicks) > 0) syncPendingOfflineClicks().then(synced => {
+    if (navigator.onLine && !offlineSyncInFlight && offlineMode) {
+        syncOfflineGameProgress().then(synced => {
             if (synced && offlineMode) { offlineMode = false; initGame(); }
         });
     }

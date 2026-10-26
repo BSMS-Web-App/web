@@ -161,6 +161,62 @@ function rollCandy(luckLevel) {
 function bestShopFor(candyId, offers) {
   return SHOPS.reduce((best,s)=>offers[s.id][candyId]>offers[best.id][candyId]?s:best,SHOPS[0]);
 }
+
+function offlineSyncProjection(state) {
+  const stats=state?.stats||{}, upgrades=state?.upgrades||{};
+  return {
+    accountId:state?.accountId||state?.uid||null,
+    cash:Number(state?.cash)||0,
+    inventory:Object.fromEntries(CANDY.map(c=>[c.id,Math.max(0,Math.floor(Number(state?.inventory?.[c.id])||0))])),
+    discovered:[...new Set(Array.isArray(state?.discovered)?state.discovered.filter(id=>CANDY.some(c=>c.id===id)):[])].sort(),
+    lifetimeCollected:Object.fromEntries(CANDY.map(c=>[c.id,Math.max(0,Math.floor(Number(state?.lifetimeCollected?.[c.id])||0))])),
+    basketCapacity:Number(state?.basketCapacity)||50,
+    upgrades:Object.fromEntries(Object.keys(UPGRADE_CONFIG).map(id=>[id,{level:Math.max(0,Math.floor(Number(upgrades[id]?.level)||0)),nextCost:Number(upgrades[id]?.nextCost)}])),
+    crew:Array.isArray(state?.crew)?state.crew:[],
+    crewUnlocked:Boolean(state?.crewUnlocked),
+    crewHireCost:Number(state?.crewHireCost)||180,
+    stats:Object.fromEntries(['highScore','lifetimeCash','cashSpent','totalClicks','totalCollected','totalSold','rareCollected','legendaryCollected','upgradesBought','crewCollected','crewSold'].map(k=>[k,Math.max(0,Math.floor(Number(stats[k])||0))]))
+  };
+}
+function validateOfflineSnapshot(state,uid) {
+  if(!state||typeof state!=='object'||state.accountId!==uid)return 'Offline progress does not match the signed-in account.';
+  const cash=Number(state.cash),capacity=Number(state.basketCapacity);
+  if(!Number.isSafeInteger(cash)||cash<0||cash>1000000000||!Number.isSafeInteger(capacity)||capacity<1||capacity>500)return 'Offline cash or basket capacity is invalid.';
+  let basketCount=0;
+  for(const candy of CANDY){
+    const qty=Number(state.inventory?.[candy.id]||0),lifetime=Number(state.lifetimeCollected?.[candy.id]||0);
+    if(!Number.isSafeInteger(qty)||qty<0||qty>500||!Number.isSafeInteger(lifetime)||lifetime<0||lifetime>1000000000)return 'Offline candy inventory is invalid.';
+    basketCount+=qty;
+  }
+  if(basketCount>capacity)return 'Offline basket exceeds its capacity.';
+  if(!Array.isArray(state.discovered)||state.discovered.some(id=>!CANDY.some(c=>c.id===id)))return 'Offline Candy Index data is invalid.';
+  if(!Array.isArray(state.crew)||state.crew.length>MAX_CREW)return 'Offline crew data is invalid.';
+  for(const id of Object.keys(UPGRADE_CONFIG)){const level=Number(state.upgrades?.[id]?.level);if(!Number.isSafeInteger(level)||level<0||level>UPGRADE_CONFIG[id].max)return 'Offline upgrade data is invalid.';}
+  for(const key of ['highScore','lifetimeCash','cashSpent','totalClicks','totalCollected','totalSold','rareCollected','legendaryCollected','upgradesBought','crewCollected','crewSold']){
+    const value=Number(state.stats?.[key]||0);if(!Number.isSafeInteger(value)||value<0||value>1000000000)return 'Offline statistics are invalid.';
+  }
+  for(const crew of state.crew){
+    if(!crew||typeof crew!=='object'||!crew.id||!Number.isSafeInteger(Number(crew.capacity))||Number(crew.capacity)<1||Number(crew.capacity)>100||!crew.inventory||typeof crew.inventory!=='object')return 'Offline crew data is invalid.';
+    for(const candy of CANDY){const qty=Number(crew.inventory[candy.id]||0);if(!Number.isSafeInteger(qty)||qty<0||qty>100)return 'Offline crew inventory is invalid.';}
+  }
+  return null;
+}
+function validateOfflineDelta(baseline,local) {
+  const before=baseline.stats||{},after=local.stats||{};
+  const collectedDelta=Number(after.totalCollected||0)-Number(before.totalCollected||0);
+  const lifetimeDelta=CANDY.reduce((sum,c)=>sum+(Number(local.lifetimeCollected?.[c.id]||0)-Number(baseline.lifetimeCollected?.[c.id]||0)),0);
+  const soldDelta=Number(after.totalSold||0)-Number(before.totalSold||0);
+  const spentDelta=Number(after.cashSpent||0)-Number(before.cashSpent||0);
+  const earnedDelta=Number(after.lifetimeCash||0)-Number(before.lifetimeCash||0);
+  const held=(state)=>CANDY.reduce((sum,c)=>sum+Number(state.inventory?.[c.id]||0),0)+(state.crew||[]).reduce((sum,crew)=>sum+CANDY.reduce((n,c)=>n+Number(crew.inventory?.[c.id]||0),0),0);
+  const expectedSold=held(baseline)+collectedDelta-held(local);
+  if(collectedDelta<0||lifetimeDelta!==collectedDelta||soldDelta<0||soldDelta!==expectedSold||spentDelta<0||earnedDelta<0)return 'Offline progress totals do not reconcile. Your saved progress has been kept on this device.';
+  if(earnedDelta>soldDelta*24)return 'Offline sale totals exceed the allowed candy values. Your saved progress has been kept on this device.';
+  if(Number(local.cash)!==Number(baseline.cash)+earnedDelta-spentDelta)return 'Offline cash does not match recorded sales and purchases. Your saved progress has been kept on this device.';
+  if(Number(after.crewSold||0)<Number(before.crewSold||0)||Number(after.crewSold||0)-Number(before.crewSold||0)>soldDelta)return 'Offline crew sale totals are invalid.';
+  return null;
+}
+
 function fail(status,error){return {status,error};}
 
 export default async function handler(req,res) {
@@ -205,7 +261,33 @@ export default async function handler(req,res) {
       for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
       if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
-      if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
+      if(action==='offline-sync') {
+        const baseline=req.body?.baselineState, local=req.body?.localState;
+        const invalid=validateOfflineSnapshot(local,auth.uid);
+        if(invalid){response={error:invalid,status:400};actionResponse=response;return root;}
+        if(!baseline||baseline.accountId!==auth.uid){response={error:'The saved online baseline does not match this account.',status:409};actionResponse=response;return root;}
+        if(JSON.stringify(offlineSyncProjection(publicState(player,root,now)))!==JSON.stringify(offlineSyncProjection(baseline))){
+          response={error:'Your online game changed since this offline session began. Offline progress remains saved locally to avoid overwriting newer online progress.',status:409};actionResponse=response;return root;
+        }
+        const deltaError=validateOfflineDelta(baseline,local);
+        if(deltaError){response={error:deltaError,status:409};actionResponse=response;return root;}
+        player.cash=local.cash;
+        player.inventory=Object.fromEntries(CANDY.map(c=>[c.id,local.inventory[c.id]||0]));
+        player.discovered=[...new Set(local.discovered)];
+        player.lifetimeCollected=Object.fromEntries(CANDY.map(c=>[c.id,local.lifetimeCollected[c.id]||0]));
+        player.basketCapacity=local.basketCapacity;
+        player.currentBasketCount=Object.values(player.inventory).reduce((sum,n)=>sum+n,0);
+        player.upgrades={};
+        for(const [id,cfg] of Object.entries(UPGRADE_CONFIG)){const level=local.upgrades[id].level;player.upgrades[id]={level,nextCost:level>=cfg.max?-1:Math.floor(cfg.baseCost*Math.pow(1.62,level))};}
+        player.crew=JSON.parse(JSON.stringify(local.crew));
+        player.crewUnlocked=Boolean(local.crewUnlocked);
+        player.crewHireCost=Math.max(180,Math.floor(Number(local.crewHireCost)||180));
+        player.stats={};
+        for(const key of ['highScore','lifetimeCash','cashSpent','totalClicks','totalCollected','totalSold','rareCollected','legendaryCollected','upgradesBought','crewCollected','crewSold'])player.stats[key]=Math.floor(Number(local.stats?.[key])||0);
+        player.stats.highScore=Math.max(player.stats.highScore,player.cash);
+        player.lastCrewSync=now;
+        response={state:publicState(player,root,now),syncedOfflineProgress:true};
+      } else if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
       if(action==='crew-exit') {
         let earned=0,sold=0;
         for(const crew of player.crew){crew.inventory ||= {};for(const candy of CANDY){const qty=Math.max(0,Math.floor(Number(crew.inventory[candy.id])||0));if(!qty)continue;const shop=bestShopFor(candy.id,root.meta.offers);earned+=qty*root.meta.offers[shop.id][candy.id];sold+=qty;crew.inventory[candy.id]=0;}crew.inventoryCount=Object.values(crew.inventory).reduce((sum,n)=>sum+(Number(n)||0),0);}
