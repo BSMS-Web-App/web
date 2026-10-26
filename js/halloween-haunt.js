@@ -703,8 +703,12 @@ async function syncPendingOfflineClicks() {
             if (!stateResult?.state) throw new Error('Could not load the online game state.');
             gameState = stateResult.state;
             const owned = Object.values(gameState.inventory || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
-            if (owned >= Number(gameState.basketCapacity || 0)) throw new Error('Your online basket is full. Sell candy to make room for offline progress to sync.');
-            const batch = Math.min(50, remaining);
+            const capacity = Math.max(0, Number(gameState.basketCapacity) || 0);
+            const room = Math.max(0, capacity - owned);
+            if (room <= 0) throw new Error('Your online basket is full. Sell candy to make room for offline progress to sync.');
+            const perClick = Math.max(1, Math.min(50, 1 + Number(gameState.upgrades?.power?.level || 0)));
+            const clicksThatFit = Math.max(1, Math.floor(room / perClick));
+            const batch = Math.min(50, remaining, clicksThatFit);
             const result = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId: 'offline-sync-' + (saved.updatedAt || 0) + '-' + (remaining - batch) + '-' + batch });
             if (!result?.state) throw new Error('The server did not confirm the offline clicks.');
             remaining -= batch;
