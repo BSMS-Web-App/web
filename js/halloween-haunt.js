@@ -233,48 +233,28 @@ function closeModal() {
 // ---- Modals Implementation ----
 
 function renderIndex(container) {
-    let html = `<div class="candy-grid">`;
-    CANDY_CATALOG.forEach(c => {
-        const discovered = gameState.discovered.includes(c.id);
-        const qty = gameState.inventory[c.id] || 0;
-        html += `
-            <div class="candy-card ${discovered ? '' : 'locked'}" onclick="showToast('${discovered ? c.name : 'Unknown Candy'} - ${c.rarity}')">
-                <img src="${IMG_BASE}${c.file}" onerror="this.src='/img/icon.png'">
-                <div>${discovered ? c.name : '???'}</div>
-                <div class="qty">x${qty}</div>
-            </div>
-        `;
-    });
-    html += `</div>`;
-    container.innerHTML = html;
+    const unlocked=gameState.discovered.length, percent=Math.round(unlocked/CANDY_CATALOG.length*100);
+    container.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px"><strong>Collection progress: ${unlocked}/${CANDY_CATALOG.length} (${percent}%)</strong><select id="indexRarity" style="background:#201a28;color:white;padding:8px;border-radius:10px;font:inherit"><option value="all">All rarities</option><option>Common</option><option>Uncommon</option><option>Rare</option><option>Epic</option><option>Legendary</option><option>Mythic</option></select><select id="indexProgress" style="background:#201a28;color:white;padding:8px;border-radius:10px;font:inherit"><option value="all">All candies</option><option value="unlocked">Discovered</option><option value="locked">Not discovered</option><option value="owned">Currently owned</option></select></div><div style="height:8px;background:rgba(255,255,255,.1);border-radius:8px;overflow:hidden;margin-bottom:18px"><div style="height:100%;width:${percent}%;background:var(--orange)"></div></div><div class="candy-grid" id="candyIndexGrid"></div>`;
+    const grid=container.querySelector('#candyIndexGrid');
+    const draw=()=>{const rarity=container.querySelector('#indexRarity').value, progress=container.querySelector('#indexProgress').value;
+      const list=CANDY_CATALOG.filter(c=>{const found=gameState.discovered.includes(c.id),crew=(gameState.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(gameState.inventory[c.id]||0)+crew;return (rarity==='all'||c.rarity===rarity)&&(progress==='all'||(progress==='unlocked'&&found)||(progress==='locked'&&!found)||(progress==='owned'&&qty>0));});
+      grid.innerHTML=list.map(c=>{const found=gameState.discovered.includes(c.id),crew=(gameState.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(gameState.inventory[c.id]||0)+crew,lifetime=Number((gameState.lifetimeCollected||{})[c.id]||0),best=gameState.candyCatalog?.find(x=>x.id===c.id)?.bestPrice||c.baseValue||0;return `<div class="candy-card ${found?'':'locked'}" style="cursor:default"><img loading="lazy" src="${IMG_BASE}${c.file}" alt="${found?c.name:'Undiscovered candy'}" onerror="this.style.visibility='hidden'"><div>${found?c.name:'???'}</div><div class="qty">${c.rarity}</div><div class="qty">Owned: ${qty}</div><div class="qty">Lifetime: ${lifetime}</div><div class="qty">Best: ${formatCash(best)}</div></div>`;}).join('')||'<p>No candies match these filters.</p>';
+    };
+    container.querySelector('#indexRarity').addEventListener('change',draw);container.querySelector('#indexProgress').addEventListener('change',draw);draw();
 }
-
 async function renderShops(container) {
-    const data = await apiCall('?action=shops');
-    if (!data) { container.innerHTML = 'Error loading shops.'; return; }
-    
-    let html = `<div style="margin-bottom:15px; color:var(--fg2);">Offers refresh in <span id="shop-timer" style="color:var(--orange);">...</span></div>`;
-    
-    // Quick Sell All to Best Shop
-    html += `
-        <div style="background:rgba(255,122,24,0.1); padding:16px; border-radius:12px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div>
-                <h3 style="color:var(--orange);">Quick Sell All</h3>
-                <div style="font-size:16px; color:var(--fg2);">Automatically sells inventory to highest bidding shops.</div>
-            </div>
-            <button class="buy-btn" onclick="executeSellAll()">Sell All Candy</button>
-        </div>
-    `;
-
-    container.innerHTML = html;
+    const data=await apiCall('?action=shops');if(!data?.state){container.innerHTML='<p>Could not load shop offers.</p>';return;}
+    gameState=data.state;updateUI();const s=data.state,seconds=Math.max(0,Math.ceil((s.offerRefreshAt-Date.now())/1000)),options=s.shops.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+    container.innerHTML=`<div style="margin-bottom:15px;color:var(--fg2)">Shared offers refresh in <strong id="shop-timer" style="color:var(--orange)">${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}</strong>. Everyone sees the same offers.</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px"><label for="sellShop">Sell to:</label><select id="sellShop" style="background:#201a28;color:white;padding:8px;border-radius:10px;font:inherit"><option value="best">Best price for each candy</option>${options}</select><button class="buy-btn" onclick="executeSellAll()">Sell All Inventory</button><button class="buy-btn" onclick="executeSellSelected()">Sell Selected</button></div><p style="font-size:16px;color:var(--fg2);margin-bottom:12px">Select candies below. Best-price selling routes each candy to the highest-paying shop. Crew inventory is included.</p><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:16px;min-width:560px"><thead><tr style="text-align:left;color:var(--orange)"><th style="padding:8px">Select</th><th>Candy</th><th>Basket</th><th>Crew</th><th>Best offer</th><th>Shop comparison</th></tr></thead><tbody>${CANDY_CATALOG.map(c=>{const crew=(s.crew||[]).reduce((n,h)=>n+Number((h.inventory||{})[c.id]||0),0),qty=Number(s.inventory[c.id]||0),prices=s.shops.map(shop=>({name:shop.name,price:Number(shop.prices[c.id]||0)})).sort((a,b)=>b.price-a.price);return `<tr style="border-top:1px solid rgba(255,255,255,.08)"><td style="padding:8px"><input class="sellCandyCheck" type="checkbox" value="${c.id}" ${qty+crew===0?'disabled':''} aria-label="Select ${c.name}"></td><td>${c.name}<div style="font-size:13px;color:var(--fg2)">${c.rarity}</div></td><td>${qty}</td><td>${crew}</td><td style="color:#F5C451">${formatCash(prices[0]?.price||0)}</td><td>${prices.map(p=>`<span style="display:inline-block;margin:2px 5px 2px 0;white-space:nowrap">${p.name}: ${formatCash(p.price)}</span>`).join('')}</td></tr>`;}).join('')}</tbody></table></div>`;
+    const tick=()=>{const el=document.getElementById('shop-timer');if(!el||currentModal!=='shops')return;const left=Math.max(0,Math.ceil((s.offerRefreshAt-Date.now())/1000));el.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;};tick();
 }
-
 window.executeSellAll = async function() {
-    const res = await apiCall('?action=sell', 'POST', {});
+    const shop=document.getElementById('sellShop')?.value || 'best';
+    const res = await apiCall('?action=sell', 'POST', shop==='best' ? {} : {shopId:shop});
     if(res) {
         gameState = res.state;
         updateUI();
-        showToast(`Sold all for ${formatCash(res.earned)}!`);
+        showToast(`Sold ${res.sold || 0} candies for ${formatCash(res.earned || 0)}.`);
         if(currentModal === 'shops') closeModal();
     }
 }
@@ -307,6 +287,8 @@ function renderUpgrades(container) {
     html += `</div>`;
     container.innerHTML = html;
 }
+
+window.executeSellSelected=async function(){const selected=Array.from(document.querySelectorAll('.sellCandyCheck:checked')).map(el=>el.value);if(!selected.length){showToast('Select at least one candy to sell.');return;}const shop=document.getElementById('sellShop')?.value||'best',payload={selected};if(shop!=='best')payload.shopId=shop;const res=await apiCall('?action=sell','POST',payload);if(res){gameState=res.state;updateUI();showToast(`Sold ${res.sold||0} candies for ${formatCash(res.earned||0)}.`);renderShops(document.getElementById('modalBody'));}};
 
 window.executeUpgrade = async function(type) {
     const res = await apiCall('?action=upgrade', 'POST', { type });
@@ -376,18 +358,10 @@ window.executeCrew = async function(action, index=0) {
 }
 
 function renderStats(container) {
-    const s = gameState.stats;
-    container.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:12px; color:var(--fg2); font-size:18px;">
-            <div style="display:flex; justify-content:space-between;"><span>Highest Cash Balance:</span> <span style="color:#fff;">${formatCash(s.highScore)}</span></div>
-            <div style="display:flex; justify-content:space-between;"><span>Lifetime Cash Earned:</span> <span style="color:#fff;">${formatCash(s.lifetimeCash)}</span></div>
-            <div style="display:flex; justify-content:space-between;"><span>Total Spent on Upgrades:</span> <span style="color:#fff;">${formatCash(s.cashSpent)}</span></div>
-            <div style="display:flex; justify-content:space-between;"><span>Total Basket Clicks:</span> <span style="color:#fff;">${s.totalClicks.toLocaleString()}</span></div>
-            <div style="display:flex; justify-content:space-between;"><span>Candy Index Progress:</span> <span style="color:#fff;">${gameState.discovered.length} / 29</span></div>
-        </div>
-    `;
+    const s=gameState.stats||{},basket=Object.values(gameState.inventory||{}).reduce((a,n)=>a+Number(n||0),0),crew=(gameState.crew||[]).reduce((a,h)=>a+Number(h.inventoryCount||0),0),progress=Math.round(gameState.discovered.length/CANDY_CATALOG.length*100);
+    const rows=[['Current cash',formatCash(gameState.cash)],['Highest cash balance',formatCash(s.highScore||0)],['Lifetime cash earned',formatCash(s.lifetimeCash||0)],['Total cash spent',formatCash(s.cashSpent||0)],['Lifetime candy collected',Number(s.totalCollected||0).toLocaleString()],['Candy sold',Number(s.totalSold||0).toLocaleString()],['Basket clicks',Number(s.totalClicks||0).toLocaleString()],['Rare and epic collected',Number(s.rareCollected||0).toLocaleString()],['Legendary collected',Number(s.legendaryCollected||0).toLocaleString()],['Upgrades purchased',Number(s.upgradesBought||0).toLocaleString()],['Crew candy collected',Number(s.crewCollected||0).toLocaleString()],['Crew candy sold',Number(s.crewSold||0).toLocaleString()],['Candy in basket',basket.toLocaleString()],['Candy held by crew',crew.toLocaleString()],['Candy Index',`${gameState.discovered.length}/${CANDY_CATALOG.length} (${progress}%)`]];
+    container.innerHTML=`<div style="display:flex;flex-direction:column;gap:0;color:var(--fg2);font-size:18px">${rows.map(([label,value])=>`<div style="display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span>${label}</span><strong style="color:#fff;text-align:right">${value}</strong></div>`).join('')}</div>`;
 }
-
 async function renderLeaderboard(container) {
     const res = await apiCall('?action=leaderboard');
     if(!res) { container.innerHTML = 'Failed to load rankings.'; return; }
