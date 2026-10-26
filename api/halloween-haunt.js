@@ -291,6 +291,8 @@ export default async function handler(req,res) {
         player.stats.highScore=Math.max(player.stats.highScore,player.cash);
         player.lastCrewSync=now;
         response={state:publicState(player,root,now),syncedOfflineProgress:true,resolvedConflict:resolvingConflict};
+        if(requestId) player.recentRequests[requestId]=now;
+        player.updatedAt=now;actionResponse=response;return root;
       } else if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
       if(action==='crew-pause') {
         player.lastCrewSync=now;
