@@ -6,6 +6,7 @@
 
 import { db, admin } from './db.js';
 import crypto from 'crypto';
+import { isContentFlagged as checkProfanity } from './moderation.js';
 
 function mediaUrl(value) {
     if (value && typeof value === 'object' && value.type === 'media' && /^[a-f0-9]{64}$/.test(value.mediaId || '')) {
