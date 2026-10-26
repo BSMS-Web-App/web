@@ -55,6 +55,8 @@ const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
 const LAST_KNOWN_STATE_KEY = 'halloween_haunt_last_known_state_v1';
 let offlineSyncInFlight = false;
 let activeSessionHash = null;
+let lastApiError = null;
+let offlineConflictResolverOpen = false;
 
 // Keep saved game data separate for each signed-in session. Never use a
 // shared anonymous key: this browser may be used by more than one account.
@@ -311,6 +313,7 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         : payload;
 
     try {
+        lastApiError = null;
         const res = await fetch(`${API_BASE}${endpoint}`, {
             method,
             headers,
@@ -326,7 +329,8 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
             return null;
         }
         if (!res.ok) {
-            showToast(data.error || `Game API returned HTTP ${res.status}.`);
+            lastApiError = { status: res.status, message: String(data.error || `Game API returned HTTP ${res.status}.`) };
+            if (!(endpoint.includes('action=offline-sync') && res.status === 409 && lastApiError.message.includes('changed since this offline session began'))) showToast(lastApiError.message);
             return null;
         }
         return data;
@@ -490,9 +494,12 @@ function handleBasketClick(e) {
         if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));return;
     }
 
-    // Online drops use the candy IDs returned by the server, never a random preview.
-    // The cash/basket feedback remains instant while the selected candy animates
-    // as soon as the authoritative collect response arrives.
+    // Animate visual candy immediately. The server remains authoritative for
+    // inventory; network latency must not delay the pumpkin's visual feedback.
+    for (let i = 0; i < perClick; i++) {
+        const previewCandy = chooseOfflineCandy();
+        if (previewCandy) spawnFallingCandy(previewCandy.id, e?.clientX, e?.clientY);
+    }
 
     pendingClicks += 1;
     updateUI();
@@ -518,9 +525,6 @@ async function flushCollectQueue() {
             retryBatchClicks = 0;
             gameState = res.state;
             inFlightClicks = 0;
-            const actualDrops=Array.isArray(res.drops)?res.drops:[];
-            // Keep the animation light when a large queued batch returns.
-            actualDrops.slice(0,12).forEach((id,index)=>setTimeout(()=>spawnFallingCandy(id),index*35));
             updateUI();
             const retry = document.getElementById('collectRetry');
             if (retry) retry.hidden = true;
@@ -907,6 +911,64 @@ async function syncPendingOfflineClicks() {
 }
 
 
+
+function offlineSaveSummary(state) {
+    const s=state||{}, inventory=s.inventory||{}, stats=s.stats||{}, upgrades=s.upgrades||{};
+    const candyCount=Object.values(inventory).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
+    const discovered=Array.isArray(s.discovered)?s.discovered.length:0;
+    const crew=Array.isArray(s.crew)?s.crew.length:0;
+    const upgradeLevels=['capacity','power','luck','autoSell'].map(k=>Math.max(0,Number(upgrades[k]?.level)||0));
+    return [['Cash',formatCash(s.cash)],['Candy in basket',candyCount.toLocaleString()],['Candy Reserve',Math.max(0,Number(s.feedCandy)||0).toLocaleString()],['Candy types discovered',discovered+' / '+CANDY_CATALOG.length],['Lifetime candy collected',Math.max(0,Number(stats.totalCollected)||0).toLocaleString()],['Candy sold',Math.max(0,Number(stats.totalSold)||0).toLocaleString()],['Crew members',crew+' / 20'],['Upgrade levels',upgradeLevels.join(' · ')],['Upgrades purchased',Math.max(0,Number(stats.upgradesBought)||0).toLocaleString()],['Lifetime cash earned',formatCash(stats.lifetimeCash)],['Lifetime cash spent',formatCash(stats.cashSpent)]];
+}
+function renderOfflineSaveDetails(state) {
+    return offlineSaveSummary(state).map(([label,value])=>'<div class="hh-conflict-stat"><span>'+escapeHTML(label)+'</span><strong>'+escapeHTML(value)+'</strong></div>').join('');
+}
+function closeOfflineConflictResolver() {
+    document.getElementById('hhOfflineConflictResolver')?.remove();
+    document.getElementById('hhOfflineConflictStyles')?.remove();
+    offlineConflictResolverOpen=false;
+}
+async function showOfflineConflictResolver(localState, baselineState) {
+    if(offlineConflictResolverOpen)return;
+    offlineConflictResolverOpen=true;
+    let onlineState=null;
+    try { const result=await apiCall('?action=state'); onlineState=result?.state||null; }
+    catch(error) { console.warn('[Halloween Haunt] Could not load current database save:',error); }
+    if(!onlineState) {
+        offlineConflictResolverOpen=false;
+        showToast('Could not load the current database save. Your local progress is still safe; reconnect and retry.');
+        return;
+    }
+    const overlay=document.createElement('div');
+    overlay.id='hhOfflineConflictResolver';overlay.className='hh-conflict-overlay';
+    overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','hhConflictTitle');
+    overlay.innerHTML='<div class="hh-conflict-shell"><header class="hh-conflict-header"><span class="hh-conflict-eyebrow">SAVE CONFLICT</span><h1 id="hhConflictTitle">Which save should we keep?</h1><p>Your online game changed while you were playing offline. Compare both saves, then choose which version becomes the official database save. Your local save will not be deleted until you choose.</p></header><div class="hh-conflict-columns"><section class="hh-conflict-save"><div class="hh-conflict-save-title"><span class="hh-conflict-dot online"></span><div><h2>Current database save</h2><p>Most recent save on the server</p></div></div><div class="hh-conflict-stats">'+renderOfflineSaveDetails(onlineState)+'</div><button type="button" class="hh-conflict-button keep-database" id="hhKeepDatabaseSave">Keep database save</button><small>This keeps the server version and discards this device’s pending offline changes.</small></section><section class="hh-conflict-save local"><div class="hh-conflict-save-title"><span class="hh-conflict-dot local"></span><div><h2>Your local offline save</h2><p>Progress saved on this device</p></div></div><div class="hh-conflict-stats">'+renderOfflineSaveDetails(localState)+'</div><button type="button" class="hh-conflict-button keep-local" id="hhKeepLocalSave">Keep local save and overwrite database</button><small>This replaces the database save with your local version. The current database save will be overwritten.</small></section></div><p class="hh-conflict-footnote">Neither option merges the two saves. Review the details carefully before choosing.</p><div class="hh-conflict-status" id="hhConflictStatus" role="status" aria-live="polite"></div></div>';
+    const style=document.createElement('style');style.id='hhOfflineConflictStyles';
+    style.textContent='#hhOfflineConflictResolver{position:fixed;inset:0;z-index:1000000;overflow:auto;background:radial-gradient(ellipse at top,#2b1743 0%,#100a19 48%,#07050b 100%);color:#fff;padding:clamp(18px,4vw,48px);display:flex;align-items:flex-start;justify-content:center;font-family:inherit}#hhOfflineConflictResolver *{box-sizing:border-box}#hhOfflineConflictResolver .hh-conflict-shell{width:min(1160px,100%);margin:auto}#hhOfflineConflictResolver .hh-conflict-header{max-width:800px;margin:0 auto 28px;text-align:center}#hhOfflineConflictResolver .hh-conflict-eyebrow{display:inline-flex;border:1px solid #ffb84d77;background:#ffb84d18;color:#ffd58a;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:900;letter-spacing:.13em}#hhOfflineConflictResolver h1{font-size:clamp(30px,5vw,52px);line-height:1.06;margin:18px 0 12px;color:#fff}#hhOfflineConflictResolver .hh-conflict-header p{color:#d4c8e0;font-size:16px;line-height:1.7;margin:0}#hhOfflineConflictResolver .hh-conflict-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}#hhOfflineConflictResolver .hh-conflict-save{min-width:0;padding:clamp(16px,2.5vw,26px);border:1px solid #8f8aa755;border-radius:22px;background:linear-gradient(145deg,#21182e,#100d17);box-shadow:0 20px 60px #0005}#hhOfflineConflictResolver .hh-conflict-save.local{border-color:#b56aff88;background:linear-gradient(145deg,#29163a,#100d17)}#hhOfflineConflictResolver .hh-conflict-save-title{display:flex;align-items:center;gap:12px;margin-bottom:20px}#hhOfflineConflictResolver .hh-conflict-save-title h2{font-size:21px;margin:0 0 5px;color:#fff}#hhOfflineConflictResolver .hh-conflict-save-title p{margin:0;color:#bdb0ca;font-size:13px}#hhOfflineConflictResolver .hh-conflict-dot{width:12px;height:12px;flex:none;border-radius:50%;background:#54d99b;box-shadow:0 0 16px #54d99b88}#hhOfflineConflictResolver .hh-conflict-dot.local{background:#c084fc;box-shadow:0 0 16px #c084fc88}#hhOfflineConflictResolver .hh-conflict-stats{display:grid;gap:0;margin-bottom:22px}#hhOfflineConflictResolver .hh-conflict-stat{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #ffffff12}#hhOfflineConflictResolver .hh-conflict-stat span{color:#c4b8d0;font-size:13px}#hhOfflineConflictResolver .hh-conflict-stat strong{color:#fff;font-size:14px;text-align:right;overflow-wrap:anywhere}#hhOfflineConflictResolver .hh-conflict-button{width:100%;min-height:50px;padding:12px 16px;border:1px solid transparent;border-radius:13px;font:inherit;font-weight:850;cursor:pointer;transition:filter .15s,transform .15s}#hhOfflineConflictResolver .hh-conflict-button:hover{filter:brightness(1.12);transform:translateY(-1px)}#hhOfflineConflictResolver .keep-database{background:#d9fbe9;color:#12452d}#hhOfflineConflictResolver .keep-local{background:linear-gradient(110deg,#a855f7,#7c3aed);color:#fff}#hhOfflineConflictResolver .hh-conflict-save>small{display:block;color:#bdb0ca;font-size:12px;line-height:1.6;margin-top:11px}#hhOfflineConflictResolver .hh-conflict-footnote{text-align:center;color:#a99ab8;font-size:13px;line-height:1.6;margin:24px auto 0}#hhOfflineConflictResolver .hh-conflict-status:empty{display:none}#hhOfflineConflictResolver .hh-conflict-status{margin:16px auto 0;text-align:center;color:#ffb4bc;font-weight:700}#hhOfflineConflictResolver button:disabled{opacity:.55;cursor:wait;transform:none}@media(max-width:760px){#hhOfflineConflictResolver{padding:16px;align-items:flex-start}#hhOfflineConflictResolver .hh-conflict-columns{grid-template-columns:1fr}#hhOfflineConflictResolver .hh-conflict-header{margin-bottom:20px}#hhOfflineConflictResolver .hh-conflict-stat{gap:8px}#hhOfflineConflictResolver .hh-conflict-stat span{max-width:55%}}';
+    document.head.appendChild(style);document.body.appendChild(overlay);
+    const setBusy=(busy,message='')=>{overlay.querySelectorAll('button').forEach(b=>b.disabled=busy);const status=overlay.querySelector('#hhConflictStatus');if(status)status.textContent=message;};
+    overlay.querySelector('#hhKeepDatabaseSave').addEventListener('click',()=>{
+        setBusy(true,'Keeping the current database save…');
+        const key=getSessionStorageKey(OFFLINE_PROGRESS_KEY);
+        try{if(key)localStorage.removeItem(key);}catch(error){console.warn('[Halloween Haunt] Could not clear the local offline save:',error);}
+        gameState=cloneGameState(onlineState);offlineMode=false;activeSessionHash=getSessionHash();saveLastKnownOnlineState();
+        closeOfflineConflictResolver();updateOfflineCard('hidden');updateUI();renderCurrentModal();
+        showToast('Kept the current database save. Local offline changes were discarded.');
+    });
+    overlay.querySelector('#hhKeepLocalSave').addEventListener('click',async()=>{
+        setBusy(true,'Validating and saving your local version to the database…');
+        try{
+            const requestId='offline-resolve-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+            const result=await apiCall('?action=offline-sync-resolve','POST',{requestId,baselineState:baselineState,localState:localState});
+            if(!result?.state)throw new Error(lastApiError?.message||'The server did not confirm the selected local save.');
+            gameState=result.state;offlineMode=false;activeSessionHash=getSessionHash();
+            const key=getSessionStorageKey(OFFLINE_PROGRESS_KEY);if(key)localStorage.removeItem(key);
+            saveLastKnownOnlineState();updateOfflineCard('hidden');updateUI();renderCurrentModal();
+            closeOfflineConflictResolver();showToast('Your local offline save is now the database save.');
+        }catch(error){console.error('[Halloween Haunt] Conflict resolution failed:',error);setBusy(false,error?.message||'Could not save this version. Both saves are still available.');}
+    });
+}
+
 async function syncOfflineGameProgress() {
     if (offlineSyncInFlight || !navigator.onLine || !getSessionHash()) return false;
     const saved = readOfflineProgress();
@@ -926,7 +988,15 @@ async function syncOfflineGameProgress() {
             if (!writeOfflineProgress(saved)) throw new Error('Could not save the retry-safe sync record.');
         }
         const result = await apiCall('?action=offline-sync', 'POST', { requestId, baselineState: baseline, localState });
-        if (!result?.state) throw new Error('The server did not confirm the offline progress sync.');
+        if (!result?.state) {
+            if (lastApiError?.status === 409 && lastApiError.message.includes('changed since this offline session began')) {
+                delete saved.pendingFullSyncRequestId;
+                writeOfflineProgress(saved);
+                await showOfflineConflictResolver(localState, baseline);
+                return false;
+            }
+            throw new Error(lastApiError?.message || 'The server did not confirm the offline progress sync.');
+        }
         gameState = result.state;
         offlineMode = false;
         activeSessionHash = getSessionHash();
