@@ -12,7 +12,8 @@ const ROOT = '/halloween_haunt';
 const START = Date.parse('2026-10-26T04:00:00.000Z'); // Oct 26, 2026, 12:00 AM EDT
 const END = Date.parse('2026-10-30T19:10:00.000Z');   // Oct 30, 2026, 3:10 PM EDT
 const ROTATION_MS = 5 * 60 * 1000;
-const MAX_CREW = 5;
+const MAX_CREW = 20;
+const CREW_NAMES=['Jack','Misty','Boo','Candy','Pumpkin','Raven','Cocoa','Hex','Maple','Ember','Cobweb','Midnight','Toffee','Salem','Patches','Wick','Hocus','Mallow','Fable','Trick'];
 const MAX_CLICK_RATE = 8;
 const CANDY = [
   ['candy-corn','Candy Corn','Common','candy-corn.png',1,30],
@@ -56,7 +57,7 @@ const UPGRADE_CONFIG = {
   capacity:{label:'Basket Capacity',baseCost:45,max:30},
   power:{label:'Click Power',baseCost:60,max:20},
   luck:{label:'Candy Luck',baseCost:90,max:15},
-  autoSell:{label:'Crew Auto-Sell',baseCost:250,max:1}
+  autoSell:{label:'Auto Sell',baseCost:5000,max:1}
 };
 const rarityWeight = {Common:62,Uncommon:24,Rare:10,Epic:3.3,Legendary:0.7};
 
@@ -66,9 +67,9 @@ function newPlayer(uid, account, now) {
   for (const candy of CANDY) { inventory[candy.id]=0; lifetimeCollected[candy.id]=0; }
   return {
     uid, displayName: String(account.displayName || account.username || 'Player').slice(0,40),
-    cash:100, inventory, discovered:[], lifetimeCollected,
+    cash:100, inventory, discovered:[], lifetimeCollected, feedCandy:0,
     basketCapacity:50, currentBasketCount:0,
-    upgrades:{capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:250}},
+    upgrades:{capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:5000}},
     crew:[], crewUnlocked:false, crewHireCost:180, lastCrewSync:now,
     stats:{highScore:100,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0},
     createdAt:now, updatedAt:now
@@ -77,11 +78,11 @@ function newPlayer(uid, account, now) {
 function normalizePlayer(p, uid, account, now) {
   if (!p) return newPlayer(uid,account,now);
   p.uid=uid; p.displayName=String(account.displayName || account.username || p.displayName || 'Player').slice(0,40);
-  p.inventory ||= {}; p.lifetimeCollected ||= {}; p.discovered ||= [];
+  p.inventory ||= {}; p.lifetimeCollected ||= {}; p.discovered ||= []; p.feedCandy=Math.max(0,Math.floor(Number(p.feedCandy)||0));
   for (const c of CANDY) { p.inventory[c.id]=Number.isFinite(p.inventory[c.id])?p.inventory[c.id]:0; p.lifetimeCollected[c.id]=Number.isFinite(p.lifetimeCollected[c.id])?p.lifetimeCollected[c.id]:0; }
   p.upgrades ||= {};
   for (const [id,cfg] of Object.entries(UPGRADE_CONFIG)) p.upgrades[id] ||= {level:0,nextCost:cfg.baseCost};
-  p.crew ||= []; p.stats ||= {};
+  p.crew ||= []; for(let i=0;i<p.crew.length;i++){const w=p.crew[i];w.name=w.name||CREW_NAMES[i]||('Worker '+(i+1));w.capacityLevel=Number(w.capacityLevel||0);w.powerLevel=Number(w.powerLevel||0);w.luckLevel=Number(w.luckLevel||0);w.awakeLevel=Number(w.awakeLevel||0);w.speedLevel=Number(w.speedLevel||0);w.capacity=Number(w.capacity||50);if(w.capacityLevel===0&&w.capacity<=10)w.capacity=50;w.intervalMs=2000;w.workMs=Number(w.workMs||0);w.inventory||={};w.inventoryCount=Object.values(w.inventory).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);w.fedUntil=Number(w.fedUntil||0);w.awakeMs=Number(w.awakeMs||0);w.collectedCount=Number(w.collectedCount||0);w.moneyEarned=Number(w.moneyEarned||0);} p.stats ||= {};
   for (const [k,v] of Object.entries({highScore:p.cash||0,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0})) if (!Number.isFinite(p.stats[k])) p.stats[k]=v;
   p.cash=Math.max(0,Math.floor(Number(p.cash)||0)); p.basketCapacity=Math.max(1,Math.floor(Number(p.basketCapacity)||50));
   p.currentBasketCount=Object.values(p.inventory).reduce((a,n)=>a+n,0);
@@ -123,7 +124,7 @@ function publicState(p, root, now) {
   for(const c of CANDY) bestPrices[c.id]=Math.max(...SHOPS.map(s=>offers[s.id][c.id]));
   return {
     ...eventStatus(now), accountId:p.uid, displayName:p.displayName, cash:p.cash,
-    inventory:{...p.inventory}, discovered:[...p.discovered], lifetimeCollected:{...p.lifetimeCollected},
+    inventory:{...p.inventory}, discovered:[...p.discovered], lifetimeCollected:{...p.lifetimeCollected}, feedCandy:Math.max(0,Math.floor(Number(p.feedCandy)||0)),
     currentBasketCount:p.currentBasketCount,basketCapacity:p.basketCapacity,
     upgrades:JSON.parse(JSON.stringify(p.upgrades)),crew:JSON.parse(JSON.stringify(p.crew)),
     crewUnlocked:p.crewUnlocked,crewHireCost:p.crewHireCost,stats:{...p.stats},
@@ -167,6 +168,7 @@ function offlineSyncProjection(state) {
   return {
     accountId:state?.accountId||state?.uid||null,
     cash:Number(state?.cash)||0,
+    feedCandy:Math.max(0,Math.floor(Number(state?.feedCandy)||0)),
     inventory:Object.fromEntries(CANDY.map(c=>[c.id,Math.max(0,Math.floor(Number(state?.inventory?.[c.id])||0))])),
     discovered:[...new Set(Array.isArray(state?.discovered)?state.discovered.filter(id=>CANDY.some(c=>c.id===id)):[])].sort(),
     lifetimeCollected:Object.fromEntries(CANDY.map(c=>[c.id,Math.max(0,Math.floor(Number(state?.lifetimeCollected?.[c.id])||0))])),
@@ -180,8 +182,8 @@ function offlineSyncProjection(state) {
 }
 function validateOfflineSnapshot(state,uid) {
   if(!state||typeof state!=='object'||state.accountId!==uid)return 'Offline progress does not match the signed-in account.';
-  const cash=Number(state.cash),capacity=Number(state.basketCapacity);
-  if(!Number.isSafeInteger(cash)||cash<0||cash>1000000000||!Number.isSafeInteger(capacity)||capacity<1||capacity>500)return 'Offline cash or basket capacity is invalid.';
+  const cash=Number(state.cash),capacity=Number(state.basketCapacity),feedCandy=Number(state.feedCandy||0);
+  if(!Number.isSafeInteger(cash)||cash<0||cash>1000000000||!Number.isSafeInteger(capacity)||capacity<1||capacity>500||!Number.isSafeInteger(feedCandy)||feedCandy<0||feedCandy>1000000000)return 'Offline cash, basket capacity, or Candy Reserve is invalid.';
   let basketCount=0;
   for(const candy of CANDY){
     const qty=Number(state.inventory?.[candy.id]||0),lifetime=Number(state.lifetimeCollected?.[candy.id]||0);
@@ -196,8 +198,8 @@ function validateOfflineSnapshot(state,uid) {
     const value=Number(state.stats?.[key]||0);if(!Number.isSafeInteger(value)||value<0||value>1000000000)return 'Offline statistics are invalid.';
   }
   for(const crew of state.crew){
-    if(!crew||typeof crew!=='object'||!crew.id||!Number.isSafeInteger(Number(crew.capacity))||Number(crew.capacity)<1||Number(crew.capacity)>100||!crew.inventory||typeof crew.inventory!=='object')return 'Offline crew data is invalid.';
-    for(const candy of CANDY){const qty=Number(crew.inventory[candy.id]||0);if(!Number.isSafeInteger(qty)||qty<0||qty>100)return 'Offline crew inventory is invalid.';}
+    if(!crew||typeof crew!=='object'||!crew.id||!Number.isSafeInteger(Number(crew.capacity))||Number(crew.capacity)<1||Number(crew.capacity)>500||!crew.inventory||typeof crew.inventory!=='object')return 'Offline crew data is invalid.';
+    for(const candy of CANDY){const qty=Number(crew.inventory[candy.id]||0);if(!Number.isSafeInteger(qty)||qty<0||qty>500)return 'Offline crew inventory is invalid.';}
   }
   return null;
 }
@@ -261,17 +263,19 @@ export default async function handler(req,res) {
       for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
       if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
-      if(action==='offline-sync') {
+      if(action==='offline-sync' || action==='offline-sync-resolve') {
+        const resolvingConflict=action==='offline-sync-resolve';
         const baseline=req.body?.baselineState, local=req.body?.localState;
         const invalid=validateOfflineSnapshot(local,auth.uid);
         if(invalid){response={error:invalid,status:400};actionResponse=response;return root;}
         if(!baseline||baseline.accountId!==auth.uid){response={error:'The saved online baseline does not match this account.',status:409};actionResponse=response;return root;}
-        if(JSON.stringify(offlineSyncProjection(publicState(player,root,now)))!==JSON.stringify(offlineSyncProjection(baseline))){
+        if(!resolvingConflict && JSON.stringify(offlineSyncProjection(publicState(player,root,now)))!==JSON.stringify(offlineSyncProjection(baseline))){
           response={error:'Your online game changed since this offline session began. Offline progress remains saved locally to avoid overwriting newer online progress.',status:409};actionResponse=response;return root;
         }
         const deltaError=validateOfflineDelta(baseline,local);
         if(deltaError){response={error:deltaError,status:409};actionResponse=response;return root;}
         player.cash=local.cash;
+        player.feedCandy=Math.max(0,Math.floor(Number(local.feedCandy)||0));
         player.inventory=Object.fromEntries(CANDY.map(c=>[c.id,local.inventory[c.id]||0]));
         player.discovered=[...new Set(local.discovered)];
         player.lifetimeCollected=Object.fromEntries(CANDY.map(c=>[c.id,local.lifetimeCollected[c.id]||0]));
@@ -286,13 +290,14 @@ export default async function handler(req,res) {
         for(const key of ['highScore','lifetimeCash','cashSpent','totalClicks','totalCollected','totalSold','rareCollected','legendaryCollected','upgradesBought','crewCollected','crewSold'])player.stats[key]=Math.floor(Number(local.stats?.[key])||0);
         player.stats.highScore=Math.max(player.stats.highScore,player.cash);
         player.lastCrewSync=now;
-        response={state:publicState(player,root,now),syncedOfflineProgress:true};
+        response={state:publicState(player,root,now),syncedOfflineProgress:true,resolvedConflict:resolvingConflict};
+        if(requestId) player.recentRequests[requestId]=now;
+        player.updatedAt=now;actionResponse=response;return root;
       } else if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
-      if(action==='crew-exit') {
-        let earned=0,sold=0;
-        for(const crew of player.crew){crew.inventory ||= {};for(const candy of CANDY){const qty=Math.max(0,Math.floor(Number(crew.inventory[candy.id])||0));if(!qty)continue;const shop=bestShopFor(candy.id,root.meta.offers);earned+=qty*root.meta.offers[shop.id][candy.id];sold+=qty;crew.inventory[candy.id]=0;}crew.inventoryCount=Object.values(crew.inventory).reduce((sum,n)=>sum+(Number(n)||0),0);}
-        if(sold){credit(earned);player.stats.totalSold+=sold;player.stats.crewSold+=sold;}
-        actionResponse={state:publicState(player,root,now),crewExitSold:sold,crewExitEarned:earned};player.updatedAt=now;return root;
+      if(action==='crew-pause') {
+        player.lastCrewSync=now;
+        for(const crew of player.crew||[])crew.lastActionAt=now;
+        actionResponse={state:publicState(player,root,now),crewPaused:true};player.updatedAt=now;return root;
       }
       if(status.status!=='active') {
         response.error=status.status==='upcoming'?'Halloween Haunt has not started yet.':'Halloween Haunt has ended. Final standings are locked.';
@@ -304,12 +309,12 @@ export default async function handler(req,res) {
         const clickCount = Math.min(50, Math.max(1, Math.floor(Number(req.body?.clickCount) || 1)));
         const requested = Math.min(MAX_CLICK_RATE, 1 + (player.upgrades.power.level || 0));
         const room = Math.max(0, player.basketCapacity - count());
-        if (room <= 0) { response = { error: 'Your basket is full. Sell candy to make room.', status: 409 }; actionResponse = response; return root; }
+        if (room <= 0) { response = { state: publicState(player,root,now), collected: 0, basketFull: true }; actionResponse = response; return root; }
         const drops = [];
         for (let i = 0; i < Math.min(requested * clickCount, room); i++) {
           const c=rollCandy(player.upgrades.luck.level||0);
           player.inventory[c.id]=(player.inventory[c.id]||0)+1;
-          player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;
+          player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;player.feedCandy=Number(player.feedCandy||0)+1;
           player.stats.totalCollected++;
           if(c.rarity==='Rare'||c.rarity==='Epic') player.stats.rareCollected++;
           if(c.rarity==='Legendary') player.stats.legendaryCollected++;
@@ -320,33 +325,16 @@ export default async function handler(req,res) {
       } else if(action==='shops') {
         response={state:publicState(player,root,now)};
       } else if(action==='sell') {
-        const selected=Array.isArray(req.body?.selected)?req.body.selected.filter(id=>CANDY.some(c=>c.id===id)):null;
-        const shopId=typeof req.body?.shopId==='string'?req.body.shopId:null;
-        if(shopId && !SHOPS.some(s=>s.id===shopId)){response={error:'Invalid shop.',status:400};actionResponse=response; return root;}
         let earned=0,sold=0,receipts=[];
         for(const candy of CANDY){
-          if(selected && !selected.includes(candy.id)) continue;
           const qty=Math.max(0,Math.floor(player.inventory[candy.id]||0));if(!qty)continue;
-          const shop=shopId?SHOPS.find(s=>s.id===shopId):bestShopFor(candy.id,root.meta.offers);
-          const unit=root.meta.offers[shop.id][candy.id], subtotal=unit*qty;
+          const shop=bestShopFor(candy.id,root.meta.offers);
+          const unit=root.meta.offers[shop.id][candy.id],subtotal=unit*qty;
           earned+=subtotal;sold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:'basket'});
           player.inventory[candy.id]=0;
         }
-        let crewSold=0;
-        for(const crew of player.crew){
-          crew.inventory ||= {};
-          for(const candy of CANDY){
-            if(selected && !selected.includes(candy.id)) continue;
-            const qty=Math.max(0,Math.floor(crew.inventory[candy.id]||0));if(!qty)continue;
-            const shop=shopId?SHOPS.find(s=>s.id===shopId):bestShopFor(candy.id,root.meta.offers);
-            const unit=root.meta.offers[shop.id][candy.id], subtotal=unit*qty;
-            earned+=subtotal;sold+=qty;crewSold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:crew.id});
-            crew.inventory[candy.id]=0;
-          }
-          crew.inventoryCount=Object.values(crew.inventory).reduce((a,n)=>a+(Number(n)||0),0);
-        }
-        if(!sold){response={error:'You have no matching candy to sell.',status:409};actionResponse=response; return root;}
-        credit(earned);player.stats.totalSold+=sold;player.stats.crewSold+=crewSold;count();response={state:publicState(player,root,now),earned,sold,receipts};
+        if(!sold){response={state:publicState(player,root,now),earned:0,sold:0,receipts:[],nothingToSell:true};actionResponse=response;return root;}
+        credit(earned);player.stats.totalSold+=sold;count();response={state:publicState(player,root,now),earned,sold,receipts};
       } else if(action==='upgrade') {
         const type=String(req.body?.type||'');const cfg=UPGRADE_CONFIG[type],u=player.upgrades[type];
         if(!cfg||!u){response={error:'Unknown upgrade.',status:400};actionResponse=response; return root;}
@@ -356,7 +344,6 @@ export default async function handler(req,res) {
         player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;u.level++;
         u.nextCost=u.level>=cfg.max?-1:Math.floor(cfg.baseCost*Math.pow(1.62,u.level));
         if(type==='capacity')player.basketCapacity=Math.min(500,player.basketCapacity+10);
-        if(type==='autoSell' && u.level) player.crewUnlocked=player.crew.length>0;
         response={state:publicState(player,root,now),purchased:type,cost};
       } else if(action==='crew-action') {
         const act=String(req.body?.crewAction||req.body?.actionType||req.body?.action||'');const idx=Number.isInteger(req.body?.index)?req.body.index:-1;
@@ -364,40 +351,14 @@ export default async function handler(req,res) {
           if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};actionResponse=response; return root;}
           if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};actionResponse=response; return root;}
           const cost=player.crewHireCost;player.cash-=cost;player.stats.cashSpent+=cost;player.crewUnlocked=true;
-          player.crew.push({id:'helper-'+(player.crew.length+1),speedLevel:0,capacityLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:12000,speedUpgradeCost:75,capUpgradeCost:65,lastActionAt:now});
+          player.crew.push({id:'helper-'+(player.crew.length+1),name:CREW_NAMES[player.crew.length]||('Worker '+(player.crew.length+1)),speedLevel:0,capacityLevel:0,powerLevel:0,luckLevel:0,awakeLevel:0,inventory:{},inventoryCount:0,capacity:50,intervalMs:2000,asleep:false,awakeMs:0,fedUntil:0,lastActionAt:now,workMs:0,collectedCount:0,moneyEarned:0});
           player.crewHireCost=Math.floor(player.crewHireCost*1.85);response={state:publicState(player,root,now),hired:true,cost};
         } else {
           const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};actionResponse=response; return root;}
-          const isSpeed=act==='upgrade_speed',isCap=act==='upgrade_cap';if(!isSpeed&&!isCap){response={error:'Unknown crew action.',status:400};actionResponse=response; return root;}
-          const cost=isSpeed?Math.floor(75*Math.pow(1.7,crew.speedLevel||0)):Math.floor(65*Math.pow(1.65,crew.capacityLevel||0));
-          if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response; return root;}
-          player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;
-          if(isSpeed){crew.speedLevel=(crew.speedLevel||0)+1;crew.intervalMs=Math.max(2500,Math.floor(12000*Math.pow(.82,crew.speedLevel)));crew.speedUpgradeCost=crew.speedLevel>=8?-1:Math.floor(75*Math.pow(1.7,crew.speedLevel));}
-          else {crew.capacityLevel=(crew.capacityLevel||0)+1;crew.capacity=Math.min(100,10+crew.capacityLevel*10);crew.capUpgradeCost=crew.capacityLevel>=9?-1:Math.floor(65*Math.pow(1.65,crew.capacityLevel));}
-          response={state:publicState(player,root,now),cost};
+          if(act==='wake'){crew.asleep=false;crew.awakeMs=0;crew.lastActionAt=now;response={state:publicState(player,root,now),woke:true};}else if(act==='feed'){const need=Math.max(1,Number(player.basketCapacity||50)*10),held=Number(player.feedCandy||0);if(Number(crew.fedUntil||0)>now){response={error:'This crew member is already fed.',status:409};actionResponse=response;return root;}if(held<need){response={error:'Not enough candy in your Candy Reserve. Collect more candy first.',status:409};actionResponse=response;return root;}player.feedCandy=Math.max(0,held-need);crew.fedUntil=now+1200000;crew.asleep=false;crew.awakeMs=0;response={state:publicState(player,root,now),fed:true};}else{const cfgs={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]},cfg=cfgs[act];if(!cfg){response={error:'Unknown crew action.',status:400};actionResponse=response;return root;}const [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(crew[key]||0)));if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response;return root;}player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;crew[key]=Number(crew[key]||0)+1;if(key==='capacityLevel')crew.capacity=Math.min(500,50+crew.capacityLevel*10);response={state:publicState(player,root,now),cost};}
         }
       } else if(action==='crew-sync') {
-        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));
-        player.lastCrewSync=now;
-        if(elapsed>0 && player.crew.length){
-          for(const crew of player.crew){
-            const ticks=Math.min(8,Math.floor(elapsed/Math.max(2500,crew.intervalMs||12000)));
-            for(let n=0;n<ticks;n++){
-              const crewCount=Object.values(crew.inventory||{}).reduce((a,b)=>a+(Number(b)||0),0);
-              if(crewCount>=crew.capacity)break;
-              const c=rollCandy(player.upgrades.luck.level||0);crew.inventory ||= {};crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=crewCount+1;
-              player.stats.crewCollected++;player.stats.totalCollected++;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;
-              if(!player.discovered.includes(c.id))player.discovered.push(c.id);
-              if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected++;if(c.rarity==='Legendary')player.stats.legendaryCollected++;
-              count();
-            }
-            if(crew.inventoryCount>=crew.capacity || (player.upgrades.autoSell.level && crew.inventoryCount>0)){
-              let earned=0,sold=0;
-              for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}
-              if(earned){credit(earned);player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;}
-            }
-          }
-        }
+        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));player.lastCrewSync=now;if(elapsed>0&&player.crew.length){for(const crew of player.crew){crew.asleep=!!crew.asleep;crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);if(crew.asleep)continue;const fed=crew.fedUntil>now;if(!fed)crew.awakeMs+=elapsed;crew.lastActionAt=now;if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;continue;}const effectiveCapacity=Math.max(1,Math.floor(Number(crew.capacity||10)*(fed?1.25:1)));const workInterval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));crew.workMs=Number(crew.workMs||0)+elapsed;const ticks=Math.min(10,Math.floor(crew.workMs/workInterval));crew.workMs-=ticks*workInterval;for(let n=0;n<ticks;n++){const held=Object.values(crew.inventory||{}).reduce((x,y)=>x+(Number(y)||0),0);if(held>=effectiveCapacity)break;const c=rollCandy(Math.floor((Number(player.upgrades.luck.level||0)+Number(crew.luckLevel||0))*(fed?1.25:1)));crew.inventory||={};const basePower=Math.min(8,1+Number(crew.powerLevel||0));const power=Math.min(effectiveCapacity-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));for(let k=0;k<power;k++)crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=held+power;player.stats.crewCollected+=power;crew.collectedCount=Number(crew.collectedCount||0)+power;player.feedCandy=Number(player.feedCandy||0)+power;player.stats.totalCollected+=power;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+power;if(!player.discovered.includes(c.id))player.discovered.push(c.id);if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected+=power;if(c.rarity==='Legendary')player.stats.legendaryCollected+=power;count();}if(crew.inventoryCount>=effectiveCapacity&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){let earned=0,sold=0;for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}if(earned){credit(earned);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;crew.sellReadyAt=0;}}}}
         response={state:publicState(player,root,now),crewCollected:player.stats.crewCollected};
       } else {
         response={error:'Unknown Halloween Haunt action.',status:404};

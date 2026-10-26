@@ -472,8 +472,10 @@ body::before {
 }
 
 .candy-card {
+  --rarity-color: #ddd;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--rarity-color);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rarity-color) 24%, transparent), 0 0 14px color-mix(in srgb, var(--rarity-color) 15%, transparent);
   border-radius: 20px;
   padding: 20px 16px;
   text-align: center;
@@ -488,8 +490,8 @@ body::before {
 .candy-card:hover {
   transform: translateY(-4px);
   background: rgba(255, 122, 24, 0.08);
-  border-color: var(--primary);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 0 20px var(--primary-glow);
+  border-color: var(--rarity-color, var(--primary));
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 18px color-mix(in srgb, var(--rarity-color, var(--primary)) 35%, transparent), inset 0 0 20px color-mix(in srgb, var(--rarity-color, var(--primary)) 12%, transparent);
 }
 
 .candy-card.locked img { filter: brightness(0) opacity(0.2); }
@@ -996,6 +998,46 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+.hh-card-ui,.hh-crew-card{background:linear-gradient(145deg,#261437f2,#10081bf5);border:1px solid #ba7dff44;border-radius:18px;padding:16px;margin:0 0 14px}.hh-card-heading,.hh-crew-top,.hh-level-line,.hh-progress-label{display:flex;align-items:center;justify-content:space-between;gap:12px}.hh-badge{display:inline-flex;border-radius:99px;padding:4px 9px;font-size:10px;font-weight:900;letter-spacing:.08em;background:#9d4edd30;border:1px solid #9d4edd70;color:#d8b4fe}.hh-muted{color:var(--text-muted);font-size:14px;line-height:1.6;margin:8px 0}.hh-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}.hh-stat-card{border:1px solid #ffffff18;background:#ffffff08;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px}.hh-stat-card small{color:var(--text-muted);font-size:12px}.hh-stat-card strong{color:#fff;font-size:21px}.hh-help-btn{width:30px;height:30px;border-radius:50%;border:1px solid #ffffff55;background:#9d4edd33;color:#fff;font-weight:900;cursor:pointer}.hh-help-overlay{position:fixed;inset:0;z-index:10000;background:#040109dd;backdrop-filter:blur(9px);display:grid;place-items:center;padding:20px}.hh-help-card{max-width:440px;width:100%;padding:26px;border:1px solid #ba7dff66;border-radius:22px;background:#170c24}.hh-help-card h2{color:#fff;margin:12px 0}.hh-help-card p{line-height:1.7;color:#d6c9e2;margin-bottom:20px}.hh-crew-grid,.hh-upgrade-grid,.hh-item-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin:14px 0}.hh-crew-card.is-asleep{border-color:#ff334faa;box-shadow:0 0 22px #ff304f20}.hh-progress{height:8px;background:#ffffff19;border-radius:99px;overflow:hidden}.hh-progress i{display:block;height:100%;background:linear-gradient(90deg,#9d4edd,#ff9f43)}.hh-upgrade-mini,.hh-candy-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #ffffff18;border-radius:12px}.hh-upgrade-mini span,.hh-candy-row span{display:flex;flex-direction:column;color:#fff;font-size:13px}.hh-upgrade-mini small,.hh-candy-row small{color:var(--text-muted);font-size:12px}.hh-setting-row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #ffffff18;cursor:pointer}.hh-setting-row span{display:flex;flex-direction:column;gap:3px}.hh-setting-row small{color:var(--text-muted);font-size:12px}.hh-setting-row input{width:20px;height:20px;accent-color:#a855f7}.hh-crew-alert{position:relative!important;animation:hhPulse 1s infinite!important;border-color:#ff334f!important}.hh-alert-dot{position:absolute;right:8px;top:7px;width:8px;height:8px;border-radius:50%;background:#ff304f;box-shadow:0 0 10px #ff304f}#hh-ghost-layer{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:.32}#hh-ghost-layer span{position:absolute;left:calc(var(--i)*13%);top:calc(12% + var(--i)*10%);font-size:26px;animation:hhGhostFly calc(17s + var(--i)*2s) linear infinite;animation-delay:calc(var(--i)*-2.5s);filter:drop-shadow(0 0 9px #c296ff99)}@keyframes hhGhostFly{0%{transform:translate(-30px,30px);opacity:0}15%,85%{opacity:.8}100%{transform:translate(180px,-110px);opacity:0}}@keyframes hhPulse{50%{box-shadow:0 0 0 3px #ff304f40}}.hh-prize-callout{margin:18px auto;padding:18px;max-width:1100px;border:1px solid #f9731688;border-radius:16px;background:linear-gradient(135deg,#f973161f,#9d4edd1f);position:relative;z-index:5}.hh-prize-callout h3{color:#fff;margin:8px 0}.hh-prize-callout p{line-height:1.6}.hh-prize-callout strong{color:#fdba74}.falling-candy{width:112px!important;height:112px!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;outline:0!important}</style>
+
+<style id="hh-redesign-reliability">
+.hh-card-ui,.hh-crew-card{background:linear-gradient(145deg,#261437f2,#10081bf5);border:1px solid #ba7dff44;border-radius:18px;padding:16px;margin:0 0 14px}
+.hh-card-heading,.hh-crew-top,.hh-level-line,.hh-progress-label{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hh-badge{display:inline-flex;align-items:center;border:1px solid #ba7dff77;background:#8b5cf622;color:#e7d5ff;border-radius:999px;padding:4px 9px;font-size:.72rem;font-weight:900;letter-spacing:.06em}
+.hh-muted{color:#b9aac8;font-size:.92rem;margin-top:7px}
+.hh-summary-grid,.hh-crew-grid,.hh-upgrade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:12px 0}
+.hh-stat-card,.hh-upgrade-mini{background:#ffffff08;border:1px solid #ffffff15;border-radius:14px;padding:12px}
+.hh-stat-card small,.hh-upgrade-mini small{display:block;color:#b9aac8;font-size:.8rem}
+.hh-stat-card strong{display:block;font-size:1.3rem;margin-top:4px}
+.hh-crew-card{margin:0;min-width:0}
+.hh-crew-card.is-asleep{border-color:#ff515f99;box-shadow:0 0 0 1px #ff515f33}
+.hh-crew-card h3{font-size:1.25rem;margin:6px 0}
+.hh-progress{height:9px;border-radius:99px;background:#ffffff16;overflow:hidden;margin-top:6px}
+.hh-progress i{display:block;height:100%;background:linear-gradient(90deg,#a855f7,#ff7a18);border-radius:99px}
+.hh-help-btn{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border:1px solid #d7b4ff88;border-radius:50%;background:#7e22ce22;color:#f1ddff;font-weight:900;cursor:pointer;flex:none}
+.hh-help-overlay{position:fixed;inset:0;z-index:30000;background:#000b;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px}
+.hh-help-card{width:min(440px,100%);padding:24px;border:1px solid #ba7dff88;border-radius:20px;background:#160b21;color:#f0e6fa;box-shadow:0 20px 70px #0009}
+.hh-help-card h2{margin:10px 0}.hh-help-card p{line-height:1.6;color:#d3c4e2;margin:0 0 16px}
+.hh-setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid #ffffff12}
+.hh-setting-row span{display:flex;flex-direction:column}.hh-setting-row small{color:#b9aac8;font-size:.82rem}
+.hh-setting-row input{width:20px;height:20px;accent-color:#a855f7;flex:none}
+.hh-upgrade-mini{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px}.hh-upgrade-mini .buy-btn{padding:8px 10px;font-size:.9rem}
+.hh-crew-alert{color:#ff5364!important;background:rgba(255,48,76,.08)!important;box-shadow:inset 0 0 0 1px #ff334c66!important}
+.hh-crew-alert svg{stroke:#ff334c!important;animation:hhCrewIconFlash .75s steps(2,start) infinite!important;filter:drop-shadow(0 0 7px #ff304c)!important}
+.hh-crew-alert>span:not(.hh-alert-dot){color:#ff5364!important;animation:hhCrewTextFlash .75s steps(2,start) infinite!important}
+.hh-alert-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff334c;margin-left:4px;box-shadow:0 0 9px #ff334c}
+@keyframes hhCrewIconFlash{to{stroke:#ff9ba5;filter:drop-shadow(0 0 12px #ff304c)}}
+@keyframes hhCrewTextFlash{to{color:#fff}}
+.hh-leaderboard-row.is-first-place{border-color:#ffd84d!important;box-shadow:0 0 0 1px #ffd84d66,0 0 18px #ffd84d26}
+.hh-prize-close{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:38px;height:38px;border:1px solid #ffffff33;border-radius:12px;background:#ffffff0b;color:#fff;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.hh-prize-close:hover{background:#ff334c22;border-color:#ff7b87;transform:scale(1.04)}
+.hh-prize-close svg{width:20px;height:20px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.hh-prize-modal-card{position:relative;padding-top:34px}
+@media(max-width:600px){.action-nav{gap:4px;padding:8px;bottom:8px}.action-btn{min-width:56px;padding:7px 6px;font-size:12px}.action-btn svg{width:24px;height:24px}.modal-body{padding:14px}.candy-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}.candy-card{padding:14px 10px;border-radius:16px}}
+#hh-ghost-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+#hh-ghost-layer span{position:absolute;left:-10%;top:calc((var(--i) + 1)*11%);font-size:26px;opacity:.16;animation:hhGhostFly calc(18s + var(--i)*3s) linear infinite;animation-delay:calc(var(--i)*-2s)}
+@keyframes hhGhostFly{from{transform:translateX(-10vw) translateY(0)}to{transform:translateX(120vw) translateY(-35px)}}
+@media(max-width:600px){.hh-crew-grid,.hh-upgrade-grid,.hh-summary-grid{grid-template-columns:1fr}.hh-crew-card{padding:13px}}
 </style>
 </head>
 <body>
@@ -1023,6 +1065,10 @@ body {
   </div>
 </header>
 
+<div id="hh-prize-callout" class="hh-prize-callout"><span class="hh-badge">PRIZES</span><h3>First Place Prize</h3><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p></div>
+<div id="hh-prize-modal" class="hh-prize-modal" role="dialog" aria-modal="true" aria-labelledby="hhPrizeModalTitle" hidden><section class="hh-prize-modal-card"><button type="button" class="hh-prize-close" id="hhPrizeClose" aria-label="Close First Place Prize popup" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button><span class="hh-badge">PRIZES</span><h2 id="hhPrizeModalTitle">First Place Prize</h2><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p><button type="button" class="buy-btn" id="hhPrizeGotIt">Got it</button></section></div>
+<style>.hh-prize-modal[hidden]{display:none!important}.hh-prize-modal{position:fixed;inset:0;z-index:50000;display:flex;align-items:center;justify-content:center;padding:18px;background:#05020bdc;backdrop-filter:blur(9px)}.hh-prize-modal-card{width:min(520px,100%);padding:26px;border:1px solid #f9731688;border-radius:22px;background:linear-gradient(145deg,#25112f,#100912);box-shadow:0 24px 90px #000b;text-align:center}.hh-prize-modal-card h2{color:#fff;margin:12px 0}.hh-prize-modal-card p{color:#e9dced;line-height:1.65;margin-bottom:20px}.hh-prize-modal-card strong{color:#fdba74}</style>
+<script>(function(){const modal=document.getElementById('hh-prize-modal'),button=document.getElementById('hhPrizeGotIt'),closeButton=document.getElementById('hhPrizeClose');if(!modal||!button)return;const close=()=>{modal.hidden=true;try{localStorage.setItem('hh_prize_notice_seen_v1','1')}catch{}};button.addEventListener('click',close);closeButton?.addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)close()});try{if(localStorage.getItem('hh_prize_notice_seen_v1')!=='1')modal.hidden=false}catch{modal.hidden=false}})();</script>
 <main class="game-container">
   <section id="offlineBanner" role="status" aria-live="polite" style="display:none;"></section>
   <div class="hero-cash" aria-live="polite">
@@ -1132,6 +1178,11 @@ body {
     </svg>
     <span>Leaders</span>
   </button>
+  <button class="action-btn" data-hhsettings="1" onclick="openModal('settings')" aria-label="Settings">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.8.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1l-.2.1-2.9-1.7.1-.2a1.7 1.7 0 0 0-.3-1.8l-.1-.1v-3.4l.2-.1a1.7 1.7 0 0 0 1-1.6l-.1-.2 1.7-2.9.2.1a1.7 1.7 0 0 0 1.8-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1l.2-.1 2.9 1.7-.1.2a1.7 1.7 0 0 0 .3 1.8l.1.1z"></path>
+    </svg><span>Settings</span>
+  </button>
 </div>
 
 <!-- Modal Templates (Content injected by JS) -->
@@ -1163,6 +1214,7 @@ body {
 
 <!-- Event Logic script -->
 <script src="/js/halloween-haunt.js"></script>
+<script src="/js/halloween-haunt-redesign.js"></script>
 <script>
   // Offline support is scoped to Halloween Haunt only.
   if ('serviceWorker' in navigator) {
