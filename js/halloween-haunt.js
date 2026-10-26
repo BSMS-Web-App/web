@@ -52,6 +52,29 @@ const CANDY_CATALOG = [
 let gameState = null;
 let offlineMode = false;
 const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
+
+function saveOfflineProgress() {
+    if (!offlineMode || !gameState) return true;
+    const snapshot = {
+        version: 1,
+        currentBasketCount: Math.max(0, Math.min(Number(gameState.basketCapacity) || 50, Number(gameState.currentBasketCount) || 0)),
+        cash: Math.max(0, Number(gameState.cash) || 0),
+        updatedAt: Date.now()
+    };
+    try {
+        localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify(snapshot));
+        return true;
+    } catch (error) {
+        console.warn('[Halloween Haunt] Offline save failed:', error);
+        const banner = document.getElementById('offlineBanner');
+        if (banner) {
+            banner.textContent = 'Offline practice is running, but this browser could not save progress on this device. Check Safari storage settings.';
+            banner.style.display = 'block';
+        }
+        return false;
+    }
+}
+
 let currentModal = null;
 let offerRefreshTime = 0;
 let isEventActive = false;
@@ -201,7 +224,7 @@ function enterOfflineMode() {
     leaderboardCache = [];
     const banner = document.getElementById('offlineBanner');
     if (banner) {
-        banner.textContent = 'Offline practice mode — pumpkin clicks are saved on this device only and will not sync to your online account.';
+        banner.textContent = 'Offline practice mode — progress saves on this device automatically. It does not sync to your online account.';
         banner.style.display = 'block';
     }
     document.querySelector('.hero-cash-label')?.replaceChildren(document.createTextNode('Offline Practice'));
@@ -284,13 +307,7 @@ function handleBasketClick(e) {
             gameState.cash = Math.max(0, Number(gameState.cash) || 0) + confirmed;
             gameState.currentBasketCount = 0;
             confirmed = 0;
-            try {
-                localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify({
-                    currentBasketCount: 0,
-                    cash: gameState.cash,
-                    updatedAt: Date.now()
-                }));
-            } catch (_) {}
+            saveOfflineProgress();
             showToast('Offline practice: sold a basket locally. This cash will not sync online.');
         } else {
             showToast("Basket is full! Sell candy to make room.");
@@ -307,13 +324,7 @@ function handleBasketClick(e) {
             Number(gameState.basketCapacity) || 50,
             confirmed + perClick
         );
-        try {
-            localStorage.setItem(OFFLINE_PROGRESS_KEY, JSON.stringify({
-                currentBasketCount: gameState.currentBasketCount,
-                cash: gameState.cash,
-                updatedAt: Date.now()
-            }));
-        } catch (_) {}
+        saveOfflineProgress();
         updateUI();
         return;
     }
@@ -648,3 +659,23 @@ window.retryHalloweenHauntCollect = retryCollectQueue;
 let crewExitSent=false;
 function sellCrewCandyOnExit(){if(crewExitSent||!gameState||!gameState.crew?.length)return;crewExitSent=true;const sessionId=localStorage.getItem('session_id')||'';if(!sessionId)return;const deviceId=localStorage.getItem('device_id')||sessionId;const payload={requestId:'crew-exit-'+Date.now()+'-'+Math.random().toString(36).slice(2)};try{fetch(API_BASE+'?action=crew-exit',{method:'POST',keepalive:true,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Session-ID':sessionId,'X-Device-ID':deviceId},body:JSON.stringify(payload)}).catch(()=>{});}catch{}}
 window.addEventListener('pagehide',sellCrewCandyOnExit);
+
+window.addEventListener('pagehide', saveOfflineProgress);
+window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveOfflineProgress();
+});
+window.addEventListener('online', () => {
+    if (offlineMode) {
+        const banner = document.getElementById('offlineBanner');
+        if (banner) banner.textContent = 'You are back online. Your offline practice progress is saved on this device; reload to return to your online account.';
+    }
+});
+window.addEventListener('offline', () => {
+    const banner = document.getElementById('offlineBanner');
+    if (banner) {
+        banner.textContent = offlineMode
+            ? 'Offline practice mode — progress saves on this device automatically. It does not sync to your online account.'
+            : 'You are offline. Reload Halloween Haunt to enter offline practice mode.';
+        banner.style.display = 'block';
+    }
+});
