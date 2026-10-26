@@ -388,7 +388,7 @@ async function renderLeaderboard(container) {
 // Bootstrap
 window.addEventListener('DOMContentLoaded', initGame);
  + Math.floor(num).toLocaleString(); }
-function escapeHTML(value) { return String(value ?? '').replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[char])); }
+function escapeHTML(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 // ------------------------------------------------------------------
 // API Communication
