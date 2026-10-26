@@ -136,7 +136,7 @@ function createOfflineGameState(){
  const inventory={},lifetimeCollected={};for(const c of CANDY_CATALOG){inventory[c.id]=0;lifetimeCollected[c.id]=0;}
  const now=Date.now(),values=Object.fromEntries(CANDY_CATALOG.map(c=>[c.id,c.rarity==='Common'?1:c.rarity==='Uncommon'?2:c.rarity==='Rare'?4:c.rarity==='Epic'?8:16]));
  const shops=createDefaultShops();
- return {accountId:'offline-local',displayName:'Offline Player',cash:100,inventory,discovered:[],lifetimeCollected,currentBasketCount:0,basketCapacity:50,upgrades:createDefaultUpgrades(),crew:[],crewUnlocked:false,crewHireCost:180,stats:createDefaultStats(),shops,candyCatalog:CANDY_CATALOG.map(c=>({...c,baseValue:values[c.id]})),offerWindow:Math.floor(now/300000)*300000,offerRefreshAt:(Math.floor(now/300000)+1)*300000,startsAt:Date.parse(START_Z),endsAt:Date.parse(DEADLINE_Z),crewAutoSell:false};
+ return {accountId:'offline-local',displayName:'Offline Player',cash:100,inventory,discovered:[],lifetimeCollected,feedCandy:0,currentBasketCount:0,basketCapacity:50,upgrades:createDefaultUpgrades(),crew:[],crewUnlocked:false,crewHireCost:180,stats:createDefaultStats(),shops,candyCatalog:CANDY_CATALOG.map(c=>({...c,baseValue:values[c.id]})),offerWindow:Math.floor(now/300000)*300000,offerRefreshAt:(Math.floor(now/300000)+1)*300000,startsAt:Date.parse(START_Z),endsAt:Date.parse(DEADLINE_Z),crewAutoSell:false};
 }
 function chooseOfflineCandy(){
  const weights={Common:62,Uncommon:24,Rare:10,Epic:3.3,Legendary:.7},luck=Math.min(14,Math.max(0,Number(gameState?.upgrades?.luck?.level)||0)),items=CANDY_CATALOG.map(c=>({c,w:(weights[c.rarity]||1)*(c.rarity==='Common'?1:1+luck*.055)}));
@@ -146,6 +146,7 @@ function recalculateBasketCount(state=gameState){if(!state)return 0;state.invent
 function recordOfflineCandy(candy,amount=1){
  gameState.inventory||={};gameState.lifetimeCollected||={};gameState.discovered||=[];gameState.stats||=createDefaultStats();
  gameState.inventory[candy.id]=Math.max(0,Number(gameState.inventory[candy.id])||0)+amount;
+ gameState.feedCandy=Math.max(0,Number(gameState.feedCandy)||0)+amount;
  gameState.lifetimeCollected[candy.id]=Math.max(0,Number(gameState.lifetimeCollected[candy.id])||0)+amount;
  if(!gameState.discovered.includes(candy.id))gameState.discovered.push(candy.id);
  gameState.stats.totalCollected=Number(gameState.stats.totalCollected||0)+amount;
@@ -417,7 +418,7 @@ async function syncCrew(){
     const held=Object.values(crew.inventory).reduce((n,v)=>n+Math.max(0,Number(v)||0),0);if(held>=cap)break;
     const candy=chooseOfflineCandy(),power=Math.min(cap-held,1+Number(crew.powerLevel||0)+(fed?Math.max(1,Math.ceil((Number(crew.powerLevel||0)+1)*.25)):0));
     for(let k=0;k<power;k++){crew.inventory[candy.id]=Number(crew.inventory[candy.id]||0)+1;gameState.lifetimeCollected[candy.id]=Number(gameState.lifetimeCollected[candy.id]||0)+1;}
-    crew.inventoryCount=held+power;crew.collectedCount=Number(crew.collectedCount||0)+power;gameState.stats.totalCollected=Number(gameState.stats.totalCollected||0)+power;gameState.stats.crewCollected=Number(gameState.stats.crewCollected||0)+power;
+    crew.inventoryCount=held+power;crew.collectedCount=Number(crew.collectedCount||0)+power;gameState.feedCandy=Number(gameState.feedCandy||0)+power;gameState.stats.totalCollected=Number(gameState.stats.totalCollected||0)+power;gameState.stats.crewCollected=Number(gameState.stats.crewCollected||0)+power;
     if(!gameState.discovered.includes(candy.id))gameState.discovered.push(candy.id);
     if(candy.rarity==='Rare'||candy.rarity==='Epic')gameState.stats.rareCollected=Number(gameState.stats.rareCollected||0)+power;if(candy.rarity==='Legendary')gameState.stats.legendaryCollected=Number(gameState.stats.legendaryCollected||0)+power;
     changed=true;
@@ -710,7 +711,7 @@ window.executeCrew=async function(action,index=0){
   if(Number(gameState.cash)<Number(gameState.crewHireCost)){showToast('You need '+formatCash(gameState.crewHireCost)+' to hire the next crew member.');return;}
  } else if(!worker){showToast('That crew member could not be found.');return;}
  if(action==='feed'){
-  const need=10*Number(gameState.basketCapacity||50),held=Object.values(gameState.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
+  const need=10*Number(gameState.basketCapacity||50),held=Number(gameState.feedCandy||0);
   if(Number(worker.fedUntil||0)>Date.now()){showToast('This crew member is already fed.');return;}
   if(held<need){showToast('You need '+need+' candy to feed '+(worker.name||names[index])+'.');return;}
  }
@@ -728,7 +729,7 @@ window.executeCrew=async function(action,index=0){
   }
   const c=state.crew[index];if(!c)return;
   if(action==='wake'){c.asleep=false;c.awakeMs=0;c.lastActionAt=Date.now();return;}
-  if(action==='feed'){const need=10*Number(state.basketCapacity||50);let rem=need;for(const candy of CANDY_CATALOG){const take=Math.min(rem,Number(state.inventory[candy.id]||0));state.inventory[candy.id]=Number(state.inventory[candy.id]||0)-take;rem-=take;if(rem<=0)break;}state.currentBasketCount=Math.max(0,Number(state.currentBasketCount||0)-need);c.fedUntil=Date.now()+1200000;c.asleep=false;c.awakeMs=0;return;}
+  if(action==='feed'){const need=10*Number(state.basketCapacity||50);state.feedCandy=Math.max(0,Number(state.feedCandy||0)-need);c.fedUntil=Date.now()+1200000;c.asleep=false;c.awakeMs=0;return;}
   if(key){const cost=Math.floor(bases[key]*Math.pow(mults[key],Number(c[key]||0)));state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;c[key]=Number(c[key]||0)+1;if(key==='capacityLevel')c.capacity=Math.min(500,10+c.capacityLevel*10);if(key==='speedLevel')c.intervalMs=Math.max(2000,20000-2000*c.speedLevel);}
  },r=>r.hired?'Crew member hired!':action==='feed'?'Crew member fed for 20 minutes.':action==='wake'?'Crew member is awake.':'Crew upgrade purchased!');
 }
