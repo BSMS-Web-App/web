@@ -310,16 +310,17 @@ function renderCrew(container) {
     gameState.crew.forEach((c, idx) => {
         html += `
             <div class="upgrade-row" style="flex-direction:column; align-items:flex-start;">
-                <div style="width:100%; display:flex; justify-content:space-between; margin-bottom:10px;">
+                <div style="width:100%; display:flex; justify-content:space-between; gap:12px; margin-bottom:10px;">
                     <h3 style="color:var(--orange);">Helper #${idx+1}</h3>
                     <span style="color:var(--fg2);">Holding: ${c.inventoryCount}/${c.capacity}</span>
                 </div>
+                <div style="color:var(--fg2);font-size:15px;margin-bottom:10px;">Collection interval: ${(Number(c.intervalMs||12000)/1000).toFixed(1)}s while active. ${Object.entries(c.inventory||{}).filter(([,qty])=>Number(qty)>0).map(([id,qty])=>{const candy=getCandyObj(id);return (candy?candy.name:id)+' × '+qty;}).join(' · ') || 'Inventory empty.'}</div>
                 <div style="width:100%; display:flex; gap:10px; flex-wrap:wrap;">
-                    <button class="buy-btn" style="flex:1; font-size:16px;" ${gameState.cash < c.speedUpgradeCost ? 'disabled' : ''} onclick="executeCrew('upgrade_speed', ${idx})">
-                        Speed Up (${formatCash(c.speedUpgradeCost)})
+                    <button class="buy-btn" style="flex:1; font-size:16px;" ${c.speedUpgradeCost===-1 || gameState.cash < c.speedUpgradeCost ? 'disabled' : ''} onclick="executeCrew('upgrade_speed', ${idx})">
+                        ${c.speedUpgradeCost===-1?'Speed MAXED':'Speed Up ('+formatCash(c.speedUpgradeCost)+')'}
                     </button>
-                    <button class="buy-btn" style="flex:1; font-size:16px;" ${gameState.cash < c.capUpgradeCost ? 'disabled' : ''} onclick="executeCrew('upgrade_cap', ${idx})">
-                        Capacity Up (${formatCash(c.capUpgradeCost)})
+                    <button class="buy-btn" style="flex:1; font-size:16px;" ${c.capUpgradeCost===-1 || gameState.cash < c.capUpgradeCost ? 'disabled' : ''} onclick="executeCrew('upgrade_cap', ${idx})">
+                        ${c.capUpgradeCost===-1?'Capacity MAXED':'Capacity Up ('+formatCash(c.capUpgradeCost)+')'}
                     </button>
                 </div>
             </div>
