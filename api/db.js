@@ -9,11 +9,14 @@ import crypto from 'node:crypto';
 const BSMS_WEB_API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, '');
 const BSMS_WEB_API_KEY = process.env.BSMS_WEB_API_KEY || '';
 
-if (!BSMS_WEB_API_URL || BSMS_WEB_API_KEY.length < 32) {
-    throw new Error('[BSMS Web :: DB] BSMS_WEB_API_URL and a 32+ character BSMS_WEB_API_KEY are required. No alternate database fallback is available.');
+function assertMacApiConfig() {
+    if (!BSMS_WEB_API_URL || BSMS_WEB_API_KEY.length < 32) {
+        throw new Error('[BSMS Web :: DB] Missing BSMS_WEB_API_URL or BSMS_WEB_API_KEY (minimum 32 characters).');
+    }
 }
 
 async function macRequest(method, route, body) {
+    assertMacApiConfig();
     let response;
     try {
         response = await fetch(BSMS_WEB_API_URL + route, {
@@ -76,10 +79,17 @@ function makeRemoteRef(pathStr) {
             for (let attempt = 0; attempt < 50; attempt += 1) {
                 const currentSnapshot = await makeRemoteRef(cleanPath).once('value');
                 const current = currentSnapshot.val();
-                const next = updateFn(current);
+
+                // The Firebase-style updater commonly mutates its argument in place.
+                // Keep an untouched copy for compare-and-set; otherwise expected
+                // accidentally becomes the new value and every transaction conflicts.
+                const expected = current === undefined ? null : JSON.parse(JSON.stringify(current));
+                const workingCopy = current === undefined ? null : JSON.parse(JSON.stringify(current));
+                const next = updateFn(workingCopy);
+
                 const result = await macRequest('POST', '/v1/db/compare-and-set', {
                     path: cleanPath,
-                    expected: current,
+                    expected,
                     value: next
                 });
                 if (result.committed) {

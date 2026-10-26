@@ -1,0 +1,1161 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: MIT
+-->    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="description" content="Compete in the BSMS Web Halloween Haunt! Collect candy, upgrade your crew, and climb the leaderboard."/>
+<meta name="theme-color" content="#12041b">
+<meta name="color-scheme" content="dark">
+<title>Halloween Haunt - BSMS Web</title>
+
+<!-- Existing Core Scripts -->
+<script src="/js/ban-check.js"></script>
+<script src="/js/account-check.js"></script>
+<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2TKPQV995W');
+</script>
+<script src="/js/analytics.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Nunito:wght@400;600;800;900&display=swap');
+
+:root {
+  --primary: #FF7A18;
+  --primary-glow: rgba(255, 122, 24, 0.4);
+  --secondary: #9D4EDD;
+  --secondary-glow: rgba(157, 78, 221, 0.4);
+  --accent: #39FF14;
+  --bg-deep: #0a0211;
+  --bg-surface: rgba(25, 10, 35, 0.75);
+  --bg-surface-border: rgba(157, 78, 221, 0.25);
+  --text-main: #f0e6fa;
+  --text-muted: #a395b3;
+  --font-main: 'Nunito', system-ui, -apple-system, sans-serif;
+  --font-display: 'Creepster', system-ui, -apple-system, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bg-deep);
+  color: var(--text-main);
+  font: 16px/1.5 var(--font-main);
+  padding: 100px 20px 140px;
+  background-image: 
+    radial-gradient(circle at 50% 10%, rgba(157, 78, 221, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(255, 122, 24, 0.1) 0%, transparent 40%);
+}
+
+/* Ambient Moon & Fog Orbs */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50px;
+  right: -50px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #FFFBEB 0%, #FFD700 10%, transparent 60%);
+  border-radius: 50%;
+  box-shadow: 0 0 100px 50px rgba(255, 215, 0, 0.15);
+  z-index: -3;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.ambient-particles {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(circle, var(--secondary-glow) 1px, transparent 2px),
+    radial-gradient(circle, var(--primary-glow) 1px, transparent 2px);
+  background-size: 100px 100px, 150px 150px;
+  background-position: 0 0, 50px 50px;
+  opacity: 0.4;
+  animation: floatSouls 40s linear infinite;
+}
+
+@keyframes floatSouls {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-150px) rotate(5deg); }
+}
+
+/* Header */
+.haunt-header {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1000px, calc(100% - 32px));
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--bg-surface-border);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 16px rgba(157,78,221,0.1);
+  z-index: 100;
+}
+
+.header-brand h1 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 36px);
+  color: var(--primary);
+  text-shadow: 0 0 10px var(--primary-glow);
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  line-height: 1.1;
+}
+
+.header-brand h1:hover {
+  transform: scale(1.05) rotate(-2deg);
+}
+
+.header-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.stat-pill {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.stat-pill .timer {
+  color: var(--primary);
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+/* Game Area */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 250px);
+  width: 100%;
+  position: relative;
+  isolation: isolate;
+  z-index: 10;
+}
+
+.hero-cash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+  z-index: 10;
+  background: rgba(0,0,0,0.4);
+  padding: 16px 40px;
+  border-radius: 32px;
+  border: 1px solid rgba(57, 255, 20, 0.2);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(57, 255, 20, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hero-cash-label {
+  font-size: 1rem;
+  letter-spacing: 6px;
+  color: var(--text-muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.hero-cash .cash {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 8vw, 80px);
+  color: var(--accent);
+  text-shadow: 0 0 25px rgba(57, 255, 20, 0.5), 0 4px 10px rgba(0,0,0,0.9);
+  line-height: 1;
+  letter-spacing: 2px;
+}
+
+/* The Pumpkin Hitbox */
+.basket-wrapper {
+  position: relative;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-block;
+}
+
+.basket-wrapper:hover {
+  transform: scale(1.05) translateY(-5px);
+}
+
+.basket-wrapper:active {
+  transform: scale(0.95) translateY(5px);
+}
+
+.pumpkin-svg {
+  width: clamp(200px, 35vw, 320px);
+  height: auto;
+  filter: drop-shadow(0 15px 35px rgba(255, 122, 24, 0.4));
+  transition: filter 0.3s;
+}
+
+.basket-wrapper:hover .pumpkin-svg {
+  filter: drop-shadow(0 20px 45px rgba(255, 122, 24, 0.6));
+}
+
+/* Basket Capacity Bar */
+.basket-status {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.basket-status span {
+  color: var(--text-main);
+  font-family: monospace;
+  font-size: 1.2rem;
+}
+
+.basket-bar-bg {
+  width: min(300px, 80vw);
+  height: 16px;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid var(--bg-surface-border);
+  border-radius: 8px;
+  margin: 12px auto;
+  overflow: hidden;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+}
+
+.basket-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  width: 0%;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+/* Candy Physics Layer */
+.falling-candy {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 50;
+  animation: candyDrop 1.45s cubic-bezier(.2, .65, .35, 1) forwards;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+}
+
+@keyframes candyDrop {
+  0% { transform: translate(0,0) scale(.65) rotate(0); opacity: 0; }
+  12% { opacity: 1; transform: translate(0,0) scale(1.15) rotate(25deg); }
+  35% { transform: translate(var(--candy-drift),var(--candy-lift)) scale(1.05) rotate(100deg); opacity: 1; }
+  100% { transform: translate(calc(var(--candy-drift) * 1.35), 250px) scale(.85) rotate(260deg); opacity: 0; }
+}
+
+/* Action Navigation Dock */
+.action-nav {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--bg-surface-border);
+  padding: 12px;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  z-index: 100;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
+.action-nav::-webkit-scrollbar { display: none; }
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: 600 14px var(--font-main);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 16px;
+  transition: all 0.2s;
+  min-width: 70px;
+}
+
+.action-btn svg {
+  width: 28px;
+  height: 28px;
+  transition: transform 0.2s, stroke 0.2s, filter 0.2s;
+}
+
+.action-btn:hover, .action-btn:focus-visible {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.action-btn:hover svg, .action-btn:focus-visible svg {
+  transform: translateY(-3px);
+  stroke: var(--primary);
+  filter: drop-shadow(0 0 8px var(--primary-glow));
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+/* Modal Windows */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.haunt-modal {
+  background: var(--bg-deep);
+  border: 1px solid var(--bg-surface-border);
+  border-radius: 24px;
+  width: min(900px, 100%);
+  max-height: min(85vh, 900px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.9), 0 0 40px rgba(157,78,221,0.2);
+  transform: translateY(30px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.haunt-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 150px;
+  background: linear-gradient(180deg, rgba(157,78,221,0.1), transparent);
+  pointer-events: none;
+}
+
+.modal-overlay.show .haunt-modal {
+  transform: translateY(0) scale(1);
+}
+
+.modal-header {
+  padding: 24px 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--text-main);
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(255, 122, 24, 0.3);
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close svg {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-close:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.modal-close:hover svg {
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 32px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+  position: relative;
+  z-index: 10;
+}
+
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Injected Modal Content */
+.candy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.candy-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.candy-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 122, 24, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 0 20px var(--primary-glow);
+}
+
+.candy-card.locked img { filter: brightness(0) opacity(0.2); }
+
+.candy-card img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,0.6));
+  transition: transform 0.3s;
+}
+
+.candy-card:hover img { transform: scale(1.1) rotate(5deg); }
+
+.candy-card .qty {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.4);
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
+.upgrade-list { display: flex; flex-direction: column; gap: 16px; }
+
+.upgrade-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 20px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.2s;
+}
+
+.upgrade-row:hover { background: rgba(255, 255, 255, 0.05); }
+
+.upgrade-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.level-badge {
+  background: rgba(157, 78, 221, 0.2);
+  border: 1px solid rgba(157, 78, 221, 0.5);
+  color: #d8b4fe;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  box-shadow: 0 0 10px rgba(157, 78, 221, 0.2);
+}
+
+.buy-btn {
+  background: linear-gradient(135deg, var(--primary), #D95C00);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-family: var(--font-main);
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 15px var(--primary-glow);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  white-space: nowrap;
+}
+
+.buy-btn:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px var(--primary-glow);
+  filter: brightness(1.1);
+}
+
+.buy-btn:active:not(:disabled) { transform: scale(0.95); }
+
+.buy-btn:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+th {
+  text-align: left;
+  padding: 12px 16px;
+  color: var(--text-muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+td {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+td:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px 0 0 12px;
+}
+
+td:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0 12px 12px 0;
+}
+
+tr:hover td { background: rgba(255, 255, 255, 0.06); }
+
+/* Loaders & Overlays */
+#gameLoadingScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg-deep);
+  transition: opacity 0.4s, visibility 0.4s;
+}
+
+#gameLoadingScreen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-card {
+  width: min(480px, 100%);
+  padding: 40px;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-surface-border);
+  border-radius: 32px;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.8), 0 0 50px rgba(157,78,221,0.2);
+}
+
+.loading-mark {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 24px;
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: var(--primary);
+  border-right-color: var(--secondary);
+  border-radius: 50%;
+  animation: hauntSpin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+@keyframes hauntSpin { to { transform: rotate(360deg); } }
+
+.loading-card h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  margin-bottom: 12px;
+  color: var(--text-main);
+  letter-spacing: 2px;
+}
+
+.loading-card p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.loading-retry {
+  margin-top: 24px;
+  background: var(--secondary);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  color: white;
+  font: 800 1.1rem var(--font-main);
+  cursor: pointer;
+}
+
+.loading-retry[hidden], #collectRetry[hidden] {
+  display: none !important;
+}
+
+#collectRetry {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  background: #E63946;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 12px 20px;
+  color: #fff;
+  font: 800 1rem var(--font-main);
+  box-shadow: 0 10px 30px rgba(230,57,70,0.4);
+  cursor: pointer;
+}
+
+/* Offline Banner */
+#offlineBanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #E63946;
+  color: #fff;
+  text-align: center;
+  padding: 12px;
+  font-weight: 800;
+  z-index: 10000;
+  box-shadow: 0 4px 15px rgba(230, 57, 70, 0.5);
+}
+
+/* Tutorial / Welcome Guide */
+#welcomeGuideOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+#welcomeGuideOverlay.show { opacity: 1; visibility: visible; }
+
+.welcome-guide-card {
+  width: min(600px, 100%);
+  padding: clamp(32px, 6vw, 48px);
+  border: 1px solid var(--bg-surface-border);
+  border-radius: 32px;
+  background: linear-gradient(145deg, rgba(30, 15, 40, 0.95), rgba(15, 5, 20, 0.95));
+  box-shadow: 0 30px 100px rgba(0,0,0,0.9), 0 0 60px rgba(157,78,221,0.2);
+  text-align: center;
+}
+
+.welcome-guide-kicker {
+  font-size: 0.9rem;
+  letter-spacing: 3px;
+  font-weight: 900;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.welcome-guide-card h2 {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vw, 48px);
+  line-height: 1.1;
+  margin: 16px 0 20px;
+  color: #fff;
+  text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  letter-spacing: 1px;
+}
+
+.welcome-guide-card p {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  min-height: 100px;
+}
+
+.welcome-guide-progress {
+  margin-top: 24px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.welcome-guide-dots {
+  display: flex;
+  gap: 8px;
+  margin: 24px 0;
+  justify-content: center;
+}
+
+.welcome-guide-dots span {
+  height: 6px;
+  width: 32px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.welcome-guide-dots span.active {
+  background: var(--primary);
+  width: 48px;
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.welcome-guide-controls { display: flex; justify-content: center; gap: 16px; }
+
+.guide-btn {
+  background: var(--primary);
+  border: none;
+  border-radius: 16px;
+  padding: 14px 32px;
+  color: white;
+  font: 800 1.1rem var(--font-main);
+  cursor: pointer;
+  box-shadow: 0 8px 20px var(--primary-glow);
+  transition: all 0.2s;
+}
+
+.guide-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.guide-btn:active:not(:disabled) { transform: scale(0.95); }
+.guide-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.guide-btn.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+.guide-btn.secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+
+.guide-skip {
+  display: block;
+  margin: 24px auto 0;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  font: 600 1rem var(--font-main);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.guide-skip:hover { color: var(--text-main); }
+
+/* Toasts */
+#toast-container {
+  position: fixed;
+  top: 100px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(350px, calc(100vw - 48px));
+  pointer-events: none;
+}
+
+.toast {
+  background: rgba(20, 10, 30, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--bg-surface-border);
+  border-left: 4px solid var(--primary);
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  body { padding: 90px 16px 120px; }
+  
+  .haunt-header {
+    top: 12px;
+    width: calc(100% - 24px);
+    padding: 12px 16px;
+    border-radius: 16px;
+  }
+  
+  .header-brand h1 { font-size: 24px; }
+  .stat-pill { padding: 6px 12px; font-size: 0.9rem; }
+  .hero-cash .cash { font-size: 40px; }
+  
+  .action-nav {
+    bottom: 12px;
+    width: calc(100% - 24px);
+    padding: 10px 12px;
+    gap: 8px;
+    border-radius: 20px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+  
+  .action-btn { scroll-snap-align: start; flex: 0 0 auto; min-width: 65px; font-size: 12px; padding: 8px; }
+  .action-btn svg { width: 24px; height: 24px; }
+  
+  .modal-overlay { padding: 12px; }
+  .haunt-modal { border-radius: 20px; max-height: calc(100dvh - 24px); }
+  .modal-header { padding: 20px; }
+  .modal-header h2 { font-size: 28px; }
+  .modal-body { padding: 20px; }
+  
+  .upgrade-row { flex-direction: column; align-items: stretch; text-align: center; }
+  .upgrade-title-row { justify-content: center; }
+  .buy-btn { width: 100%; }
+}
+
+
+/* Compact play area: keep cash, pumpkin, and basket progress in one viewport. */
+body {
+  padding: 82px 16px 96px;
+}
+
+.game-container {
+  min-height: calc(100svh - 178px);
+  min-height: calc(100vh - 178px);
+  gap: clamp(8px, 1.5vh, 14px);
+  padding: 6px 0;
+}
+
+.hero-cash {
+  margin-bottom: 0;
+  padding: 10px 28px;
+  border-radius: 20px;
+}
+
+.hero-cash-label {
+  font-size: 0.76rem;
+  letter-spacing: 3px;
+  margin-bottom: 2px;
+}
+
+.hero-cash .cash {
+  font-size: clamp(36px, 5vw, 58px);
+  letter-spacing: 1px;
+}
+
+.pumpkin-svg {
+  width: clamp(145px, 27vh, 230px);
+  max-height: 29svh;
+}
+
+.basket-status {
+  margin-top: 0;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+}
+
+.basket-status span {
+  font-size: 1rem;
+}
+
+.basket-bar-bg {
+  width: min(280px, 76vw);
+  height: 12px;
+  margin: 6px auto 0;
+}
+
+@media (max-height: 700px) {
+  body { padding-top: 72px; padding-bottom: 88px; }
+  .game-container { min-height: calc(100svh - 160px); min-height: calc(100vh - 160px); gap: 6px; }
+  .hero-cash { padding: 6px 20px; }
+  .hero-cash-label { font-size: 0.65rem; }
+  .hero-cash .cash { font-size: clamp(32px, 4.5vw, 46px); }
+  .pumpkin-svg { width: clamp(125px, 22vh, 170px); }
+  .basket-status { font-size: 0.75rem; }
+  .basket-bar-bg { height: 9px; margin-top: 5px; }
+}
+
+@media (max-width: 420px) {
+  .haunt-header { padding: 10px 12px; }
+  .header-brand h1 { font-size: 21px; letter-spacing: 1px; }
+  .stat-pill { gap: 5px; padding: 5px 8px; font-size: 0.76rem; }
+  .stat-pill .timer { font-size: 0.95em; }
+  .hero-cash { padding: 8px 22px; }
+  .hero-cash .cash { font-size: 38px; }
+  .pumpkin-svg { width: clamp(140px, 24vh, 185px); }
+  .action-nav { bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="gameLoadingScreen" role="status" aria-live="polite">
+  <div class="loading-card">
+    <div class="loading-mark" aria-hidden="true"></div>
+    <h2>Halloween Haunt</h2>
+    <p id="loadingMessage">Loading your game, shops, collection, and candy artwork…</p>
+    <button id="loadingRetry" class="loading-retry" hidden onclick="window.retryHalloweenHauntLoad()">Retry loading</button>
+  </div>
+</div>
+
+<button id="collectRetry" hidden onclick="window.retryHalloweenHauntCollect()">Retry saving candy clicks</button>
+
+<div id="offlineBanner" style="display:none;">You are currently offline.</div>
+
+<!-- Ambient BG -->
+<div class="ambient-particles"></div>
+
+<header class="haunt-header">
+  <div class="header-brand">
+    <h1 onclick="window.location.href='/'">Halloween Haunt</h1>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">Ends in: <span class="timer" id="ui-timer">00:00:00</span></div>
+  </div>
+</header>
+
+<main class="game-container">
+  <div class="hero-cash" aria-live="polite">
+    <span class="hero-cash-label">Your Cash</span>
+    <span class="cash" id="ui-cash">$0</span>
+  </div>
+
+  <div class="basket-wrapper" id="basketHitbox" role="button" tabindex="0" aria-label="Collect candy by clicking the pumpkin" onclick="handleBasketClick(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleBasketClick(event)}">
+    <svg viewBox="0 0 100 100" class="pumpkin-svg">
+      <defs>
+        <radialgradient id="pumpkinGrad" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#FF9D00" />
+          <stop offset="100%" stop-color="#D95C00" />
+        </radialgradient>
+        <lineargradient id="stemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#4CAF50" />
+          <stop offset="100%" stop-color="#1B5E20" />
+        </lineargradient>
+      </defs>
+      
+      <!-- Stem -->
+      <path d="M45,22 Q48,5 60,10 Q68,14 62,24 L52,22 Z" fill="url(#stemGrad)" stroke="#0d3310" stroke-width="1.5" stroke-linejoin="round"/>
+      
+      <!-- Back segments -->
+      <ellipse cx="30" cy="55" rx="15" ry="32" fill="#CC4400" />
+      <ellipse cx="70" cy="55" rx="15" ry="32" fill="#CC4400" />
+      
+      <!-- Mid segments -->
+      <ellipse cx="40" cy="55" rx="20" ry="34" fill="#E65C00" />
+      <ellipse cx="60" cy="55" rx="20" ry="34" fill="#E65C00" />
+      
+      <!-- Center segment -->
+      <ellipse cx="50" cy="55" rx="22" ry="36" fill="url(#pumpkinGrad)" stroke="#993300" stroke-width="1" />
+      
+      <!-- Facial Cutouts -->
+      <polygon points="34,42 44,56 26,56" fill="#1A0D00"/>
+      <polygon points="66,42 74,56 56,56" fill="#1A0D00"/>
+      <polygon points="50,58 54,64 46,64" fill="#1A0D00"/>
+      <path d="M28,68 Q40,82 50,82 Q60,82 72,68 Q65,76 60,73 Q55,80 50,77 Q45,80 40,73 Q35,76 28,68 Z" fill="#1A0D00"/>
+      
+      <!-- Highlight Features to make them pop cleanly without expensive blur -->
+      <polygon points="34,42 44,56 26,56" fill="none" stroke="#FFD700" stroke-width="1" />
+      <polygon points="66,42 74,56 56,56" fill="none" stroke="#FFD700" stroke-width="1" />
+      <polygon points="50,58 54,64 46,64" fill="none" stroke="#FFD700" stroke-width="0.5" />
+      <path d="M28,68 Q40,82 50,82 Q60,82 72,68 Q65,76 60,73 Q55,80 50,77 Q45,80 40,73 Q35,76 28,68 Z" fill="none" stroke="#FFD700" stroke-width="1" />
+    </svg>
+  </div>
+
+  <div class="basket-status">
+    <div>Basket: <span id="ui-capacity-text">0 / 50</span></div>
+    <div class="basket-bar-bg"><div class="basket-bar-fill" id="ui-capacity-bar"></div></div>
+  </div>
+</main>
+
+<div class="action-nav">
+  <button class="action-btn" onclick="openModal('shops')">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <path d="M16 10a4 4 0 0 1-8 0"></path>
+    </svg>
+    <span>Shops</span>
+  </button>
+  
+  <button class="action-btn" onclick="openModal('upgrades')">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+    <span>Upgrades</span>
+  </button>
+  
+  <button class="action-btn" onclick="openModal('crew')">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+    <span>Crew</span>
+  </button>
+  
+  <button class="action-btn" onclick="openModal('index')">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="3" y1="9" x2="21" y2="9"></line>
+      <line x1="9" y1="21" x2="9" y2="9"></line>
+    </svg>
+    <span>Index</span>
+  </button>
+  
+  <button class="action-btn" onclick="openModal('stats')">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"></line>
+      <line x1="12" y1="20" x2="12" y2="4"></line>
+      <line x1="6" y1="20" x2="6" y2="14"></line>
+    </svg>
+    <span>Stats</span>
+  </button>
+  
+  <button class="action-btn" onclick="openModal('leaderboard')">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 21h8"></path>
+      <path d="M12 17v4"></path>
+      <path d="M7 4h10v6a5 5 0 0 1-10 0V4z"></path>
+      <path d="M3 4h4v4a2 2 0 0 0-2-2H3z"></path>
+      <path d="M21 4h-4v4a2 2 0 0 1 2-2h2z"></path>
+    </svg>
+    <span>Leaders</span>
+  </button>
+</div>
+
+<!-- Modal Templates (Content injected by JS) -->
+<div id="hauntModalOverlay" class="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="haunt-modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Title</h2>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close Modal">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Content -->
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<div id="welcomeGuideOverlay" aria-live="polite"></div>
+
+<!-- Event Logic script -->
+<script src="/js/halloween-haunt.js"></script>
+
+</body>
+</html>

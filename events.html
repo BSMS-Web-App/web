@@ -15,7 +15,7 @@ SPDX-License-Identifier: MIT
 <meta name="theme-color" content="#f97316">
 <meta name="color-scheme" content="dark">
 <meta name="application-name" content="BSMS Web">
-<title>Contests - BSMS Web</title>
+<title>Events - BSMS Web</title>
 
 <!-- Ban Check Enforcer -->
 <script src="/js/ban-check.js"></script>
@@ -124,7 +124,7 @@ body::before {
 .btn-cinematic:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(187,0,30, 0.5); }
 .btn-cinematic:active { transform: scale(0.97); }
 
-/* --- CONTEST PAGE SPECIFIC STYLES --- */
+/* --- EVENT PAGE SPECIFIC STYLES --- */
 
 /* Page Header */
 .page-header {
@@ -310,7 +310,7 @@ body::before {
   text-align: center; color: #fb923c; font-size: 16px; margin-top: auto; padding-top: 16px;
 }
 
-/* Secondary Sections (More Contests) */
+/* Secondary Sections (More Events) */
 .secondary-section {
   text-align: center;
   max-width: 800px;
@@ -386,19 +386,19 @@ body::before {
 
   <!-- Page Header -->
   <section class="page-header">
-    <h1>Contests</h1>
+    <h1>Events</h1>
     <h2>Compete, collect, and climb the leaderboard.</h2>
-    <p>Get ready for special BSMS Web events featuring unique challenges, exciting rewards, and friendly competition. New contests are on the way, so stay tuned!</p>
+    <p>Get ready for special BSMS Web events featuring unique challenges, exciting rewards, and friendly competition. New events are on the way, so stay tuned!</p>
     <a href="/" class="btn-cinematic">Return to Home</a>
   </section>
 
-  <!-- Featured Contest: Halloween Haunt -->
+  <!-- Featured Event: Halloween Haunt -->
   <section class="feature-section">
     <div class="hh-card">
       <div class="hh-content-left">
-        <div class="hh-badge">Upcoming</div>
+        <div class="hh-badge" id="eventStatusBadge">Upcoming</div>
         <div class="hh-title-wrap">
-          <img src="/img/halloween-haunt-contest/pumpkin.svg" alt="Pumpkin">
+          <img src="/img/halloween-haunt-event/pumpkin.svg" alt="Pumpkin">
           <h2>Halloween Haunt</h2>
         </div>
         
@@ -411,13 +411,13 @@ body::before {
           Get ready for a Halloween adventure! Explore spooky neighborhoods, visit houses, collect candy, discover rare treats, and build your way toward the top of the leaderboard.
         </p>
         
-        <button class="btn-halloween" onclick="openHHModal()">Learn More</button>
+        <div class="event-actions"><a id="eventPlayButton" class="btn-halloween" href="/event/halloween-haunt" style="display:none">Play Halloween Haunt</a><button id="eventLearnMore" class="btn-halloween" onclick="openHHModal()">Learn More</button></div>
 
         <!-- Countdown Card Integrated Here -->
         <div class="hh-countdown">
-          <h3>The countdown to Halloween Haunt is on.</h3>
+          <h3 id="eventCountdownHeading">The countdown to Halloween Haunt is on.</h3>
           <p>Stay tuned for more announcements and get ready for an unforgettable candy-collecting adventure!</p>
-          <h4>Begins In</h4>
+          <h4 id="eventCountdownLabel">Begins In</h4>
           <div class="hh-countdown-timer" id="hh-cd-timer">--d --h --m --s</div>
         </div>
       </div>
@@ -426,44 +426,18 @@ body::before {
       <div class="hh-leaderboard">
         <div class="hh-lb-header">
           <h3>Halloween Haunt Leaderboard</h3>
-          <p>Think you can make the top spot? The leaderboard will come alive when the contest begins.</p>
+          <p id="eventLeaderboardStatus">Live standings ranked by current cash. Updates automatically.</p>
         </div>
         
-        <div class="lb-row">
-          <span class="lb-rank">1st</span>
-          <div class="lb-box"></div>
-          <span class="lb-score">— candy</span>
-        </div>
-        <div class="lb-row">
-          <span class="lb-rank">2nd</span>
-          <div class="lb-box"></div>
-          <span class="lb-score">— candy</span>
-        </div>
-        <div class="lb-row">
-          <span class="lb-rank">3rd</span>
-          <div class="lb-box"></div>
-          <span class="lb-score">— candy</span>
-        </div>
-        <div class="lb-row">
-          <span class="lb-rank">4th</span>
-          <div class="lb-box"></div>
-          <span class="lb-score">— candy</span>
-        </div>
-        <div class="lb-row">
-          <span class="lb-rank">5th</span>
-          <div class="lb-box"></div>
-          <span class="lb-score">— candy</span>
-        </div>
-        
-        <p class="lb-note">The leaderboard opens when the contest begins.</p>
+        <div id="eventLeaderboardRows"><div class="lb-row"><span class="lb-rank">—</span><div class="lb-box"></div><span class="lb-score">Loading…</span></div></div><p class="lb-note" id="eventLeaderboardNote">Loading live leaderboard…</p>
       </div>
     </div>
   </section>
 
-  <!-- More Contests Section -->
+  <!-- More Events Section -->
   <section class="secondary-section">
-    <h3>More Contests Coming Soon</h3>
-    <p>Halloween Haunt is just the beginning. Keep an eye on this page for future BSMS Web contests, special events, and new ways to compete.</p>
+    <h3>More Events Coming Soon</h3>
+    <p>Halloween Haunt is just the beginning. Keep an eye on this page for future BSMS Web events, special events, and new ways to compete.</p>
   </section>
 
   <div class="footer">
@@ -476,9 +450,9 @@ body::before {
   <div class="hh-modal-content">
     <button class="hh-close-btn" onclick="closeHHModal()" aria-label="Close dialog">&times;</button>
     
-    <h2>Halloween Haunt Is Coming!</h2>
+    <h2 id="eventModalTitle">Halloween Haunt Is Coming!</h2>
     
-    <p>Get ready for the ultimate Halloween candy-collecting adventure on BSMS Web! Halloween Haunt is an upcoming limited-time contest where every house could hold a surprise, every neighborhood has something new to discover, and every piece of candy brings you one step closer to the top.</p>
+    <p>Get ready for the ultimate Halloween candy-collecting adventure on BSMS Web! Halloween Haunt is an upcoming limited-time event where every house could hold a surprise, every neighborhood has something new to discover, and every piece of candy brings you one step closer to the top.</p>
     
     <h3>Explore Spooky Neighborhoods</h3>
     <p>Venture through Halloween-themed neighborhoods, explore streets lined with decorated houses, and see what surprises are waiting behind each door. The further you progress, the more exciting your candy-hunting adventures can become.</p>
@@ -487,13 +461,13 @@ body::before {
     <p>Visit houses, ring their doorbells, and get ready for a candy-collecting experience. Discover different types of candy, chase rare finds, and work toward building an impressive collection. You never know what you might find!</p>
 
     <h3>Build Your Candy Empire</h3>
-    <p>Collect candy, unlock new possibilities, upgrade your progress, and build your very own Trick-or-Treat Crew. Your crew will help you collect even more candy while you explore the contest's features.</p>
+    <p>Collect candy, unlock new possibilities, upgrade your progress, and build your very own Trick-or-Treat Crew. Your crew will help you collect even more candy while you explore the event's features.</p>
 
     <h3>Discover Rare Treats</h3>
     <p>Not all candy is created equal! Keep an eye out for uncommon and extraordinary discoveries. Every candy type has a place in your collection, and rare finds will make your Halloween adventure even more memorable.</p>
 
     <h3>Climb the Leaderboard</h3>
-    <p>Think you can collect enough candy to reach the top? Watch the leaderboard, keep improving your strategy, and see how you stack up against other players once the contest begins.</p>
+    <p>Think you can collect enough candy to reach the top? Watch the leaderboard, keep improving your strategy, and see how you stack up against other players once the event begins.</p>
 
     <h3>When Does It Begin?</h3>
     <p>Halloween Haunt begins Monday, October 26, 2026, and ends Friday, October 30, 2026, at 3:10 PM EDT. This is a limited-time event, so make the most of it while it lasts!</p>
@@ -504,33 +478,14 @@ body::before {
 </div>
 
 <script>
-// --- Countdown Logic ---
-function updateCountdown() {
-    // Target date: October 26, 2026 at 8:00 AM EDT (UTC-4)
-    const targetDate = new Date('2026-10-26T08:00:00-04:00').getTime();
-    const now = new Date().getTime();
-    const diff = targetDate - now;
-    
-    const timerEl = document.getElementById('hh-cd-timer');
-    
-    if (diff <= 0) {
-        // If the date has passed or the contest is active
-        timerEl.innerText = "Contest Started!";
-        return;
-    }
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    timerEl.innerText = `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
-}
-// Initialize and run every second
-setInterval(updateCountdown, 1000);
-updateCountdown();
-
-// --- Modal Logic ---
+// Event status and live public leaderboard.
+const EVENT_START=new Date('2026-10-26T00:00:00-04:00').getTime();
+const EVENT_END=new Date('2026-10-30T15:10:00-04:00').getTime();
+function eventTime(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return d>0?d+'d '+String(h).padStart(2,'0')+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s':String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function updateEventStatus(){const now=Date.now(),badge=document.getElementById('eventStatusBadge'),timer=document.getElementById('hh-cd-timer'),label=document.getElementById('eventCountdownLabel'),heading=document.getElementById('eventCountdownHeading'),play=document.getElementById('eventPlayButton'),learn=document.getElementById('eventLearnMore'),title=document.getElementById('eventModalTitle'),dates=document.querySelector('.hh-dates');const status=now<EVENT_START?'upcoming':now<EVENT_END?'active':'ended',left=status==='upcoming'?EVENT_START-now:status==='active'?EVENT_END-now:0;if(badge)badge.textContent=status==='active'?'LIVE NOW':status==='ended'?'ENDED':'UPCOMING';if(timer)timer.textContent=status==='ended'?'Event Ended':eventTime(left);if(label)label.textContent=status==='upcoming'?'Begins In':status==='active'?'Ends In':'Event Ended';if(heading)heading.textContent=status==='active'?'Halloween Haunt is live!':status==='ended'?'Halloween Haunt has ended.':'The countdown to Halloween Haunt is on.';if(play)play.style.display=status==='active'?'inline-block':'none';if(learn)learn.style.display=status==='active'?'none':'inline-block';if(title)title.textContent=status==='active'?'Halloween Haunt Is Live!':status==='ended'?'Halloween Haunt Has Ended':'Halloween Haunt Is Coming!';if(dates&&status==='active')dates.innerHTML='<strong>Started:</strong> Monday, October 26, 2026<br><strong>Ends:</strong> Friday, October 30, 2026 at 3:10 PM EDT';if(dates&&status==='ended')dates.innerHTML='<strong>Ended:</strong> Friday, October 30, 2026 at 3:10 PM EDT';}
+function eventEscape(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll(String.fromCharCode(34),'&quot;').replaceAll(String.fromCharCode(39),'&#39;');}
+async function refreshEventLeaderboard(){const rows=document.getElementById('eventLeaderboardRows'),note=document.getElementById('eventLeaderboardNote'),status=document.getElementById('eventLeaderboardStatus');try{const response=await fetch('/api/halloween-haunt?action=leaderboard',{cache:'no-store'}),data=await response.json();if(!response.ok||!Array.isArray(data.rankings))throw new Error(data.error||'Leaderboard unavailable');if(rows)rows.innerHTML=data.rankings.slice(0,5).map((p,i)=>'<div class="lb-row"><span class="lb-rank">'+(i+1)+'</span><div style="flex:1;min-width:0;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+eventEscape(p.displayName)+'</div><span class="lb-score">'+Number(p.cash||0).toLocaleString()+' cash</span></div>').join('')||'<p class="lb-note">No players yet. Be the first to play!</p>';if(note)note.textContent=data.rankings.length?'Live · refreshes every 60 seconds':'The leaderboard is ready for its first player.';if(status)status.textContent='Ranked by current cash. Last updated '+new Date().toLocaleTimeString();}catch(error){if(note)note.textContent='Leaderboard temporarily unavailable. It will retry automatically.';console.warn('[Events] Leaderboard refresh failed',error);}}
+updateEventStatus();setInterval(updateEventStatus,1000);refreshEventLeaderboard();setInterval(refreshEventLeaderboard,60000);// --- Modal Logic ---
 const modal = document.getElementById('hhModal');
 function openHHModal() {
     modal.classList.add('show');

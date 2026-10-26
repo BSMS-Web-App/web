@@ -475,7 +475,7 @@ section {
   95%, 100% { width: 0%; }
 }
 
-/* Announcements & Contests Cards */
+/* Announcements & Events Cards */
 .announcements-section {
   display: block;
   padding: 40px 16px 20px;
@@ -636,8 +636,8 @@ section {
 .ann-card-body em { font-style: italic; color: rgba(255,255,255,0.92); }
 .ann-card-body u { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Contests Card (Updated for Halloween Theme) */
-.contests-card {
+/* Events Card (Updated for Halloween Theme) */
+.events-card {
   background: radial-gradient(ellipse at top left, rgba(249, 115, 22, 0.12) 0%, rgba(14, 14, 18, 0.95) 70%);
   border: 1px solid rgba(249, 115, 22, 0.4);
   border-radius: 20px;
@@ -647,18 +647,18 @@ section {
   overflow: hidden;
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
-.contests-card:hover {
+.events-card:hover {
   transform: translateY(-2px);
   border-color: rgba(249, 115, 22, 0.6);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 35px rgba(249, 115, 22, 0.25);
 }
-.contest-header-row {
+.event-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
-.contest-icon-badge {
+.event-icon-badge {
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -668,11 +668,11 @@ section {
   align-items: center;
   justify-content: center;
 }
-.contest-icon-img {
+.event-icon-img {
   width: 24px;
   height: 24px;
 }
-.contest-status-pill {
+.event-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -686,28 +686,28 @@ section {
   letter-spacing: 1px;
   color: #fb923c;
 }
-.contest-sparkle { color: #fdba74; font-size: 13px; }
-.contest-title {
+.event-sparkle { color: #fdba74; font-size: 13px; }
+.event-title {
   font-family: var(--font-brand);
   font-size: clamp(1.3rem, 2.3vw, 1.7rem);
   color: #fff;
   margin: 0 0 8px;
 }
-.contest-desc {
+.event-desc {
   font-family: var(--font-tech);
   font-size: 13.5px;
   color: rgba(255, 255, 255, 0.78);
   line-height: 1.6;
   margin: 0 0 18px;
 }
-.contest-footer {
+.event-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
 }
-.contest-prizes-preview {
+.event-prizes-preview {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -721,7 +721,7 @@ section {
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #e5e5e5;
 }
-.contest-coming-soon-btn {
+.event-coming-soon-btn {
   font-family: var(--font-brand);
   font-size: 16px;
   padding: 9px 22px;
@@ -735,20 +735,20 @@ section {
   transition: all 0.2s ease;
   box-shadow: 0 4px 15px rgba(249, 115, 22, 0.15);
 }
-.contest-coming-soon-btn:hover {
+.event-coming-soon-btn:hover {
   transform: translateY(-2px) scale(1.02);
   border-color: #fb923c;
   box-shadow: 0 6px 20px rgba(249, 115, 22, 0.35);
 }
-.contest-coming-soon-btn .btn-shine {
+.event-coming-soon-btn .btn-shine {
   position: absolute;
   top: 0; left: -100%;
   width: 50%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transform: skewX(-20deg);
-  animation: contestShine 3.5s infinite;
+  animation: eventshine 3.5s infinite;
 }
-@keyframes contestShine {
+@keyframes eventshine {
   0% { left: -100%; }
   20%, 100% { left: 200%; }
 }
@@ -884,7 +884,7 @@ html { scroll-padding-top: 100px; }
     </div>
   </section>
 
-  <!-- Announcements & Contests Area -->
+  <!-- Announcements & Events Area -->
   <section class="announcements-section reveal" id="announcements">
     <div class="announcements-container stagger">
       <!-- Recent Announcement Card -->
@@ -914,33 +914,33 @@ html { scroll-padding-top: 100px; }
         </div>
       </div>
 
-      <!-- Upcoming Contests Card -->
-      <div class="contests-card">
-        <div class="contest-header-row">
-          <div class="contest-icon-badge">
-            <img src="/img/halloween-haunt-contest/pumpkin.svg" alt="Halloween Haunt" class="contest-icon-img">
+      <!-- Upcoming Events Card -->
+      <div class="events-card">
+        <div class="event-header-row">
+          <div class="event-icon-badge">
+            <img src="/img/halloween-haunt-event/pumpkin.svg" alt="Halloween Haunt" class="event-icon-img">
           </div>
-          <div class="contest-status-pill">
-            <span class="contest-sparkle">✦</span>
-            <span>UPCOMING FEATURE</span>
+          <div class="event-status-pill" id="homeEventStatus">
+            <span class="event-sparkle">✦</span>
+            <span>FEATURED EVENT</span>
           </div>
         </div>
 
-        <div class="contest-body">
-          <h3 class="contest-title">Upcoming Contest: Halloween Haunt</h3>
-          <p class="contest-desc">
-            A brand-new competitive arena is launching soon! Put your high scores, trivia mastery, and creative talents to the test against students across the school. Compete in seasonal tournaments to win exclusive profile roles, real prizes, and Bulldog Bucks. Stay tuned—the games are about to begin!
+        <div class="event-body">
+          <h3 class="event-title" id="homeEventTitle">Upcoming Event: Halloween Haunt</h3>
+          <p class="event-desc">
+            Explore Halloween Haunt, collect candy, upgrade your Trick-or-Treat Crew, and compete for the highest current-cash balance. Open Events for live status, the leaderboard, and the Play button when the event begins.
           </p>
         </div>
 
-        <div class="contest-footer">
-          <div class="contest-prizes-preview">
+        <div class="event-footer">
+          <div class="event-prizes-preview">
             <span class="prize-tag">Exclusive Roles</span>
             <span class="prize-tag">Real Prizes</span>
             <span class="prize-tag">Bulldog Bucks</span>
           </div>
-          <button class="contest-coming-soon-btn" onclick="window.location.href='/contests'">
-            <span>View Upcoming Contests</span>
+          <button class="event-coming-soon-btn" onclick="window.location.href='/events'">
+            <span>View Events</span>
             <span class="btn-shine"></span>
           </button>
         </div>
@@ -1314,7 +1314,7 @@ function triggerDemoCelebration() {
     demoLabel.style.color = '#FFD700'; 
 }
 
-// --- RECENT ANNOUNCEMENT & CONTESTS INTEGRATION ---
+// --- RECENT ANNOUNCEMENT & EVENTS INTEGRATION ---
 function escapeHTML(str) {
     if (!str) return '';
     return String(str)
@@ -1416,14 +1416,14 @@ async function fetchRecentAnnouncement() {
     }
 }
 
-function showContestNotice() {
-    const existing = document.getElementById('contestFloatingNotice');
+function showEventNotice() {
+    const existing = document.getElementById('eventFloatingNotice');
     if (existing) existing.remove();
 
     const toast = document.createElement('div');
-    toast.id = 'contestFloatingNotice';
+    toast.id = 'eventFloatingNotice';
     toast.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(18,18,22,0.95); border:2px solid #eab308; color:#fff; padding:14px 24px; border-radius:16px; font-family:var(--font-brand); font-size:16px; z-index:9999; box-shadow:0 10px 40px rgba(0,0,0,0.8), 0 0 25px rgba(234,179,8,0.3); display:flex; align-items:center; gap:12px; pointer-events:none; transition:all 0.3s ease;';
-    toast.innerHTML = '🏆 <span><strong>Contests Starting Soon!</strong> Prepare for tournaments, roles, and Bulldog Bucks.</span>';
+    toast.innerHTML = '🏆 <span><strong>Events Starting Soon!</strong> Prepare for tournaments, roles, and Bulldog Bucks.</span>';
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -1437,5 +1437,10 @@ function showContestNotice() {
 window.addEventListener('DOMContentLoaded', fetchRecentAnnouncement);
 
 </script>
+
+<script>
+(function(){const start=new Date('2026-10-26T00:00:00-04:00').getTime(),end=new Date('2026-10-30T15:10:00-04:00').getTime();function tick(){const now=Date.now(),pill=document.getElementById('homeEventStatus'),title=document.getElementById('homeEventTitle'),btn=document.querySelector('.events-card .event-coming-soon-btn');if(pill){const span=pill.querySelector('span:last-child');if(span)span.textContent=now<start?'UPCOMING EVENT':now<end?'LIVE NOW':'EVENT ENDED';}if(title)title.textContent=now<start?'Upcoming Event: Halloween Haunt':now<end?'Live Event: Halloween Haunt':'Past Event: Halloween Haunt';if(btn){const span=btn.querySelector('span:first-child');if(span)span.textContent=now<start?'View Events':now<end?'Play Halloween Haunt':'View Event Results';}}tick();setInterval(tick,1000);})();
+</script>
 </body>
 </html>
+
