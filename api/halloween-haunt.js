@@ -12,7 +12,8 @@ const ROOT = '/halloween_haunt';
 const START = Date.parse('2026-10-26T04:00:00.000Z'); // Oct 26, 2026, 12:00 AM EDT
 const END = Date.parse('2026-10-30T19:10:00.000Z');   // Oct 30, 2026, 3:10 PM EDT
 const ROTATION_MS = 5 * 60 * 1000;
-const MAX_CREW = 5;
+const MAX_CREW = 20;
+const CREW_NAMES=['Jack','Misty','Boo','Candy','Pumpkin','Raven','Cocoa','Hex','Maple','Ember','Cobweb','Midnight','Toffee','Salem','Patches','Wick','Hocus','Mallow','Fable','Trick'];
 const MAX_CLICK_RATE = 8;
 const CANDY = [
   ['candy-corn','Candy Corn','Common','candy-corn.png',1,30],
@@ -56,7 +57,7 @@ const UPGRADE_CONFIG = {
   capacity:{label:'Basket Capacity',baseCost:45,max:30},
   power:{label:'Click Power',baseCost:60,max:20},
   luck:{label:'Candy Luck',baseCost:90,max:15},
-  autoSell:{label:'Crew Auto-Sell',baseCost:250,max:1}
+  autoSell:{label:'Auto Sell',baseCost:5000,max:1}
 };
 const rarityWeight = {Common:62,Uncommon:24,Rare:10,Epic:3.3,Legendary:0.7};
 
@@ -68,7 +69,7 @@ function newPlayer(uid, account, now) {
     uid, displayName: String(account.displayName || account.username || 'Player').slice(0,40),
     cash:100, inventory, discovered:[], lifetimeCollected,
     basketCapacity:50, currentBasketCount:0,
-    upgrades:{capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:250}},
+    upgrades:{capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:5000}},
     crew:[], crewUnlocked:false, crewHireCost:180, lastCrewSync:now,
     stats:{highScore:100,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0},
     createdAt:now, updatedAt:now
@@ -364,40 +365,14 @@ export default async function handler(req,res) {
           if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};actionResponse=response; return root;}
           if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};actionResponse=response; return root;}
           const cost=player.crewHireCost;player.cash-=cost;player.stats.cashSpent+=cost;player.crewUnlocked=true;
-          player.crew.push({id:'helper-'+(player.crew.length+1),speedLevel:0,capacityLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:12000,speedUpgradeCost:75,capUpgradeCost:65,lastActionAt:now});
+          player.crew.push({id:'helper-'+(player.crew.length+1),name:CREW_NAMES[player.crew.length]||('Worker '+(player.crew.length+1)),speedLevel:0,capacityLevel:0,powerLevel:0,luckLevel:0,awakeLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:20000,asleep:false,awakeMs:0,fedUntil:0,lastActionAt:now});
           player.crewHireCost=Math.floor(player.crewHireCost*1.85);response={state:publicState(player,root,now),hired:true,cost};
         } else {
           const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};actionResponse=response; return root;}
-          const isSpeed=act==='upgrade_speed',isCap=act==='upgrade_cap';if(!isSpeed&&!isCap){response={error:'Unknown crew action.',status:400};actionResponse=response; return root;}
-          const cost=isSpeed?Math.floor(75*Math.pow(1.7,crew.speedLevel||0)):Math.floor(65*Math.pow(1.65,crew.capacityLevel||0));
-          if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response; return root;}
-          player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;
-          if(isSpeed){crew.speedLevel=(crew.speedLevel||0)+1;crew.intervalMs=Math.max(2500,Math.floor(12000*Math.pow(.82,crew.speedLevel)));crew.speedUpgradeCost=crew.speedLevel>=8?-1:Math.floor(75*Math.pow(1.7,crew.speedLevel));}
-          else {crew.capacityLevel=(crew.capacityLevel||0)+1;crew.capacity=Math.min(100,10+crew.capacityLevel*10);crew.capUpgradeCost=crew.capacityLevel>=9?-1:Math.floor(65*Math.pow(1.65,crew.capacityLevel));}
-          response={state:publicState(player,root,now),cost};
+          if(act==='wake'){crew.asleep=false;crew.awakeMs=0;crew.lastActionAt=now;response={state:publicState(player,root,now),woke:true};}else if(act==='feed'){const need=Math.max(1,Number(player.basketCapacity||50)*10),held=Object.values(player.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);if(Number(crew.fedUntil||0)>now){response={error:'This crew member is already fed.',status:409};actionResponse=response;return root;}if(held<need){response={error:'Not enough candy to feed this crew member.',status:409};actionResponse=response;return root;}let rem=need;for(const candy of CANDY){const take=Math.min(rem,Number(player.inventory[candy.id]||0));player.inventory[candy.id]-=take;rem-=take;if(!rem)break;}player.currentBasketCount=Math.max(0,held-need);crew.fedUntil=now+1200000;crew.asleep=false;crew.awakeMs=0;response={state:publicState(player,root,now),fed:true};}else{const cfgs={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]},cfg=cfgs[act];if(!cfg){response={error:'Unknown crew action.',status:400};actionResponse=response;return root;}const [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(crew[key]||0)));if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response;return root;}player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;crew[key]=Number(crew[key]||0)+1;if(key==='capacityLevel')crew.capacity=Math.min(500,10+crew.capacityLevel*10);if(key==='speedLevel')crew.intervalMs=Math.max(2000,20000*Math.pow(.85,crew.speedLevel));response={state:publicState(player,root,now),cost};}
         }
       } else if(action==='crew-sync') {
-        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));
-        player.lastCrewSync=now;
-        if(elapsed>0 && player.crew.length){
-          for(const crew of player.crew){
-            const ticks=Math.min(8,Math.floor(elapsed/Math.max(2500,crew.intervalMs||12000)));
-            for(let n=0;n<ticks;n++){
-              const crewCount=Object.values(crew.inventory||{}).reduce((a,b)=>a+(Number(b)||0),0);
-              if(crewCount>=crew.capacity)break;
-              const c=rollCandy(player.upgrades.luck.level||0);crew.inventory ||= {};crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=crewCount+1;
-              player.stats.crewCollected++;player.stats.totalCollected++;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;
-              if(!player.discovered.includes(c.id))player.discovered.push(c.id);
-              if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected++;if(c.rarity==='Legendary')player.stats.legendaryCollected++;
-              count();
-            }
-            if(crew.inventoryCount>=crew.capacity || (player.upgrades.autoSell.level && crew.inventoryCount>0)){
-              let earned=0,sold=0;
-              for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}
-              if(earned){credit(earned);player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;}
-            }
-          }
-        }
+        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));player.lastCrewSync=now;if(elapsed>0&&player.crew.length){for(const crew of player.crew){crew.asleep=!!crew.asleep;crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);if(crew.asleep)continue;const fed=crew.fedUntil>now;crew.awakeMs+=elapsed;if(!fed&&crew.awakeMs>=300000){crew.asleep=true;continue;}const ticks=Math.min(10,Math.floor(elapsed/Math.max(2000,Number(crew.intervalMs||20000)*(fed?.75:1))));for(let n=0;n<ticks;n++){const held=Object.values(crew.inventory||{}).reduce((x,y)=>x+(Number(y)||0),0);if(held>=Number(crew.capacity||10))break;const c=rollCandy(Number(player.upgrades.luck.level||0)+Number(crew.luckLevel||0)+(fed?2:0));crew.inventory||={};crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=held+1;player.stats.crewCollected++;player.stats.totalCollected++;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;if(!player.discovered.includes(c.id))player.discovered.push(c.id);if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected++;if(c.rarity==='Legendary')player.stats.legendaryCollected++;count();}if(crew.inventoryCount>=crew.capacity){let earned=0,sold=0;for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}if(earned){credit(earned);player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;}}}}
         response={state:publicState(player,root,now),crewCollected:player.stats.crewCollected};
       } else {
         response={error:'Unknown Halloween Haunt action.',status:404};
