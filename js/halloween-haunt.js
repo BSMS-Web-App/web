@@ -425,7 +425,7 @@ async function syncCrew(){
     changed=true;
    }
    if(crew.inventoryCount>=cap&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(1000,20000*Math.pow(.8,Number(crew.speedLevel||0))*(fed?.75:1));
-   if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){const sold=sellCrewOffline(crew);crew.moneyEarned=Number(crew.moneyEarned||0);if(sold)crew.moneyEarned+=0;crew.sellReadyAt=0;changed=true;}
+   if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){const sold=sellCrewOffline(crew);if(sold)changed=true;}
   }
   if(changed){saveOfflineProgress();updateUI();if(currentModal==='crew')renderCrew();if(currentModal==='shops')renderShops(document.getElementById('modalBody'));if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));}
   return;
@@ -434,7 +434,7 @@ async function syncCrew(){
 }
 function sellCrewOffline(crew){
  let earned=0,sold=0;for(const c of CANDY_CATALOG){const q=Math.max(0,Number(crew.inventory?.[c.id])||0);if(q){earned+=q*offlinePrice(c.id,'best');sold+=q;crew.inventory[c.id]=0;}}
- crew.inventoryCount=0;if(sold){gameState.cash=Number(gameState.cash||0)+earned;gameState.stats.totalSold=Number(gameState.stats.totalSold||0)+sold;gameState.stats.crewSold=Number(gameState.stats.crewSold||0)+sold;gameState.stats.lifetimeCash=Number(gameState.stats.lifetimeCash||0)+earned;gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),gameState.cash);}return sold;
+ crew.inventoryCount=0;crew.sellReadyAt=0;if(sold){gameState.cash=Number(gameState.cash||0)+earned;gameState.stats.totalSold=Number(gameState.stats.totalSold||0)+sold;gameState.stats.crewSold=Number(gameState.stats.crewSold||0)+sold;gameState.stats.lifetimeCash=Number(gameState.stats.lifetimeCash||0)+earned;gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),gameState.cash);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;}return sold;
 }
 
 // ------------------------------------------------------------------
@@ -774,6 +774,7 @@ function changeWelcomeGuide(direction){if(helpSection===HELP_SECTIONS.length-1&&
 function finishWelcomeGuide(){try{localStorage.setItem('halloween_haunt_guide_seen_v1','1')}catch{}document.getElementById('welcomeGuideOverlay')?.classList.remove('show')}
 window.changeWelcomeGuide=changeWelcomeGuide;window.finishWelcomeGuide=finishWelcomeGuide;
 // Bootstrap
+document.addEventListener('visibilitychange',()=>{if(!gameState||!Array.isArray(gameState.crew))return;const now=Date.now();for(const worker of gameState.crew){worker.lastActionAt=now;}if(offlineMode)saveOfflineProgress();});
 window.addEventListener('DOMContentLoaded', initGame);
 window.retryHalloweenHauntLoad = initGame;
 window.retryHalloweenHauntCollect = retryCollectQueue;
