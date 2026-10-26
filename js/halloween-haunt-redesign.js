@@ -71,6 +71,17 @@
     container.querySelectorAll('[data-hh-crew]').forEach(b=>b.addEventListener('click',()=>window.executeCrew?.(b.dataset.hhCrew,Number(b.dataset.index))));
   }
   window.renderCrew=renderCrewDashboard;
+  const baseUpgrade=window.executeUpgrade;
+  window.executeUpgrade=async function(type){
+    const before=typeof gameState!=='undefined'&&gameState?Number(gameState.upgrades?.[type]?.level||0):0;
+    if(typeof baseUpgrade!=='function')return;
+    const result=await baseUpgrade.apply(this,arguments);
+    if(typeof gameState!=='undefined'&&gameState&&Number(gameState.upgrades?.[type]?.level||0)>before){
+      const prefs=getPrefs();
+      if(prefs.upgradeBought!==false&&typeof window.showToast==='function')window.showToast((type==='autoSell'?'Auto Sell unlocked':'Upgrade purchased')+' — your upgrade is ready.');
+    }
+    return result;
+  };
   function initSettingsEntry(){
     const nav=document.querySelector('.action-nav');if(!nav)return;
     let button=nav.querySelector('[data-hhsettings]');
