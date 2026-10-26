@@ -56,7 +56,7 @@
     const crew=Array.isArray(state.crew)?state.crew:[];
     const crewCollected=Number(state.stats?.crewCollected||0), crewSold=Number(state.stats?.crewSold||0);
     let html=card('What are Crews?','<p>Crew members collect candy automatically while the game is open. When a basket fills, they sell it to the best-paying seller. After five minutes awake, a worker falls asleep and must be woken manually.</p><p class="hh-muted">Feed a worker using candy equal to 10 × your basket capacity. Feeding wakes them and gives percentage-based boosts for 20 minutes. A worker cannot be fed again while the boost is active.</p>'+helpButton('Crew basics','Crew work pauses when the game is closed. Each worker has their own basket, awake timer, and upgrade levels. Full baskets are sold automatically to the best-paying shop.'),'AUTOMATIC WORK');
-    html+='<div class="hh-summary-grid"><div class="hh-stat-card"><small>Crew members</small><strong>'+crew.length+' / 20</strong></div><div class="hh-stat-card"><small>Candy collected</small><strong>'+crewCollected.toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Candy sold</small><strong>'+crewSold.toLocaleString()+'</strong></div></div>';
+    html+='<div class="hh-summary-grid"><div class="hh-stat-card"><small>Crew members</small><strong>'+crew.length+' / 20</strong></div><div class="hh-stat-card"><small>Candy collected</small><strong>'+crewCollected.toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Candy sold</small><strong>'+crewSold.toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Candy Reserve</small><strong>'+Number(state.feedCandy||0).toLocaleString()+'</strong><small>Used to feed crew</small></div></div>';
     if(!crew.length){
       html+=card('Hire your first member','<p class="hh-muted">Every recruit starts with the same base stats. Each new recruit costs more than the last.</p><button class="buy-btn" type="button" data-hh-hire '+(Number(state.cash)<Number(state.crewHireCost)?'disabled':'')+'>Hire '+CREW_ROSTER[0]+' · '+money(state.crewHireCost)+'</button>','RECRUIT');
     } else {
@@ -151,7 +151,7 @@
     }
     for(let i=0;i<crew.length;i++){
       const worker=crew[i],wasAsleep=lastSleepState.get(worker.id||String(i));
-      if(worker.asleep&&wasAsleep===false&&getPrefs().crewAsleep!==false&&typeof window.showToast==='function')window.showToast('Crew member asleep: '+(worker.name||CREW_ROSTER[i]||('Worker '+(i+1)))+' needs waking.');
+      if(worker.asleep&&(wasAsleep===false||wasAsleep===undefined)&&getPrefs().crewAsleep!==false&&typeof window.showToast==='function')window.showToast('Crew member asleep: '+(worker.name||CREW_ROSTER[i]||('Worker '+(i+1)))+' needs waking.');
       lastSleepState.set(worker.id||String(i),!!worker.asleep);
     }
     const cap=Math.max(1,Number(state.basketCapacity||50));
