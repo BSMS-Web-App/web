@@ -704,20 +704,21 @@ tr:hover td { background: rgba(255, 255, 255, 0.06); }
   cursor: pointer;
 }
 
-/* Offline Banner */
+/* Offline connection card on the event home screen */
 #offlineBanner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background: #E63946;
+  width: min(760px, 100%);
+  margin: 0 auto 24px;
+  padding: 18px 22px;
+  border: 1px solid rgba(255, 122, 24, 0.55);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(76, 35, 8, 0.96), rgba(35, 12, 48, 0.96));
   color: #fff;
-  text-align: center;
-  padding: 12px;
-  font-weight: 800;
-  z-index: 10000;
-  box-shadow: 0 4px 15px rgba(230, 57, 70, 0.5);
+  text-align: left;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 0 24px rgba(255, 122, 24, 0.08);
 }
+#offlineBanner .offline-card-title { display:flex; align-items:center; gap:10px; margin-bottom:6px; color:#FFB36B; font-size:1.1rem; font-weight:900; }
+#offlineBanner p { color:#eadff3; line-height:1.5; }
+#offlineBanner .offline-card-status { margin-top:8px; color:#c9b6d9; font-size:.9rem; }
 
 /* Tutorial / Welcome Guide */
 #welcomeGuideOverlay {
@@ -1011,8 +1012,6 @@ body {
 
 <button id="collectRetry" hidden onclick="window.retryHalloweenHauntCollect()">Retry saving candy clicks</button>
 
-<div id="offlineBanner" style="display:none;">You are currently offline.</div>
-
 <!-- Ambient BG -->
 <div class="ambient-particles"></div>
 
@@ -1026,6 +1025,7 @@ body {
 </header>
 
 <main class="game-container">
+  <section id="offlineBanner" role="status" aria-live="polite" style="display:none;"></section>
   <div class="hero-cash" aria-live="polite">
     <span class="hero-cash-label">Your Cash</span>
     <span class="cash" id="ui-cash">$0</span>
