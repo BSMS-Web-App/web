@@ -62,8 +62,11 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;ba
 .action-nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:5px;max-width:calc(100vw - 24px);background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);padding:9px;border-radius:22px;box-shadow:0 10px 45px rgba(0,0,0,.7);z-index:100;flex-wrap:wrap;justify-content:center}
 .action-btn{background:transparent;border:1px solid transparent;color:var(--fg2);font:inherit;font-size:18px;cursor:pointer;padding:8px 13px;border-radius:13px;transition:background .2s,color .2s,border-color .2s}
 .action-btn:hover,.action-btn:focus-visible,.action-btn.active{background:rgba(187,0,30,.16);border-color:rgba(187,0,30,.35);color:#fff;outline:none}
-.falling-candy{position:absolute;width:40px;height:40px;object-fit:contain;pointer-events:none;z-index:50;animation:candyDrop 1.2s cubic-bezier(.3,0,.7,1) forwards}
-@keyframes candyDrop{0%{transform:translateY(-50px) scale(.5) rotate(0);opacity:0}20%{opacity:1;transform:translateY(-10px) scale(1.2) rotate(45deg)}100%{transform:translateY(150px) scale(.8) rotate(180deg);opacity:0}}
+.hero-cash{display:flex;flex-direction:column;align-items:center;gap:2px;margin:0 auto 12px;text-align:center;position:relative;z-index:3}
+.hero-cash-label{font-size:12px;letter-spacing:3px;font-weight:800;color:#a6efb3}
+.hero-cash .cash{font-size:clamp(34px,7vw,58px);line-height:1.05;font-weight:900;letter-spacing:-1.5px;color:#42f078;text-shadow:0 0 14px rgba(40,255,105,.3),0 3px 20px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
+.falling-candy{position:absolute;width:56px;height:56px;object-fit:contain;pointer-events:none;z-index:50;animation:candyDrop 1.45s cubic-bezier(.2,.65,.35,1) forwards;will-change:transform,opacity}
+@keyframes candyDrop{0%{transform:translate(0,0) scale(.65) rotate(0);opacity:0}12%{opacity:1;transform:translate(0,0) scale(1.15) rotate(25deg)}35%{transform:translate(var(--candy-drift),var(--candy-lift)) scale(1.05) rotate(100deg);opacity:1}100%{transform:translate(calc(var(--candy-drift) * 1.35),180px) scale(.85) rotate(260deg);opacity:0}}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:2000;opacity:0;visibility:hidden;transition:opacity .22s,visibility .22s}
 .modal-overlay.show{opacity:1;visibility:visible}
 .haunt-modal{background:rgba(10,10,11,.96);border:1px solid var(--glass-border);border-radius:24px;width:min(1050px,100%);max-height:min(86vh,900px);display:flex;flex-direction:column;box-shadow:0 25px 90px rgba(0,0,0,.75),0 0 35px rgba(187,0,30,.08);transform:translateY(14px) scale(.99);transition:transform .22s;overflow:hidden}
@@ -81,6 +84,8 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;ba
 .candy-card img{width:62px;height:62px;object-fit:contain;margin-bottom:8px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
 .candy-card .qty{font-size:16px;color:var(--fg2)}
 .upgrade-list{display:flex;flex-direction:column;gap:12px}
+.upgrade-title-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.level-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:8px;border:1px solid rgba(187,0,30,.45);background:rgba(187,0,30,.14);color:#ff7b8c;font-size:12px;font-weight:850;letter-spacing:.7px;line-height:1.5}
 .upgrade-row{display:flex;justify-content:space-between;align-items:center;gap:16px;background:rgba(255,255,255,.025);padding:16px;border-radius:16px;border:1px solid var(--border)}
 .buy-btn{background:linear-gradient(135deg,var(--red),#820014);color:#fff;border:1px solid rgba(255,255,255,.1);padding:9px 18px;border-radius:13px;font:inherit;font-size:18px;cursor:pointer;box-shadow:0 5px 18px rgba(187,0,30,.2);transition:transform .15s,filter .15s;white-space:nowrap}
 .buy-btn:hover{filter:brightness(1.13);transform:translateY(-1px)}
@@ -97,6 +102,21 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;ba
 .loading-retry[hidden]{display:none}
 #collectRetry{position:fixed;bottom:145px;left:50%;transform:translateX(-50%);z-index:150;background:var(--red);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:9px 14px;color:#fff;font:inherit;font-size:16px;box-shadow:0 8px 24px #0008}
 #collectRetry[hidden]{display:none}
+#welcomeGuideOverlay{position:fixed;inset:0;z-index:25000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.84);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);opacity:0;visibility:hidden;transition:opacity .22s,visibility .22s}
+#welcomeGuideOverlay.show{opacity:1;visibility:visible}
+.welcome-guide-card{width:min(570px,100%);padding:clamp(22px,5vw,38px);border:1px solid rgba(255,255,255,.13);border-radius:25px;background:linear-gradient(150deg,rgba(28,24,27,.98),rgba(9,9,11,.98));box-shadow:0 30px 100px rgba(0,0,0,.65),0 0 45px rgba(187,0,30,.13)}
+.welcome-guide-kicker{font-size:12px;letter-spacing:2px;font-weight:900;color:#ff657a}
+.welcome-guide-progress{margin-top:16px;font-size:12px;font-weight:800;letter-spacing:1.5px;color:var(--fg2)}
+.welcome-guide-card h2{font-size:clamp(25px,5vw,34px);line-height:1.15;margin:10px 0 14px;color:#fff}
+.welcome-guide-card p{font-size:18px;line-height:1.65;color:#d6d3d6;min-height:125px}
+.welcome-guide-dots{display:flex;gap:7px;margin:20px 0}
+.welcome-guide-dots span{height:4px;flex:1;border-radius:99px;background:rgba(255,255,255,.14)}
+.welcome-guide-dots span.active{background:#BB001E}
+.welcome-guide-controls{display:flex;justify-content:space-between;gap:12px}
+.guide-btn{border:1px solid #BB001E;background:linear-gradient(135deg,#BB001E,#820014);border-radius:12px;padding:11px 20px;color:white;font:inherit;font-weight:750;cursor:pointer}
+.guide-btn.secondary{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}
+.guide-btn:disabled{opacity:.35;cursor:not-allowed}
+.guide-skip{display:block;margin:15px auto 0;background:transparent;border:0;color:var(--fg2);font:inherit;font-size:14px;cursor:pointer}
 @keyframes hauntSpin{to{transform:rotate(360deg)}}
 .toast{background:rgba(12,12,14,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-left:4px solid var(--red-hot);padding:12px 17px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.5);color:#fff;font-size:18px;animation:slideIn .25s ease-out forwards}
 @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -146,11 +166,12 @@ th,td{padding:9px 8px}
   </div>
   <div class="header-stats">
     <div class="stat-pill">Ends in: <span class="timer" id="ui-timer">00:00:00</span></div>
-    <div class="stat-pill">Cash: <span class="cash" id="ui-cash">$0</span></div>
+
   </div>
 </header>
 
 <main class="game-container">
+  <div class="hero-cash" aria-live="polite"><span class="hero-cash-label">YOUR CASH</span><span class="cash" id="ui-cash">$0</span></div>
   <div class="basket-wrapper" id="basketHitbox" role="button" tabindex="0" aria-label="Collect candy by clicking the pumpkin" onclick="handleBasketClick(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleBasketClick(event)}">
     <svg viewBox="0 0 100 100" class="pumpkin-svg">
        <ellipse cx="50" cy="55" rx="40" ry="35" fill="#FF7A18" stroke="#D95C00" stroke-width="4"/>
@@ -189,6 +210,7 @@ th,td{padding:9px 8px}
 </div>
 
 <div id="toast-container"></div>
+<div id="welcomeGuideOverlay" aria-live="polite"></div>
 
 <!-- Contest Logic script -->
 <script src="/js/halloween-haunt.js"></script>

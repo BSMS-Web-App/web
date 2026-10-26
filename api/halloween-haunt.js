@@ -21,29 +21,29 @@ const CANDY = [
   ['whoppers','Whoppers','Common','whoppers.jpeg.png',1,30],
   ['milk-duds','Milk Duds','Common','milk-duds.png',1,30],
   ['mounds','Mounds','Common','mounds.png',1,30],
-  ['3-musketeers','3 Musketeers','Uncommon','3-musketeers.png',2,22],
-  ['milky-way','Milky Way','Uncommon','milky-way.png',2,22],
-  ['mr-goodbar','Mr. Goodbar','Uncommon','mr-goodbar.png',2,22],
-  ['almond-joy','Almond Joy','Uncommon','almond-joy.png',2,22],
-  ['baby-ruth','Baby Ruth','Uncommon','baby-ruth.png',2,22],
-  ['tootsie-pop','Tootsie Pop','Uncommon','tootsie-pop.png',2,22],
-  ['jolly-ranchers','Jolly Ranchers','Uncommon','jolly-ranchers.png',2,22],
-  ['twizzlers','Twizzlers','Uncommon','twizzlers.png',2,22],
-  ['hersheys',"Hershey's",'Rare','hersheys.png',4,15],
-  ['m-ms',"M&M's",'Rare','m-ms.png',4,15],
-  ['skittles','Skittles','Rare','skittles.png',4,15],
-  ['airheads','Airheads','Rare','airheads.png',4,15],
-  ['swedish-fish','Swedish Fish','Rare','swedish-fish.png',4,15],
-  ['york','York','Rare','york.png',4,15],
-  ['crunch','Crunch','Rare','crunch.png',4,15],
-  ['butter-finger','Butterfinger','Rare','butter-finger.png',4,15],
-  ['startburst','Starburst','Rare','startburst.png',4,15],
-  ['kitkat','KitKat','Epic','kitkat.png',8,7],
-  ['snickers','Snickers','Epic','snickers.png',8,7],
-  ['sour-patch-kids','Sour Patch Kids','Epic','sour-patch-kids.png',8,7],
-  ['100-grand','100 Grand','Epic','100-grand.png',8,7],
-  ['twix','Twix','Legendary','twix.png',16,2],
-  ['reeses',"Reese's",'Legendary','reeses.png',16,2]
+  ['3-musketeers','3 Musketeers','Uncommon','3-musketeers.png',2,10],
+  ['milky-way','Milky Way','Uncommon','milky-way.png',2,10],
+  ['mr-goodbar','Mr. Goodbar','Uncommon','mr-goodbar.png',2,10],
+  ['almond-joy','Almond Joy','Uncommon','almond-joy.png',2,10],
+  ['baby-ruth','Baby Ruth','Uncommon','baby-ruth.png',2,10],
+  ['tootsie-pop','Tootsie Pop','Uncommon','tootsie-pop.png',2,10],
+  ['jolly-ranchers','Jolly Ranchers','Uncommon','jolly-ranchers.png',2,10],
+  ['twizzlers','Twizzlers','Uncommon','twizzlers.png',2,10],
+  ['hersheys',"Hershey's",'Rare','hersheys.png',4,2.5],
+  ['m-ms',"M&M's",'Rare','m-ms.png',4,2.5],
+  ['skittles','Skittles','Rare','skittles.png',4,2.5],
+  ['airheads','Airheads','Rare','airheads.png',4,2.5],
+  ['swedish-fish','Swedish Fish','Rare','swedish-fish.png',4,2.5],
+  ['york','York','Rare','york.png',4,2.5],
+  ['crunch','Crunch','Rare','crunch.png',4,2.5],
+  ['butter-finger','Butterfinger','Rare','butter-finger.png',4,2.5],
+  ['startburst','Starburst','Rare','startburst.png',4,2.5],
+  ['kitkat','KitKat','Epic','kitkat.png',8,0.35],
+  ['snickers','Snickers','Epic','snickers.png',8,0.35],
+  ['sour-patch-kids','Sour Patch Kids','Epic','sour-patch-kids.png',8,0.35],
+  ['100-grand','100 Grand','Epic','100-grand.png',8,0.35],
+  ['twix','Twix','Legendary','twix.png',16,0.025],
+  ['reeses',"Reese's",'Legendary','reeses.png',16,0.025]
 ].map(([id,name,rarity,file,baseValue,weight])=>({id,name,rarity,file,baseValue,weight}));
 
 const SHOPS = [
@@ -151,7 +151,7 @@ async function authenticate(req) {
   return null;
 }
 function rollCandy(luckLevel) {
-  const luckFactor=1+Math.min(14,luckLevel)*0.10;
+  const luckFactor=1+Math.min(14,luckLevel)*0.055;
   const weighted=CANDY.map(c=>({c,w:c.weight*(c.rarity==='Common'?1:luckFactor)}));
   const total=weighted.reduce((s,x)=>s+x.w,0); let r=Math.random()*total;
   for(const item of weighted){r-=item.w;if(r<=0)return item.c;}
