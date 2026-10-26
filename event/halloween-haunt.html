@@ -1,0 +1,269 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: MIT
+-->    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="description" content="Compete in the BSMS Web Halloween Haunt! Collect candy, upgrade your crew, and climb the leaderboard."/>
+<meta name="theme-color" content="#FF7A18">
+<meta name="color-scheme" content="dark">
+<title>Halloween Haunt - BSMS Web</title>
+
+<!-- Existing Core Scripts -->
+<script src="/js/ban-check.js"></script>
+<script src="/js/account-check.js"></script>
+<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2TKPQV995W');
+</script>
+<script src="/js/analytics.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Patrick+Hand&display=swap');
+
+:root {
+  --orange: #FF7A18;
+  --orange-glow: rgba(255, 122, 24, 0.4);
+  --purple: #7C3AED;
+  --purple-glow: rgba(124, 58, 237, 0.3);
+  --bg: #120D18;
+  --surface: #1a1523;
+  --fg: #ffffff;
+  --fg2: rgba(255, 255, 255, 0.75);
+  --border: rgba(255, 122, 24, 0.2);
+  --glass-bg: rgba(26, 21, 35, 0.65);
+  --glass-border: rgba(255, 122, 24, 0.15);
+  --font: 'Patrick Hand', cursive;
+  --font-spooky: 'Creepster', cursive;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  width: 100vw; height: 100vh; overflow: hidden; font-size: 20px;
+}
+
+/* Ambient Halloween Particles */
+.ambient-particles {
+  position: fixed; inset: 0; z-index: -1; opacity: 0.2; pointer-events: none;
+  background-image: radial-gradient(var(--orange-glow) 1.5px, transparent 1.5px);
+  background-size: 60px 60px;
+  transform: perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+  animation: moveParticles 25s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 40%, transparent);
+}
+@keyframes moveParticles {
+  from { background-position: 0 0; }
+  to { background-position: 0 120px; }
+}
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(124,58,237,0.1) 0%, transparent 60%),
+              radial-gradient(circle at 50% 100%, rgba(255,122,24,0.08) 0%, transparent 60%);
+}
+
+/* Top Navigation */
+.haunt-header {
+  position: fixed; top: 0; left: 0; width: 100%; padding: 15px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(180deg, var(--bg) 0%, transparent 100%);
+  z-index: 100;
+}
+.header-brand h1 { font-family: var(--font-spooky); color: var(--orange); font-size: 32px; text-shadow: 0 0 15px var(--orange-glow); letter-spacing: 2px;}
+.header-stats { display: flex; gap: 20px; align-items: center; }
+.stat-pill {
+  background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border); padding: 6px 16px; border-radius: 20px;
+  font-size: 22px; color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  display: flex; align-items: center; gap: 8px;
+}
+.stat-pill span.cash { color: #F5C451; font-weight: bold; }
+.stat-pill span.timer { color: var(--orange); font-family: monospace; font-size: 18px; }
+
+/* Main Game Area */
+.game-container {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; width: 100vw; position: relative;
+}
+.basket-wrapper {
+  position: relative; cursor: pointer; transform-style: preserve-3d;
+  transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.basket-wrapper:active { transform: scale(0.95) translateY(5px); }
+.pumpkin-svg { width: 300px; height: 300px; filter: drop-shadow(0 15px 30px rgba(255, 122, 24, 0.3)); }
+.basket-status {
+  text-align: center; margin-top: -20px;
+  font-size: 24px; color: var(--fg2); text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+}
+.basket-bar-bg {
+  width: 250px; height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin: 10px auto; overflow: hidden;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+}
+.basket-bar-fill {
+  height: 100%; background: linear-gradient(90deg, var(--orange), #FF9A3D); width: 0%; transition: width 0.3s;
+}
+
+/* Floating Navigation Menu */
+.action-nav {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px;
+  background: var(--glass-bg); backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 40px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 100; flex-wrap: wrap; justify-content: center;
+}
+.action-btn {
+  background: transparent; border: none; color: var(--fg2); font-family: var(--font);
+  font-size: 20px; cursor: pointer; padding: 6px 14px; border-radius: 20px;
+  transition: all 0.2s;
+}
+.action-btn:hover, .action-btn.active {
+  background: rgba(255,122,24,0.15); color: #fff; text-shadow: 0 0 10px var(--orange-glow);
+}
+
+/* Falling Candy Animation */
+.falling-candy {
+  position: absolute; width: 40px; height: 40px; object-fit: contain; pointer-events: none; z-index: 50;
+  animation: candyDrop 1.2s cubic-bezier(0.3, 0, 0.7, 1) forwards;
+}
+@keyframes candyDrop {
+  0% { transform: translateY(-50px) scale(0.5) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; transform: translateY(-10px) scale(1.2) rotate(45deg); }
+  100% { transform: translateY(150px) scale(0.8) rotate(180deg); opacity: 0; }
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center; z-index: 2000;
+  opacity: 0; visibility: hidden; transition: all 0.3s;
+}
+.modal-overlay.show { opacity: 1; visibility: visible; }
+.haunt-modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 24px;
+  width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px var(--purple-glow);
+  transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-overlay.show .haunt-modal { transform: translateY(0) scale(1); }
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header h2 { font-family: var(--font-spooky); font-size: 28px; color: var(--purple); letter-spacing: 1px; }
+.modal-close { background: none; border: none; color: var(--fg2); font-size: 28px; cursor: pointer; transition: color 0.2s; }
+.modal-close:hover { color: #fff; }
+.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+/* Grid systems & Cards */
+.candy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; }
+.candy-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.candy-card:hover { border-color: var(--orange); background: rgba(255,122,24,0.05); }
+.candy-card.locked img { filter: brightness(0) opacity(0.3); }
+.candy-card img { width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+.candy-card .qty { font-size: 16px; color: var(--fg2); }
+
+.upgrade-list { display: flex; flex-direction: column; gap: 12px; }
+.upgrade-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+}
+.buy-btn {
+  background: linear-gradient(135deg, var(--orange), #D95C00); color: #fff;
+  border: none; padding: 8px 20px; border-radius: 12px; font-family: var(--font); font-size: 18px;
+  cursor: pointer; box-shadow: 0 4px 15px var(--orange-glow); transition: transform 0.1s;
+}
+.buy-btn:active { transform: scale(0.95); }
+.buy-btn:disabled { background: #333; color: #888; box-shadow: none; cursor: not-allowed; }
+
+/* Toasts */
+#toast-container { position: fixed; top: 80px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  background: var(--surface); border-left: 4px solid var(--orange); padding: 12px 20px;
+  border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.6); color: #fff; font-size: 18px;
+  animation: slideIn 0.3s ease-out forwards;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .haunt-header { padding: 10px; flex-direction: column; gap: 10px; }
+  .action-nav { bottom: 15px; padding: 8px; gap: 5px; width: 95%; }
+  .action-btn { font-size: 16px; padding: 4px 8px; }
+}
+</style>
+</head>
+<body>
+
+<div id="offlineBanner" style="position:fixed;top:0;width:100%;background:#D10022;color:#fff;text-align:center;padding:8px;z-index:9999;display:none;">You are currently offline.</div>
+
+<!-- Ambient BG -->
+<div class="ambient-particles"></div>
+
+<header class="haunt-header">
+  <div class="header-brand">
+    <h1 style="cursor:pointer;" onclick="window.location.href='/'">Halloween Haunt</h1>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">Ends in: <span class="timer" id="ui-timer">00:00:00</span></div>
+    <div class="stat-pill">Cash: <span class="cash" id="ui-cash">$0</span></div>
+  </div>
+</header>
+
+<main class="game-container">
+  <div class="basket-wrapper" id="basketHitbox" onclick="handleBasketClick(event)">
+    <svg viewBox="0 0 100 100" class="pumpkin-svg">
+       <ellipse cx="50" cy="55" rx="40" ry="35" fill="#FF7A18" stroke="#D95C00" stroke-width="4"/>
+       <path d="M45,20 Q50,10 60,15 L55,25 Z" fill="#2E7D32"/>
+       <polygon points="35,45 45,60 25,60" fill="#120D18"/>
+       <polygon points="65,45 75,60 55,60" fill="#120D18"/>
+       <path d="M30,70 Q50,85 70,70 Q60,75 50,75 Q40,75 30,70 Z" fill="#120D18"/>
+    </svg>
+  </div>
+  <div class="basket-status">
+    <div>Basket: <span id="ui-capacity-text">0 / 50</span></div>
+    <div class="basket-bar-bg"><div class="basket-bar-fill" id="ui-capacity-bar"></div></div>
+  </div>
+</main>
+
+<div class="action-nav">
+  <button class="action-btn" onclick="openModal('shops')">Shops</button>
+  <button class="action-btn" onclick="openModal('upgrades')">Upgrades</button>
+  <button class="action-btn" onclick="openModal('crew')">Crew</button>
+  <button class="action-btn" onclick="openModal('index')">Candy Index</button>
+  <button class="action-btn" onclick="openModal('stats')">Stats</button>
+  <button class="action-btn" onclick="openModal('leaderboard')">Leaderboard</button>
+</div>
+
+<!-- Modal Templates (Content injected by JS) -->
+<div id="hauntModalOverlay" class="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="haunt-modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Title</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Content -->
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Contest Logic script -->
+<script src="/js/halloween-haunt.js"></script>
+
+</body>
+</html>
