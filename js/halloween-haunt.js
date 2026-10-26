@@ -310,7 +310,7 @@ function renderCrew(container) {
     if(!gameState.crewUnlocked) {
         container.innerHTML = `
             <div style="text-align:center; padding:30px;">
-                <h3 style="color:var(--purple); margin-bottom:10px;">Hire Trick-or-Treat Crew</h3>
+                <h3 style="color:var(--red-hot); margin-bottom:10px;">Hire Trick-or-Treat Crew</h3>
                 <p style="color:var(--fg2); margin-bottom:20px;">Helpers collect candy automatically while you are playing.</p>
                 <button class="buy-btn" ${gameState.cash < gameState.crewHireCost ? 'disabled' : ''} onclick="executeCrew('hire')">
                     Hire First Helper (${formatCash(gameState.crewHireCost)})
