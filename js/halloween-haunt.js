@@ -152,8 +152,9 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 async function apiCall(endpoint, method = 'GET', payload = null) {
     const sessionId = localStorage.getItem('session_id') || '';
     const isHealthCheck = endpoint.includes('action=health');
+    // Offline practice must work without an account session.
+    // Let the caller fall back to local-only play instead of blocking the game.
     if (!sessionId && !isHealthCheck) {
-        showToast("Please sign in to play Halloween Haunt.");
         return null;
     }
 
@@ -188,8 +189,9 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         }
         return data;
     } catch (e) {
-        console.error("API Error:", e);
-        showToast("Network error. Please try again.");
+        // A failed request is not a reason to block offline practice.
+        // initGame() switches to local state when the API cannot be reached.
+        console.warn("[Halloween Haunt] API unavailable; local/offline fallback will be used:", endpoint);
         return null;
     }
 }
@@ -256,12 +258,18 @@ async function initGame() {
     if (retryButton) retryButton.hidden = true;
     setLoadingMessage('Loading your game, shops, collection, and candy artwork…');
 
+    // Do not wait for a network request to decide whether the game can open.
+    // If offline progress is queued, attempt sync; failure keeps it local and
+    // the game continues into offline practice instead of showing a retry screen.
     if (navigator.onLine && !offlineSyncInFlight) {
-        const synced = await syncPendingOfflineClicks();
-        if (!synced) updateOfflineCard('failed');
+        const saved = readOfflineProgress();
+        if (Number(saved.offlineClicks) > 0) {
+            const synced = await syncPendingOfflineClicks();
+            if (!synced) updateOfflineCard('failed');
+        }
     }
 
-    const data = await apiCall('?action=state');
+    const data = navigator.onLine ? await apiCall('?action=state') : null;
     if (!data?.state) {
         await enterOfflineMode();
         return;
