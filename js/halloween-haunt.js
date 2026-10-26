@@ -406,24 +406,24 @@ async function syncCrew(){
  if(offlineMode){
   let changed=false;const now=Date.now();
   for(const crew of gameState.crew||[]){
-   crew.inventory||={};crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);crew.workMs=Number(crew.workMs||0);
+   crew.inventory||={};crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);crew.workMs=Number(crew.workMs||0);crew.capacityLevel=Number(crew.capacityLevel||0);if(crew.capacityLevel===0&&Number(crew.capacity||10)<=10)crew.capacity=50;crew.intervalMs=2000;
    if(crew.asleep)continue;
    const fed=crew.fedUntil>now;
-   const last=Number(crew.lastActionAt)||now,elapsed=Math.max(0,Math.min(5000,now-last));crew.lastActionAt=now;crew.awakeMs+=elapsed;
+   const last=Number(crew.lastActionAt)||now,elapsed=Math.max(0,Math.min(5000,now-last));crew.lastActionAt=now;if(!fed)crew.awakeMs+=elapsed;
    if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;changed=true;continue;}
-   const cap=Math.max(1,Math.floor(Number(crew.capacity||10)*(fed?1.25:1))),interval=Math.max(2000,Number(crew.intervalMs||20000)*(fed?.75:1));
+   const cap=Math.max(1,Math.floor(Number(crew.capacity||50)*(fed?1.25:1))),interval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));
    crew.workMs+=elapsed;
    let ticks=Math.min(5,Math.floor(crew.workMs/interval));crew.workMs-=ticks*interval;
    for(let t=0;t<ticks;t++){
     const held=Object.values(crew.inventory).reduce((n,v)=>n+Math.max(0,Number(v)||0),0);if(held>=cap)break;
-    const candy=chooseOfflineCandy(),power=Math.min(cap-held,1+Number(crew.powerLevel||0)+(fed?Math.max(1,Math.ceil((Number(crew.powerLevel||0)+1)*.25)):0));
+    const candy=chooseOfflineCandy(),basePower=Math.min(8,1+Number(crew.powerLevel||0)),power=Math.min(cap-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));
     for(let k=0;k<power;k++){crew.inventory[candy.id]=Number(crew.inventory[candy.id]||0)+1;gameState.lifetimeCollected[candy.id]=Number(gameState.lifetimeCollected[candy.id]||0)+1;}
     crew.inventoryCount=held+power;crew.collectedCount=Number(crew.collectedCount||0)+power;gameState.feedCandy=Number(gameState.feedCandy||0)+power;gameState.stats.totalCollected=Number(gameState.stats.totalCollected||0)+power;gameState.stats.crewCollected=Number(gameState.stats.crewCollected||0)+power;
     if(!gameState.discovered.includes(candy.id))gameState.discovered.push(candy.id);
     if(candy.rarity==='Rare'||candy.rarity==='Epic')gameState.stats.rareCollected=Number(gameState.stats.rareCollected||0)+power;if(candy.rarity==='Legendary')gameState.stats.legendaryCollected=Number(gameState.stats.legendaryCollected||0)+power;
     changed=true;
    }
-   if(crew.inventoryCount>=cap&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(1000,20000*Math.pow(.8,Number(crew.speedLevel||0))*(fed?.75:1));
+   if(crew.inventoryCount>=cap&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);
    if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){const sold=sellCrewOffline(crew);if(sold)changed=true;}
   }
   if(changed){saveOfflineProgress();updateUI();if(currentModal==='crew')renderCrew();if(currentModal==='shops')renderShops(document.getElementById('modalBody'));if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));}
@@ -724,13 +724,13 @@ window.executeCrew=async function(action,index=0){
   if(action==='hire'){
    const i=state.crew.length,cost=Number(state.crewHireCost||180);
    state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.crewUnlocked=true;
-   state.crew.push({id:'helper-'+(i+1),name:names[i]||('Worker '+(i+1)),speedLevel:0,capacityLevel:0,powerLevel:0,luckLevel:0,awakeLevel:0,inventory:{},inventoryCount:0,capacity:10,intervalMs:20000,asleep:false,awakeMs:0,fedUntil:0,lastActionAt:Date.now(),workMs:0,collectedCount:0,moneyEarned:0});
+   state.crew.push({id:'helper-'+(i+1),name:names[i]||('Worker '+(i+1)),speedLevel:0,capacityLevel:0,powerLevel:0,luckLevel:0,awakeLevel:0,inventory:{},inventoryCount:0,capacity:50,intervalMs:2000,asleep:false,awakeMs:0,fedUntil:0,lastActionAt:Date.now(),workMs:0,collectedCount:0,moneyEarned:0});
    state.crewHireCost=Math.floor(cost*1.85);return;
   }
   const c=state.crew[index];if(!c)return;
   if(action==='wake'){c.asleep=false;c.awakeMs=0;c.lastActionAt=Date.now();return;}
   if(action==='feed'){const need=10*Number(state.basketCapacity||50);state.feedCandy=Math.max(0,Number(state.feedCandy||0)-need);c.fedUntil=Date.now()+1200000;c.asleep=false;c.awakeMs=0;return;}
-  if(key){const cost=Math.floor(bases[key]*Math.pow(mults[key],Number(c[key]||0)));state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;c[key]=Number(c[key]||0)+1;if(key==='capacityLevel')c.capacity=Math.min(500,10+c.capacityLevel*10);if(key==='speedLevel')c.intervalMs=Math.max(2000,20000-2000*c.speedLevel);}
+  if(key){const cost=Math.floor(bases[key]*Math.pow(mults[key],Number(c[key]||0)));state.cash-=cost;state.stats.cashSpent=Number(state.stats.cashSpent||0)+cost;state.stats.upgradesBought=Number(state.stats.upgradesBought||0)+1;c[key]=Number(c[key]||0)+1;if(key==='capacityLevel')c.capacity=Math.min(500,50+c.capacityLevel*10);}
  },r=>r.hired?'Crew member hired!':action==='feed'?'Crew member fed for 20 minutes.':action==='wake'?'Crew member is awake.':'Crew upgrade purchased!');
 }
 function renderStats(container) {
