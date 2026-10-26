@@ -6,6 +6,7 @@
 
 import { db, admin, requestMacApi } from './db.js';
 import crypto from 'crypto';
+import { isContentFlagged as checkProfanity } from './moderation.js';
 
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
@@ -15,26 +16,6 @@ async function getUserBySession(sessionId) {
     } catch {
         return null;
     }
-}
-
-// Extracted Glin Profanity Checker
-async function checkProfanity(text) {
-    if (!text) return false;
-    let strippedText = text
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[\u200B-\u200D\uFEFF]/g, "")
-        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-        .replace(/\s+/g, "")
-        .replace(/@/g, "a").replace(/\$/g, "s").replace(/0/g, "o")
-        .replace(/1/g, "i").replace(/3/g, "e").replace(/4/g, "a")
-        .replace(/5/g, "s").replace(/7/g, "t")
-        .toLowerCase();
-
-    const blockList = [
-        'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
-        'nigger', 'nigga', 'faggot', 'fag', 'cock', 'pussy', 'whore', 'slut', 'bastard', 'retard'
-    ];
-    return blockList.some(word => strippedText.includes(word));
 }
 
 export default async function handler(req, res) {
