@@ -446,10 +446,10 @@ window.executeAutoSell = async function() {
     while (Date.now() < deadline) {
         if (pendingRetryRequestId) return;
         if (!collectInFlight && pendingClicks > 0) flushCollectQueue();
-        if (!collectInFlight && pendingClicks === 0 && retryBatchClicks === 0 && inFlightClicks === 0) break;
+        if (!collectInFlight && pendingClicks === 0 && retryBatchClicks === 0 && inFlightClicks === 0 && pendingOptimisticActions === 0) break;
         await new Promise(resolve => setTimeout(resolve, 50));
     }
-    if (pendingRetryRequestId || collectInFlight || pendingClicks > 0 || retryBatchClicks > 0 || inFlightClicks > 0) return;
+    if (pendingRetryRequestId || collectInFlight || pendingClicks > 0 || retryBatchClicks > 0 || inFlightClicks > 0 || pendingOptimisticActions > 0) return;
     autoSellInProgress = true;
     try {
         const latest = await apiCall('?action=state');
