@@ -683,20 +683,6 @@ tr:hover td { background: rgba(255, 255, 255, 0.06); }
 }
 
 /* Compact red server connection warning */
-#offlineBanner{width:min(760px,100%);margin:0 auto 16px;padding:9px 13px;border:1px solid rgba(255,85,100,.8);border-radius:12px;background:linear-gradient(135deg,rgba(112,15,25,.98),rgba(64,8,17,.98));color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 20px rgba(0,0,0,.28);}
-#offlineBanner .offline-card-title{display:flex;align-items:center;gap:9px;color:#fff;font-size:1rem;font-weight:850;margin:0;}
-#offlineBanner .offline-card-title svg{flex:none;}
-#offlineBanner .offline-learn-more{border:1px solid rgba(255,255,255,.7);border-radius:9px;padding:7px 11px;background:#fff;color:#8d101d;font:inherit;font-weight:800;cursor:pointer;white-space:nowrap;}
-#offlineBanner .offline-learn-more:hover{background:#ffe7e9;}
-.offline-help-overlay{position:fixed;inset:0;z-index:26000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease;}
-.offline-help-overlay.show{opacity:1;visibility:visible;}
-.offline-help-card{width:min(440px,100%);padding:24px;border:1px solid rgba(255,76,76,.55);border-radius:18px;background:linear-gradient(145deg,#291218,#100d13);color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.6);}
-.offline-help-card h2{margin:0 0 12px;font-size:1.35rem;}
-.offline-help-card p{color:#f1dfe2;line-height:1.6;margin:0 0 12px;}
-.offline-help-card .offline-help-close{margin-top:8px;width:100%;border:0;border-radius:10px;padding:11px 14px;background:#c51f32;color:#fff;font:inherit;font-weight:800;cursor:pointer;}
-.offline-leaderboard-note{padding:18px;border:1px solid rgba(255,76,76,.35);border-radius:12px;background:rgba(112,15,25,.12);}
-.offline-leaderboard-note p{color:var(--fg2);}
-
 /* Tutorial / Welcome Guide */
 #welcomeGuideOverlay {
   position: fixed;
@@ -1015,3 +1001,23 @@ body {
 @media(max-width:600px){.hh-crew-grid,.hh-upgrade-grid,.hh-summary-grid{grid-template-columns:1fr}.hh-crew-card{padding:13px}}
 
 .hh-prize-modal[hidden]{display:none!important}.hh-prize-modal{position:fixed;inset:0;z-index:50000;display:flex;align-items:center;justify-content:center;padding:18px;background:#05020bdc;backdrop-filter:blur(9px)}.hh-prize-modal-card{width:min(520px,100%);padding:26px;border:1px solid #f9731688;border-radius:22px;background:linear-gradient(145deg,#25112f,#100912);box-shadow:0 24px 90px #000b;text-align:center}.hh-prize-modal-card h2{color:#fff;margin:12px 0}.hh-prize-modal-card p{color:#e9dced;line-height:1.65;margin-bottom:20px}.hh-prize-modal-card strong{color:#fdba74}
+
+/* Halloween Haunt: live collection status and crew dashboard polish */
+.hh-collect-pending{display:flex;align-items:center;gap:10px;margin:12px 0 14px;padding:10px 14px;border:1px solid #ff4b61;border-radius:999px;background:linear-gradient(110deg,#8f1029,#5b0b1c);color:#fff;font-size:.9rem;line-height:1.4;box-shadow:0 5px 20px #ff174422}
+.hh-collect-pending[hidden]{display:none!important}
+.hh-collect-pending-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:50%;background:#fff;color:#b30e2b;font-size:15px;font-weight:1000;line-height:1}
+.hh-collect-pending strong{color:#fff!important;font-weight:950;font-variant-numeric:tabular-nums}
+.hh-crew-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+.hh-awake-mini{display:flex;align-items:center;gap:10px;margin:12px 0;padding:11px 12px;border:1px solid #a855f755;border-radius:13px;background:linear-gradient(115deg,#8b5cf61c,#ffffff06)}
+.hh-awake-mini-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border:1px solid #c084fc66;border-radius:11px;background:#a855f722;color:#f1d8ff;font-size:22px;line-height:1}
+.hh-awake-mini-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
+.hh-awake-mini-copy small{color:#cbb7dc;font-size:.7rem;font-weight:850;letter-spacing:.08em}
+.hh-awake-mini-copy strong{color:#fff;font-size:1rem;font-variant-numeric:tabular-nums}
+.hh-awake-mini.is-asleep{border-color:#ff516577;background:#ff334c12}
+.hh-awake-mini.is-asleep .hh-awake-mini-icon{border-color:#ff516588;background:#ff334c22;color:#ff9aa5}
+.hh-awake-mini.is-protected{border-color:#45d48366;background:#45d4830d}
+.hh-awake-mini.is-protected .hh-awake-mini-icon{border-color:#45d48366;background:#45d48316;color:#9df2bd}
+.hh-wake-btn:not(:disabled){background:linear-gradient(135deg,#b91c3b,#7f1028)!important;border:1px solid #ff7b8b!important;box-shadow:0 5px 18px #ff304f24}
+.hh-wake-btn:disabled{opacity:.7;cursor:wait}
+@media(max-width:1000px){.hh-crew-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.hh-crew-grid{grid-template-columns:minmax(0,1fr)}.hh-collect-pending{border-radius:16px;align-items:flex-start}.hh-awake-mini{margin:10px 0}}

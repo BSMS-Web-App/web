@@ -74,7 +74,8 @@
         const status=asleep?'ASLEEP':fed?'FED BOOST':sellReady&&held>=capacity?'SELLING':'COLLECTING';
         const interval=Math.max(500,Number(worker.intervalMs||2000)*(fed?.75:1)), workElapsed=Number(worker.workMs||0)+elapsedSinceSync, collectRemaining=Math.max(0,interval-Math.min(interval,workElapsed)); const activity=asleep?'Wake this member to resume work.':fed?'Boost active · '+timeLeft(Number(worker.fedUntil)-Date.now())+' remaining':sellReady&&held>=capacity?'Selling in '+timeLeft(sellReady-Date.now()):'Awake for '+timeLeft(awakeRemaining)+' more · next candy in '+timeLeft(collectRemaining);
         const upgrades=[['capacity','Basket Capacity','capacityLevel',65,1.65],['power','Click Power','powerLevel',80,1.65],['luck','Candy Luck','luckLevel',95,1.65],['speed','Auto Sell Faster','speedLevel',75,1.7],['awake','Awake Time','awakeLevel',100,1.8]];
-        return '<article class="hh-crew-card '+(asleep?'is-asleep':'')+'"><div class="hh-crew-top"><div><span class="hh-badge">'+status+'</span><h3>'+esc(name)+'</h3><p class="hh-muted">'+activity+'</p></div>'+helpButton('Worker status','Collecting means candy is being gathered. Selling means the basket is full and waiting for its sale. Sleeping workers need a manual wake-up.')+'</div><div class="hh-progress-label"><span>Basket</span><strong>'+held+' / '+capacity+'</strong></div><div class="hh-progress"><i style="width:'+Math.min(100,held/capacity*100)+'%"></i></div><div class="hh-summary-grid"><div class="hh-stat-card"><small>Candy collected by this member</small><strong>'+Number(worker.collectedCount||0).toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Money earned by this member</small><strong>'+money(worker.moneyEarned||0)+'</strong></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">'+(asleep?'<button class="buy-btn" type="button" data-hh-crew="wake" data-index="'+index+'">Wake up</button>':'<button class="buy-btn" type="button" data-hh-crew="feed" data-index="'+index+'" '+(fed?'disabled':'')+'>Feed · '+(10*Number(state.basketCapacity||50))+' candy</button>')+'</div><div class="hh-upgrade-grid">'+upgrades.map(([key,label,field,base,mult])=>{const level=Number(worker[field]||0),cost=Math.floor(base*Math.pow(mult,level));return '<div class="hh-upgrade-mini"><span>'+label+'<small>Level '+level+'</small></span><button class="buy-btn" type="button" data-hh-crew="upgrade_'+key+'" data-index="'+index+'" '+(Number(state.cash)<cost?'disabled':'')+'>'+money(cost)+'</button></div>';}).join('')+'</div></article>';
+        const actionKey=String(worker.id||index)+':wake',wakePending=!!window.hhCrewActionsPending?.has(actionKey);
+        return '<article class="hh-crew-card '+(asleep?'is-asleep':'')+'"><div class="hh-crew-top"><div><span class="hh-badge">'+status+'</span><h3>'+esc(name)+'</h3><p class="hh-muted">'+activity+'</p></div>'+helpButton('Worker status','Collecting means candy is being gathered. Selling means the basket is full and waiting for its sale. Sleeping workers need a manual wake-up.')+'</div><div class="hh-awake-mini '+(asleep?'is-asleep':fed?'is-protected':'')+'"><span class="hh-awake-mini-icon" aria-hidden="true">◷</span><span class="hh-awake-mini-copy"><small>AWAKE TIME LEFT</small><strong>'+(asleep?'Sleeping · wake to resume':fed?'Paused during feed boost':timeLeft(awakeRemaining))+'</strong></span></div><div class="hh-progress-label"><span>Basket</span><strong>'+held+' / '+capacity+'</strong></div><div class="hh-progress"><i style="width:'+Math.min(100,held/capacity*100)+'%"></i></div><div class="hh-summary-grid"><div class="hh-stat-card"><small>Candy collected by this member</small><strong>'+Number(worker.collectedCount||0).toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Money earned by this member</small><strong>'+money(worker.moneyEarned||0)+'</strong></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">'+(asleep?'<button class="buy-btn hh-wake-btn" type="button" data-hh-crew="wake" data-index="'+index+'" '+(wakePending?'disabled':'')+'>'+(wakePending?'Waking…':'Wake up')+'</button>':'<button class="buy-btn" type="button" data-hh-crew="feed" data-index="'+index+'" '+(fed?'disabled':'')+'>Feed · '+(10*Number(state.basketCapacity||50))+' candy</button>')+'</div><div class="hh-upgrade-grid">'+upgrades.map(([key,label,field,base,mult])=>{const level=Number(worker[field]||0),cost=Math.floor(base*Math.pow(mult,level));return '<div class="hh-upgrade-mini"><span>'+label+'<small>Level '+level+'</small></span><button class="buy-btn" type="button" data-hh-crew="upgrade_'+key+'" data-index="'+index+'" '+(Number(state.cash)<cost?'disabled':'')+'>'+money(cost)+'</button></div>';}).join('')+'</div></article>';
       }).join('')+'</div>';
     }
     if(crew.length<20)html+=card('Recruit another member','<p>All recruits start equally. Hiring costs rise each time, up to a maximum of 20 crew members.</p><button class="buy-btn" type="button" data-hh-hire '+(Number(state.cash)<Number(state.crewHireCost)?'disabled':'')+'>Hire '+esc(CREW_ROSTER[crew.length]||'Worker')+' · '+money(state.crewHireCost)+'</button>','NEXT RECRUIT');
@@ -83,6 +84,18 @@
     container.querySelectorAll('[data-hh-crew]').forEach(b=>b.addEventListener('click',()=>window.executeCrew?.(b.dataset.hhCrew,Number(b.dataset.index))));
   }
   window.renderCrew=renderCrewDashboard;
+  window.hhCrewActionsPending=window.hhCrewActionsPending||new Set();
+  const baseExecuteCrew=window.executeCrew;
+  window.executeCrew=async function(action,index=0){
+    if(typeof baseExecuteCrew!=='function')return;
+    const key=action==='hire'?'hire':String(gameState?.crew?.[index]?.id||index)+':'+action;
+    if(window.hhCrewActionsPending.has(key))return;
+    window.hhCrewActionsPending.add(key);
+    const body=document.getElementById('modalBody');
+    if(typeof currentModal!=='undefined'&&currentModal==='crew'&&body)renderCrewDashboard(body);
+    try{const result=await baseExecuteCrew.apply(this,arguments);if(action==='wake'){const worker=gameState?.crew?.[index];if(worker&&!worker.asleep)window.showToast?.('Crew member is awake and collecting candy.');else if(!lastApiError)window.showToast?.('Wake-up could not be confirmed. Check your connection and try again.');}return result;}
+    finally{window.hhCrewActionsPending.delete(key);if(typeof currentModal!=='undefined'&&currentModal==='crew'&&body)renderCrewDashboard(body);}
+  };
   // The core action handler now shows immediate optimistic feedback; avoid a second delayed toast.
   const baseUpgrade=window.executeUpgrade;
   window.executeUpgrade=function(type){
@@ -115,30 +128,11 @@
     if(category&&getPrefs()[category]===false)return;
     if(typeof baseShowToast==='function')return baseShowToast.apply(this,arguments);
   };
-  const initialDiscovered=new Set();
-  const initialRarities=new Set();
-  let hasInitialDiscoverySnapshot=false;
-  const lastSleepState=new Map();
   const baseUpdateUI=window.updateUI;
   window.updateUI=function(){
     if(typeof baseUpdateUI==='function')baseUpdateUI.apply(this,arguments);
     const state=typeof gameState!=='undefined'?gameState:null;
     if(!state)return;
-    const discovered=Array.isArray(state.discovered)?state.discovered:[];
-    if(!hasInitialDiscoverySnapshot){
-      discovered.forEach(id=>{initialDiscovered.add(id);const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);if(candy)initialRarities.add(candy.rarity);});
-      hasInitialDiscoverySnapshot=true;
-    } else {
-      for(const id of discovered){
-        if(initialDiscovered.has(id))continue;
-        initialDiscovered.add(id);
-        const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);
-        if(candy&&!initialRarities.has(candy.rarity)){
-          initialRarities.add(candy.rarity);
-          if(getPrefs().newRarity!==false&&typeof window.showToast==='function')window.showToast('New rarity unlocked: '+candy.rarity+'!');
-        }
-      }
-    }
     const crew=Array.isArray(state.crew)?state.crew:[];
     const asleep=crew.filter(worker=>worker.asleep);
     const nav=document.querySelector('.action-nav');
@@ -150,11 +144,6 @@
       if(asleep.length&&!dot){dot=document.createElement('span');dot.className='hh-alert-dot';dot.setAttribute('aria-label','Crew members need waking');crewButton.appendChild(dot);}
       if(!asleep.length&&dot)dot.remove();
     }
-    for(let i=0;i<crew.length;i++){
-      const worker=crew[i],wasAsleep=lastSleepState.get(worker.id||String(i));
-      if(worker.asleep&&(wasAsleep===false||wasAsleep===undefined)&&getPrefs().crewAsleep!==false&&typeof window.showToast==='function')window.showToast('Crew member asleep: '+(worker.name||CREW_ROSTER[i]||('Worker '+(i+1)))+' needs waking.');
-      lastSleepState.set(worker.id||String(i),!!worker.asleep);
-    }
     const cap=Math.max(1,Number(state.basketCapacity||50));
     const count=Object.values(state.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
     const enabled=Number(state.upgrades?.autoSell?.level||0)>0;
@@ -164,16 +153,7 @@
     }
     if(!autoSellTimer&&!autoSellPending){
       autoSellPending=true;
-      autoSellTimer=setTimeout(async()=>{
-        autoSellTimer=null;
-        const latest=typeof gameState!=='undefined'?gameState:null;
-        const latestCount=Object.values(latest?.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
-        if(latest&&Number(latest.upgrades?.autoSell?.level||0)>0&&latestCount>=Math.max(1,Number(latest.basketCapacity||50))){
-          if(getPrefs().autoSell!==false&&typeof window.showToast==='function')window.showToast('Auto Sell — your full basket is being sold at the best prices.');
-          await window.executeSellAll?.();
-        }
-        autoSellPending=false;
-      },1000);
+      autoSellTimer=setTimeout(async()=>{autoSellTimer=null;try{await window.executeAutoSell?.();}finally{autoSellPending=false;}},1000);
     }
   };
   setInterval(()=>{if(typeof currentModal!=='undefined'&&currentModal==='crew'&&typeof gameState!=='undefined'&&gameState){const body=document.getElementById('modalBody');if(body)renderCrewDashboard(body);}},1000);
