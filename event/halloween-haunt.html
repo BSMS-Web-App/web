@@ -11,6 +11,25 @@ SPDX-License-Identifier: MIT
 <meta name="description" content="Compete in the BSMS Web Halloween Haunt! Collect candy, upgrade your crew, and climb the leaderboard."/>
 <meta name="theme-color" content="#12041b">
 <meta name="color-scheme" content="dark">
+<script>
+/* Remove Halloween Haunt's previously installed offline worker and cached assets. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations
+        .filter(registration => registration.active?.scriptURL.endsWith('/event/halloween-haunt-sw.js'))
+        .map(registration => registration.unregister()));
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(key => key.startsWith('bsms-halloween-haunt-')).map(key => caches.delete(key)));
+      }
+    } catch (error) {
+      console.warn('[Halloween Haunt] Could not clear its old offline cache:', error);
+    }
+  });
+}
+</script>
 <title>Halloween Haunt - BSMS Web</title>
 
 <!-- Existing Core Scripts -->
@@ -57,7 +76,6 @@ SPDX-License-Identifier: MIT
 
 <script src="/js/halloween-haunt-page.js"></script>
 <main class="game-container">
-  <section id="offlineBanner" role="status" aria-live="polite" style="display:none;"></section>
   <div class="hero-cash" aria-live="polite">
     <span class="hero-cash-label">Your Cash</span>
     <span class="cash" id="ui-cash">$0</span>
@@ -190,19 +208,12 @@ SPDX-License-Identifier: MIT
   </div>
 </div>
 
-<div id="offlineHelpOverlay" class="offline-help-overlay" role="dialog" aria-modal="true" aria-labelledby="offlineHelpTitle" onclick="if(event.target===this)closeOfflineHelp()">
-<div class="offline-help-card"><h2 id="offlineHelpTitle">Server Connection Failed</h2>
-<p>Your internet connection may be unavailable, or the game server may not be responding.</p>
-<p>You can keep playing. Candy, cash, upgrades, crew, the Candy Index, and stats are saved locally on this device and remain available after refreshing or reopening the game.</p>
-<p>Offline changes stay on this device. They are not automatically merged into your online account or leaderboard when the connection returns.</p>
-<button type="button" class="offline-help-close" onclick="closeOfflineHelp()">Got it</button></div></div>
 <div id="toast-container"></div>
 <div id="welcomeGuideOverlay" aria-live="polite"></div>
 
 <!-- Event Logic script -->
 <script src="/js/halloween-haunt.js"></script>
 <script src="/js/halloween-haunt-redesign.js"></script>
-<script src="/js/halloween-haunt-offline.js"></script>
 
 </body>
 </html>
