@@ -16,7 +16,7 @@ SPDX-License-Identifier: MIT
 <!-- Vercel Web Analytics -->
 <script src="/js/vercel-analytics-bootstrap.js"></script>
 <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
-    
+
 <!-- Favicons -->
 <link rel="icon" href="/img/icon.png">
 <link rel="apple-touch-icon" href="/img/app-icon.png">
@@ -37,27 +37,55 @@ SPDX-License-Identifier: MIT
   <a href="/" class="btn" data-ga="privacy_home_btn">← Go Back Home</a>
 
   <h1>Privacy Policy</h1>
-  <p><strong>Last Updated:</strong> September 2026</p>
+  <p><strong>Last Updated:</strong> October 2026</p>
 
-  <p>Welcome to BSMS Web. We are committed to protecting your personal information and your right to privacy. This policy explains what information we collect and how we use it within the BSMS Web ecosystem.</p>
+  <p>This Privacy Policy explains how BSMS Web collects, uses, stores, and shares information when you use the website and its features, including accounts, chat, games, announcements, and support or reporting tools. Please do not post passwords, home addresses, phone numbers, or other sensitive personal information in public profiles or chats.</p>
 
   <h2>1. Information We Collect</h2>
   <ul>
-    <li><strong>Account Information:</strong> We collect your chosen username, display name, and any optional bio or contact info you provide to render your public profile.</li>
-    <li><strong>Chat Logs:</strong> Messages sent within BSMS Chat are permanently logged and stored on our servers to maintain chat history and enforce moderation.</li>
-    <li><strong>Usage & Sessions:</strong> We utilize HTML5 Local Storage to generate and store a secure <code>session_id</code> to keep you logged in.</li>
-    <li><strong>Network Data:</strong> As this service is hosted on Vercel, standard network data including IP addresses may be processed by Vercel for security and routing purposes.</li>
+    <li><strong>Account and profile information:</strong> Information you submit to create or manage an account, such as your username, display name, profile details, and optional bio or contact information.</li>
+    <li><strong>Content you submit:</strong> Chat messages, profile content, game saves, reports, and other information you choose to submit through BSMS Web. Public-facing content may be visible to other users.</li>
+    <li><strong>Session and browser data:</strong> BSMS Web uses browser storage, including Local Storage, to keep session-related information and support features. The site may also use necessary browser storage for preferences or functionality. Do not share your device or session with someone you do not trust.</li>
+    <li><strong>Technical and request data:</strong> Hosting and infrastructure providers may process information such as IP address, browser and device details, request timestamps, and diagnostic or security logs when your browser connects to the service.</li>
+    <li><strong>Analytics data:</strong> Our analytics tools may collect page-view, interaction, referral, and technical information about how the site is used.</li>
   </ul>
 
-  <h2>2. Analytics</h2>
-  <p>We use Google Analytics 4 (GA4) to analyze user behavior, track button clicks, and understand page traffic. This helps us improve the platform's user experience. GA4 may utilize cookies to function properly.</p>
+  <h2>2. How We Use Information</h2>
+  <p>Information is used to operate BSMS Web, authenticate accounts, display profiles and chat history, save game progress, provide requested features, respond to reports, troubleshoot errors, protect the service, enforce rules, and understand site usage so the experience can be improved.</p>
 
-  <h2>3. Moderation & Bans</h2>
-  <p>To ensure a safe environment, all text data (including usernames and messages) is processed by our automated Profanity Filter. Accounts that violate our terms may have their <code>account_status</code> flagged as banned, which will permanently revoke device and session access to the platform.</p>
+  <h2>3. Analytics</h2>
+  <p>BSMS Web currently loads <strong>Vercel Web Analytics</strong> and <strong>Google Analytics 4 (GA4)</strong>. These tools help measure site traffic and usage, including page views and certain interactions such as clicks on elements configured for analytics. The providers may process technical information such as browser, device, referral, and approximate location information derived from network data. Google Analytics may use cookies or similar technologies; Vercel Web Analytics has its own data-collection and privacy practices. Analytics data is handled under the respective providers' policies and settings.</p>
+  <p>Analytics is used to understand how the service is used, not to display users' private chat messages publicly. Do not assume that information sent to an analytics-enabled interaction is confidential.</p>
 
-  <h2>4. Data Export & Deletion</h2>
-  <p>You have full control over your data. In the Account Manager, you can download a complete ZIP export of your profile, messages, and game saves. You may also permanently delete your account, which removes your profile and scrubs your identity from historical chat logs.</p>
+  <h2>4. Automated Content Moderation</h2>
+  <p>To help enforce community rules, text submitted through supported features may be checked by an automated profanity filter. When configured, BSMS Web also sends submitted text to OpenAI's Moderation API for automated safety classification. These checks can be used for content such as usernames, messages, and other text submitted through supported account or community features.</p>
+  <p>Moderation results may be used to reject content or support enforcement decisions. Automated systems can make mistakes, so a moderation result should not be treated as a perfect judgment of a person's intent. If the moderation service is unavailable, some submissions may be rejected rather than accepted without a check. Text sent to a third-party moderation provider is subject to that provider's applicable policies.</p>
 
+  <h2>5. Hosting, Storage, and Service Providers</h2>
+  <p>The website is hosted on Vercel. BSMS Web also uses a private database API hosted on the project operator's Mac and made reachable through a Cloudflare Tunnel. Depending on the feature and request, application code running on Vercel may communicate with that database API to read or update information. Uploaded or embedded media may be stored separately from ordinary text records. These arrangements may change as the service is updated.</p>
+  <p>Vercel, Cloudflare, Google, OpenAI, and other providers may process information as needed to deliver the features described in this policy. Their handling of information is also governed by their own policies and service configurations. We do not ask these providers to use private chat content for advertising.</p>
+
+  <h2>6. Retention, Chat History, and Public Content</h2>
+  <p>Account details, messages, game data, and other submitted content may be retained to provide the service, maintain chat history, investigate reports, and enforce rules. Chat messages should not be assumed to disappear when you sign out or close the browser. Content visible to other users may have been seen or copied before it is edited or deleted.</p>
+  <p>We aim to retain information only as needed for the purposes described here, subject to technical limitations, security needs, and any records that must be kept to operate or protect the service. Deleting content from the interface may not instantly remove every copy from logs, backups, caches, or third-party systems.</p>
+
+  <h2>7. Account Access, Export, and Deletion</h2>
+  <p>Where the relevant tools are available, the Account Manager lets you export account information and supported data, and request account deletion. Deletion is intended to remove your account profile and disassociate your identity from historical content where the application supports that behavior. Some records may remain temporarily in logs, backups, or other systems, or where needed for security and service integrity. Please review the confirmation shown in the Account Manager before proceeding.</p>
+
+  <h2>8. Security</h2>
+  <p>BSMS Web uses technical safeguards intended to protect accounts and service data, including server-side handling of sensitive configuration and authenticated requests between backend services. No website, network connection, or storage system can be guaranteed completely secure. Keep your account credentials and device private, and report suspected vulnerabilities or account misuse through the site's available reporting tools.</p>
+
+  <h2>9. Children's and School-Age Users</h2>
+  <p>BSMS Web may be used by school-age users. Do not submit information that you would not want other users or service operators to see. Users should follow their school's, family's, and applicable platform rules. If you are a parent or guardian with a privacy concern, please use the site's available reporting or support tools.</p>
+
+  <h2>10. Your Choices</h2>
+  <p>You can limit information you choose to add to your profile or messages, use available account tools to review or delete supported data, and manage cookies or site storage through your browser settings. Blocking storage or scripts may cause login, analytics, or other features to work differently. Browser settings do not necessarily erase information already held by the service or its providers.</p>
+
+  <h2>11. Changes to This Policy</h2>
+  <p>This policy may be updated when BSMS Web's features, infrastructure, or data practices change. The “Last Updated” date at the top indicates the latest revision. Continued use of the service after an update means you can review the revised policy; it does not remove any rights you may have under applicable law.</p>
+
+  <h2>12. Questions or Privacy Concerns</h2>
+  <p>For a privacy concern, account issue, or request related to your data, use the reporting or account tools available on BSMS Web. Please do not include passwords, session tokens, or other secrets in a report.</p>
 </div>
 
 <script src="/js/privacy.js"></script>
