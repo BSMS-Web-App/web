@@ -33,6 +33,7 @@ export default defineConfig(() => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
+      copyPublicDir: false,
       cssCodeSplit: false,
       rollupOptions: {
         input: path.resolve(__dirname, 'src/main.tsx'),

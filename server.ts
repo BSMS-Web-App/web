@@ -66,12 +66,16 @@ interface ActiveRoom {
 
 const ROOT_DIR = process.cwd();
 const MEMBERS_DATA_FILE = path.resolve(ROOT_DIR, 'bsms_members.json');
+const RUNTIME_MEMBERS_FILE = '/tmp/bsms_members.json';
 
 function loadStoredMembers(): Map<string, WebsiteMemberRecord> {
   const map = new Map<string, WebsiteMemberRecord>();
   try {
-    if (fs.existsSync(MEMBERS_DATA_FILE)) {
-      const raw = fs.readFileSync(MEMBERS_DATA_FILE, 'utf-8');
+    const fileToRead = fs.existsSync(RUNTIME_MEMBERS_FILE)
+      ? RUNTIME_MEMBERS_FILE
+      : MEMBERS_DATA_FILE;
+    if (fs.existsSync(fileToRead)) {
+      const raw = fs.readFileSync(fileToRead, 'utf-8');
       const parsed: WebsiteMemberRecord[] = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         for (const m of parsed) {
@@ -94,7 +98,7 @@ function loadStoredMembers(): Map<string, WebsiteMemberRecord> {
 function saveStoredMembers(members: Map<string, WebsiteMemberRecord>) {
   try {
     const arr = Array.from(members.values());
-    fs.writeFileSync(MEMBERS_DATA_FILE, JSON.stringify(arr, null, 2), 'utf-8');
+    fs.writeFileSync(RUNTIME_MEMBERS_FILE, JSON.stringify(arr, null, 2), 'utf-8');
   } catch {
     // Ignore file write errors
   }
