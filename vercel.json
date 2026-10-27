@@ -20,6 +20,11 @@
       "source": "/rooms",
       "destination": "/chat",
       "permanent": true
+    },
+    {
+      "source": "/contact",
+      "destination": "/support",
+      "permanent": true
     }
   ],
   "git": {
