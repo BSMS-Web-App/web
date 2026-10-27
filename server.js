@@ -68,9 +68,10 @@ app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.h
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
-app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'contact.html')));
-app.get('/bug-report', (req, res) => res.redirect(302, '/contact?type=bug'));
-app.get('/feature-request', (req, res) => res.redirect(302, '/contact?type=feature'));
+app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
+app.get('/contact', (req, res) => res.redirect(301, '/support'));
+app.get('/bug-report', (req, res) => res.redirect(302, '/support?type=bug'));
+app.get('/feature-request', (req, res) => res.redirect(302, '/support?type=feature'));
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.get('/401', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.html')));
