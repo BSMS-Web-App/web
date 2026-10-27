@@ -179,7 +179,7 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         }
         if (!res.ok) {
             lastApiError = { status: res.status, message: String(data.error || `Game API returned HTTP ${res.status}.`) };
-            if (!(endpoint.includes('action=offline-sync') && res.status === 409 && lastApiError.message.includes('changed since this offline session began'))) showToast(lastApiError.message);
+            showToast(lastApiError.message);
             return null;
         }
         return data;
@@ -369,11 +369,6 @@ async function refreshLeaderboard() {
 }
 
 function openModal(type) {
-    if(false&&type==='leaderboard'){
-        currentModal=type;document.querySelectorAll('.action-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`openModal('${type}')`));
-        document.getElementById('hauntModalOverlay').classList.add('show');document.getElementById('modalTitle').innerText='Leaderboard';
-        document.getElementById('modalBody').innerHTML='<div class="offline-leaderboard-note"><strong>Leaderboard unavailable offline</strong><p>Your local progress is saved on this device. Reconnect to load the live leaderboard.</p></div>';return;
-    }
     currentModal = type;
     document.querySelectorAll('.action-btn').forEach(button => button.classList.toggle('active', button.getAttribute('onclick') === `openModal('${type}')`));
     document.getElementById('hauntModalOverlay').classList.add('show');
