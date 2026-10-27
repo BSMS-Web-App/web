@@ -164,7 +164,7 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 async function apiCall(endpoint, method = 'GET', payload = null) {
     const sessionId = localStorage.getItem('session_id') || '';
     const isHealthCheck = endpoint.includes('action=health');
-    if (halloweenOfflineMode && !navigator.onLine) return hhOfflineApi(endpoint, method, payload);
+    if (halloweenOfflineMode) return hhOfflineApi(endpoint, method, payload);
     if (!sessionId && !isHealthCheck) {
         return null;
     }
@@ -203,6 +203,11 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         return data;
     } catch (e) {
         console.warn('[Halloween Haunt] API request failed:', endpoint, e);
+        if (!navigator.onLine && gameState) {
+            halloweenOfflineMode = true;
+            try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+            return hhOfflineApi(endpoint, method, payload);
+        }
         return null;
     }
 }
@@ -238,14 +243,25 @@ async function initGame() {
     const retryButton = document.getElementById('loadingRetry');
     if (retryButton) retryButton.hidden = true;
     const offlineImportButton=document.getElementById('offlineImportButton'); if(offlineImportButton) offlineImportButton.hidden=true;
-    if (!navigator.onLine) { hhShowOfflineMenu(); return; }
+    if (!navigator.onLine) {
+        halloweenOfflineMode = true;
+        try {
+            const saved = localStorage.getItem(HH_OFFLINE_KEY);
+            if (saved) {
+                gameState = hhValidateSaveState(JSON.parse(saved));
+                updateUI(); hideLoadingScreen(); showToast('Continuing your saved offline game.');
+                return;
+            }
+        } catch (error) { console.warn('[Halloween Haunt] Could not restore local offline save:', error); }
+        hhShowOfflineMenu(); return;
+    }
     halloweenOfflineMode=false;
     setLoadingMessage('Connecting to Halloween Haunt…');
     try {
         const data = await apiCall('?action=state');
         if (!data?.state) {
-            if (!navigator.onLine) { hhShowOfflineMenu(); return; }
-            setLoadingMessage(lastApiError?.message || 'Could not connect to the game server. Check your connection and try again.');
+            hhShowOfflineMenu();
+            if (navigator.onLine) { const message=document.getElementById('loadingMessage'); if(message) message.textContent='The game server could not be reached. You can retry or import a save for offline play.'; }
             if (retryButton) retryButton.hidden = false;
             return;
         }
@@ -258,8 +274,8 @@ async function initGame() {
         hideLoadingScreen(); maybeShowWelcomeGuide();
     } catch (error) {
         console.error('[Halloween Haunt] Initial load failed:', error);
-        if (!navigator.onLine) { hhShowOfflineMenu(); return; }
-        setLoadingMessage('Could not connect to the game server. Check your connection and try again.');
+        hhShowOfflineMenu();
+        if (navigator.onLine) { const message=document.getElementById('loadingMessage'); if(message) message.textContent='The game server could not be reached. You can retry or import a save for offline play.'; }
         if (retryButton) retryButton.hidden = false;
     }
 }
