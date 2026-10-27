@@ -69,6 +69,7 @@ let retryBatchClicks = 0;
 let pendingRetryRequestId = null;
 let collectInFlight = false;
 let collectFlushTimer = null;
+let autoSellInProgress = false;
 let shopTimerInterval = null;
 let shopRefreshInFlight = false;
 let actionInFlight = false;
@@ -283,7 +284,7 @@ function handleBasketClick(e) {
 }
 
 async function flushCollectQueue() {
-    if (collectInFlight || (!pendingRetryRequestId && pendingClicks <= 0) || !gameState) return;
+    if (autoSellInProgress || collectInFlight || (!pendingRetryRequestId && pendingClicks <= 0) || !gameState) return;
     collectInFlight = true;
     const retrying = Boolean(pendingRetryRequestId);
     const batch = retrying ? retryBatchClicks : Math.min(50, pendingClicks);
@@ -438,6 +439,36 @@ window.executeSellAll = async function() {
   state.cash=Number(state.cash||0)+earned;state.currentBasketCount=0;
  },r=>'Sold '+(r.sold||count)+' candies for '+formatCash(r.earned||0)+'.');
 }
+
+window.executeAutoSell = async function() {
+    if (autoSellInProgress || !gameState || Number(gameState.upgrades?.autoSell?.level || 0) <= 0) return;
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+        if (pendingRetryRequestId) return;
+        if (!collectInFlight && pendingClicks > 0) flushCollectQueue();
+        if (!collectInFlight && pendingClicks === 0 && retryBatchClicks === 0 && inFlightClicks === 0) break;
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    if (pendingRetryRequestId || collectInFlight || pendingClicks > 0 || retryBatchClicks > 0 || inFlightClicks > 0) return;
+    autoSellInProgress = true;
+    try {
+        const latest = await apiCall('?action=state');
+        if (!latest?.state) return;
+        gameState = latest.state;
+        recalculateBasketCount();
+        updateUI();
+        if (currentModal) renderCurrentModal();
+        const count = Number(gameState.currentBasketCount || 0);
+        const capacity = Math.max(1, Number(gameState.basketCapacity || 50));
+        if (Number(gameState.upgrades?.autoSell?.level || 0) > 0 && count >= capacity) await window.executeSellAll();
+    } finally {
+        autoSellInProgress = false;
+        if (pendingClicks > 0 && !collectInFlight) {
+            if (collectFlushTimer) clearTimeout(collectFlushTimer);
+            collectFlushTimer = setTimeout(flushCollectQueue, 0);
+        }
+    }
+};
 function renderUpgrades(container) {
  const upg=gameState.upgrades||{};
  const list=[
