@@ -93,7 +93,7 @@
     window.hhCrewActionsPending.add(key);
     const body=document.getElementById('modalBody');
     if(typeof currentModal!=='undefined'&&currentModal==='crew'&&body)renderCrewDashboard(body);
-    try{return await baseExecuteCrew.apply(this,arguments);}
+    try{const result=await baseExecuteCrew.apply(this,arguments);if(action==='wake'){const worker=gameState?.crew?.[index];if(worker&&!worker.asleep)window.showToast?.('Crew member is awake and collecting candy.');else if(!lastApiError)window.showToast?.('Wake-up could not be confirmed. Check your connection and try again.');}return result;}
     finally{window.hhCrewActionsPending.delete(key);if(typeof currentModal!=='undefined'&&currentModal==='crew'&&body)renderCrewDashboard(body);}
   };
   // The core action handler now shows immediate optimistic feedback; avoid a second delayed toast.
