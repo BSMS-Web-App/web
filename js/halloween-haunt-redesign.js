@@ -124,21 +124,6 @@
     if(typeof baseUpdateUI==='function')baseUpdateUI.apply(this,arguments);
     const state=typeof gameState!=='undefined'?gameState:null;
     if(!state)return;
-    const discovered=Array.isArray(state.discovered)?state.discovered:[];
-    if(!hasInitialDiscoverySnapshot){
-      discovered.forEach(id=>{initialDiscovered.add(id);const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);if(candy)initialRarities.add(candy.rarity);});
-      hasInitialDiscoverySnapshot=true;
-    } else {
-      for(const id of discovered){
-        if(initialDiscovered.has(id))continue;
-        initialDiscovered.add(id);
-        const candy=(typeof CANDY_CATALOG!=='undefined'?CANDY_CATALOG:[]).find(item=>item.id===id);
-        if(candy&&!initialRarities.has(candy.rarity)){
-          initialRarities.add(candy.rarity);
-          if(getPrefs().newRarity!==false&&typeof window.showToast==='function')window.showToast('New rarity unlocked: '+candy.rarity+'!');
-        }
-      }
-    }
     const crew=Array.isArray(state.crew)?state.crew:[];
     const asleep=crew.filter(worker=>worker.asleep);
     const nav=document.querySelector('.action-nav');
@@ -149,11 +134,6 @@
       let dot=crewButton.querySelector('.hh-alert-dot');
       if(asleep.length&&!dot){dot=document.createElement('span');dot.className='hh-alert-dot';dot.setAttribute('aria-label','Crew members need waking');crewButton.appendChild(dot);}
       if(!asleep.length&&dot)dot.remove();
-    }
-    for(let i=0;i<crew.length;i++){
-      const worker=crew[i],wasAsleep=lastSleepState.get(worker.id||String(i));
-      if(worker.asleep&&(wasAsleep===false||wasAsleep===undefined)&&getPrefs().crewAsleep!==false&&typeof window.showToast==='function')window.showToast('Crew member asleep: '+(worker.name||CREW_ROSTER[i]||('Worker '+(i+1)))+' needs waking.');
-      lastSleepState.set(worker.id||String(i),!!worker.asleep);
     }
     const cap=Math.max(1,Number(state.basketCapacity||50));
     const count=Object.values(state.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
