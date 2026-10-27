@@ -1,0 +1,22 @@
+/*
+ * BSMS Web
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: MIT
+ */
+/*
+ * BSMS Web shared styles
+ * Permanent site-wide foundation. Page-specific styles belong in their own files.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bsms-accent: #BB001E;
+  --bsms-accent-hover: #d10022;
+  --bsms-font-body: 'Patrick Hand', cursive;
+}

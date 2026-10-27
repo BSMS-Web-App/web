@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-// glin-profanity import removed temporarily to fix Vercel 500 error
+import { moderateContent } from './moderation.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -12,37 +12,45 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { text } = req.body;
-        if (!text || typeof text !== 'string') {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+        const { text } = body;
+        if (typeof text !== 'string' || !text.trim()) {
             return res.status(400).json({ error: 'Text payload is required.' });
         }
+        if (text.length > 10000) {
+            return res.status(400).json({ error: 'Text is too long to validate.' });
+        }
 
-        // 1. Normalization Pipeline
-        let normalized = text
-            // Strip diacritics / accents
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-            // Remove zero-width spaces and invisible characters
+        const normalized = text
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[\u200B-\u200D\uFEFF]/g, '')
-            // Convert basic leetspeak
             .replace(/@/g, 'a')
             .replace(/\$/g, 's')
             .replace(/0/g, 'o');
 
-        // 2. Strict Validation: Allow standard ASCII + Newlines + Standard Emojis.
         const validTextRegex = /^[\x20-\x7E\p{Emoji}\s]*$/u;
         if (!validTextRegex.test(normalized)) {
-            console.warn(`[BSMS Web :: API] Validation blocked invalid characters.`);
             return res.status(400).json({ error: 'Invalid characters or formatting detected.' });
         }
 
-        // 3. Profanity Check (Temporarily Disabled)
-        // const isBad = profanity(normalized);
-        // if (isBad) { ... }
+        const moderation = await moderateContent(text);
+        if (moderation.flagged) {
+            return res.status(400).json({
+                success: false,
+                clean: false,
+                error: `Content was blocked by moderation: ${moderation.reason}`,
+                moderation: {
+                    flagged: true,
+                    reasons: moderation.reasons,
+                    categories: moderation.categories || [],
+                    sources: moderation.sources || []
+                }
+            });
+        }
 
-        return res.status(200).json({ success: true, clean: true });
-
+        return res.status(200).json({ success: true, clean: true, moderation: { flagged: false, sources: moderation.sources || [] } });
     } catch (err) {
-        console.error(`[BSMS Web :: API] Text validation error:`, err);
-        return res.status(500).json({ error: 'Internal server error during text validation.' });
+        console.error('[BSMS Web :: API] Text moderation failed.');
+        return res.status(500).json({ error: 'Unable to validate text right now.' });
     }
 }

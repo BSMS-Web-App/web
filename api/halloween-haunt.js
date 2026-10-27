@@ -2,6 +2,11 @@
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
+ */
+/*
+ * BSMS Web
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: MIT
  *
  * Halloween Haunt authoritative event API.
  * All economy changes are server-calculated and committed through the Mac DB CAS transaction.

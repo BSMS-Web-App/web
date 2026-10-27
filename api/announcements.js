@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { moderateContent } from './moderation.js';
 
 // Verify session belongs to an owner or admin
 async function verifyStaff(sessionId) {
@@ -83,6 +84,22 @@ export default async function handler(req, res) {
             }
             if (!content) {
                 return res.status(400).json({ error: "Announcement content is required." });
+            }
+
+            const titleModeration = await moderateContent(title);
+            if (titleModeration.flagged) {
+                return res.status(400).json({
+                    error: `Announcement title was blocked by moderation: ${titleModeration.reason}`,
+                    moderation: { flagged: true, reasons: titleModeration.reasons, categories: titleModeration.categories || [], sources: titleModeration.sources || [] }
+                });
+            }
+
+            const contentModeration = await moderateContent(content);
+            if (contentModeration.flagged) {
+                return res.status(400).json({
+                    error: `Announcement content was blocked by moderation: ${contentModeration.reason}`,
+                    moderation: { flagged: true, reasons: contentModeration.reasons, categories: contentModeration.categories || [], sources: contentModeration.sources || [] }
+                });
             }
 
             const newRef = db.ref('/announcements').push();

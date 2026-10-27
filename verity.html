@@ -5,31 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Verity Quest — 20-Level Platformer</title>
-<style>
-:root{color-scheme:dark;--ink:#fff8dc;--panel:rgba(12,18,35,.82);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-*{box-sizing:border-box}
-html,body{background:radial-gradient(ellipse at 50% 0%,#26335f 0%,#101426 70%) fixed #101426}
-body{margin:0;min-height:100vh;color:var(--ink);font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;padding:18px}
-.game-wrap{width:min(100%,1000px)}
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
-h1{margin:0;font-size:clamp(1.25rem,3vw,2rem);background:linear-gradient(90deg,#ffe55c,#ff9ad5);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.5px}
-.hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pill,button{border:1px solid #ffffff2e;background:linear-gradient(180deg,#ffffff14,#ffffff05),var(--panel);backdrop-filter:blur(8px);color:var(--ink);padding:9px 14px;border-radius:999px;font:inherit;box-shadow:0 4px 14px #0004}
-button{cursor:pointer;transition:transform .12s,background .12s}
-button:hover{background:#35415e;transform:translateY(-1px)}
-canvas{display:block;width:100%;aspect-ratio:16/9;background:#1a2541;border:2px solid #ffffff35;border-radius:16px;box-shadow:0 18px 60px #0006}
-.under{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.help{color:#c9d4f0;font-size:.92rem;line-height:1.5}
-.help kbd{background:#ffffff18;border:1px solid #ffffff35;padding:2px 6px;border-radius:5px;color:#fff}
-.message{color:#ffe68b;min-height:1.5em;font-weight:650}
-.mobile{display:none;gap:10px;justify-content:space-between;margin-top:12px}
-.mobile button{flex:1;font-size:1.2rem;touch-action:none;user-select:none}
-canvas{border-color:#ffffff4d;box-shadow:0 0 0 4px #ffffff0d,0 18px 60px #000a}
-.message{background:#ffffff0d;padding:8px 14px;border-radius:12px}
-.game-wrap:fullscreen{width:100vw;max-width:none;height:100vh;padding:12px;background:#101426;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
-.game-wrap:fullscreen canvas{width:min(100%,calc((100vh - 160px)*16/9));margin:0 auto}
-@media(max-width:650px){body{padding:10px}.mobile{display:flex}.help{font-size:.82rem}}
-</style>
+<link rel="stylesheet" href="/css/styles.css">
+<link rel="stylesheet" href="/css/verity.css">
 </head>
 <body>
 <div class="game-wrap">
