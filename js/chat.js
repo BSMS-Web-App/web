@@ -1273,6 +1273,8 @@ const ChatManager = {
     },
 
     loadAttachment: async function(msgId) {
+        UI.showToast("File and image attachments are disabled in chat.", "error");
+        return;
         const c = State.channels[State.activeChannelId];
         if (!c || !c.messages || !c.messages[msgId]) return;
         const m = c.messages[msgId];
@@ -1655,20 +1657,12 @@ const ChatManager = {
                     <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
                 </div>`;
             } else if (m.contentType === 'file' || m.contentType === 'image') {
-                const isImg = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) || (typeof m.content === 'string' && m.content.startsWith('data:image')) || m.contentType === 'image';
-                const name = Utils.escapeHTML(m.attachmentName || (isImg ? 'Image Attachment' : 'File Attachment'));
                 content += `
-                <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin-top:4px; max-width:320px;">
-                    <div id="att-header-${msgId}" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                        <div style="display:flex; align-items:center; gap:8px; overflow:hidden; font-size:0.9rem;">
-                            <svg class="ic" style="width:18px; height:18px; flex-shrink:0;"><use href="#ico-file"></use></svg>
-                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${name}">${name}</span>
-                        </div>
-                        <button class="btn sec" style="width:auto; padding:4px 10px; font-size:0.8rem; border-radius:6px; flex-shrink:0;" onclick="ChatManager.loadAttachment('${msgId}')">
-                            Load
-                        </button>
+                <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:4px; max-width:320px;">
+                    <div style="display:flex; align-items:center; gap:8px; color:var(--fg2); font-size:0.9rem;">
+                        <svg class="ic" style="width:18px; height:18px; flex-shrink:0;"><use href="#ico-file"></use></svg>
+                        <span>File and image attachments are disabled. This attachment is unavailable.</span>
                     </div>
-                    <div id="att-preview-${msgId}" style="display:none; opacity:0; transition:opacity 0.35s ease; margin-top:10px;"></div>
                 </div>`;
             } else if (m.contentType === 'invite') {
                 let inv = m.content;
@@ -2187,6 +2181,12 @@ const AuthManager = {
 
 const ComposerManager = {
     attachFile: function(e) {
+        if (e?.target) e.target.value = '';
+        State.attachmentData = null;
+        State.attachmentName = null;
+        UI.hide('attachmentPreview');
+        UI.showToast("Sending files and images in chat is disabled.", "error");
+        return;
         const f = e.target.files[0];
         if(!f) return;
         if(f.size > 25*1024*1024) { UI.showToast("File exceeds 25MB maximum limit.", 'error'); return; }
@@ -2221,7 +2221,12 @@ const ComposerManager = {
 
         const inp = document.getElementById('msgInput');
         const txt = inp.innerText.trim().substring(0,100);
-        if (!txt && !State.attachmentData) return;
+        if (State.attachmentData) {
+            UI.showToast("Sending files and images in chat is disabled.", "error");
+            this.clearAttachment();
+            return;
+        }
+        if (!txt) return;
 
         const btn = document.getElementById('btnSend');
 
