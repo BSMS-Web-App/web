@@ -18,6 +18,7 @@ import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
 import versionHandler from './api/version.js';
 import halloweenHauntHandler from './api/halloween-haunt.js';
+import reportsHandler from './api/reports.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,7 @@ app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res))
 app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/halloween-haunt', (req, res) => halloweenHauntHandler(req, res));
+app.use('/api/reports', (req, res) => reportsHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
@@ -66,7 +68,10 @@ app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.h
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
-app.get('/bug-report', (req, res) => res.sendFile(path.join(__dirname, 'bug-report.html')));
+app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
+app.get('/contact', (req, res) => res.redirect(301, '/support'));
+app.get('/bug-report', (req, res) => res.redirect(302, '/support?type=bug'));
+app.get('/feature-request', (req, res) => res.redirect(302, '/support?type=feature'));
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.get('/401', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.html')));

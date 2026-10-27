@@ -51,12 +51,44 @@ export default async function handler(req, res) {
     const action = req.query.action || payload.action;
 
     // Enforce Moderator read-only restriction
-    if (isMod && action !== 'getUsers') {
+    if (isMod && action !== 'getUsers' && action !== 'getReports') {
         return res.status(403).json({ error: 'Moderator Read-Only: Moderation edits and bans are reserved for administrators.' });
     }
 
     try {
         switch (action) {
+            case 'getReports': {
+                const reportsSnap = await db.ref('/reports').once('value');
+                const reports = reportsSnap.val() || {};
+                const list = Object.values(reports).filter(report => report && typeof report === 'object').sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+                return res.status(200).json({ reports: list, callerRole });
+            }
+
+            case 'updateReport': {
+                if (isMod) return res.status(403).json({ error: 'Moderators have read-only access to reports.' });
+                const { reportId, status, adminNotes = '' } = payload;
+                const allowedStatuses = new Set(['open', 'under_review', 'planned', 'in_progress', 'resolved', 'declined', 'duplicate']);
+                if (typeof reportId !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(reportId)) return res.status(400).json({ error: 'Invalid report reference.' });
+                if (!allowedStatuses.has(status)) return res.status(400).json({ error: 'Choose a valid report status.' });
+                if (typeof adminNotes !== 'string' || adminNotes.length > 2000) return res.status(400).json({ error: 'Admin notes must be 2,000 characters or fewer.' });
+                const reportRef = db.ref('/reports/' + reportId);
+                const reportSnap = await reportRef.once('value');
+                if (!reportSnap.exists()) return res.status(404).json({ error: 'Report not found.' });
+                await reportRef.update({ status, adminNotes: adminNotes.trim(), updatedAt: Date.now(), updatedByUid: staffUser.uid });
+                return res.status(200).json({ success: true });
+            }
+
+            case 'deleteReport': {
+                if (isMod) return res.status(403).json({ error: 'Moderators have read-only access to reports.' });
+                const { reportId } = payload;
+                if (typeof reportId !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(reportId)) return res.status(400).json({ error: 'Invalid report reference.' });
+                const reportRef = db.ref('/reports/' + reportId);
+                const reportSnap = await reportRef.once('value');
+                if (!reportSnap.exists()) return res.status(404).json({ error: 'Report not found.' });
+                await reportRef.remove();
+                return res.status(200).json({ success: true });
+            }
+
             case 'getUsers': {
                 const [accountsSnap, devicesSnap] = await Promise.all([
                     db.ref('/accounts').once('value'),
