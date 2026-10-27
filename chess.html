@@ -1,0 +1,53 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: MIT
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BSMS Web - Chess Arena</title>
+    <meta name="description" content="BSMS Web Chess Arena featuring Online Standard Ranked ELO with synced BSMS accounts, Famous Personalities, Move Ratings (Brilliant !! &amp; Blunder ??), and Custom Alien Overlord modes." />
+    <meta name="category" content="Education" />
+    <meta name="author" content="BSMS Web" />
+    <meta name="theme-color" content="#81b64c" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="application-name" content="BSMS Web Chess" />
+    <meta property="og:title" content="BSMS Web - Chess Arena" />
+    <meta property="og:description" content="Challenge BSMS members in Online Standard Chess for Rated ELO, battle Famous Bots, and unlock Brilliant (!!) move ratings." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Ban Check Enforcer -->
+    <script src="/js/ban-check.js"></script>
+
+    <!-- Account Update Checker -->
+    <script src="/js/account-check.js"></script>
+
+    <link rel="icon" type="image/png" href="/img/icon.png" />
+    <link rel="apple-touch-icon" href="/img/app-icon.png" />
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        window.dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      gtag('config', 'G-2TKPQV995W');
+    </script>
+    <script src="/js/analytics.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;family=Patrick+Hand&amp;display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/js/chess-bundle.css" />
+  </head>
+  <body class="bg-[#302e2b] text-white antialiased selection:bg-[#81b64c] selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/js/chess-bundle.js"></script>
+  </body>
+</html>
