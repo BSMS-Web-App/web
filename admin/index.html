@@ -22,6 +22,7 @@ SPDX-License-Identifier: MIT
     <button class="nav-btn active" onclick="Admin.switchTab('users', this)">Accounts Registry</button>
     <button class="nav-btn" onclick="Admin.switchTab('announcements', this)">Announcements</button>
     <button class="nav-btn" onclick="Admin.switchTab('chat', this)">Chat Moderation</button>
+    <button class="nav-btn" onclick="Admin.switchTab('reports', this)">Reports &amp; Requests</button>
     <button class="nav-btn" onclick="Admin.switchTab('devices', this)">Banned Devices</button>
     <button class="nav-btn" id="nav-btn-db" style="display:none;" onclick="Admin.switchTab('db', this)">Raw DB Inspector</button>
     <div style="flex:1"></div>
@@ -162,6 +163,30 @@ SPDX-License-Identifier: MIT
         </div>
         <div id="db-tree">Click "Fetch Snapshot" to load the database tree...</div>
     </div>
+</div>
+
+
+<!-- Reports & Feature Requests Panel -->
+<div id="reports-panel" class="panel">
+  <div class="panel-header">
+    <div><h1>Reports &amp; Requests</h1><p style="color:var(--fg2);margin:4px 0 0;">Review user-submitted bug reports and feature ideas.</p></div>
+    <button class="btn" onclick="Admin.loadReports()">Refresh</button>
+  </div>
+  <div id="reports-staff-notice" class="banner-mod" style="display:none;"></div>
+  <div class="status-filters" id="reports-filter-row">
+    <span style="color:var(--fg2);font-size:12px;font-weight:bold;">Type:</span>
+    <button class="status-filter-btn active" onclick="Admin.setReportFilter('all', this)">All</button>
+    <button class="status-filter-btn" onclick="Admin.setReportFilter('bug', this)">Bug reports</button>
+    <button class="status-filter-btn" onclick="Admin.setReportFilter('feature', this)">Feature requests</button>
+    <label for="report-status-filter" style="color:var(--fg2);font-size:12px;font-weight:bold;margin-left:8px;">Status:</label>
+    <select id="report-status-filter" onchange="Admin.renderReports()" style="max-width:190px;">
+      <option value="all">All statuses</option><option value="open">Open</option><option value="under_review">Under review</option><option value="planned">Planned</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option><option value="declined">Declined</option><option value="duplicate">Duplicate</option>
+    </select>
+    <input type="search" id="report-search" placeholder="Search reports..." oninput="Admin.renderReports()" style="width:220px;">
+  </div>
+  <div id="reports-list" style="display:flex;flex-direction:column;gap:14px;">
+    <div style="text-align:center;color:var(--fg2);padding:30px;">Select Reports &amp; Requests to load submissions.</div>
+  </div>
 </div>
 
 <!-- Edit Account Modal -->
