@@ -23,6 +23,7 @@ const Admin = {
         
         if (tabId === 'users' || tabId === 'devices') this.loadUsers();
         if (tabId === 'announcements') this.loadAnnouncements();
+        if (tabId === 'reports') this.loadReports();
         if (tabId === 'db') this.loadDB();
     },
 
@@ -837,6 +838,161 @@ const Admin = {
         } catch (e) {
             alert("Error deleting announcement: " + e.message);
         }
+    },
+
+
+    reportsCache: [],
+    reportFilter: 'all',
+
+    setReportFilter: function(type, btnEl) {
+        this.reportFilter = type;
+        document.querySelectorAll('#reports-filter-row .status-filter-btn').forEach(button => button.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        this.renderReports();
+    },
+
+    loadReports: async function() {
+        const list = document.getElementById('reports-list');
+        if (!list) return;
+        list.textContent = 'Loading reports...';
+        try {
+            const data = await this.apiCall('getReports');
+            this.reportsCache = Array.isArray(data.reports) ? data.reports : [];
+            const notice = document.getElementById('reports-staff-notice');
+            if (notice) {
+                notice.style.display = data.callerRole === 'mod' ? 'block' : 'none';
+                notice.textContent = data.callerRole === 'mod' ? 'Moderator view is read-only. Administrators and the owner can update report status, notes, or remove submissions.' : '';
+            }
+            this.renderReports();
+        } catch (error) {
+            list.textContent = 'Unable to load reports. Check your staff permissions and database connection.';
+        }
+    },
+
+    renderReports: function() {
+        const list = document.getElementById('reports-list');
+        if (!list) return;
+        const query = (document.getElementById('report-search')?.value || '').trim().toLowerCase();
+        const statusFilter = document.getElementById('report-status-filter')?.value || 'all';
+        const canManage = this.callerRole === 'owner' || this.callerRole === 'admin';
+        const statuses = [
+            ['open', 'Open'], ['under_review', 'Under review'], ['planned', 'Planned'],
+            ['in_progress', 'In progress'], ['resolved', 'Resolved'], ['declined', 'Declined'], ['duplicate', 'Duplicate']
+        ];
+        const filtered = this.reportsCache.filter(report => {
+            if (this.reportFilter !== 'all' && report.type !== this.reportFilter) return false;
+            if (statusFilter !== 'all' && (report.status || 'open') !== statusFilter) return false;
+            const haystack = [report.title, report.description, report.category, report.reporterUsername, report.reporterDisplayName, report.page].join(' ').toLowerCase();
+            return !query || haystack.includes(query);
+        });
+        list.replaceChildren();
+        if (!filtered.length) {
+            const empty = document.createElement('div');
+            empty.textContent = 'No submissions match these filters.';
+            empty.style.cssText = 'text-align:center;color:var(--fg2);padding:30px;background:var(--panel);border:1px solid var(--border);border-radius:14px;';
+            list.appendChild(empty);
+            return;
+        }
+        filtered.forEach(report => {
+            const card = document.createElement('article');
+            card.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:clamp(16px,3vw,22px);display:flex;flex-direction:column;gap:12px;';
+            const type = document.createElement('div');
+            type.textContent = report.type === 'feature' ? 'FEATURE REQUEST' : 'BUG REPORT';
+            type.style.cssText = 'font-size:11px;font-weight:800;letter-spacing:.06em;color:' + (report.type === 'feature' ? 'var(--accent,#a78bfa)' : 'var(--red)') + ';';
+            const title = document.createElement('h2');
+            title.textContent = report.title || 'Untitled submission';
+            title.style.cssText = 'font-family:var(--font-brand);font-size:24px;margin:0;overflow-wrap:anywhere;';
+            const meta = document.createElement('div');
+            meta.style.cssText = 'font-size:12px;color:var(--fg2);line-height:1.7;overflow-wrap:anywhere;';
+            meta.textContent = 'Category: ' + (report.category || 'other') + ' · Submitted by ' + (report.reporterDisplayName || report.reporterUsername || 'Unknown user') + ' (@' + (report.reporterUsername || 'unknown') + ') · ' + (report.createdAt ? new Date(Number(report.createdAt)).toLocaleString() : 'Unknown date') + ' · Reference: ' + (report.id || '');
+            const description = document.createElement('div');
+            description.textContent = report.description || '';
+            description.style.cssText = 'line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap;';
+            card.append(type, title, meta, description);
+            if (report.page) {
+                const page = document.createElement('div');
+                page.textContent = 'Page: ' + report.page;
+                page.style.cssText = 'font-size:13px;color:var(--fg2);';
+                card.appendChild(page);
+            }
+            if (report.steps) {
+                const steps = document.createElement('div');
+                steps.style.cssText = 'background:var(--panel-alt);padding:12px 14px;border-radius:10px;border-left:3px solid var(--red);white-space:pre-wrap;overflow-wrap:anywhere;';
+                const label = document.createElement('strong');
+                label.textContent = 'Steps / example';
+                const body = document.createElement('div');
+                body.textContent = report.steps;
+                body.style.marginTop = '6px';
+                steps.append(label, body);
+                card.appendChild(steps);
+            }
+            const controls = document.createElement('div');
+            controls.style.cssText = 'display:grid;grid-template-columns:minmax(0,1fr);gap:10px;border-top:1px solid var(--border);padding-top:14px;';
+            const statusLabel = document.createElement('label');
+            statusLabel.textContent = 'Status';
+            statusLabel.style.cssText = 'display:flex;flex-direction:column;gap:6px;color:var(--fg2);font-size:12px;font-weight:700;';
+            const select = document.createElement('select');
+            select.id = 'report-status-' + report.id;
+            statuses.forEach(([value, label]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                option.selected = (report.status || 'open') === value;
+                select.appendChild(option);
+            });
+            select.disabled = !canManage;
+            statusLabel.appendChild(select);
+            const notesLabel = document.createElement('label');
+            notesLabel.textContent = 'Private admin notes';
+            notesLabel.style.cssText = 'display:flex;flex-direction:column;gap:6px;color:var(--fg2);font-size:12px;font-weight:700;';
+            const notes = document.createElement('textarea');
+            notes.id = 'report-notes-' + report.id;
+            notes.rows = 3;
+            notes.maxLength = 2000;
+            notes.value = report.adminNotes || '';
+            notes.placeholder = 'Internal notes; not visible to the submitter';
+            notes.readOnly = !canManage;
+            notesLabel.appendChild(notes);
+            controls.append(statusLabel, notesLabel);
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;';
+            if (canManage) {
+                const save = document.createElement('button');
+                save.className = 'btn';
+                save.textContent = 'Save changes';
+                save.addEventListener('click', () => this.saveReport(report.id));
+                const remove = document.createElement('button');
+                remove.className = 'btn warn sm';
+                remove.textContent = 'Delete';
+                remove.addEventListener('click', () => this.removeReport(report.id));
+                actions.append(save, remove);
+            } else {
+                actions.textContent = 'Read-only';
+                actions.style.color = 'var(--fg2)';
+            }
+            controls.appendChild(actions);
+            card.appendChild(controls);
+            list.appendChild(card);
+        });
+    },
+
+    saveReport: async function(reportId) {
+        if (this.callerRole !== 'owner' && this.callerRole !== 'admin') return;
+        const status = document.getElementById('report-status-' + reportId)?.value;
+        const adminNotes = document.getElementById('report-notes-' + reportId)?.value || '';
+        try {
+            await this.apiCall('updateReport', { reportId, status, adminNotes });
+            await this.loadReports();
+        } catch (error) {}
+    },
+
+    removeReport: async function(reportId) {
+        if (this.callerRole !== 'owner' && this.callerRole !== 'admin') return;
+        if (!confirm('Permanently delete this submission? This cannot be undone.')) return;
+        try {
+            await this.apiCall('deleteReport', { reportId });
+            await this.loadReports();
+        } catch (error) {}
     },
 
     escapeHTML: function(str) {
