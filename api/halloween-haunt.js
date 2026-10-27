@@ -157,6 +157,47 @@ async function authenticate(req) {
   }
   return null;
 }
+
+function sanitizeImportedPlayer(input, uid, account, now) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid save state.');
+  const player = newPlayer(uid, account, now);
+  const cap = (value, max=1000000000) => Math.max(0, Math.min(max, Math.floor(Number(value)||0)));
+  player.cash = cap(input.cash);
+  player.displayName = String(account.displayName || account.username || input.displayName || 'Player').slice(0,40);
+  for (const candy of CANDY) {
+    player.inventory[candy.id] = cap(input.inventory?.[candy.id], 1000000);
+    player.lifetimeCollected[candy.id] = cap(input.lifetimeCollected?.[candy.id], 1000000000);
+  }
+  player.discovered = [...new Set(Array.isArray(input.discovered) ? input.discovered.filter(id => CANDY.some(c => c.id === id)) : [])];
+  player.feedCandy = cap(input.feedCandy, 1000000000);
+  player.basketCapacity = Math.max(1, Math.min(500, cap(input.basketCapacity, 500) || 50));
+  for (const [key,cfg] of Object.entries(UPGRADE_CONFIG)) {
+    const level = Math.min(cfg.max, cap(input.upgrades?.[key]?.level, cfg.max));
+    player.upgrades[key] = {level,nextCost:level>=cfg.max?-1:Math.floor(cfg.baseCost*Math.pow(1.62,level))};
+  }
+  const statDefaults = player.stats;
+  for (const key of Object.keys(statDefaults)) player.stats[key] = cap(input.stats?.[key], 1000000000000);
+  player.stats.highScore = Math.max(player.stats.highScore, player.cash);
+  player.crewUnlocked = Boolean(input.crewUnlocked);
+  player.crewHireCost = Math.max(180, Math.min(1000000000, cap(input.crewHireCost,1000000000)||180));
+  player.crew = Array.isArray(input.crew) ? input.crew.slice(0,MAX_CREW).map((worker,index) => {
+    const inventory={};
+    for(const candy of CANDY) inventory[candy.id]=cap(worker?.inventory?.[candy.id],1000000);
+    return {
+      id:'helper-'+(index+1),name:String(worker?.name||CREW_NAMES[index]||('Worker '+(index+1))).slice(0,40),
+      speedLevel:Math.min(20,cap(worker?.speedLevel,20)),capacityLevel:Math.min(30,cap(worker?.capacityLevel,30)),
+      powerLevel:Math.min(20,cap(worker?.powerLevel,20)),luckLevel:Math.min(15,cap(worker?.luckLevel,15)),
+      awakeLevel:Math.min(20,cap(worker?.awakeLevel,20)),capacity:Math.min(500,Math.max(10,cap(worker?.capacity,500)||50)),
+      intervalMs:2000,asleep:Boolean(worker?.asleep),awakeMs:cap(worker?.awakeMs),fedUntil:0,lastActionAt:now,workMs:cap(worker?.workMs),
+      inventory,inventoryCount:Object.values(inventory).reduce((sum,q)=>sum+q,0),collectedCount:cap(worker?.collectedCount),moneyEarned:cap(worker?.moneyEarned)
+    };
+  }) : [];
+  player.crewUnlocked = player.crewUnlocked || player.crew.length>0;
+  player.stats.lifetimeCash = cap(input.stats?.lifetimeCash,1000000000000);
+  player.updatedAt=now;
+  player.currentBasketCount=Object.values(player.inventory).reduce((sum,q)=>sum+q,0);
+  return player;
+}
 function rollCandy(luckLevel) {
   const luckFactor=1+Math.min(14,luckLevel)*0.055;
   const weighted=CANDY.map(c=>({c,w:c.weight*(c.rarity==='Common'?1:luckFactor)}));
@@ -213,6 +254,16 @@ export default async function handler(req,res) {
       if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
       if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
+      if(action==='import-save') {
+        try {
+          root.players[auth.uid]=sanitizeImportedPlayer(req.body?.saveState,auth.uid,account,now);
+          actionResponse={state:publicState(root.players[auth.uid],root,now),imported:true};
+          return root;
+        } catch(error) {
+          actionResponse={error:'Save file data is invalid or unsupported.',status:400};
+          return root;
+        }
+      }
       if(action==='crew-pause') {
         player.lastCrewSync=now;
         for(const crew of player.crew||[])crew.lastActionAt=now;

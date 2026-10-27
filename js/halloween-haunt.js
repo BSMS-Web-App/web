@@ -164,6 +164,7 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 async function apiCall(endpoint, method = 'GET', payload = null) {
     const sessionId = localStorage.getItem('session_id') || '';
     const isHealthCheck = endpoint.includes('action=health');
+    if (halloweenOfflineMode) return hhOfflineApi(endpoint, method, payload);
     if (!sessionId && !isHealthCheck) {
         return null;
     }
@@ -202,6 +203,11 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         return data;
     } catch (e) {
         console.warn('[Halloween Haunt] API request failed:', endpoint, e);
+        if (!navigator.onLine && gameState) {
+            halloweenOfflineMode = true;
+            try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+            return hhOfflineApi(endpoint, method, payload);
+        }
         return null;
     }
 }
@@ -236,11 +242,26 @@ function hideLoadingScreen() {
 async function initGame() {
     const retryButton = document.getElementById('loadingRetry');
     if (retryButton) retryButton.hidden = true;
+    const offlineImportButton=document.getElementById('offlineImportButton'); if(offlineImportButton) offlineImportButton.hidden=true;
+    if (!navigator.onLine) {
+        halloweenOfflineMode = true;
+        try {
+            const saved = localStorage.getItem(HH_OFFLINE_KEY);
+            if (saved) {
+                gameState = hhValidateSaveState(JSON.parse(saved));
+                updateUI(); hideLoadingScreen(); showToast('Continuing your saved offline game.');
+                return;
+            }
+        } catch (error) { console.warn('[Halloween Haunt] Could not restore local offline save:', error); }
+        hhShowOfflineMenu(); return;
+    }
+    halloweenOfflineMode=false;
     setLoadingMessage('Connecting to Halloween Haunt…');
     try {
         const data = await apiCall('?action=state');
         if (!data?.state) {
-            setLoadingMessage(lastApiError?.message || 'Could not connect to the game server. Check your connection and try again.');
+            hhShowOfflineMenu();
+            if (navigator.onLine) { const message=document.getElementById('loadingMessage'); if(message) message.textContent='The game server could not be reached. You can retry or import a save for offline play.'; }
             if (retryButton) retryButton.hidden = false;
             return;
         }
@@ -253,7 +274,8 @@ async function initGame() {
         hideLoadingScreen(); maybeShowWelcomeGuide();
     } catch (error) {
         console.error('[Halloween Haunt] Initial load failed:', error);
-        setLoadingMessage('Could not connect to the game server. Check your connection and try again.');
+        hhShowOfflineMenu();
+        if (navigator.onLine) { const message=document.getElementById('loadingMessage'); if(message) message.textContent='The game server could not be reached. You can retry or import a save for offline play.'; }
         if (retryButton) retryButton.hidden = false;
     }
 }
@@ -412,6 +434,202 @@ function closeModal() {
     document.getElementById('hauntModalOverlay').classList.remove('show');
 }
 
+
+// ---- Encrypted save import/export and offline play ----
+let halloweenOfflineMode = false;
+let pendingSaveImport = null;
+const HH_SAVE_MAGIC = 'BSMS-HALLOWEEN-HAUNT-SAVE';
+const HH_SAVE_VERSION = 1;
+const HH_OFFLINE_KEY = 'halloween_haunt_offline_save_v1';
+
+function hhBase64(bytes) {
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+}
+function hhUnbase64(value) {
+    const binary = atob(value);
+    return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+async function hhSaveKey(passphrase, salt) {
+    const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+function hhShowDialog(title, body, buttons, options={}) {
+    let dialog = document.getElementById('hhSaveDialog');
+    if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.id = 'hhSaveDialog';
+        dialog.className = 'hh-save-dialog';
+        dialog.innerHTML = '<section class="hh-save-dialog-card" role="dialog" aria-modal="true" aria-labelledby="hhSaveDialogTitle"><h2 id="hhSaveDialogTitle"></h2><div id="hhSaveDialogBody"></div><div id="hhSaveDialogActions"></div></section>';
+        document.body.appendChild(dialog);
+    }
+    dialog.querySelector('#hhSaveDialogTitle').textContent = title;
+    dialog.querySelector('#hhSaveDialogBody').innerHTML = body;
+    const actions = dialog.querySelector('#hhSaveDialogActions');
+    actions.replaceChildren();
+    for (const item of buttons) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = item.primary ? 'buy-btn' : 'hh-save-secondary';
+        button.textContent = item.label;
+        button.addEventListener('click', async () => {
+            if (item.action) await item.action(dialog);
+            else dialog.hidden = true;
+        });
+        actions.appendChild(button);
+    }
+    dialog.hidden = false;
+    const firstInput = dialog.querySelector('input');
+    if (firstInput) firstInput.focus();
+    return dialog;
+}
+function hhValidateSaveState(state) {
+    if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('This save does not contain a valid game state.');
+    if (!Number.isFinite(Number(state.cash)) || Number(state.cash) < 0) throw new Error('The save has an invalid cash value.');
+    if (!state.inventory || typeof state.inventory !== 'object' || !Array.isArray(state.discovered) || !state.stats || typeof state.stats !== 'object') throw new Error('The save is missing required game data.');
+    const validIds = new Set(CANDY_CATALOG.map(c => c.id));
+    for (const [id, quantity] of Object.entries(state.inventory)) {
+        if (!validIds.has(id) || !Number.isFinite(Number(quantity)) || Number(quantity) < 0 || Number(quantity) > 1000000) throw new Error('The save contains invalid candy inventory.');
+    }
+    if (state.discovered.some(id => !validIds.has(id))) throw new Error('The save contains an unknown candy type.');
+    if (state.discovered.length > CANDY_CATALOG.length) throw new Error('The save contains too many discovered candies.');
+    return state;
+}
+async function hhExportSave() {
+    if (!gameState) return showToast('There is no loaded game save to export.');
+    hhShowDialog('Encrypt your save', '<p>Choose a passphrase. You will need the same passphrase to import this file later.</p><label class="hh-save-label" for="hhSavePass">Passphrase</label><input id="hhSavePass" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"><p class="hh-save-note">Keep the passphrase somewhere safe. It cannot be recovered if lost.</p>', [
+        {label:'Cancel'},
+        {label:'Export .txt',primary:true,action:async dialog=>{
+            const pass=dialog.querySelector('#hhSavePass').value;
+            if(pass.length<8){dialog.querySelector('#hhSavePass').setCustomValidity('Use at least 8 characters.');dialog.querySelector('#hhSavePass').reportValidity();return;}
+            try {
+                const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+                const key=await hhSaveKey(pass,salt);
+                const payload={format:HH_SAVE_MAGIC,version:HH_SAVE_VERSION,createdAt:new Date().toISOString(),state:cloneGameState(gameState)};
+                const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(payload)));
+                const fileText=JSON.stringify({format:HH_SAVE_MAGIC,version:HH_SAVE_VERSION,algorithm:'AES-GCM',kdf:'PBKDF2-SHA256',iterations:250000,salt:hhBase64(salt),iv:hhBase64(iv),data:hhBase64(new Uint8Array(encrypted))},null,2);
+                const url=URL.createObjectURL(new Blob([fileText],{type:'text/plain;charset=utf-8'}));
+                const link=document.createElement('a');link.href=url;link.download='halloween-haunt-save.txt';link.click();URL.revokeObjectURL(url);
+                dialog.hidden=true;showToast('Encrypted save exported.');
+            } catch(error) { showToast('Could not encrypt this save in your browser.'); }
+        }}
+    ]);
+}
+async function hhReadSaveFile(file) {
+    if (!file || file.size > 5*1024*1024) throw new Error('Choose a save file smaller than 5 MB.');
+    const envelope=JSON.parse(await file.text());
+    if(envelope.format!==HH_SAVE_MAGIC||envelope.version!==HH_SAVE_VERSION||envelope.algorithm!=='AES-GCM'||envelope.kdf!=='PBKDF2-SHA256') throw new Error('This is not a supported Halloween Haunt save file.');
+    const salt=hhUnbase64(envelope.salt),iv=hhUnbase64(envelope.iv),data=hhUnbase64(envelope.data);
+    const dialog=hhShowDialog('Unlock save file','<p>Enter the passphrase used when this save was exported.</p><label class="hh-save-label" for="hhImportPass">Passphrase</label><input id="hhImportPass" type="password" autocomplete="current-password" placeholder="Save passphrase">',[
+        {label:'Cancel',action:async d=>{d.hidden=true;pendingSaveImport=null;}},
+        {label:'Unlock save',primary:true,action:async d=>{
+            const pass=d.querySelector('#hhImportPass').value;
+            try {
+                const key=await hhSaveKey(pass,salt);
+                const clear=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data);
+                const payload=JSON.parse(new TextDecoder().decode(clear));
+                if(payload.format!==HH_SAVE_MAGIC||payload.version!==HH_SAVE_VERSION) throw new Error('Unsupported save version.');
+                pendingSaveImport=hhValidateSaveState(payload.state);
+                d.hidden=true;
+                hhConfirmImport();
+            } catch(error) {
+                d.querySelector('#hhImportPass').setCustomValidity('Passphrase is incorrect or the save file is damaged.');
+                d.querySelector('#hhImportPass').reportValidity();
+            }
+        }}
+    ]);
+}
+function hhConfirmImport() {
+    if(!pendingSaveImport)return;
+    const offline=!navigator.onLine;
+    const body=offline
+      ? '<p>You are <strong>OFFLINE</strong>. This loads the save only on this device. It will not update the online account while offline.</p><p>Continue with this imported save?</p>'
+      : '<p>This will replace the currently loaded save'+(halloweenOfflineMode?' on this device':' on the server')+'. Export a backup first if you want to keep the current progress.</p><p>The imported file is encrypted, but save values are not a cheat-proof proof of progress. Server-side checks still apply.</p>';
+    hhShowDialog(offline?'Load offline save':'Replace current save',body,[
+      {label:'Cancel',action:async d=>{d.hidden=true;pendingSaveImport=null;}},
+      {label:offline?'Load on this device':'Replace save',primary:true,action:async d=>{
+        const imported=pendingSaveImport;d.hidden=true;pendingSaveImport=null;
+        try {
+          if(!navigator.onLine||halloweenOfflineMode){
+            gameState=cloneGameState(imported);halloweenOfflineMode=true;
+            localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(gameState));
+            updateUI();hideLoadingScreen();setLoadingMessage('Offline save loaded.');
+            showToast('Offline save loaded on this device.');
+            if(currentModal==='stats')renderStats(document.getElementById('modalBody'));
+          } else {
+            const result=await apiCall('?action=import-save','POST',{saveState:imported});
+            if(result?.state){gameState=result.state;updateUI();if(currentModal==='stats')renderStats(document.getElementById('modalBody'));showToast('Server save replaced successfully.');}
+          }
+        } catch(error) { showToast(error.message||'Could not import this save.'); }
+      }}
+    ]);
+}
+function hhChooseImportFile() {
+    let picker=document.getElementById('hhSaveFileInput');
+    if(!picker){picker=document.createElement('input');picker.id='hhSaveFileInput';picker.type='file';picker.accept='.txt,text/plain';picker.hidden=true;document.body.appendChild(picker);
+      picker.addEventListener('change',async()=>{const file=picker.files?.[0];picker.value='';if(!file)return;try{await hhReadSaveFile(file);}catch(error){hhShowDialog('Could not read save','<p>'+escapeHtml(error.message||'The save file could not be read.')+'</p>',[{label:'Close',primary:true}]);}});
+    }
+    picker.click();
+}
+function hhShowOfflineMenu() {
+    halloweenOfflineMode=true;
+    const message=document.getElementById('loadingMessage');
+    if(message)message.textContent='You are OFFLINE. Import an encrypted save file to continue on this device.';
+    const retry=document.getElementById('loadingRetry');
+    if(retry){retry.hidden=false;retry.textContent='Try connecting again';}
+    const importButton=document.getElementById('offlineImportButton');
+    if(importButton)importButton.hidden=false;
+}
+
+async function hhOfferOfflineSync() {
+    if (!halloweenOfflineMode || !gameState || !navigator.onLine || document.getElementById('hhSaveDialog')?.hidden===false) return;
+    hhShowDialog('Connection restored', '<p>Your offline progress is saved on this device. Would you like to replace your online server save with this offline version?</p><p><strong>This replaces the online save.</strong> Nothing will upload unless you choose the replace option.</p>', [
+      {label:'Keep playing offline',action:async d=>{d.hidden=true;}},
+      {label:'Replace server save',primary:true,action:async d=>{
+        const localState=cloneGameState(gameState);d.hidden=true;
+        halloweenOfflineMode=false;
+        const result=await apiCall('?action=import-save','POST',{saveState:localState});
+        if(result?.state){
+          gameState=result.state;
+          try{localStorage.removeItem(HH_OFFLINE_KEY);}catch(_){}
+          updateUI();if(currentModal==='stats')renderStats(document.getElementById('modalBody'));
+          showToast('Offline save uploaded and server save replaced.');
+        } else {
+          halloweenOfflineMode=true;
+          showToast('Could not upload offline save. Your local copy is still available.');
+        }
+      }}
+    ]);
+}
+
+function hhOfflineApi(endpoint,method,payload) {
+    const action=(endpoint.split('action=')[1]||'state').split('&')[0];
+    const s=gameState;
+    if(action==='leaderboard')return Promise.resolve({rankings:[]});
+    if(action==='state')return Promise.resolve({state:s});
+    if(!s)return Promise.resolve(null);
+    if(action==='crew-pause')return Promise.resolve({state:s});
+    if(action==='shops')return Promise.resolve({state:s});
+    if(action==='collect'){
+      const count=Math.min(50,Math.max(1,Math.floor(Number(payload?.clickCount)||1))),per=Math.min(8,1+Number(s.upgrades?.power?.level||0));
+      const room=Math.max(0,Number(s.basketCapacity||50)-Object.values(s.inventory||{}).reduce((a,n)=>a+Number(n||0),0));
+      const n=Math.min(room,count*per);
+      for(let i=0;i<n;i++){const candy=choosePreviewCandy();s.inventory[candy.id]=Number(s.inventory[candy.id]||0)+1;s.lifetimeCollected[candy.id]=Number(s.lifetimeCollected[candy.id]||0)+1;if(!s.discovered.includes(candy.id))s.discovered.push(candy.id);}
+      s.stats.totalClicks=Number(s.stats.totalClicks||0)+count;s.stats.totalCollected=Number(s.stats.totalCollected||0)+n;
+      recalculateBasketCount(s);localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(s));return Promise.resolve({state:s,drops:[]});
+    }
+    if(action==='sell'){
+      let earned=0,sold=0;for(const candy of CANDY_CATALOG){const q=Math.max(0,Math.floor(Number(s.inventory?.[candy.id]||0)));if(q){const price=Math.max(1,Number(s.candyCatalog?.find(c=>c.id===candy.id)?.bestPrice||candy.baseValue||1));earned+=q*price;sold+=q;s.inventory[candy.id]=0;}}
+      s.cash=Number(s.cash||0)+earned;s.stats.lifetimeCash=Number(s.stats.lifetimeCash||0)+earned;s.stats.totalSold=Number(s.stats.totalSold||0)+sold;recalculateBasketCount(s);localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(s));return Promise.resolve({state:s,earned,sold});
+    }
+    if(action==='upgrade'){
+      const type=String(payload?.type||''),cfg={capacity:[45,30],power:[60,20],luck:[90,15],autoSell:[5000,1]}[type],u=s.upgrades?.[type];
+      if(!cfg||!u||Number(u.level)>=cfg[1])return Promise.resolve({state:s,error:'Upgrade unavailable offline.'});
+      const cost=Math.floor(cfg[0]*Math.pow(1.62,Number(u.level)||0));if(Number(s.cash)<cost)return Promise.resolve({state:s,error:'Not enough cash.'});
+      s.cash-=cost;s.stats.cashSpent=Number(s.stats.cashSpent||0)+cost;s.stats.upgradesBought=Number(s.stats.upgradesBought||0)+1;u.level++;u.nextCost=u.level>=cfg[1]?-1:Math.floor(cfg[0]*Math.pow(1.62,u.level));if(type==='capacity')s.basketCapacity=Math.min(500,Number(s.basketCapacity||50)+10);localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(s));return Promise.resolve({state:s,purchased:type,cost});
+    }
+    return Promise.resolve({state:s,offline:true});
+}
 // ---- Modals Implementation ----
 
 function renderIndex(container) {
@@ -575,7 +793,7 @@ window.executeCrew=async function(action,index=0){
 function renderStats(container) {
     const s=gameState.stats||{},basket=Object.values(gameState.inventory||{}).reduce((a,n)=>a+Number(n||0),0),crew=(gameState.crew||[]).reduce((a,h)=>a+Number(h.inventoryCount||0),0),progress=Math.round(gameState.discovered.length/CANDY_CATALOG.length*100);
     const rows=[['Current cash',formatCash(gameState.cash)],['Highest cash balance',formatCash(s.highScore||0)],['Lifetime cash earned',formatCash(s.lifetimeCash||0)],['Total cash spent',formatCash(s.cashSpent||0)],['Lifetime candy collected',Number(s.totalCollected||0).toLocaleString()],['Candy sold',Number(s.totalSold||0).toLocaleString()],['Basket clicks',Number(s.totalClicks||0).toLocaleString()],['Rare and epic collected',Number(s.rareCollected||0).toLocaleString()],['Legendary collected',Number(s.legendaryCollected||0).toLocaleString()],['Upgrades purchased',Number(s.upgradesBought||0).toLocaleString()],['Crew candy collected',Number(s.crewCollected||0).toLocaleString()],['Crew candy sold',Number(s.crewSold||0).toLocaleString()],['Candy in basket',basket.toLocaleString()],['Candy held by crew',crew.toLocaleString()],['Candy Index',`${gameState.discovered.length}/${CANDY_CATALOG.length} (${progress}%)`]];
-    container.innerHTML=`<div style="display:flex;flex-direction:column;gap:0;color:var(--fg2);font-size:18px">${rows.map(([label,value])=>`<div style="display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span>${label}</span><strong style="color:#fff;text-align:right">${value}</strong></div>`).join('')}</div>`;
+    container.innerHTML=`<div class="hh-save-controls"><button type="button" class="buy-btn" onclick="hhExportSave()">Export Save (.txt)</button><button type="button" class="hh-save-secondary" onclick="hhChooseImportFile()">Import Save (.txt)</button><p class="hh-save-note">${halloweenOfflineMode?'OFFLINE MODE — changes stay on this device.':'Importing online replaces your server save after confirmation.'}</p></div><div style="display:flex;flex-direction:column;gap:0;color:var(--fg2);font-size:18px">${rows.map(([label,value])=>`<div style="display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.07)"><span>${label}</span><strong style="color:#fff;text-align:right">${value}</strong></div>`).join('')}</div>`;
 }
 function renderLeaderboard(container) {
     const rankings = leaderboardCache;
@@ -605,6 +823,8 @@ function finishWelcomeGuide(){try{localStorage.setItem('halloween_haunt_guide_se
 window.changeWelcomeGuide=changeWelcomeGuide;window.finishWelcomeGuide=finishWelcomeGuide;
 // Bootstrap
 window.addEventListener('DOMContentLoaded', initGame);
+window.importHalloweenHauntSave = hhChooseImportFile;
+window.offerHalloweenHauntSync = hhOfferOfflineSync;
 window.retryHalloweenHauntLoad = initGame;
 window.retryHalloweenHauntCollect = retryCollectQueue;
 

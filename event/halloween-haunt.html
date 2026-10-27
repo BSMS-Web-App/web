@@ -11,36 +11,6 @@ SPDX-License-Identifier: MIT
 <meta name="description" content="Compete in the BSMS Web Halloween Haunt! Collect candy, upgrade your crew, and climb the leaderboard."/>
 <meta name="theme-color" content="#12041b">
 <meta name="color-scheme" content="dark">
-<script>
-/* Remove Halloween Haunt's previously installed offline worker and cached assets. */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations
-        .filter(registration => registration.active?.scriptURL.endsWith('/event/halloween-haunt-sw.js'))
-        .map(registration => registration.unregister()));
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.filter(key => key.startsWith('bsms-halloween-haunt-')).map(key => caches.delete(key)));
-      }
-      try {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith('halloween_haunt_offline_progress_v1:') ||
-                      key.startsWith('halloween_haunt_last_known_state_v1:'))) {
-            localStorage.removeItem(key);
-          }
-        }
-      } catch (error) {
-        console.warn('[Halloween Haunt] Could not clear old local game snapshots:', error);
-      }
-    } catch (error) {
-      console.warn('[Halloween Haunt] Could not clear its old offline cache:', error);
-    }
-  });
-}
-</script>
 <title>Halloween Haunt - BSMS Web</title>
 
 <!-- Existing Core Scripts -->
@@ -56,6 +26,7 @@ if ('serviceWorker' in navigator) {
 
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/halloween-haunt.css">
+<link rel="stylesheet" href="/css/halloween-haunt-save.css">
 </head>
 <body>
 
@@ -65,6 +36,7 @@ if ('serviceWorker' in navigator) {
     <h2>Halloween Haunt</h2>
     <p id="loadingMessage">Loading your game, shops, collection, and candy artwork…</p>
     <button id="loadingRetry" class="loading-retry" hidden onclick="window.retryHalloweenHauntLoad()">Retry loading</button>
+    <button id="offlineImportButton" class="loading-retry" hidden onclick="window.importHalloweenHauntSave()">Import save file</button>
   </div>
 </div>
 
@@ -226,5 +198,9 @@ if ('serviceWorker' in navigator) {
 <script src="/js/halloween-haunt.js"></script>
 <script src="/js/halloween-haunt-redesign.js"></script>
 
+<script>
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/event/halloween-haunt-sw.js").catch(error => console.warn("[Halloween Haunt] Offline cache unavailable:", error)));
+window.addEventListener("online", () => { if (window.offerHalloweenHauntSync) window.offerHalloweenHauntSync(); else { const note=document.getElementById("loadingMessage"); if(note) note.textContent="Connection restored. Retry to load your online save."; } });
+</script>
 </body>
 </html>
