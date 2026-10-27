@@ -21,5 +21,14 @@
       "destination": "/chat",
       "permanent": true
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "dev1": false,
+      "dev2": false,
+      "dev3": false,
+      "dev4": false
+    }
+  }
 }
