@@ -82,11 +82,27 @@ const HELP_SECTIONS = [
 ];
 
 // Helpers
+const recentToastCategories = new Map();
 function showToast(msg) {
     const container = document.getElementById('toast-container');
+    if (!container) return;
+    const text = String(msg ?? '').trim();
+    const lower = text.toLowerCase();
+    let category = null;
+    if (/sold .* candies|candy sold|your candy was sold|selling your full basket|auto sell.*selling|selling candy/.test(lower)) category = 'sale';
+    else if (/upgrade purchased|upgrade unlocked|auto sell unlocked/.test(lower)) category = 'upgrade';
+    else if (/crew member hired|crew updated|crew hired|your worker is ready/.test(lower)) category = 'crew-hired';
+    else if (/fed for 20 minutes|crew member fed|boosts are active/.test(lower)) category = 'crew-fed';
+    else if (/crew member awake|worker is back to work/.test(lower)) category = 'crew-awake';
+    else if (/basket is full|basket full/.test(lower)) category = 'basket-full';
+    else if (/new rarity unlocked|discovered a .* candy/.test(lower)) category = 'new-rarity';
+    else if (/crew member asleep|needs to be woken|needs waking/.test(lower)) category = 'crew-asleep';
+    const now = Date.now();
+    if (category && now - (recentToastCategories.get(category) || 0) < 1800) return;
+    if (category) recentToastCategories.set(category, now);
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerText = msg;
+    toast.innerText = text;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
@@ -284,6 +300,7 @@ async function flushCollectQueue() {
             gameState = res.state;
             inFlightClicks = 0;
             updateUI();
+            renderCurrentModal();
             const retry = document.getElementById('collectRetry');
             if (retry) retry.hidden = true;
         } else {
