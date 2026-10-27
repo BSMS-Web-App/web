@@ -115,10 +115,6 @@
     if(category&&getPrefs()[category]===false)return;
     if(typeof baseShowToast==='function')return baseShowToast.apply(this,arguments);
   };
-  const initialDiscovered=new Set();
-  const initialRarities=new Set();
-  let hasInitialDiscoverySnapshot=false;
-  const lastSleepState=new Map();
   const baseUpdateUI=window.updateUI;
   window.updateUI=function(){
     if(typeof baseUpdateUI==='function')baseUpdateUI.apply(this,arguments);
