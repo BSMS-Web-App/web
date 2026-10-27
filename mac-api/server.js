@@ -397,7 +397,9 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         config,
         members,
         messageCount: indexedKeys.length,
-        lastMessage,
+        lastMessage: lastMessage && (lastMessage.contentType === 'file' || lastMessage.contentType === 'image')
+          ? { ...lastMessage, content: null, hasContent: true, attachmentMimeType: null, attachmentName: 'Attachment' }
+          : lastMessage,
         lastMessageId: lastId
       };
       if (channel.members[uid]?.role === 'owner' && channel.joinRequests) channelData.joinRequests = channel.joinRequests;
@@ -452,10 +454,10 @@ app.get('/v1/chat/messages', requireApiKey, (req, res) => {
     const message = allMsgs[id];
     if (!message) continue;
     if (message.senderUid) neededUids.add(message.senderUid);
-    const media = message.content && typeof message.content === 'object' && message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
-    if ((message.contentType === 'file' || message.contentType === 'image') && media) {
-      messages[id] = { ...message, content: null, hasContent: true, attachmentName: message.attachmentName || 'Attachment', attachmentMimeType: message.content.mimeType || null, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+    if (message.contentType === 'file' || message.contentType === 'image') {
+      messages[id] = { ...message, content: null, hasContent: true, attachmentName: 'Attachment', attachmentMimeType: null, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
     } else {
+      const media = message.content && typeof message.content === 'object' && message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
       const content = media ? '/api/media?id=' + encodeURIComponent(message.content.mediaId) : message.content;
       messages[id] = { ...message, content, attachmentMimeType: media ? (message.content.mimeType || null) : (typeof message.content === 'string' && message.content.startsWith('data:') ? message.content.slice(5).split(/[;,]/)[0] : null), senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
     }
