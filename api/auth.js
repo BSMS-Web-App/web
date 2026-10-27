@@ -6,16 +6,6 @@
 
 import { db, admin } from './db.js';
 import crypto from 'crypto';
-import { moderateContent } from './moderation.js';
-
-async function rejectFlaggedContent(res, value, label) {
-    const result = await moderateContent(value);
-    if (!result.flagged) return null;
-    return res.status(400).json({
-        error: `${label} was blocked by moderation: ${result.reason}`,
-        moderation: { flagged: true, reasons: result.reasons, categories: result.categories || [], sources: result.sources || [] }
-    });
-}
 
 function mediaUrl(value) {
     if (value && typeof value === 'object' && value.type === 'media' && /^[a-f0-9]{64}$/.test(value.mediaId || '')) {
@@ -91,6 +81,33 @@ async function evaluateAndClearBans(uid, deviceId, accountObj) {
     return { isBanned: false };
 }
 
+// Dynamic Glin Profanity checker for usernames and display names
+async function checkProfanity(text) {
+    if (!text) return false;
+    let strippedText = text
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+        .replace(/\s+/g, "")
+        .replace(/@/g, "a")
+        .replace(/\$/g, "s")
+        .replace(/0/g, "o")
+        .replace(/1/g, "i")
+        .replace(/3/g, "e")
+        .replace(/4/g, "a")
+        .replace(/5/g, "s")
+        .replace(/7/g, "t")
+        .toLowerCase();
+
+    const blockList = [
+        'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
+        'nigger', 'nigga', 'faggot', 'fag', 'cock', 'pussy', 'whore', 'slut', 'bastard', 'retard'
+    ];
+    return blockList.some(word => strippedText.includes(word));
+}
+
+
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
@@ -122,8 +139,7 @@ export default async function handler(req, res) {
                 const validUserRegex = /^[a-zA-Z0-9_.-]+$/;
                 if (!validUserRegex.test(username)) return res.status(400).json({ error: 'Username contains invalid characters.' });
                 
-                const usernameModerationResponse = await rejectFlaggedContent(res, username, 'Username');
-                if (usernameModerationResponse) return usernameModerationResponse;
+                if (await checkProfanity(username)) return res.status(400).json({ error: 'Username contains profane language.' });
 
                 const accountsSnap = await db.ref('/accounts').once('value');
                 const accounts = accountsSnap.val() || {};
@@ -279,13 +295,11 @@ export default async function handler(req, res) {
                 const updates = {};
                 
                 if (displayName !== undefined) {
-                    const displayNameModerationResponse = await rejectFlaggedContent(res, displayName, 'Display name');
-                    if (displayNameModerationResponse) return displayNameModerationResponse;
+                    if (await checkProfanity(displayName)) return res.status(400).json({ error: 'Display name contains profane language.' });
                     updates['displayName'] = displayName;
                 }
                 if (bio !== undefined) {
-                    const bioModerationResponse = await rejectFlaggedContent(res, bio, 'Bio');
-                    if (bioModerationResponse) return bioModerationResponse;
+                    if (await checkProfanity(bio)) return res.status(400).json({ error: 'Bio contains profane language.' });
                     updates['bio'] = bio;
                 }
                 if (email !== undefined) updates['email'] = email;
@@ -345,8 +359,7 @@ export default async function handler(req, res) {
                 }
 
                 if (!/^[a-zA-Z0-9_-]{3,20}$/.test(newUsername)) return res.status(400).json({ error: 'Invalid username format.' });
-                const newUsernameModerationResponse = await rejectFlaggedContent(res, newUsername, 'Username');
-                if (newUsernameModerationResponse) return newUsernameModerationResponse;
+                if (await checkProfanity(newUsername)) return res.status(400).json({ error: 'Username contains profane language.' });
                 
                 const snap = await db.ref('/accounts').once('value');
                 const allAccs = snap.val() || {};

@@ -6,16 +6,6 @@
 
 import { db, admin, requestMacApi } from './db.js';
 import crypto from 'crypto';
-import { moderateContent } from './moderation.js';
-
-async function rejectFlaggedContent(res, value, label = 'Content') {
-    const result = await moderateContent(value);
-    if (!result.flagged) return null;
-    return res.status(400).json({
-        error: `${label} was blocked by moderation: ${result.reason}`,
-        moderation: { flagged: true, reasons: result.reasons, categories: result.categories || [], sources: result.sources || [] }
-    });
-}
 
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
@@ -25,6 +15,26 @@ async function getUserBySession(sessionId) {
     } catch {
         return null;
     }
+}
+
+// Extracted Glin Profanity Checker
+async function checkProfanity(text) {
+    if (!text) return false;
+    let strippedText = text
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+        .replace(/\s+/g, "")
+        .replace(/@/g, "a").replace(/\$/g, "s").replace(/0/g, "o")
+        .replace(/1/g, "i").replace(/3/g, "e").replace(/4/g, "a")
+        .replace(/5/g, "s").replace(/7/g, "t")
+        .toLowerCase();
+
+    const blockList = [
+        'fuck', 'fucker', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
+        'nigger', 'nigga', 'faggot', 'fag', 'cock', 'pussy', 'whore', 'slut', 'bastard', 'retard'
+    ];
+    return blockList.some(word => strippedText.includes(word));
 }
 
 export default async function handler(req, res) {
@@ -103,25 +113,12 @@ export default async function handler(req, res) {
                 });
                 if (beforeId) query.set('beforeId', String(beforeId));
                 const result = await requestMacApi('GET', '/v1/chat/messages?' + query.toString());
-                if (result?.messages && typeof result.messages === 'object') {
-                    for (const message of Object.values(result.messages)) {
-                        if (message && (message.contentType === 'file' || message.contentType === 'image')) {
-                            message.content = null;
-                            message.hasContent = true;
-                            message.attachmentMimeType = null;
-                            message.attachmentName = 'Attachment';
-                        }
-                    }
-                }
                 return res.status(200).json(result);
             }
 
             case 'sendMessage': {
                 const { cid, type, content, contentType = 'text', attachmentName, repliedTo } = payload;
                 if (!cid || !type || !content) return res.status(400).json({ error: "Missing payload data" });
-                if (contentType === 'file' || contentType === 'image') {
-                    return res.status(403).json({ error: 'Sending files and images in chat is disabled.' });
-                }
 
                 const chSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
                 const channel = chSnap.val();
@@ -130,21 +127,12 @@ export default async function handler(req, res) {
                 if (contentType === 'text') {
                     const validTextRegex = /^[\x20-\x7E\p{Emoji}\s]*$/u;
                     if (!validTextRegex.test(content)) return res.status(400).json({ error: 'Invalid characters or formatting detected.' });
-                    const messageModerationResponse = await rejectFlaggedContent(res, content, 'Message');
-                    if (messageModerationResponse) return messageModerationResponse;
+                    if (await checkProfanity(content)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
                 } else if (contentType === 'poll') {
-                    const pollQuestionModerationResponse = await rejectFlaggedContent(res, content.pollQuestion, 'Poll question');
-                    if (pollQuestionModerationResponse) return pollQuestionModerationResponse;
-                    if (content.pollOptions && typeof content.pollOptions === 'object') {
-                        for (const option of Object.values(content.pollOptions)) {
-                            const pollOptionModerationResponse = await rejectFlaggedContent(res, option, 'Poll option');
-                            if (pollOptionModerationResponse) return pollOptionModerationResponse;
-                        }
-                    }
+                    if (await checkProfanity(content.pollQuestion)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
                 } else if (contentType === 'invite') {
                     if (typeof content === 'object' && content.groupName) {
-                        const inviteNameModerationResponse = await rejectFlaggedContent(res, content.groupName, 'Group name');
-                        if (inviteNameModerationResponse) return inviteNameModerationResponse;
+                        if (await checkProfanity(content.groupName)) return res.status(400).json({ error: 'Content flagged by profanity filter.' });
                     }
                 }
 
@@ -210,8 +198,7 @@ export default async function handler(req, res) {
                 } else if (msgAction === 'pin' && isMod) {
                     await msgRef.update({ 'status/pinned': !(msg.status?.pinned || false) });
                 } else if (msgAction === 'edit' && isMine && msg.contentType === 'text') {
-                    const editedMessageModerationResponse = await rejectFlaggedContent(res, content, 'Edited message');
-                    if (editedMessageModerationResponse) return editedMessageModerationResponse;
+                    if (await checkProfanity(content)) return res.status(400).json({ error: "Content flagged by profanity filter." });
                     await msgRef.update({ content: content, 'status/edited': true });
                 } else if (msgAction === 'react' && emoji) {
                     const rxRef = db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}/reactions/${uid}`);
@@ -276,8 +263,7 @@ export default async function handler(req, res) {
             case 'createGroup': {
                 const { name, joinCode, requireApproval, icon } = payload;
                 if (!name || name.length < 3 || name.length > 30) return res.status(400).json({ error: "Group name must be 3-30 characters." });
-                const groupNameModerationResponse = await rejectFlaggedContent(res, name, 'Group name');
-                if (groupNameModerationResponse) return groupNameModerationResponse;
+                if (await checkProfanity(name)) return res.status(400).json({ error: "Content flagged by profanity filter." });
 
                 const finalCode = joinCode || crypto.randomBytes(3).toString('hex').toUpperCase();
                 
@@ -369,8 +355,7 @@ export default async function handler(req, res) {
                 switch (gAction) {
                     case 'rename':
                         if (!isOwner) return res.status(403).json({ error: "Unauthorized" });
-                        const groupTextModerationResponse = await rejectFlaggedContent(res, value, 'Group text');
-                        if (groupTextModerationResponse) return groupTextModerationResponse;
+                        if (await checkProfanity(value)) return res.status(400).json({ error: "Content flagged by profanity filter." });
                         await db.ref(`/chat/conversations/gcs/${cid}/name`).set(value);
                         break;
                     case 'updateConfig':
@@ -408,10 +393,7 @@ export default async function handler(req, res) {
                         break;
                     case 'saveNickname':
                         if (group.config?.allowCustomNicknames === false) return res.status(400).json({ error: "Nicknames disabled" });
-                        if (value) {
-                            const groupConfigModerationResponse = await rejectFlaggedContent(res, value, 'Group setting');
-                            if (groupConfigModerationResponse) return groupConfigModerationResponse;
-                        }
+                        if (value && await checkProfanity(value)) return res.status(400).json({ error: "Content flagged by profanity filter." });
                         await db.ref(`/chat/conversations/gcs/${cid}/members/${uid}/nickname`).set(value || null);
                         break;
                     case 'requestJoin':
@@ -450,9 +432,6 @@ export default async function handler(req, res) {
                 const msgSnap = await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}`).once('value');
                 const msg = msgSnap.val();
                 if (!msg) return res.status(404).json({ error: "Message not found" });
-                if (msg.contentType === 'file' || msg.contentType === 'image') {
-                    return res.status(403).json({ error: 'File and image attachments are disabled in chat.' });
-                }
                 let content = msg.content;
                 let attachmentMimeType = null;
                 if (content && typeof content === 'object' && content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '')) {
