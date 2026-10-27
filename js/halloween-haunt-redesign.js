@@ -169,7 +169,6 @@
         const latest=typeof gameState!=='undefined'?gameState:null;
         const latestCount=Object.values(latest?.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
         if(latest&&Number(latest.upgrades?.autoSell?.level||0)>0&&latestCount>=Math.max(1,Number(latest.basketCapacity||50))){
-          if(getPrefs().autoSell!==false&&typeof window.showToast==='function')window.showToast('Auto Sell — your full basket is being sold at the best prices.');
           await window.executeSellAll?.();
         }
         autoSellPending=false;
