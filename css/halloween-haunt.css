@@ -683,20 +683,6 @@ tr:hover td { background: rgba(255, 255, 255, 0.06); }
 }
 
 /* Compact red server connection warning */
-#offlineBanner{width:min(760px,100%);margin:0 auto 16px;padding:9px 13px;border:1px solid rgba(255,85,100,.8);border-radius:12px;background:linear-gradient(135deg,rgba(112,15,25,.98),rgba(64,8,17,.98));color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 8px 20px rgba(0,0,0,.28);}
-#offlineBanner .offline-card-title{display:flex;align-items:center;gap:9px;color:#fff;font-size:1rem;font-weight:850;margin:0;}
-#offlineBanner .offline-card-title svg{flex:none;}
-#offlineBanner .offline-learn-more{border:1px solid rgba(255,255,255,.7);border-radius:9px;padding:7px 11px;background:#fff;color:#8d101d;font:inherit;font-weight:800;cursor:pointer;white-space:nowrap;}
-#offlineBanner .offline-learn-more:hover{background:#ffe7e9;}
-.offline-help-overlay{position:fixed;inset:0;z-index:26000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease;}
-.offline-help-overlay.show{opacity:1;visibility:visible;}
-.offline-help-card{width:min(440px,100%);padding:24px;border:1px solid rgba(255,76,76,.55);border-radius:18px;background:linear-gradient(145deg,#291218,#100d13);color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.6);}
-.offline-help-card h2{margin:0 0 12px;font-size:1.35rem;}
-.offline-help-card p{color:#f1dfe2;line-height:1.6;margin:0 0 12px;}
-.offline-help-card .offline-help-close{margin-top:8px;width:100%;border:0;border-radius:10px;padding:11px 14px;background:#c51f32;color:#fff;font:inherit;font-weight:800;cursor:pointer;}
-.offline-leaderboard-note{padding:18px;border:1px solid rgba(255,76,76,.35);border-radius:12px;background:rgba(112,15,25,.12);}
-.offline-leaderboard-note p{color:var(--fg2);}
-
 /* Tutorial / Welcome Guide */
 #welcomeGuideOverlay {
   position: fixed;
