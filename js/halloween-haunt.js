@@ -580,6 +580,28 @@ function hhShowOfflineMenu() {
     const importButton=document.getElementById('offlineImportButton');
     if(importButton)importButton.hidden=false;
 }
+
+async function hhOfferOfflineSync() {
+    if (!halloweenOfflineMode || !gameState || !navigator.onLine || document.getElementById('hhSaveDialog')?.hidden===false) return;
+    hhShowDialog('Connection restored', '<p>Your offline progress is saved on this device. Would you like to replace your online server save with this offline version?</p><p><strong>This replaces the online save.</strong> Nothing will upload unless you choose the replace option.</p>', [
+      {label:'Keep playing offline',action:async d=>{d.hidden=true;}},
+      {label:'Replace server save',primary:true,action:async d=>{
+        const localState=cloneGameState(gameState);d.hidden=true;
+        halloweenOfflineMode=false;
+        const result=await apiCall('?action=import-save','POST',{saveState:localState});
+        if(result?.state){
+          gameState=result.state;
+          try{localStorage.removeItem(HH_OFFLINE_KEY);}catch(_){}
+          updateUI();if(currentModal==='stats')renderStats(document.getElementById('modalBody'));
+          showToast('Offline save uploaded and server save replaced.');
+        } else {
+          halloweenOfflineMode=true;
+          showToast('Could not upload offline save. Your local copy is still available.');
+        }
+      }}
+    ]);
+}
+
 function hhOfflineApi(endpoint,method,payload) {
     const action=(endpoint.split('action=')[1]||'state').split('&')[0];
     const s=gameState;
@@ -802,6 +824,7 @@ window.changeWelcomeGuide=changeWelcomeGuide;window.finishWelcomeGuide=finishWel
 // Bootstrap
 window.addEventListener('DOMContentLoaded', initGame);
 window.importHalloweenHauntSave = hhChooseImportFile;
+window.offerHalloweenHauntSync = hhOfferOfflineSync;
 window.retryHalloweenHauntLoad = initGame;
 window.retryHalloweenHauntCollect = retryCollectQueue;
 
