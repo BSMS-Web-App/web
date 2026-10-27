@@ -1,0 +1,146 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: MIT
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Contact BSMS Web to report a problem or suggest a feature.">
+<meta name="theme-color" content="#BB001E">
+<meta name="color-scheme" content="dark">
+<meta name="application-name" content="BSMS Web">
+<title>Contact BSMS Web</title>
+
+<!-- Ban Check Enforcer -->
+<script src="/js/ban-check.js"></script>
+<!-- Account Update Checker -->
+<script src="/js/account-check.js"></script>
+<link rel="icon" href="/img/icon.png">
+<link rel="apple-touch-icon" href="/img/app-icon.png">
+
+<!-- Vercel Web Analytics -->
+<script src="/js/vercel-analytics-bootstrap.js"></script>
+<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2TKPQV995W"></script>
+<script src="/js/google-analytics-config.js"></script>
+<script src="/js/analytics.js"></script>
+
+<link rel="stylesheet" href="/css/styles.css">
+<link rel="stylesheet" href="/css/contact.css">
+</head>
+<body>
+<div id="offlineBanner">You are currently offline. Check your network connection.</div>
+
+<main class="contact-shell">
+  <a class="contact-back" href="/">← Back to BSMS Web</a>
+  <header class="contact-heading">
+    <div class="contact-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.7a2.5 2.5 0 0 1-1-1.8z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 8h8M8 11.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </div>
+    <p class="contact-eyebrow">BSMS WEB SUPPORT</p>
+    <h1>How can we help?</h1>
+    <p class="contact-intro">Tell us about a problem or share an idea for making BSMS Web better. You must be signed in so your submission can be linked to your account.</p>
+  </header>
+
+  <section id="contactAuthCard" class="contact-card" hidden>
+    <h2>Sign in to continue</h2>
+    <p>Bug reports and feature requests are linked to your BSMS Web account. Sign in or create an account to submit one.</p>
+    <a class="contact-primary" href="/accounts">Open Account Manager</a>
+  </section>
+
+  <section id="contactFormCard" class="contact-card" hidden>
+    <div class="contact-account-row">
+      <div class="contact-avatar" id="contactAvatar">?</div>
+      <div class="contact-account-meta">
+        <strong id="contactDisplayName">Signed in</strong>
+        <span id="contactUsername">@username</span>
+      </div>
+      <span class="contact-linked-pill">Account linked</span>
+    </div>
+
+    <form id="contactForm">
+      <div class="contact-type-grid" role="group" aria-label="Submission type">
+        <button type="button" class="contact-type active" data-type="bug" aria-pressed="true">
+          <span class="contact-type-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 8 7 5M15 8l2-3M4 10h16M5 14H3m18 0h-2M8 19l-2 2m10-2 2 2M8 8h8v8a4 4 0 0 1-8 0z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <strong>Bug report</strong>
+          <span>Something isn't working correctly.</span>
+        </button>
+        <button type="button" class="contact-type" data-type="feature" aria-pressed="false">
+          <span class="contact-type-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5a6 6 0 0 0-3.7 10.7c.9.7 1.2 1.4 1.2 2.3h5c0-.9.3-1.6 1.2-2.3A6 6 0 0 0 12 3.5zM9.5 19h5M10.2 21h3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <strong>Feature request</strong>
+          <span>Suggest an idea or improvement.</span>
+        </button>
+      </div>
+      <input type="hidden" id="contactType" name="type" value="bug">
+
+      <div class="contact-field">
+        <label for="contactTitle">Title <span>Required</span></label>
+        <input id="contactTitle" name="title" type="text" maxlength="120" placeholder="A short summary" required>
+      </div>
+
+      <div class="contact-field">
+        <label for="contactCategory">Category <span>Required</span></label>
+        <select id="contactCategory" name="category" required>
+          <option value="">Choose a category</option>
+          <option value="accounts">Accounts</option>
+          <option value="chat">Chat</option>
+          <option value="games">Games</option>
+          <option value="events">Events</option>
+          <option value="ui">Design and interface</option>
+          <option value="performance">Performance</option>
+          <option value="security">Security or privacy</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="contact-field">
+        <label for="contactDescription" id="contactDescriptionLabel">What happened?</label>
+        <textarea id="contactDescription" name="description" rows="6" minlength="10" maxlength="5000" placeholder="Describe what happened and what you expected to happen." required></textarea>
+        <div class="contact-field-foot"><span id="contactDescriptionHint">Include the steps that led to the problem, if you know them.</span><span id="contactCharCount">0 / 5000</span></div>
+      </div>
+
+      <div class="contact-field" id="contactPageField">
+        <label for="contactPage">Page where it happened <span>Optional</span></label>
+        <input id="contactPage" name="page" type="text" maxlength="200" placeholder="e.g. /chat">
+      </div>
+
+      <div class="contact-field">
+        <label for="contactSteps" id="contactStepsLabel">Steps to reproduce <span>Optional</span></label>
+        <textarea id="contactSteps" name="steps" rows="3" maxlength="2500" placeholder="1. Open Chat&#10;2. Send a message&#10;3. Describe what happened"></textarea>
+      </div>
+
+      <p class="contact-privacy-note">Do not include passwords, session tokens, private personal information, or sensitive information about other people. Submissions are visible to authorized BSMS Web staff.</p>
+      <div id="contactMessage" class="contact-message" role="status" aria-live="polite" hidden></div>
+      <button id="contactSubmit" class="contact-primary contact-submit" type="submit">Submit bug report</button>
+    </form>
+  </section>
+
+  <section id="contactSuccessCard" class="contact-card contact-success" hidden>
+    <div class="contact-success-icon" aria-hidden="true">✓</div>
+    <h2>Submission received</h2>
+    <p>Your submission has been saved and linked to your BSMS Web account.</p>
+    <p class="contact-ticket">Reference: <strong id="contactReference"></strong></p>
+    <div class="contact-success-actions">
+      <button class="contact-primary" id="contactAnother" type="button">Submit another</button>
+      <a class="contact-secondary" href="/">Return home</a>
+    </div>
+  </section>
+
+  <footer class="contact-footer">
+    <span>BSMS Web</span>
+    <span>© 2026 Jellyfish Jelly · MIT License</span>
+    <a href="/privacy">Privacy Policy</a>
+  </footer>
+</main>
+
+<script src="/js/contact.js"></script>
+</body>
+</html>
