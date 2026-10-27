@@ -618,8 +618,8 @@ SPDX-License-Identifier: MIT
             <div id="charCounter">0/100</div>
 
             <div class="cmp-row">
-                <button class="cmp-btn" onclick="document.getElementById('fileUploadInput').click()" title="Attach File"><svg class="ic"><use href="#ico-upload"></use></svg></button>
-                <input type="file" id="fileUploadInput" style="display:none;" onchange="ComposerManager.attachFile(event)">
+                <button class="cmp-btn" type="button" disabled title="File and image attachments are disabled" aria-label="File and image attachments are disabled" style="opacity:0.4;cursor:not-allowed;"><svg class="ic"><use href="#ico-upload"></use></svg></button>
+                <input type="file" id="fileUploadInput" style="display:none;" disabled onchange="ComposerManager.attachFile(event)">
 
                 <div id="msgInput" class="rich-input" contenteditable="true" data-placeholder="Message..."></div>
 
