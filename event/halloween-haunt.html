@@ -200,7 +200,7 @@ SPDX-License-Identifier: MIT
 
 <script>
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/event/halloween-haunt-sw.js").catch(error => console.warn("[Halloween Haunt] Offline cache unavailable:", error)));
-window.addEventListener("online", () => { if (!window.halloweenHauntOnlineNoticeShown) { window.halloweenHauntOnlineNoticeShown=true; const note=document.getElementById("loadingMessage"); if(note && document.getElementById("gameLoadingScreen")?.classList.contains("hidden")===false) note.textContent="Connection restored. Retry to load your online save; offline progress is not synced automatically."; } });
+window.addEventListener("online", () => { if (window.offerHalloweenHauntSync) window.offerHalloweenHauntSync(); else { const note=document.getElementById("loadingMessage"); if(note) note.textContent="Connection restored. Retry to load your online save."; } });
 </script>
 </body>
 </html>
