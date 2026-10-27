@@ -50,160 +50,14 @@ const CANDY_CATALOG = [
 
 // Active State
 let gameState = null;
-let offlineMode = false;
-const OFFLINE_PROGRESS_KEY = 'halloween_haunt_offline_progress_v1';
-const LAST_KNOWN_STATE_KEY = 'halloween_haunt_last_known_state_v1';
-let offlineSyncInFlight = false;
-let activeSessionHash = null;
 let lastApiError = null;
-let offlineConflictResolverOpen = false;
-
-// Keep saved game data separate for each signed-in session. Never use a
-// shared anonymous key: this browser may be used by more than one account.
-function getSessionHash() {
-    try {
-        const sessionId = localStorage.getItem('session_id') || '';
-        if (!sessionId) return null;
-        let hash = 2166136261;
-        for (let i = 0; i < sessionId.length; i++) {
-            hash ^= sessionId.charCodeAt(i);
-            hash = Math.imul(hash, 16777619);
-        }
-        return (hash >>> 0).toString(36);
-    } catch (_) { return null; }
-}
-
-function getSessionStorageKey(baseKey) {
-    const hash = getSessionHash();
-    return hash ? baseKey + ':' + hash : null;
-}
-
-function readLastKnownOnlineState() {
-    const key = getSessionStorageKey(LAST_KNOWN_STATE_KEY);
-    const sessionHash = getSessionHash();
-    if (!key || !sessionHash) return null;
-    try {
-        const saved = JSON.parse(localStorage.getItem(key) || 'null');
-        if (!saved || saved.version !== 2 || saved.sessionHash !== sessionHash ||
-            !saved.state || typeof saved.state !== 'object' ||
-            !saved.state.accountId || saved.state.accountId === 'offline-local') return null;
-        return saved.state;
-    } catch (_) { return null; }
-}
-
-function saveLastKnownOnlineState() {
-    const key = getSessionStorageKey(LAST_KNOWN_STATE_KEY);
-    const sessionHash = getSessionHash();
-    if (offlineMode || !key || !sessionHash || activeSessionHash !== sessionHash ||
-        !gameState || !gameState.accountId || gameState.accountId === 'offline-local') return false;
-    try {
-        localStorage.setItem(key, JSON.stringify({ version: 2, sessionHash, savedAt: Date.now(), state: gameState }));
-        return true;
-    } catch (error) {
-        console.warn('[Halloween Haunt] Could not save last known online stats locally:', error);
-        return false;
-    }
-}
-
-function readOfflineProgress() {
-    const key = getSessionStorageKey(OFFLINE_PROGRESS_KEY);
-    const sessionHash = getSessionHash();
-    if (!key || !sessionHash) return {};
-    try {
-        const saved = JSON.parse(localStorage.getItem(key) || '{}') || {};
-        return saved.sessionHash === sessionHash ? saved : {};
-    } catch (_) { return {}; }
-}
-
-function writeOfflineProgress(saved) {
-    const key = getSessionStorageKey(OFFLINE_PROGRESS_KEY);
-    const sessionHash = getSessionHash();
-    if (!key || !sessionHash) return false;
-    try {
-        localStorage.setItem(key, JSON.stringify({ ...saved, version: 2, sessionHash }));
-        return true;
-    } catch (error) {
-        console.warn('[Halloween Haunt] Could not save offline progress:', error);
-        return false;
-    }
-}
 
 function createDefaultStats(){return {highScore:100,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0};}
-function createDefaultUpgrades(){return {capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:5000}};}
-function createDefaultShops(){
- const values=Object.fromEntries(CANDY_CATALOG.map(c=>[c.id,c.rarity==='Common'?1:c.rarity==='Uncommon'?2:c.rarity==='Rare'?4:c.rarity==='Epic'?8:16]));
- return [{id:'corner',name:'Corner Store',multiplier:1},{id:'market',name:'Harvest Market',multiplier:1.12},{id:'arcade',name:'Midnight Arcade',multiplier:.94},{id:'pharmacy',name:'Moonlight Pharmacy',multiplier:1.05}].map(s=>({...s,prices:Object.fromEntries(Object.entries(values).map(([id,v])=>[id,Math.max(1,Math.round(v*s.multiplier))]))}));
-}
-function createOfflineGameState(){
- const inventory={},lifetimeCollected={};for(const c of CANDY_CATALOG){inventory[c.id]=0;lifetimeCollected[c.id]=0;}
- const now=Date.now(),values=Object.fromEntries(CANDY_CATALOG.map(c=>[c.id,c.rarity==='Common'?1:c.rarity==='Uncommon'?2:c.rarity==='Rare'?4:c.rarity==='Epic'?8:16]));
- const shops=createDefaultShops();
- return {accountId:'offline-local',displayName:'Offline Player',cash:100,inventory,discovered:[],lifetimeCollected,feedCandy:0,currentBasketCount:0,basketCapacity:50,upgrades:createDefaultUpgrades(),crew:[],crewUnlocked:false,crewHireCost:180,stats:createDefaultStats(),shops,candyCatalog:CANDY_CATALOG.map(c=>({...c,baseValue:values[c.id]})),offerWindow:Math.floor(now/300000)*300000,offerRefreshAt:(Math.floor(now/300000)+1)*300000,startsAt:Date.parse(START_Z),endsAt:Date.parse(DEADLINE_Z),crewAutoSell:false};
-}
-function chooseOfflineCandy(){
+function choosePreviewCandy(){
  const weights={Common:62,Uncommon:24,Rare:10,Epic:3.3,Legendary:.7},luck=Math.min(14,Math.max(0,Number(gameState?.upgrades?.luck?.level)||0)),items=CANDY_CATALOG.map(c=>({c,w:(weights[c.rarity]||1)*(c.rarity==='Common'?1:1+luck*.055)}));
  let roll=Math.random()*items.reduce((n,x)=>n+x.w,0);for(const x of items){roll-=x.w;if(roll<=0)return x.c;}return items[0].c;
 }
 function recalculateBasketCount(state=gameState){if(!state)return 0;state.inventory||={};state.currentBasketCount=Object.values(state.inventory).reduce((n,q)=>n+Math.max(0,Math.floor(Number(q)||0)),0);return state.currentBasketCount;}
-function recordOfflineCandy(candy,amount=1){
- gameState.inventory||={};gameState.lifetimeCollected||={};gameState.discovered||=[];gameState.stats||=createDefaultStats();
- gameState.inventory[candy.id]=Math.max(0,Number(gameState.inventory[candy.id])||0)+amount;
- gameState.feedCandy=Math.max(0,Number(gameState.feedCandy)||0)+amount;
- gameState.lifetimeCollected[candy.id]=Math.max(0,Number(gameState.lifetimeCollected[candy.id])||0)+amount;
- if(!gameState.discovered.includes(candy.id))gameState.discovered.push(candy.id);
- gameState.stats.totalCollected=Number(gameState.stats.totalCollected||0)+amount;
- if(candy.rarity==='Rare'||candy.rarity==='Epic')gameState.stats.rareCollected=Number(gameState.stats.rareCollected||0)+amount;
- if(candy.rarity==='Legendary')gameState.stats.legendaryCollected=Number(gameState.stats.legendaryCollected||0)+amount;
-}
-function offlinePrice(id,shopId='best'){const shops=gameState?.shops||[];return shopId==='best'?Math.max(0,...shops.map(s=>Number(s.prices?.[id])||0)):Math.max(0,Number(shops.find(s=>s.id===shopId)?.prices?.[id])||0);}
-function sellOfflineCandy(){
- let earned=0,sold=0;
- for(const c of CANDY_CATALOG){const qty=Math.max(0,Math.floor(Number(gameState.inventory?.[c.id])||0));if(qty){earned+=qty*offlinePrice(c.id,'best');sold+=qty;gameState.inventory[c.id]=0;}}
- if(sold){gameState.cash=Number(gameState.cash||0)+earned;gameState.stats||=createDefaultStats();gameState.stats.totalSold=Number(gameState.stats.totalSold||0)+sold;gameState.stats.lifetimeCash=Number(gameState.stats.lifetimeCash||0)+earned;gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),gameState.cash);}
- recalculateBasketCount();return {sold,earned};
-}
-function rotateOfflineShopOffers(){
- if(!offlineMode||!gameState)return;
- const values=Object.fromEntries(CANDY_CATALOG.map(c=>[c.id,c.rarity==='Common'?1:c.rarity==='Uncommon'?2:c.rarity==='Rare'?4:c.rarity==='Epic'?8:16]));
- const mult={corner:1,market:1.12,arcade:.94,pharmacy:1.05};
- gameState.shops=(gameState.shops||createDefaultShops()).map(s=>({...s,prices:Object.fromEntries(Object.entries(values).map(([id,v])=>[id,Math.max(1,Math.round(v*(mult[s.id]||1)*(.82+Math.random()*.38)))]))}));
- const now=Date.now();gameState.offerWindow=Math.floor(now/300000)*300000;gameState.offerRefreshAt=gameState.offerWindow+300000;
- gameState.candyCatalog=CANDY_CATALOG.map(c=>({...c,baseValue:values[c.id],bestPrice:Math.max(0,...gameState.shops.map(s=>Number(s.prices[c.id])||0))}));saveOfflineProgress();
-}
-function updateOfflineCard(mode, detail = '') {
- const card=document.getElementById('offlineBanner');if(!card)return;
- if(mode==='hidden'){card.style.display='none';card.innerHTML='';return;}
- card.style.display='flex';
- card.innerHTML='<div class="offline-card-title"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5A15 15 0 0 1 22 8.5"></path><path d="M5 12a10 10 0 0 1 14 0"></path><path d="M8.5 15.5a5 5 0 0 1 7 0"></path><path d="M12 19h.01"></path><path d="M3 3l18 18"></path></svg><span>Server Connection Failed</span></div><button type="button" class="offline-learn-more" onclick="openOfflineHelp()">Learn More</button>';
-}
-function openOfflineHelp(){document.getElementById('offlineHelpOverlay')?.classList.add('show');}
-function closeOfflineHelp(){document.getElementById('offlineHelpOverlay')?.classList.remove('show');}
-window.openOfflineHelp=openOfflineHelp;window.closeOfflineHelp=closeOfflineHelp;
-
-function saveOfflineProgress() {
-    if (!offlineMode || !gameState) return true;
-    const previous=readOfflineProgress();
-    // If gameplay changes after a sync request may have reached the server,
-    // discard that request ID. A retry with the old ID could otherwise replay
-    // the earlier snapshot and accidentally discard these newer local changes.
-    if (previous.pendingFullSyncRequestId && previous.localState &&
-        JSON.stringify(previous.localState) !== JSON.stringify(gameState)) {
-        delete previous.pendingFullSyncRequestId;
-    }
-    const snapshot={...previous,version:2,localState:cloneGameState(gameState),hasLocalChanges:true,currentBasketCount:recalculateBasketCount(gameState),cash:Math.max(0,Number(gameState.cash)||0),offlineClicks:0,updatedAt:Date.now()};
-    try {
-        if (!writeOfflineProgress(snapshot)) throw new Error('Session-scoped storage is unavailable.');
-        return true;
-    } catch (error) {
-        console.warn('[Halloween Haunt] Offline save failed:', error);
-        const banner = document.getElementById('offlineBanner');
-        if (banner) {
-            banner.textContent = 'Offline practice is running, but this browser could not save progress for this session. Keep this tab open until the connection returns and check browser storage settings.';
-            banner.style.display = 'block';
-        }
-        return false;
-    }
-}
 
 let currentModal = null;
 let offerRefreshTime = 0;
@@ -251,10 +105,7 @@ let lastAuthoritativeActionState=null;
 function performOptimisticAction(endpoint,payload,mutate,successMessage) {
  if(!gameState)return Promise.resolve();
  const action=String(endpoint.split('action=')[1]||'').split('&')[0];
- if(offlineMode){
-  if(action==='sell'){const result=sellOfflineCandy();if(!result.sold){showToast('There is no matching candy to sell.');return Promise.resolve();}saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage(result));return Promise.resolve(result);}
-  mutate(gameState);recalculateBasketCount();gameState.stats||=createDefaultStats();gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),Number(gameState.cash||0));saveOfflineProgress();updateUI();renderCurrentModal();if(successMessage)showToast(successMessage({state:gameState,hired:payload?.action==='hire'}));return Promise.resolve(gameState);
- }
+   
  // Optimistically update the interface before starting any network work. Actions
  // are serialized in the background so server transactions cannot race each other.
  if(pendingOptimisticActions===0)lastAuthoritativeActionState=cloneGameState(gameState);
@@ -279,8 +130,8 @@ function performOptimisticAction(endpoint,payload,mutate,successMessage) {
   pendingOptimisticActions=Math.max(0,pendingOptimisticActions-1);
   if(pendingOptimisticActions===0){
    if(lastAuthoritativeActionState)gameState=cloneGameState(lastAuthoritativeActionState);
-   activeSessionHash=getSessionHash();
-   saveLastKnownOnlineState();
+   
+   
    updateUI();
    renderCurrentModal();
   }
@@ -296,8 +147,6 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 async function apiCall(endpoint, method = 'GET', payload = null) {
     const sessionId = localStorage.getItem('session_id') || '';
     const isHealthCheck = endpoint.includes('action=health');
-    // Offline practice must work without an account session.
-    // Let the caller fall back to local-only play instead of blocking the game.
     if (!sessionId && !isHealthCheck) {
         return null;
     }
@@ -335,9 +184,7 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         }
         return data;
     } catch (e) {
-        // A failed request is not a reason to block offline practice.
-        // initGame() switches to local state when the API cannot be reached.
-        console.warn("[Halloween Haunt] API unavailable; local/offline fallback will be used:", endpoint);
+        console.warn('[Halloween Haunt] API request failed:', endpoint, e);
         return null;
     }
 }
@@ -369,102 +216,38 @@ function hideLoadingScreen() {
     setTimeout(() => screen.remove(), 350);
 }
 
-function enterOfflineMode() {
-    offlineMode = true;
-    const saved=readOfflineProgress(),lastKnown=readLastKnownOnlineState();activeSessionHash=getSessionHash();
-    const restored=saved.localState&&typeof saved.localState==='object'?cloneGameState(saved.localState):lastKnown?cloneGameState(lastKnown):createOfflineGameState();
-    gameState={...restored,accountId:restored.accountId||'offline-local',displayName:restored.displayName||'Offline Player',cash:Math.max(0,Number(restored.cash??saved.cash)||0),basketCapacity:Math.max(1,Number(restored.basketCapacity)||50),upgrades:{...createDefaultUpgrades(),...(restored.upgrades||{})},startsAt:Number(restored.startsAt)||Date.parse(START_Z),endsAt:Number(restored.endsAt)||Date.parse(DEADLINE_Z),crew:Array.isArray(restored.crew)?restored.crew:[],discovered:Array.isArray(restored.discovered)?restored.discovered:[],candyCatalog:Array.isArray(restored.candyCatalog)?restored.candyCatalog:CANDY_CATALOG,shops:Array.isArray(restored.shops)&&restored.shops.length?restored.shops:createDefaultShops(),lifetimeCollected:restored.lifetimeCollected||{},inventory:restored.inventory||{},stats:{...createDefaultStats(),...(restored.stats||{})},crewHireCost:Number(restored.crewHireCost)||180,crewUnlocked:Boolean(restored.crewUnlocked)};
-    for(const c of CANDY_CATALOG){gameState.inventory[c.id]=Math.max(0,Number(gameState.inventory[c.id])||0);gameState.lifetimeCollected[c.id]=Math.max(0,Number(gameState.lifetimeCollected[c.id])||0);}recalculateBasketCount();
-    leaderboardCache = [];
-    updateOfflineCard(navigator.onLine ? 'failed' : 'offline');
-    document.querySelector('.hero-cash-label')?.replaceChildren(document.createTextNode('Offline Practice'));
-    updateUI();
-    updateTimer();
-    if (!window.halloweenHauntTimerStarted) {
-        window.halloweenHauntTimerStarted = true;
-        setInterval(updateTimer, 1000);
-        setInterval(syncCrew, 3000);
-    }
-    preloadCandyImages();
-    hideLoadingScreen();
-    maybeShowWelcomeGuide();
-}
-
 async function initGame() {
     const retryButton = document.getElementById('loadingRetry');
     if (retryButton) retryButton.hidden = true;
-    setLoadingMessage('Loading your game, shops, collection, and candy artwork…');
-
-    const savedLocal=readOfflineProgress();
-    if(savedLocal.hasLocalChanges&&savedLocal.localState){await enterOfflineMode();if(navigator.onLine)updateOfflineCard('failed');return;}
-    const data = navigator.onLine ? await apiCall('?action=state') : null;
-    if (!data?.state) {
-        await enterOfflineMode();
-        return;
+    setLoadingMessage('Connecting to Halloween Haunt…');
+    try {
+        const data = await apiCall('?action=state');
+        if (!data?.state) {
+            setLoadingMessage(lastApiError?.message || 'Could not connect to the game server. Check your connection and try again.');
+            if (retryButton) retryButton.hidden = false;
+            return;
+        }
+        gameState = data.state;
+        const [leaderboard] = await Promise.all([apiCall('?action=leaderboard'),preloadCandyImages(),document.fonts?.ready || Promise.resolve()]);
+        leaderboardCache = Array.isArray(leaderboard?.rankings) ? leaderboard.rankings : [];
+        updateUI(); updateTimer();
+        if (!window.halloweenHauntTimerStarted) { window.halloweenHauntTimerStarted = true; setInterval(updateTimer, 1000); }
+        if (!window.halloweenHauntOnlineIntervalsStarted) { window.halloweenHauntOnlineIntervalsStarted = true; setInterval(syncCrew, 3000); setInterval(refreshLeaderboard, 60000); }
+        hideLoadingScreen(); maybeShowWelcomeGuide();
+    } catch (error) {
+        console.error('[Halloween Haunt] Initial load failed:', error);
+        setLoadingMessage('Could not connect to the game server. Check your connection and try again.');
+        if (retryButton) retryButton.hidden = false;
     }
-
-    // Save authoritative state before optional requests such as the leaderboard.
-    // A leaderboard outage must not block the player's online game.
-    offlineMode = false;
-    gameState = data.state;
-    activeSessionHash = getSessionHash();
-    saveLastKnownOnlineState();
-
-    const [leaderboard] = await Promise.all([
-        apiCall('?action=leaderboard'),
-        preloadCandyImages(),
-        document.fonts?.ready || Promise.resolve()
-    ]);
-    leaderboardCache = Array.isArray(leaderboard?.rankings) ? leaderboard.rankings : [];
-    const queuedOfflineClicks = Math.max(0, Math.floor(Number(readOfflineProgress().offlineClicks) || 0));
-    updateOfflineCard(!navigator.onLine ? 'offline' : queuedOfflineClicks > 0 ? 'failed' : 'hidden');
-    updateUI();
-    updateTimer();
-    if (!window.halloweenHauntTimerStarted) {
-        window.halloweenHauntTimerStarted = true;
-        setInterval(updateTimer, 1000);
-    }
-    if(!window.halloweenHauntOnlineIntervalsStarted){window.halloweenHauntOnlineIntervalsStarted=true;setInterval(syncCrew,3000);setInterval(refreshLeaderboard,60000);}
-    hideLoadingScreen();
-    maybeShowWelcomeGuide();
 }
 
 function updateTimer(){if(!gameState)return;const now=Date.now(),start=Number(gameState.startsAt||Date.parse(START_Z)),end=Number(gameState.endsAt||Date.parse(DEADLINE_Z));isEventActive=now>=start&&now<end;const timer=document.getElementById('ui-timer'),label=timer?.previousSibling;if(!timer)return;if(now<start){if(label)label.textContent='Starts in: ';timer.textContent=eventDuration(start-now);}else if(now<end){if(label)label.textContent='Ends in: ';timer.textContent=eventDuration(end-now);}else{if(label)label.textContent='';timer.textContent='EVENT ENDED';}}
 function eventDuration(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return d>0?d+'d '+h+'h '+m+'m '+s+'s':String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 
-async function syncCrew(){
- if(!gameState||!isEventActive||!gameState.crewUnlocked||document.visibilityState==='hidden')return;
- if(offlineMode){
-  let changed=false;const now=Date.now();
-  for(const crew of gameState.crew||[]){
-   crew.inventory||={};crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);crew.workMs=Number(crew.workMs||0);crew.capacityLevel=Number(crew.capacityLevel||0);if(crew.capacityLevel===0&&Number(crew.capacity||10)<=10)crew.capacity=50;crew.intervalMs=2000;
-   if(crew.asleep)continue;
-   const fed=crew.fedUntil>now;
-   const last=Number(crew.lastActionAt)||now,elapsed=Math.max(0,Math.min(5000,now-last));crew.lastActionAt=now;if(!fed)crew.awakeMs+=elapsed;
-   if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;changed=true;continue;}
-   const cap=Math.max(1,Math.floor(Number(crew.capacity||50)*(fed?1.25:1))),interval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));
-   crew.workMs+=elapsed;
-   let ticks=Math.min(5,Math.floor(crew.workMs/interval));crew.workMs-=ticks*interval;
-   for(let t=0;t<ticks;t++){
-    const held=Object.values(crew.inventory).reduce((n,v)=>n+Math.max(0,Number(v)||0),0);if(held>=cap)break;
-    const candy=chooseOfflineCandy(),basePower=Math.min(8,1+Number(crew.powerLevel||0)),power=Math.min(cap-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));
-    for(let k=0;k<power;k++){crew.inventory[candy.id]=Number(crew.inventory[candy.id]||0)+1;gameState.lifetimeCollected[candy.id]=Number(gameState.lifetimeCollected[candy.id]||0)+1;}
-    crew.inventoryCount=held+power;crew.collectedCount=Number(crew.collectedCount||0)+power;gameState.feedCandy=Number(gameState.feedCandy||0)+power;gameState.stats.totalCollected=Number(gameState.stats.totalCollected||0)+power;gameState.stats.crewCollected=Number(gameState.stats.crewCollected||0)+power;
-    if(!gameState.discovered.includes(candy.id))gameState.discovered.push(candy.id);
-    if(candy.rarity==='Rare'||candy.rarity==='Epic')gameState.stats.rareCollected=Number(gameState.stats.rareCollected||0)+power;if(candy.rarity==='Legendary')gameState.stats.legendaryCollected=Number(gameState.stats.legendaryCollected||0)+power;
-    changed=true;
-   }
-   if(crew.inventoryCount>=cap&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);
-   if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){const sold=sellCrewOffline(crew);if(sold)changed=true;}
-  }
-  if(changed){saveOfflineProgress();updateUI();if(currentModal==='crew'){if(typeof window.renderCrew==='function')window.renderCrew(document.getElementById('modalBody'));else renderCrew();}if(currentModal==='shops')renderShops(document.getElementById('modalBody'));if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));}
-  return;
- }
- const res=await apiCall('?action=crew-sync','POST');if(res?.state){gameState=res.state;activeSessionHash=getSessionHash();saveLastKnownOnlineState();updateUI();if(currentModal==='crew')renderCrew();}
-}
-function sellCrewOffline(crew){
- let earned=0,sold=0;for(const c of CANDY_CATALOG){const q=Math.max(0,Number(crew.inventory?.[c.id])||0);if(q){earned+=q*offlinePrice(c.id,'best');sold+=q;crew.inventory[c.id]=0;}}
- crew.inventoryCount=0;crew.sellReadyAt=0;if(sold){gameState.cash=Number(gameState.cash||0)+earned;gameState.stats.totalSold=Number(gameState.stats.totalSold||0)+sold;gameState.stats.crewSold=Number(gameState.stats.crewSold||0)+sold;gameState.stats.lifetimeCash=Number(gameState.stats.lifetimeCash||0)+earned;gameState.stats.highScore=Math.max(Number(gameState.stats.highScore||0),gameState.cash);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;}return sold;
+async function syncCrew() {
+    if (!gameState || !isEventActive || !gameState.crewUnlocked || document.visibilityState === 'hidden') return;
+    const result = await apiCall('?action=crew-sync', 'POST');
+    if (result?.state) { gameState = result.state; updateUI(); if (currentModal === 'crew') renderCrew(); }
 }
 
 // ------------------------------------------------------------------
@@ -473,37 +256,12 @@ function sellCrewOffline(crew){
 function handleBasketClick(e) {
     if (!gameState) { showToast("Halloween Haunt is still connecting."); return; }
     if (!isEventActive) { showToast("Event is not active."); return; }
-    if (offlineMode && offlineSyncInFlight) {
-        showToast('Saving offline progress. Please wait a moment.');
-        return;
-    }
-
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
-    let confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
+    const confirmed = Math.max(0, Number(gameState.currentBasketCount) || 0);
     const pendingCandy = (pendingClicks + retryBatchClicks + inFlightClicks) * perClick;
-    if (confirmed + pendingCandy >= Number(gameState.basketCapacity || 0)) {
-        showToast("Basket is full! Sell candy to make room.");
-        return;
-    }
-
-    if(offlineMode){
-        const room=Math.max(0,Number(gameState.basketCapacity||50)-recalculateBasketCount()),amount=Math.min(room,perClick);
-        if(amount<=0){showToast('Basket is full. Sell candy to make room.');return;}
-        for(let n=0;n<amount;n++){const candy=chooseOfflineCandy();recordOfflineCandy(candy,1);spawnFallingCandy(candy.id,e.clientX,e.clientY);}
-        gameState.stats.totalClicks=Number(gameState.stats.totalClicks||0)+1;recalculateBasketCount();saveOfflineProgress();updateUI();
-        if(currentModal==='index')renderIndex(document.getElementById('modalBody'));if(currentModal==='stats')renderStats(document.getElementById('modalBody'));return;
-    }
-
-    // Animate visual candy immediately. The server remains authoritative for
-    // inventory; network latency must not delay the pumpkin's visual feedback.
-    for (let i = 0; i < perClick; i++) {
-        const previewCandy = chooseOfflineCandy();
-        if (previewCandy) spawnFallingCandy(previewCandy.id, e?.clientX, e?.clientY);
-    }
-
-    pendingClicks += 1;
-    updateUI();
-
+    if (confirmed + pendingCandy >= Number(gameState.basketCapacity || 0)) { showToast("Basket is full! Sell candy to make room."); return; }
+    for (let i = 0; i < perClick; i++) { const previewCandy = choosePreviewCandy(); if (previewCandy) spawnFallingCandy(previewCandy.id, e?.clientX, e?.clientY); }
+    pendingClicks += 1; updateUI();
     if (collectFlushTimer) clearTimeout(collectFlushTimer);
     collectFlushTimer = setTimeout(flushCollectQueue, 45);
 }
@@ -576,7 +334,7 @@ function spawnFallingCandy(candyId, originX, originY) {
 // ------------------------------------------------------------------
 function updateUI() {
     if (!gameState) return;
-    saveLastKnownOnlineState();
+    
     document.getElementById('ui-cash').innerText = formatCash(gameState.cash);
 
     const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
@@ -611,7 +369,7 @@ async function refreshLeaderboard() {
 }
 
 function openModal(type) {
-    if(offlineMode&&type==='leaderboard'){
+    if(false&&type==='leaderboard'){
         currentModal=type;document.querySelectorAll('.action-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`openModal('${type}')`));
         document.getElementById('hauntModalOverlay').classList.add('show');document.getElementById('modalTitle').innerText='Leaderboard';
         document.getElementById('modalBody').innerHTML='<div class="offline-leaderboard-note"><strong>Leaderboard unavailable offline</strong><p>Your local progress is saved on this device. Reconnect to load the live leaderboard.</p></div>';return;
@@ -803,255 +561,13 @@ function changeWelcomeGuide(direction){if(helpSection===HELP_SECTIONS.length-1&&
 function finishWelcomeGuide(){try{localStorage.setItem('halloween_haunt_guide_seen_v1','1')}catch{}document.getElementById('welcomeGuideOverlay')?.classList.remove('show')}
 window.changeWelcomeGuide=changeWelcomeGuide;window.finishWelcomeGuide=finishWelcomeGuide;
 // Bootstrap
-document.addEventListener('visibilitychange',()=>{if(!gameState||!Array.isArray(gameState.crew))return;const now=Date.now();for(const worker of gameState.crew){worker.lastActionAt=now;}if(offlineMode)saveOfflineProgress();});
 window.addEventListener('DOMContentLoaded', initGame);
 window.retryHalloweenHauntLoad = initGame;
 window.retryHalloweenHauntCollect = retryCollectQueue;
 
 let crewPauseSent=false;
-function pauseCrewOnExit(){if(crewPauseSent||!gameState||!gameState.crew?.length||offlineMode)return;crewPauseSent=true;const sessionId=localStorage.getItem('session_id')||'';if(!sessionId)return;const deviceId=localStorage.getItem('device_id')||sessionId;const payload={requestId:'crew-pause-'+Date.now()+'-'+Math.random().toString(36).slice(2)};try{fetch(API_BASE+'?action=crew-pause',{method:'POST',keepalive:true,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Session-ID':sessionId,'X-Device-ID':deviceId},body:JSON.stringify(payload)}).catch(()=>{});}catch{}}
+function pauseCrewOnExit(){if(crewPauseSent||!gameState||!gameState.crew?.length)return;crewPauseSent=true;const sessionId=localStorage.getItem('session_id')||'';if(!sessionId)return;const deviceId=localStorage.getItem('device_id')||sessionId;const payload={requestId:'crew-pause-'+Date.now()+'-'+Math.random().toString(36).slice(2)};try{fetch(API_BASE+'?action=crew-pause',{method:'POST',keepalive:true,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Session-ID':sessionId,'X-Device-ID':deviceId},body:JSON.stringify(payload)}).catch(()=>{});}catch{}}
 window.addEventListener('pagehide',pauseCrewOnExit);
-
-window.addEventListener('pagehide', saveOfflineProgress);
-window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') saveOfflineProgress();
-});
-async function syncPendingOfflineClicks() {
-    if (offlineSyncInFlight) return false;
-    let saved = readOfflineProgress();
-    let remaining = Math.max(0, Math.floor(Number(saved.offlineClicks) || 0));
-    if (!remaining) return true;
-    if (!navigator.onLine || !getSessionHash()) return false;
-
-    offlineSyncInFlight = true;
-    updateOfflineCard('syncing');
-    try {
-        while (remaining > 0) {
-            if (!navigator.onLine) throw new Error('Connection lost during sync.');
-
-            const stateResult = await apiCall('?action=state');
-            if (!stateResult?.state) throw new Error('Could not load the online game state.');
-            gameState = stateResult.state;
-            activeSessionHash = getSessionHash();
-
-            let batch;
-            let requestId;
-            const pendingBatch = Math.floor(Number(saved.pendingSyncBatch) || 0);
-            // Persist a batch ID and size before sending it. If the server commits
-            // but the response is lost, retry that exact request instead of
-            // recalculating a smaller batch from the changed basket capacity.
-            if (typeof saved.pendingSyncRequestId === 'string' &&
-                saved.pendingSyncRemaining === remaining &&
-                pendingBatch >= 1 && pendingBatch <= 50) {
-                batch = pendingBatch;
-                requestId = saved.pendingSyncRequestId;
-            } else {
-                const owned = Object.values(gameState.inventory || {}).reduce(
-                    (sum, qty) => sum + Math.max(0, Number(qty) || 0), 0
-                );
-                const capacity = Math.max(0, Number(gameState.basketCapacity) || 0);
-                const room = Math.max(0, capacity - owned);
-                if (room <= 0) {
-                    throw new Error('Your online basket is full. Sell candy to make room for offline progress to sync.');
-                }
-                const perClick = Math.max(1, Math.min(50, 1 + Number(gameState.upgrades?.power?.level || 0)));
-                const clicksThatFit = Math.max(1, Math.floor(room / perClick));
-                batch = Math.min(50, remaining, clicksThatFit);
-                requestId = 'offline-sync-' + getSessionHash() + '-' +
-                    (saved.updatedAt || 0) + '-' + remaining + '-' + batch;
-                saved.pendingSyncRequestId = requestId;
-                saved.pendingSyncBatch = batch;
-                saved.pendingSyncRemaining = remaining;
-                if (!writeOfflineProgress(saved)) {
-                    throw new Error('Could not save the retry-safe sync record on this device.');
-                }
-            }
-
-            const result = await apiCall('?action=collect', 'POST', {
-                clickCount: batch,
-                requestId
-            });
-            if (!result?.state) throw new Error('The server did not confirm the offline clicks.');
-
-            remaining = Math.max(0, remaining - batch);
-            saved.offlineClicks = remaining;
-            delete saved.pendingSyncRequestId;
-            delete saved.pendingSyncBatch;
-            delete saved.pendingSyncRemaining;
-            saved.updatedAt = Date.now();
-            if (!writeOfflineProgress(saved)) {
-                // The pending request record was persisted before sending. If this
-                // write fails, the same request ID remains available for replay.
-                throw new Error('Could not update the local sync record.');
-            }
-            gameState = result.state;
-            activeSessionHash = getSessionHash();
-        }
-
-        saved.offlineClicks = 0;
-        delete saved.pendingSyncRequestId;
-        delete saved.pendingSyncBatch;
-        delete saved.pendingSyncRemaining;
-        saved.updatedAt = Date.now();
-        writeOfflineProgress(saved);
-        if (gameState && !offlineMode) {
-            activeSessionHash = getSessionHash();
-            saveLastKnownOnlineState();
-            updateUI();
-            renderCurrentModal();
-        }
-        return true;
-    } catch (error) {
-        console.warn('[Halloween Haunt] Offline progress sync is pending:', error);
-        updateOfflineCard('failed');
-        return false;
-    } finally {
-        offlineSyncInFlight = false;
-    }
-}
-
-
-
-function offlineSaveSummary(state) {
-    const s=state||{}, inventory=s.inventory||{}, stats=s.stats||{}, upgrades=s.upgrades||{};
-    const candyCount=Object.values(inventory).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
-    const discovered=Array.isArray(s.discovered)?s.discovered.length:0;
-    const crew=Array.isArray(s.crew)?s.crew.length:0;
-    const upgradeLevels=['capacity','power','luck','autoSell'].map(k=>Math.max(0,Number(upgrades[k]?.level)||0));
-    return [['Cash',formatCash(s.cash)],['Candy in basket',candyCount.toLocaleString()],['Candy Reserve',Math.max(0,Number(s.feedCandy)||0).toLocaleString()],['Candy types discovered',discovered+' / '+CANDY_CATALOG.length],['Lifetime candy collected',Math.max(0,Number(stats.totalCollected)||0).toLocaleString()],['Candy sold',Math.max(0,Number(stats.totalSold)||0).toLocaleString()],['Crew members',crew+' / 20'],['Upgrade levels',upgradeLevels.join(' · ')],['Upgrades purchased',Math.max(0,Number(stats.upgradesBought)||0).toLocaleString()],['Lifetime cash earned',formatCash(stats.lifetimeCash)],['Lifetime cash spent',formatCash(stats.cashSpent)]];
-}
-function renderOfflineSaveDetails(state) {
-    const s=state||{}, inventory=s.inventory||{}, upgrades=s.upgrades||{}, crew=Array.isArray(s.crew)?s.crew:[];
-    const candyRows=CANDY_CATALOG.filter(c=>Math.max(0,Number(inventory[c.id])||0)>0).map(c=>'<div class="hh-conflict-stat"><span>'+escapeHTML(c.name)+' <em>'+escapeHTML(c.rarity)+'</em></span><strong>'+Math.max(0,Number(inventory[c.id])||0).toLocaleString()+'</strong></div>').join('')||'<div class="hh-conflict-empty">No candy currently in the basket</div>';
-    const discovered=(Array.isArray(s.discovered)?s.discovered:[]).map(id=>CANDY_CATALOG.find(c=>c.id===id)?.name).filter(Boolean);
-    const crewRows=crew.map(w=>'<div class="hh-conflict-stat"><span>'+escapeHTML(w.name||'Crew member')+'</span><strong>'+(w.asleep?'Asleep':'Awake')+' · '+Math.max(0,Number(w.inventoryCount)||0)+' candy</strong></div>').join('')||'<div class="hh-conflict-empty">No crew members hired</div>';
-    const upgradeRows=[['Basket Capacity','capacity'],['Click Power','power'],['Candy Luck','luck'],['Auto Sell','autoSell']].map(([name,id])=>'<div class="hh-conflict-stat"><span>'+name+'</span><strong>'+(Number(upgrades[id]?.level)||0)+(id==='autoSell'?' '+((Number(upgrades[id]?.level)||0)>0?'(unlocked)':'(locked)'):'')+'</strong></div>').join('');
-    return '<div class="hh-conflict-section-label">Save overview</div>'+offlineSaveSummary(s).map(([label,value])=>'<div class="hh-conflict-stat"><span>'+escapeHTML(label)+'</span><strong>'+escapeHTML(value)+'</strong></div>').join('')+'<details class="hh-conflict-details" open><summary>Candy in basket ('+CANDY_CATALOG.filter(c=>Math.max(0,Number(inventory[c.id])||0)>0).length+' types)</summary>'+candyRows+'</details><details class="hh-conflict-details"><summary>Candy Index ('+discovered.length+' discovered)</summary><p class="hh-conflict-discovered">'+escapeHTML(discovered.join(', ')||'No candy discovered yet')+'</p></details><details class="hh-conflict-details"><summary>Upgrade levels</summary>'+upgradeRows+'</details><details class="hh-conflict-details"><summary>Crew details ('+crew.length+' members)</summary>'+crewRows+'</details>';
-}
-function closeOfflineConflictResolver() {
-    document.getElementById('hhOfflineConflictResolver')?.remove();
-    document.getElementById('hhOfflineConflictStyles')?.remove();
-    offlineConflictResolverOpen=false;
-}
-async function showOfflineConflictResolver(localState, baselineState) {
-    if(offlineConflictResolverOpen)return;
-    offlineConflictResolverOpen=true;
-    // Display a full-screen conflict immediately, instead of waiting on the
-    // extra state request (which previously made the conflict appear to do nothing).
-    const loadingOverlay=document.createElement('div');
-    loadingOverlay.id='hhOfflineConflictLoading';
-    loadingOverlay.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;background:#07030cf5;color:#fff;font:600 17px system-ui;text-align:center';
-    loadingOverlay.innerHTML='<div style="max-width:560px;padding:28px;border:1px solid #ba7dff77;border-radius:20px;background:#170c24"><h1 style="font-size:28px">Save conflict</h1><p>Your online game changed while you were playing offline.</p><p>Loading the current database save so you can compare it with your local save…</p><p style="font-size:14px;color:#d8c7e8">Your local progress remains saved on this device.</p></div>';
-    document.body.appendChild(loadingOverlay);
-    let onlineState=null;
-    try { const result=await apiCall('?action=state'); onlineState=result?.state||null; }
-    catch(error) { console.warn('[Halloween Haunt] Could not load current database save:',error); }
-    if(!onlineState) {
-        loadingOverlay.innerHTML='<div style="max-width:560px;padding:28px;border:1px solid #ba7dff77;border-radius:20px;background:#170c24"><h1 style="font-size:28px">Save conflict</h1><p>Could not load the current database save. Your local save is still safe.</p><p>Reconnect, then reload the page to retry the comparison.</p></div>';
-        offlineConflictResolverOpen=false;
-        return;
-    }
-    loadingOverlay.remove();
-    const overlay=document.createElement('div');
-    overlay.id='hhOfflineConflictResolver';overlay.className='hh-conflict-overlay';
-    overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','hhConflictTitle');
-    overlay.innerHTML='<div class="hh-conflict-shell"><header class="hh-conflict-header"><span class="hh-conflict-eyebrow">SAVE CONFLICT</span><h1 id="hhConflictTitle">Which save should we keep?</h1><p>Your online game changed while you were playing offline. Compare both saves, then choose which version becomes the official database save. Your local save will not be deleted until you choose.</p></header><div class="hh-conflict-columns"><section class="hh-conflict-save"><div class="hh-conflict-save-title"><span class="hh-conflict-dot online"></span><div><h2>Current database save</h2><p>Most recent save on the server</p></div></div><div class="hh-conflict-stats">'+renderOfflineSaveDetails(onlineState)+'</div><button type="button" class="hh-conflict-button keep-database" id="hhKeepDatabaseSave">Keep database save</button><small>This keeps the server version and discards this device’s pending offline changes.</small></section><section class="hh-conflict-save local"><div class="hh-conflict-save-title"><span class="hh-conflict-dot local"></span><div><h2>Your local offline save</h2><p>Progress saved on this device</p></div></div><div class="hh-conflict-stats">'+renderOfflineSaveDetails(localState)+'</div><button type="button" class="hh-conflict-button keep-local" id="hhKeepLocalSave">Keep local save and overwrite database</button><small>This replaces the database save with your local version. The current database save will be overwritten.</small></section></div><p class="hh-conflict-footnote">Neither option merges the two saves. Review the details carefully before choosing.</p><div class="hh-conflict-status" id="hhConflictStatus" role="status" aria-live="polite"></div></div>';
-    const style=document.createElement('style');style.id='hhOfflineConflictStyles';
-    style.textContent='#hhOfflineConflictResolver{position:fixed;inset:0;z-index:1000000;overflow:auto;background:radial-gradient(ellipse at top,#2b1743 0%,#100a19 48%,#07050b 100%);color:#fff;padding:clamp(18px,4vw,48px);display:flex;align-items:flex-start;justify-content:center;font-family:inherit}#hhOfflineConflictResolver *{box-sizing:border-box}#hhOfflineConflictResolver .hh-conflict-shell{width:min(1160px,100%);margin:auto}#hhOfflineConflictResolver .hh-conflict-header{max-width:800px;margin:0 auto 28px;text-align:center}#hhOfflineConflictResolver .hh-conflict-eyebrow{display:inline-flex;border:1px solid #ffb84d77;background:#ffb84d18;color:#ffd58a;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:900;letter-spacing:.13em}#hhOfflineConflictResolver h1{font-size:clamp(30px,5vw,52px);line-height:1.06;margin:18px 0 12px;color:#fff}#hhOfflineConflictResolver .hh-conflict-header p{color:#d4c8e0;font-size:16px;line-height:1.7;margin:0}#hhOfflineConflictResolver .hh-conflict-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}#hhOfflineConflictResolver .hh-conflict-save{min-width:0;padding:clamp(16px,2.5vw,26px);border:1px solid #8f8aa755;border-radius:22px;background:linear-gradient(145deg,#21182e,#100d17);box-shadow:0 20px 60px #0005}#hhOfflineConflictResolver .hh-conflict-save.local{border-color:#b56aff88;background:linear-gradient(145deg,#29163a,#100d17)}#hhOfflineConflictResolver .hh-conflict-save-title{display:flex;align-items:center;gap:12px;margin-bottom:20px}#hhOfflineConflictResolver .hh-conflict-save-title h2{font-size:21px;margin:0 0 5px;color:#fff}#hhOfflineConflictResolver .hh-conflict-save-title p{margin:0;color:#bdb0ca;font-size:13px}#hhOfflineConflictResolver .hh-conflict-dot{width:12px;height:12px;flex:none;border-radius:50%;background:#54d99b;box-shadow:0 0 16px #54d99b88}#hhOfflineConflictResolver .hh-conflict-dot.local{background:#c084fc;box-shadow:0 0 16px #c084fc88}#hhOfflineConflictResolver .hh-conflict-stats{display:grid;gap:0;margin-bottom:22px}#hhOfflineConflictResolver .hh-conflict-section-label{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#b8a5ca;margin:0 0 8px}#hhOfflineConflictResolver .hh-conflict-details{margin:13px 0;border:1px solid #ffffff18;border-radius:12px;background:#ffffff05;overflow:hidden}#hhOfflineConflictResolver .hh-conflict-details summary{padding:12px;color:#f0e7f7;font-size:13px;font-weight:800;cursor:pointer}#hhOfflineConflictResolver .hh-conflict-details[open] summary{border-bottom:1px solid #ffffff12}#hhOfflineConflictResolver .hh-conflict-details .hh-conflict-stat{padding:9px 12px}#hhOfflineConflictResolver .hh-conflict-details em{font-size:11px;font-style:normal;color:#aa99bb}#hhOfflineConflictResolver .hh-conflict-empty,#hhOfflineConflictResolver .hh-conflict-discovered{padding:10px 12px;margin:0;color:#bdb0ca;font-size:12px;line-height:1.7;overflow-wrap:anywhere}#hhOfflineConflictResolver .hh-conflict-stat{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #ffffff12}#hhOfflineConflictResolver .hh-conflict-stat span{color:#c4b8d0;font-size:13px}#hhOfflineConflictResolver .hh-conflict-stat strong{color:#fff;font-size:14px;text-align:right;overflow-wrap:anywhere}#hhOfflineConflictResolver .hh-conflict-button{width:100%;min-height:50px;padding:12px 16px;border:1px solid transparent;border-radius:13px;font:inherit;font-weight:850;cursor:pointer;transition:filter .15s,transform .15s}#hhOfflineConflictResolver .hh-conflict-button:hover{filter:brightness(1.12);transform:translateY(-1px)}#hhOfflineConflictResolver .keep-database{background:#d9fbe9;color:#12452d}#hhOfflineConflictResolver .keep-local{background:linear-gradient(110deg,#a855f7,#7c3aed);color:#fff}#hhOfflineConflictResolver .hh-conflict-save>small{display:block;color:#bdb0ca;font-size:12px;line-height:1.6;margin-top:11px}#hhOfflineConflictResolver .hh-conflict-footnote{text-align:center;color:#a99ab8;font-size:13px;line-height:1.6;margin:24px auto 0}#hhOfflineConflictResolver .hh-conflict-status:empty{display:none}#hhOfflineConflictResolver .hh-conflict-status{margin:16px auto 0;text-align:center;color:#ffb4bc;font-weight:700}#hhOfflineConflictResolver button:disabled{opacity:.55;cursor:wait;transform:none}@media(max-width:760px){#hhOfflineConflictResolver{padding:16px;align-items:flex-start}#hhOfflineConflictResolver .hh-conflict-columns{grid-template-columns:1fr}#hhOfflineConflictResolver .hh-conflict-header{margin-bottom:20px}#hhOfflineConflictResolver .hh-conflict-stat{gap:8px}#hhOfflineConflictResolver .hh-conflict-stat span{max-width:55%}}';
-    document.head.appendChild(style);document.body.appendChild(overlay);
-    const setBusy=(busy,message='')=>{overlay.querySelectorAll('button').forEach(b=>b.disabled=busy);const status=overlay.querySelector('#hhConflictStatus');if(status)status.textContent=message;};
-    overlay.querySelector('#hhKeepDatabaseSave').addEventListener('click',()=>{
-        setBusy(true,'Keeping the current database save…');
-        const key=getSessionStorageKey(OFFLINE_PROGRESS_KEY);
-        try{if(key)localStorage.removeItem(key);}catch(error){console.warn('[Halloween Haunt] Could not clear the local offline save:',error);}
-        gameState=cloneGameState(onlineState);offlineMode=false;activeSessionHash=getSessionHash();saveLastKnownOnlineState();
-        closeOfflineConflictResolver();updateOfflineCard('hidden');updateUI();renderCurrentModal();
-        showToast('Kept the current database save. Local offline changes were discarded.');
-    });
-    overlay.querySelector('#hhKeepLocalSave').addEventListener('click',async()=>{
-        setBusy(true,'Validating and saving your local version to the database…');
-        try{
-            const requestId='offline-resolve-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
-            const result=await apiCall('?action=offline-sync-resolve','POST',{requestId,baselineState:baselineState,localState:localState});
-            if(!result?.state)throw new Error(lastApiError?.message||'The server did not confirm the selected local save.');
-            gameState=result.state;offlineMode=false;activeSessionHash=getSessionHash();
-            const key=getSessionStorageKey(OFFLINE_PROGRESS_KEY);if(key)localStorage.removeItem(key);
-            saveLastKnownOnlineState();updateOfflineCard('hidden');updateUI();renderCurrentModal();
-            closeOfflineConflictResolver();showToast('Your local offline save is now the database save.');
-        }catch(error){console.error('[Halloween Haunt] Conflict resolution failed:',error);setBusy(false,error?.message||'Could not save this version. Both saves are still available.');}
-    });
-}
-
-async function syncOfflineGameProgress() {
-    if (offlineSyncInFlight || !navigator.onLine || !getSessionHash()) return false;
-    const saved = readOfflineProgress();
-    if (!saved.hasLocalChanges || !saved.localState) return syncPendingOfflineClicks();
-    const baseline = readLastKnownOnlineState();
-    const localState = saved.localState;
-    if (!baseline?.accountId || baseline.accountId === 'offline-local' || localState.accountId !== baseline.accountId) {
-        showToast('This offline session has no matching saved online account state. Your progress remains saved on this device.');
-        return false;
-    }
-    offlineSyncInFlight = true;
-    updateOfflineCard('syncing');
-    try {
-        const requestId = saved.pendingFullSyncRequestId || ('offline-state-' + getSessionHash() + '-' + String(saved.updatedAt || 0));
-        if (!saved.pendingFullSyncRequestId) {
-            saved.pendingFullSyncRequestId = requestId;
-            if (!writeOfflineProgress(saved)) throw new Error('Could not save the retry-safe sync record.');
-        }
-        const result = await apiCall('?action=offline-sync', 'POST', { requestId, baselineState: baseline, localState });
-        if (!result?.state) {
-            if (lastApiError?.status === 409 && lastApiError.message.includes('changed since this offline session began')) {
-                delete saved.pendingFullSyncRequestId;
-                writeOfflineProgress(saved);
-                await showOfflineConflictResolver(localState, baseline);
-                return false;
-            }
-            throw new Error(lastApiError?.message || 'The server did not confirm the offline progress sync.');
-        }
-        gameState = result.state;
-        offlineMode = false;
-        activeSessionHash = getSessionHash();
-        const key = getSessionStorageKey(OFFLINE_PROGRESS_KEY);
-        if (key) { try { localStorage.removeItem(key); } catch (error) { console.warn('[Halloween Haunt] Synced progress, but could not clear the local queue:', error); } }
-        saveLastKnownOnlineState();
-        updateOfflineCard('hidden');
-        updateUI();
-        renderCurrentModal();
-        showToast('Offline progress synced to your online account.');
-        return true;
-    } catch (error) {
-        console.warn('[Halloween Haunt] Offline progress sync is pending:', error);
-        updateOfflineCard('failed');
-        showToast(error?.message || 'Offline progress is still saved locally and will retry when the server is available.');
-        return false;
-    } finally { offlineSyncInFlight = false; }
-}
-
-window.addEventListener('online', async () => {
-    updateOfflineCard('syncing');
-    const synced = await syncOfflineGameProgress();
-    if (synced) { offlineMode = false; await initGame(); }
-    else {
-        updateOfflineCard('failed');
-        // Keep the local snapshot untouched; the background retry loop will
-        // keep attempting synchronization until the API confirms it.
-    }
-});
-window.addEventListener('pagehide',()=>{if(offlineMode&&gameState)saveOfflineProgress();});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&offlineMode&&gameState)saveOfflineProgress();});
-window.addEventListener('offline',()=>{if(gameState&&!offlineMode){saveLastKnownOnlineState();enterOfflineMode();}updateOfflineCard('offline');});
-setInterval(() => {
-    if (!navigator.onLine || offlineSyncInFlight || !getSessionHash()) return;
-    const saved = readOfflineProgress();
-    if (offlineMode || saved.hasLocalChanges || saved.pendingSyncRequestId || saved.pendingFullSyncRequestId) {
-        syncOfflineGameProgress().then(synced => {
-            if (synced && offlineMode) { offlineMode = false; initGame(); }
-        });
-    }
-}, 3000);
-
 
 const HHN=['Jack','Misty','Boo','Candy','Pumpkin','Raven','Cocoa','Hex','Maple','Ember','Cobweb','Midnight','Toffee','Salem','Patches','Wick','Hocus','Mallow','Fable','Trick'],HHR={Common:'#ddd',Uncommon:'#45d483',Rare:'#4c9dff',Epic:'#b66aff',Legendary:'#ffc94a',Mythic:'#ff5ca8'},HHP=[['basketFull','Basket full'],['candySold','Candy sold'],['crewAsleep','Crew asleep'],['newRarity','New rarity unlocked'],['upgradeBought','Upgrade purchased'],['crewHired','Crew hired'],['crewFed','Crew feeding'],['autoSell','Auto Sell']];
 function hPrefs(){try{return JSON.parse(localStorage.getItem('hh_notification_prefs')||'{}')}catch{return {}}}function hNotify(k,t,m){if(hPrefs()[k]===false)return;showToast(t+' — '+m)}
@@ -1067,6 +583,6 @@ const hUpgrade=window.executeUpgrade;window.executeUpgrade=async function(t){if(
 window.executeCrew=async function(action,index=0){let map={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]};await performOptimisticAction('?action=crew-action',{action,index},s=>{s.stats||=createDefaultStats();if(action==='hire'){if(s.crew.length>=20||s.cash<s.crewHireCost)return;let cost=s.crewHireCost,i=s.crew.length;s.cash-=cost;s.stats.cashSpent+=cost;s.crewUnlocked=true;s.crew.push({id:'helper-'+(i+1),name:HHN[i]||('Worker '+(i+1)),capacity:10,capacityLevel:0,powerLevel:0,luckLevel:0,speedLevel:0,awakeLevel:0,intervalMs:20000,inventory:{},inventoryCount:0,asleep:false,awakeMs:0,fedUntil:0});s.crewHireCost=Math.floor(cost*1.85);return}let w=s.crew[index];if(!w)return;if(action==='wake'){w.asleep=false;w.awakeMs=0;return}if(action==='feed'){let need=10*Number(s.basketCapacity||50),reserve=Math.max(0,Number(s.feedCandy||0));if(Number(w.fedUntil||0)>Date.now()||reserve<need){showToast('You need '+need+' candy in your Candy Reserve to feed this crew member.');return}s.feedCandy=reserve-need;w.fedUntil=Date.now()+1200000;w.asleep=false;w.awakeMs=0;return}let cfg=map[action];if(!cfg)return;let [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(w[key]||0)));if(s.cash<cost)return;s.cash-=cost;s.stats.cashSpent+=cost;s.stats.upgradesBought++;w[key]=Number(w[key]||0)+1;if(key==='capacityLevel')w.capacity=10+w[key]*10;if(key==='speedLevel')w.intervalMs=Math.max(2000,20000*Math.pow(.85,w.speedLevel))},r=>r.fed?'Fed for 20 minutes.':r.woke?'Crew member awake.':r.hired?'Crew member hired!':'Crew updated!');if(action==='hire')hNotify('crewHired','Crew member hired','Your worker is ready.');if(action==='feed')hNotify('crewFed','Crew member fed','Boosts are active for 20 minutes.');if(action==='wake')hNotify('crewAsleep','Crew member awake','Your worker is back to work.')};
 const hSpawn=spawnFallingCandy;spawnFallingCandy=function(id,x,y){const r=hSpawn(id,x,y),els=document.querySelectorAll('.falling-candy'),el=els[els.length-1],c=getCandyObj(id);if(el&&c){const col=HHR[c.rarity]||'#fff';el.style.width='112px';el.style.height='112px';el.style.border='0';el.style.outline='0';el.style.borderRadius='0';el.style.background='transparent';el.style.boxShadow='none';el.style.filter='drop-shadow(0 0 4px '+col+') drop-shadow(0 0 12px '+col+')'}return r};
 const hIndex=renderIndex;renderIndex=function(c){hIndex(c);const paint=()=>c.querySelectorAll('.candy-card').forEach(card=>{let img=card.querySelector('img'),x=CANDY_CATALOG.find(v=>img?.getAttribute('src')?.includes(v.file));if(x){card.style.border='2px solid '+(HHR[x.rarity]||'#fff');card.style.boxShadow='0 0 12px '+(HHR[x.rarity]||'#fff')+'33'}});paint();c.querySelectorAll('select').forEach(x=>x.addEventListener('change',()=>setTimeout(paint,0)))};
-const hUI=updateUI;window.hhAsleepSeen=window.hhAsleepSeen||new Set();updateUI=function(){hUI();if(!gameState)return;let b=[...document.querySelectorAll('.action-btn')].find(x=>x.textContent.includes('Crew')),asleep=(gameState.crew||[]).some(x=>x.asleep);if(b){b.classList.toggle('hh-crew-alert',asleep);if(asleep&&!b.querySelector('.hh-alert-dot'))b.insertAdjacentHTML('beforeend','<i class="hh-alert-dot"></i>');if(!asleep)b.querySelector('.hh-alert-dot')?.remove()}for(let w of gameState.crew||[])if(w.asleep&&!hhAsleepSeen.has(w.id)){hhAsleepSeen.add(w.id);hNotify('crewAsleep','Crew member asleep',(w.name||'A crew member')+' needs to be woken.')}else if(!w.asleep)hhAsleepSeen.delete(w.id);let cap=Number(gameState.basketCapacity||0),cnt=Number(gameState.currentBasketCount||0);if(cap&&cnt>=cap&&!window.hhFull){window.hhFull=true;hNotify('basketFull','Basket full','Your basket is full.')}if(cnt<cap)window.hhFull=false;if(cap&&cnt>=cap&&gameState.upgrades?.autoSell?.level&&!window.hhAuto){window.hhAuto=true;setTimeout(async()=>{try{if(!offlineMode&&gameState.upgrades.autoSell.level&&Number(gameState.currentBasketCount)>=Number(gameState.basketCapacity)){hNotify('autoSell','Auto Sell','Selling your full basket at the best price.');await executeSellAll()}}finally{window.hhAuto=false}},1000)}};
+const hUI=updateUI;window.hhAsleepSeen=window.hhAsleepSeen||new Set();updateUI=function(){hUI();if(!gameState)return;let b=[...document.querySelectorAll('.action-btn')].find(x=>x.textContent.includes('Crew')),asleep=(gameState.crew||[]).some(x=>x.asleep);if(b){b.classList.toggle('hh-crew-alert',asleep);if(asleep&&!b.querySelector('.hh-alert-dot'))b.insertAdjacentHTML('beforeend','<i class="hh-alert-dot"></i>');if(!asleep)b.querySelector('.hh-alert-dot')?.remove()}for(let w of gameState.crew||[])if(w.asleep&&!hhAsleepSeen.has(w.id)){hhAsleepSeen.add(w.id);hNotify('crewAsleep','Crew member asleep',(w.name||'A crew member')+' needs to be woken.')}else if(!w.asleep)hhAsleepSeen.delete(w.id);let cap=Number(gameState.basketCapacity||0),cnt=Number(gameState.currentBasketCount||0);if(cap&&cnt>=cap&&!window.hhFull){window.hhFull=true;hNotify('basketFull','Basket full','Your basket is full.')}if(cnt<cap)window.hhFull=false;if(cap&&cnt>=cap&&gameState.upgrades?.autoSell?.level&&!window.hhAuto){window.hhAuto=true;setTimeout(async()=>{try{if(gameState.upgrades.autoSell.level&&Number(gameState.currentBasketCount)>=Number(gameState.basketCapacity)){hNotify('autoSell','Auto Sell','Selling your full basket at the best price.');await executeSellAll()}}finally{window.hhAuto=false}},1000)}};
 
 const hRarityUpdate=updateUI;window.hhKnownRarities=window.hhKnownRarities||null;updateUI=function(){hRarityUpdate();if(!gameState)return;const found=new Set();for(const id of gameState.discovered||[]){const candy=getCandyObj(id);if(candy)found.add(candy.rarity)}if(window.hhKnownRarities===null){window.hhKnownRarities=found;return}for(const rarity of found){if(!window.hhKnownRarities.has(rarity)){window.hhKnownRarities.add(rarity);hNotify('newRarity','New rarity unlocked',rarity+' candy has been discovered!')}}};
