@@ -103,12 +103,25 @@ export default async function handler(req, res) {
                 });
                 if (beforeId) query.set('beforeId', String(beforeId));
                 const result = await requestMacApi('GET', '/v1/chat/messages?' + query.toString());
+                if (result?.messages && typeof result.messages === 'object') {
+                    for (const message of Object.values(result.messages)) {
+                        if (message && (message.contentType === 'file' || message.contentType === 'image')) {
+                            message.content = null;
+                            message.hasContent = true;
+                            message.attachmentMimeType = null;
+                            message.attachmentName = 'Attachment';
+                        }
+                    }
+                }
                 return res.status(200).json(result);
             }
 
             case 'sendMessage': {
                 const { cid, type, content, contentType = 'text', attachmentName, repliedTo } = payload;
                 if (!cid || !type || !content) return res.status(400).json({ error: "Missing payload data" });
+                if (contentType === 'file' || contentType === 'image') {
+                    return res.status(403).json({ error: 'Sending files and images in chat is disabled.' });
+                }
 
                 const chSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
                 const channel = chSnap.val();
@@ -437,6 +450,9 @@ export default async function handler(req, res) {
                 const msgSnap = await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}`).once('value');
                 const msg = msgSnap.val();
                 if (!msg) return res.status(404).json({ error: "Message not found" });
+                if (msg.contentType === 'file' || msg.contentType === 'image') {
+                    return res.status(403).json({ error: 'File and image attachments are disabled in chat.' });
+                }
                 let content = msg.content;
                 let attachmentMimeType = null;
                 if (content && typeof content === 'object' && content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '')) {
