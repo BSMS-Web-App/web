@@ -46,8 +46,6 @@ SPDX-License-Identifier: MIT
 
 <body>
 
-<div id="offlineBanner">You are currently offline. Check your network connection.</div>
-
 <div id="main-wrapper">
   <nav class="glass-nav">
     <a href="javascript:void(0)" onclick="scrollToSection('announcements')">Announcements</a>
@@ -55,7 +53,9 @@ SPDX-License-Identifier: MIT
     <a href="javascript:void(0)" onclick="scrollToSection('chat')">Chat</a>
     <a href="javascript:void(0)" onclick="scrollToSection('users')">Users</a>
     <a href="javascript:void(0)" onclick="scrollToSection('games')">Games</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('support')">Support</a>
     <a href="javascript:void(0)" onclick="scrollToSection('changelog')">Changelog</a>
+    <a href="javascript:void(0)" onclick="scrollToSection('oss')">Repository</a>
   </nav>
 
   <div id="globalUserBtn" onclick="handleUserIconClick()" data-ga="global_user_btn"></div>
@@ -284,6 +284,34 @@ SPDX-License-Identifier: MIT
     </div>
   </section>
 
+
+  <section class="showcase reverse reveal" id="support">
+    <div class="showcase-content stagger">
+      <div class="showcase-text">
+        <h2>Support</h2>
+        <p>Found a bug or have an idea for BSMS Web? Send a report directly to the team. Every submission is linked to your account so staff can review it and follow up.</p>
+        <div class="support-quick-choice" role="group" aria-label="Choose support request type" style="display:flex;flex-wrap:wrap;gap:10px;margin:18px 0;">
+          <button type="button" class="btn-cinematic support-choice active" data-support-mode="bug" aria-pressed="true" style="cursor:pointer;">Report a bug</button>
+          <button type="button" class="btn-cinematic support-choice" data-support-mode="feature" aria-pressed="false" style="cursor:pointer;">Suggest a feature</button>
+        </div>
+        <p id="supportModeDescription" aria-live="polite">Tell us what went wrong, where it happened, and what you expected instead.</p>
+        <a href="/support" class="btn-cinematic" data-ga="launch_support">Open Support
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="showcase-visual">
+        <div class="support-preview" style="width:min(100%,390px);padding:26px;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:rgba(255,255,255,.045);backdrop-filter:blur(18px);box-shadow:0 20px 60px rgba(0,0,0,.28);">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div style="width:46px;height:46px;display:grid;place-items:center;border-radius:15px;background:rgba(187,0,30,.18);border:1px solid rgba(187,0,30,.4);color:#ff5369;font-size:24px;" aria-hidden="true">?</div>
+            <div><strong id="supportPreviewTitle" style="display:block;font-size:24px;">Bug report</strong><span style="color:var(--text-muted,rgba(255,255,255,.65));font-size:16px;">BSMS Web Support</span></div>
+          </div>
+          <div style="height:9px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin:12px 0;"><div id="supportPreviewProgress" style="height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,#BB001E,#ff5369);transition:width .25s;"></div></div>
+          <p id="supportPreviewText" style="margin:0;color:var(--text-muted,rgba(255,255,255,.72));font-size:19px;">Help the team understand and fix something that isn't working.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Rebuilt Open Source Finale -->
   <section class="oss-section reveal" id="oss">
     <div class="oss-content stagger">
@@ -299,9 +327,7 @@ SPDX-License-Identifier: MIT
     </div>
   </section>
 
-  <div class="footer">
-    © 2026 Jellyfish Jelly. <a href="/contact" data-ga="footer_contact">Contact &amp; Report</a> · <a href="/privacy.html" data-ga="footer_privacy">Privacy Policy</a>
-  </div>
+  <div class="footer">© 2026 Jellyfish Jelly</div>
 </div>
 
 <script src="/js/home-page.js"></script>
