@@ -634,6 +634,65 @@ function hhShowDialog(title, body, buttons, options={}) {
     if (firstInput) firstInput.focus();
     return dialog;
 }
+async function hhManualSave(dialog) {
+    const status = dialog?.querySelector('#hhSaveStatus');
+    const setStatus = message => { if (status) status.textContent = message; };
+
+    if (!gameState) {
+        setStatus('Your game has not finished loading yet.');
+        return;
+    }
+    if (halloweenOfflineMode || !navigator.onLine) {
+        setStatus('You are offline. Your current progress cannot be saved to the server until your connection returns.');
+        showToast('You are offline. Server saving is unavailable.');
+        return;
+    }
+    if (window.hhManualSaveInProgress) return;
+    window.hhManualSaveInProgress = true;
+    setStatus('Saving pending actions and checking the server…');
+
+    try {
+        const deadline = Date.now() + 30000;
+        while (pendingServerActions.length || syncInProgress) {
+            if (!navigator.onLine) throw new Error('Connection lost before the save could finish.');
+            if (Date.now() >= deadline) throw new Error('Saving is taking too long. Your pending actions will remain queued for retry.');
+            if (!syncInProgress && pendingServerActions.length) {
+                await flushServerActionQueue();
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        const result = await apiCall('?action=state');
+        if (!result?.state) throw new Error(lastApiError?.message || 'The server could not confirm your save.');
+
+        gameState = cloneGameState(result.state);
+        recalculateBasketCount();
+        updateUI();
+        renderCurrentModal();
+        setStatus('Saved to the server just now.');
+        showToast('Game progress saved to the server.');
+    } catch (error) {
+        const message = error?.message || 'Could not save your progress right now.';
+        setStatus(message);
+        showToast(message);
+    } finally {
+        window.hhManualSaveInProgress = false;
+    }
+}
+
+function hhOpenSaveInfo() {
+    hhShowDialog(
+        'Game saving',
+        '<p>Your progress automatically saves to the server every <strong>10 seconds</strong> while you are online.</p><p>You can also select <strong>Save now</strong> to send pending actions immediately and confirm that the latest server save is available.</p><p id="hhSaveStatus" role="status" aria-live="polite">Your game is saved automatically while you play.</p>',
+        [
+            { label: 'Save now', primary: true, action: async dialog => { await hhManualSave(dialog); } },
+            { label: 'Close', action: async dialog => { dialog.hidden = true; } }
+        ]
+    );
+}
+window.hhOpenSaveInfo = hhOpenSaveInfo;
+
 function hhValidateSaveState(state) {
     if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('This save does not contain a valid game state.');
     if (!Number.isFinite(Number(state.cash)) || Number(state.cash) < 0) throw new Error('The save has an invalid cash value.');
