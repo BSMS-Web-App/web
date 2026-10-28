@@ -222,6 +222,56 @@ export default async function handler(req,res) {
   if(!['GET','POST'].includes(req.method)) return res.status(405).json({error:'Method not allowed.'});
   const action=String(req.query?.action || (typeof req.body==='object'&&req.body?.action) || 'state');
 
+  // One browser request can flush a queue of locally processed actions.
+  // Each command still passes through the normal server-side validation and
+  // idempotency checks; the client never submits a trusted cash/inventory save.
+  if (action === 'sync') {
+    const queued = req.body?.actions;
+    if (!Array.isArray(queued) || queued.length < 1 || queued.length > 100) {
+      return res.status(400).json({ error: 'Invalid sync batch.' });
+    }
+    const allowed = new Set(['collect', 'sell', 'upgrade', 'crew-action', 'crew-sync', 'crew-pause']);
+    const results = [];
+    let latestState = null;
+
+    for (const item of queued) {
+      const queuedAction = String(item?.action || '');
+      if (!allowed.has(queuedAction) || !item?.payload || typeof item.payload !== 'object' || Array.isArray(item.payload)) {
+        return res.status(400).json({ error: 'The sync batch contains an invalid action.' });
+      }
+
+      const innerResponse = {
+        statusCode: 200,
+        body: null,
+        status(code) { this.statusCode = code; return this; },
+        setHeader() { return this; },
+        json(body) { this.body = body; return this; },
+        end() { return this; }
+      };
+      await handler({
+        method: 'POST',
+        headers: req.headers,
+        query: { action: queuedAction },
+        body: item.payload
+      }, innerResponse);
+
+      results.push({ action: queuedAction, requestId: item.payload.requestId || null, status: innerResponse.statusCode, result: innerResponse.body });
+      if (innerResponse.body?.state) latestState = innerResponse.body.state;
+
+      // Authentication or infrastructure failures may mean the rest of the
+      // batch was not safely processed. Keep the batch retryable via request IDs.
+      if (innerResponse.statusCode === 401 || innerResponse.statusCode === 403 || innerResponse.statusCode >= 500) {
+        return res.status(innerResponse.statusCode).json({
+          error: innerResponse.body?.error || 'The sync batch could not be completed.',
+          results,
+          state: latestState
+        });
+      }
+    }
+
+    return res.status(200).json({ ok: true, results, state: latestState });
+  }
+
   // Lightweight diagnostic endpoint. Never returns account data or secrets.
   if (action === 'health') {
     try {
