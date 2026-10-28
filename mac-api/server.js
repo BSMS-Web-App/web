@@ -228,7 +228,7 @@ async function commitMutation(record) {
   // Write-ahead log: persist the operation before publishing it in memory.
   await appendJournal(completeRecord);
   database = nextDatabase;
-  if (completeRecord.path === '/accounts' || /^\/accounts\/[^/]+$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/sessions(?:\/[^/]+)?$/.test(completeRecord.path)) rebuildSessionIndex();
+  if (completeRecord.path === '/accounts' || /^\/accounts\/[^/]+$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/sessions(?:\/[^/]+)?$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/creator_session_id$/.test(completeRecord.path)) rebuildSessionIndex();
   refreshMessageKeyIndex(completeRecord, database);
   sequence = nextSequence;
   mutationsSinceCompact += 1;
