@@ -231,6 +231,17 @@ export default async function handler(req,res) {
       return res.status(400).json({ error: 'Invalid sync batch.' });
     }
     const allowed = new Set(['collect', 'sell', 'upgrade', 'crew-action', 'crew-sync', 'crew-pause']);
+    const batchAuthStartedAt = Date.now();
+    let batchAuth;
+    try {
+      batchAuth = await authenticate(req);
+    } catch (error) {
+      console.error('[Haunt] Batch authentication failed:', error);
+      return res.status(503).json({ error: 'The game server could not verify your session. Your queued actions have not been discarded.' });
+    }
+    if (!batchAuth) return res.status(401).json({ error: 'Please sign in to play Halloween Haunt.' });
+    if (batchAuth.error) return res.status(batchAuth.status).json({ error: batchAuth.error });
+
     const results = [];
     let latestState = null;
 
@@ -252,7 +263,8 @@ export default async function handler(req,res) {
         method: 'POST',
         headers: req.headers,
         query: { action: queuedAction },
-        body: item.payload
+        body: item.payload,
+        _batchAuth: batchAuth
       }, innerResponse);
 
       results.push({ action: queuedAction, requestId: item.payload.requestId || null, status: innerResponse.statusCode, result: innerResponse.body });
@@ -295,7 +307,7 @@ export default async function handler(req,res) {
   const authStartedAt = Date.now();
   let auth;
   try {
-    auth = await authenticate(req);
+    auth = req._batchAuth || await authenticate(req);
   } catch (error) {
     res.setHeader('Server-Timing', 'auth;dur=' + (Date.now() - authStartedAt));
     console.error('[Haunt] Auth/database error:', error);
