@@ -204,6 +204,14 @@ async function flushServerActionQueue() {
    recalculateBasketCount();
    updateUI();
    renderCurrentModal();
+  } else if (!pendingServerActions.length) {
+   const authoritative = await apiCall('?action=state');
+   if (authoritative?.state) {
+    gameState = cloneGameState(authoritative.state);
+    recalculateBasketCount();
+    updateUI();
+    renderCurrentModal();
+   }
   }
  } catch (error) {
   console.warn('[Halloween Haunt] Background sync failed; queued actions will be retried:', error);
@@ -264,6 +272,7 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 async function apiCall(endpoint, method = 'GET', payload = null) {
     const sessionId = localStorage.getItem('session_id') || '';
     const isHealthCheck = endpoint.includes('action=health');
+    const isBackgroundSync = endpoint.includes('action=sync');
     if (halloweenOfflineMode) return hhOfflineApi(endpoint, method, payload);
     if (!sessionId && !isHealthCheck) {
         return null;
@@ -297,7 +306,7 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
         }
         if (!res.ok) {
             lastApiError = { status: res.status, message: String(data.error || `Game API returned HTTP ${res.status}.`) };
-            showToast(lastApiError.message);
+            if (!isBackgroundSync) showToast(lastApiError.message);
             return null;
         }
         return data;
@@ -765,33 +774,27 @@ window.executeSellAll = async function() {
 }
 
 window.executeAutoSell = async function() {
-    if (autoSellInProgress || !gameState || Number(gameState.upgrades?.autoSell?.level || 0) <= 0) return;
-    const deadline = Date.now() + 15000;
-    while (Date.now() < deadline) {
-        if (pendingRetryRequestId) return;
-        if (!collectInFlight && pendingClicks > 0) flushCollectQueue();
-        if (!collectInFlight && pendingClicks === 0 && retryBatchClicks === 0 && inFlightClicks === 0 && pendingOptimisticActions === 0) break;
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    if (pendingRetryRequestId || collectInFlight || pendingClicks > 0 || retryBatchClicks > 0 || inFlightClicks > 0 || pendingOptimisticActions > 0) return;
-    autoSellInProgress = true;
-    try {
-        const latest = await apiCall('?action=state');
-        if (!latest?.state) return;
-        gameState = latest.state;
-        recalculateBasketCount();
-        updateUI();
-        if (currentModal) renderCurrentModal();
-        const count = Number(gameState.currentBasketCount || 0);
-        const capacity = Math.max(1, Number(gameState.basketCapacity || 50));
-        if (Number(gameState.upgrades?.autoSell?.level || 0) > 0 && count >= capacity) await window.executeSellAll();
-    } finally {
-        autoSellInProgress = false;
-        if (pendingClicks > 0 && !collectInFlight) {
-            if (collectFlushTimer) clearTimeout(collectFlushTimer);
-            collectFlushTimer = setTimeout(flushCollectQueue, 0);
-        }
-    }
+ if (autoSellInProgress || !gameState || Number(gameState.upgrades?.autoSell?.level || 0) <= 0) return;
+ if (pendingClicks > 0 && !collectInFlight) await flushCollectQueue();
+ if (collectInFlight || pendingClicks > 0) return;
+
+ autoSellInProgress = true;
+ try {
+  recalculateBasketCount();
+  const count = Number(gameState.currentBasketCount || 0);
+  const capacity = Math.max(1, Number(gameState.basketCapacity || 50));
+  // The collect command is already queued before this sale, so the server
+  // processes collection and auto-sale in the same ordered background sync.
+  if (Number(gameState.upgrades?.autoSell?.level || 0) > 0 && count >= capacity) {
+   await window.executeSellAll();
+  }
+ } finally {
+  autoSellInProgress = false;
+  if (pendingClicks > 0 && !collectInFlight) {
+   if (collectFlushTimer) clearTimeout(collectFlushTimer);
+   collectFlushTimer = setTimeout(flushCollectQueue, 0);
+  }
+ }
 };
 function renderUpgrades(container) {
  const upg=gameState.upgrades||{};
