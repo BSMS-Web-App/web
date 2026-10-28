@@ -4,6 +4,15 @@
   <p>A chronological record of updates, improvements, and changes to BSMS Web since it became open source.</p>
 </div>
 
+## v6.5.0
+
+- Halloween Haunt Save System and Offline Gameplay
+- Support Requests and Administrative Review
+- Homepage Support Navigation and Presentation
+- Project Changelog
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.5.0)
+
 ## v6.4.0
 
 - Halloween Haunt Event
