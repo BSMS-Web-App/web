@@ -275,19 +275,38 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 // ------------------------------------------------------------------
 // API Communication
 // ------------------------------------------------------------------
+function getHalloweenHauntSessionId() {
+    // The account session object is the source of truth. session_id can be a
+    // generated device-tracking ID on older tabs and must not override a real
+    // authenticated session ID.
+    for (const key of ['bsms_auth_session', 'bsms_session']) {
+        try {
+            const session = JSON.parse(localStorage.getItem(key) || 'null');
+            if (session?.loggedIn && typeof session.sessionId === 'string' && session.sessionId.trim()) {
+                return session.sessionId.trim();
+            }
+        } catch (error) {
+            console.warn('[Halloween Haunt] Could not read saved account session:', error);
+        }
+    }
+    return '';
+}
+
 async function apiCall(endpoint, method = 'GET', payload = null) {
-    const sessionId = localStorage.getItem('session_id') || '';
+    const sessionId = getHalloweenHauntSessionId();
     const isHealthCheck = endpoint.includes('action=health');
     const isBackgroundSync = endpoint.includes('action=sync');
     if (halloweenOfflineMode) return hhOfflineApi(endpoint, method, payload);
     if (!sessionId && !isHealthCheck) {
+        lastApiError = { status: 401, message: 'Please sign in to play Halloween Haunt.' };
+        if (!isBackgroundSync) showToast(lastApiError.message);
         return null;
     }
 
     const headers = { 'Content-Type': 'application/json' };
     if (sessionId) {
         headers['X-Session-ID'] = sessionId;
-        headers['X-Device-ID'] = localStorage.getItem('device_id') || sessionId;
+        headers['X-Device-ID'] = localStorage.getItem('device_id') || localStorage.getItem('session_id') || sessionId;
     }
 
     const requestPayload = method === 'POST' && payload && typeof payload === 'object'
