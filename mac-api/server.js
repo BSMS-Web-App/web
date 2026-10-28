@@ -330,19 +330,37 @@ app.get('/v1/auth/session', requireApiKey, (req, res) => {
   const sessionId = String(req.query.sessionId || '');
   if (!sessionId || sessionId.length > 300) return sendError(res, 400, 'Invalid session ID.');
 
-  const uid = sessionIndex.get(sessionId);
-  const account = uid ? database.accounts?.[uid] : null;
-  const sessionIsValid = Boolean(
-    account &&
-    account.account_status !== 'banned' &&
-    account.account_status !== 'deleted' &&
+  // The index is a fast path, not the source of truth. Session data may have
+  // been written by an older server version or restored before the index was
+  // rebuilt, so validate the indexed account and fall back to the live database.
+  let uid = sessionIndex.get(sessionId) || null;
+  let account = uid ? database.accounts?.[uid] : null;
+  const isValidForAccount = (candidate) => Boolean(
+    candidate &&
+    candidate.account_status !== 'banned' &&
+    candidate.account_status !== 'deleted' &&
     (
-      (account.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) ||
-      account.creator_session_id === sessionId
+      (candidate.sessions && Object.prototype.hasOwnProperty.call(candidate.sessions, sessionId)) ||
+      candidate.creator_session_id === sessionId
     )
   );
 
-  if (!sessionIsValid) return res.status(200).json({ authenticated: false, uid: null, account: null });
+  if (!isValidForAccount(account)) {
+    uid = null;
+    account = null;
+    for (const [candidateUid, candidateAccount] of Object.entries(database.accounts || {})) {
+      if (!isValidForAccount(candidateAccount)) continue;
+      uid = candidateUid;
+      account = candidateAccount;
+      // Repair the index so subsequent requests use the fast path.
+      sessionIndex.set(sessionId, candidateUid);
+      break;
+    }
+  }
+
+  if (!isValidForAccount(account)) {
+    return res.status(200).json({ authenticated: false, uid: null, account: null });
+  }
 
   // Return only the fields used by server-side authorization and game state.
   // Passwords, session collections, and unrelated account data stay on the Mac.
