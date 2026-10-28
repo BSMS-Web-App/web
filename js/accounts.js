@@ -3,11 +3,6 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: MIT
  */
-/*
- * BSMS Web
- * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
- */
 
 // Initialize standard offline checking
 window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
