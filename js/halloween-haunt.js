@@ -115,46 +115,139 @@ function renderCurrentModal() {
  const body=document.getElementById('modalBody'); if(!body||!currentModal||!gameState)return;
  if(currentModal==='shops')renderShops(body);else if(currentModal==='upgrades')renderUpgrades(body);else if(currentModal==='crew'){if(typeof window.renderCrew==='function')window.renderCrew(body);else renderCrew(body);}else if(currentModal==='index')renderIndex(body);else if(currentModal==='stats')renderStats(body);else if(currentModal==='leaderboard')renderLeaderboard(body);
 }
-let pendingOptimisticActions=0;
-let actionQueuePromise=Promise.resolve();
-let lastAuthoritativeActionState=null;
+const HH_PENDING_ACTIONS_KEY = 'bsms_halloween_haunt_pending_actions_v1';
+const HH_SYNC_INTERVAL_MS = 10000;
+let pendingOptimisticActions = 0;
+let pendingServerActions = [];
+let syncInProgress = false;
+let syncTimerStarted = false;
 
-function performOptimisticAction(endpoint,payload,mutate,successMessage) {
- if(!gameState)return Promise.resolve();
- const action=String(endpoint.split('action=')[1]||'').split('&')[0];
-   
- // Optimistically update the interface before starting any network work. Actions
- // are serialized in the background so server transactions cannot race each other.
- if(pendingOptimisticActions===0)lastAuthoritativeActionState=cloneGameState(gameState);
- let optimisticResult={state:gameState,hired:payload?.action==='hire'};
- if(action==='sell'){
-  let sold=0,earned=0;
-  for(const candy of CANDY_CATALOG){const qty=Math.max(0,Math.floor(Number(gameState.inventory?.[candy.id])||0));if(!qty)continue;const shop=[...(gameState.shops||[])].sort((a,b)=>Number(b.prices?.[candy.id]||0)-Number(a.prices?.[candy.id]||0))[0];sold+=qty;earned+=qty*Math.max(0,Number(shop?.prices?.[candy.id]||0));}
-  optimisticResult={...optimisticResult,sold,earned};
+function makeRequestId(prefix = 'hh') {
+ return (crypto.randomUUID ? crypto.randomUUID() : prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+}
+
+function persistPendingServerActions() {
+ try {
+  const sessionId = localStorage.getItem('session_id') || '';
+  localStorage.setItem(HH_PENDING_ACTIONS_KEY, JSON.stringify({ sessionId, actions: pendingServerActions }));
+ } catch (error) {
+  console.warn('[Halloween Haunt] Could not persist pending actions:', error);
+ }
+}
+
+function restorePendingServerActions() {
+ try {
+  const saved = JSON.parse(localStorage.getItem(HH_PENDING_ACTIONS_KEY) || 'null');
+  const sessionId = localStorage.getItem('session_id') || '';
+  if (saved?.sessionId && saved.sessionId === sessionId && Array.isArray(saved.actions)) {
+   pendingServerActions = saved.actions.filter(item =>
+    item && typeof item.action === 'string' && item.payload &&
+    typeof item.payload === 'object' && typeof item.payload.requestId === 'string'
+   ).slice(0, 500);
+   pendingOptimisticActions = pendingServerActions.length;
+  } else if (saved) {
+   localStorage.removeItem(HH_PENDING_ACTIONS_KEY);
+  }
+ } catch (error) {
+  console.warn('[Halloween Haunt] Could not restore pending actions:', error);
+  pendingServerActions = [];
+  pendingOptimisticActions = 0;
+ }
+}
+
+function queueServerAction(action, payload = {}) {
+ if (!action || halloweenOfflineMode) return false;
+ if (pendingServerActions.length >= 500) {
+  showToast('Your action queue is full. Wait for synchronization before trying again.');
+  return false;
+ }
+ const item = { action, payload: { ...payload, requestId: payload.requestId || makeRequestId(action) } };
+ pendingServerActions.push(item);
+ pendingOptimisticActions = pendingServerActions.length;
+ persistPendingServerActions();
+ return true;
+}
+
+async function flushServerActionQueue() {
+ if (syncInProgress || halloweenOfflineMode || !pendingServerActions.length) return;
+ if (!navigator.onLine || !(localStorage.getItem('session_id') || '')) return;
+ syncInProgress = true;
+ const batch = pendingServerActions.slice(0, 100);
+ try {
+  const result = await apiCall('?action=sync', 'POST', {
+   actions: batch.map(item => ({ action: item.action, payload: item.payload }))
+  });
+  if (!result?.ok || !Array.isArray(result.results)) {
+   if (!navigator.onLine) {
+    halloweenOfflineMode = true;
+    try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+   }
+   return;
+  }
+
+  pendingServerActions.splice(0, batch.length);
+  pendingOptimisticActions = pendingServerActions.length;
+  persistPendingServerActions();
+
+  const failed = result.results.find(item => Number(item.status) >= 400);
+  if (failed?.result?.error) showToast(failed.result.error);
+
+  if (!pendingServerActions.length && result.state) {
+   gameState = cloneGameState(result.state);
+   recalculateBasketCount();
+   updateUI();
+   renderCurrentModal();
+  }
+ } catch (error) {
+  console.warn('[Halloween Haunt] Background sync failed; queued actions will be retried:', error);
+ } finally {
+  syncInProgress = false;
+ }
+}
+
+function startServerSyncTimer() {
+ if (syncTimerStarted) return;
+ syncTimerStarted = true;
+ setInterval(flushServerActionQueue, HH_SYNC_INTERVAL_MS);
+}
+
+function performOptimisticAction(endpoint, payload, mutate, successMessage) {
+ if (!gameState) return Promise.resolve();
+ const action = String(endpoint.split('action=')[1] || '').split('&')[0];
+ let optimisticResult = { state: gameState, hired: payload?.action === 'hire' };
+ if (action === 'sell') {
+  let sold = 0, earned = 0;
+  for (const candy of CANDY_CATALOG) {
+   const qty = Math.max(0, Math.floor(Number(gameState.inventory?.[candy.id]) || 0));
+   if (!qty) continue;
+   const shop = [...(gameState.shops || [])].sort((a, b) => Number(b.prices?.[candy.id] || 0) - Number(a.prices?.[candy.id] || 0))[0];
+   sold += qty;
+   earned += qty * Math.max(0, Number(shop?.prices?.[candy.id] || 0));
+  }
+  optimisticResult = { ...optimisticResult, sold, earned };
  }
  mutate(gameState);
  recalculateBasketCount();
  updateUI();
  renderCurrentModal();
- if(successMessage){try{const message=successMessage(optimisticResult);if(message)showToast(message);}catch(error){console.warn('[Halloween Haunt] Could not create optimistic success notice:',error);}}
- pendingOptimisticActions++;
- actionQueuePromise=actionQueuePromise.then(async()=>{
-  try{
-   const result=await apiCall(endpoint,'POST',payload);
-   if(result?.state)lastAuthoritativeActionState=cloneGameState(result.state);
-  }catch(error){console.error('[Halloween Haunt] Action request failed:',error);}
- }).catch(error=>console.error('[Halloween Haunt] Action queue failed:',error)).finally(()=>{
-  pendingOptimisticActions=Math.max(0,pendingOptimisticActions-1);
-  if(pendingOptimisticActions===0){
-   if(lastAuthoritativeActionState)gameState=cloneGameState(lastAuthoritativeActionState);
-   
-   
-   updateUI();
-   renderCurrentModal();
+
+ if (successMessage) {
+  try {
+   const message = successMessage(optimisticResult);
+   if (message) showToast(message);
+  } catch (error) {
+   console.warn('[Halloween Haunt] Could not create optimistic success notice:', error);
   }
- });
- return actionQueuePromise;
+ }
+
+ if (halloweenOfflineMode) {
+  try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+ } else {
+  queueServerAction(action, payload);
+ }
+ return Promise.resolve(optimisticResult);
 }
+
 function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll(String.fromCharCode(34), '&quot;').replaceAll(String.fromCharCode(39), '&#39;'); }
 
 
@@ -266,11 +359,13 @@ async function initGame() {
             return;
         }
         gameState = data.state;
+        restorePendingServerActions();
+        startServerSyncTimer();
         const [leaderboard] = await Promise.all([apiCall('?action=leaderboard'),preloadCandyImages(),document.fonts?.ready || Promise.resolve()]);
         leaderboardCache = Array.isArray(leaderboard?.rankings) ? leaderboard.rankings : [];
         updateUI(); updateTimer();
         if (!window.halloweenHauntTimerStarted) { window.halloweenHauntTimerStarted = true; setInterval(updateTimer, 1000); }
-        if (!window.halloweenHauntOnlineIntervalsStarted) { window.halloweenHauntOnlineIntervalsStarted = true; setInterval(syncCrew, 3000); setInterval(refreshLeaderboard, 60000); }
+        if (!window.halloweenHauntOnlineIntervalsStarted) { window.halloweenHauntOnlineIntervalsStarted = true; setInterval(syncCrew, 10000); setInterval(refreshLeaderboard, 60000); startServerSyncTimer(); }
         hideLoadingScreen(); maybeShowWelcomeGuide();
     } catch (error) {
         console.error('[Halloween Haunt] Initial load failed:', error);
@@ -284,9 +379,9 @@ function updateTimer(){if(!gameState)return;const now=Date.now(),start=Number(ga
 function eventDuration(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return d>0?d+'d '+h+'h '+m+'m '+s+'s':String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 
 async function syncCrew() {
-    if (!gameState || !isEventActive || !gameState.crewUnlocked || document.visibilityState === 'hidden' || pendingOptimisticActions > 0) return;
-    const result = await apiCall('?action=crew-sync', 'POST');
-    if (result?.state) { gameState = result.state; updateUI(); if (currentModal === 'crew') renderCrew(); }
+ if (!gameState || !isEventActive || !gameState.crewUnlocked || document.visibilityState === 'hidden' || halloweenOfflineMode) return;
+ if (pendingServerActions.some(item => item.action === 'crew-sync')) return;
+ queueServerAction('crew-sync', {});
 }
 
 // ------------------------------------------------------------------
@@ -306,51 +401,55 @@ function handleBasketClick(e) {
 }
 
 async function flushCollectQueue() {
-    if (autoSellInProgress || collectInFlight || (!pendingRetryRequestId && pendingClicks <= 0) || !gameState) return;
-    collectInFlight = true;
-    const retrying = Boolean(pendingRetryRequestId);
-    const batch = retrying ? retryBatchClicks : Math.min(50, pendingClicks);
-    if (!retrying) pendingClicks -= batch;
-    inFlightClicks = batch;
-    const requestId = pendingRetryRequestId || (crypto.randomUUID ? crypto.randomUUID() : `collect-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    let succeeded = false;
-    try {
-        const res = await apiCall('?action=collect', 'POST', { clickCount: batch, requestId });
-        if (res?.state) {
-            succeeded = true;
-            pendingRetryRequestId = null;
-            retryBatchClicks = 0;
-            gameState = res.state;
-            inFlightClicks = 0;
-            updateUI();
-            renderCurrentModal();
-            const retry = document.getElementById('collectRetry');
-            if (retry) retry.hidden = true;
-        } else {
-            // Keep failed clicks separate from newer clicks and reuse the ID on retry.
-            // A committed-but-lost response is then replayed without double counting.
-            if (!retrying) {
-                pendingRetryRequestId = requestId;
-                retryBatchClicks = batch;
-            }
-            inFlightClicks = 0;
-            updateUI();
-            const retry = document.getElementById('collectRetry');
-            if (retry) retry.hidden = false;
-        }
-    } finally {
-        collectInFlight = false;
-        if (succeeded && pendingClicks > 0) {
-            if (collectFlushTimer) clearTimeout(collectFlushTimer);
-            collectFlushTimer = setTimeout(flushCollectQueue, 0);
-        }
-    }
+ if (autoSellInProgress || collectInFlight || pendingClicks <= 0 || !gameState) return;
+ collectInFlight = true;
+ const batch = Math.min(50, pendingClicks);
+ pendingClicks -= batch;
+ inFlightClicks = batch;
+ const requestId = makeRequestId('collect');
+ try {
+  const perClick = Math.min(8, Math.max(1, Number(gameState.upgrades?.power?.level || 0) + 1));
+  const room = Math.max(0, Number(gameState.basketCapacity || 50) - recalculateBasketCount());
+  const collected = Math.min(room, batch * perClick);
+  gameState.inventory ||= {};
+  gameState.lifetimeCollected ||= {};
+  gameState.discovered ||= [];
+  gameState.stats ||= createDefaultStats();
+  for (let i = 0; i < collected; i++) {
+   const candy = choosePreviewCandy();
+   gameState.inventory[candy.id] = Number(gameState.inventory[candy.id] || 0) + 1;
+   gameState.lifetimeCollected[candy.id] = Number(gameState.lifetimeCollected[candy.id] || 0) + 1;
+   gameState.feedCandy = Number(gameState.feedCandy || 0) + 1;
+   gameState.stats.totalCollected = Number(gameState.stats.totalCollected || 0) + 1;
+   if (candy.rarity === 'Rare' || candy.rarity === 'Epic') gameState.stats.rareCollected = Number(gameState.stats.rareCollected || 0) + 1;
+   if (candy.rarity === 'Legendary') gameState.stats.legendaryCollected = Number(gameState.stats.legendaryCollected || 0) + 1;
+   if (!gameState.discovered.includes(candy.id)) gameState.discovered.push(candy.id);
+  }
+  gameState.stats.totalClicks = Number(gameState.stats.totalClicks || 0) + batch;
+  recalculateBasketCount();
+  if (halloweenOfflineMode) {
+   try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+  } else {
+   queueServerAction('collect', { clickCount: batch, requestId });
+  }
+  inFlightClicks = 0;
+  updateUI();
+  renderCurrentModal();
+  const retry = document.getElementById('collectRetry');
+  if (retry) retry.hidden = true;
+ } finally {
+  collectInFlight = false;
+  if (pendingClicks > 0) {
+   if (collectFlushTimer) clearTimeout(collectFlushTimer);
+   collectFlushTimer = setTimeout(flushCollectQueue, 0);
+  }
+ }
 }
 
 function retryCollectQueue() {
-    const retry = document.getElementById('collectRetry');
-    if (retry) retry.hidden = true;
-    flushCollectQueue();
+ const retry = document.getElementById('collectRetry');
+ if (retry) retry.hidden = true;
+ flushServerActionQueue();
 }
 
 function spawnFallingCandy(candyId, originX, originY) {
