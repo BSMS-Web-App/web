@@ -81,7 +81,10 @@ function rebuildSessionIndex() {
   sessionIndex.clear();
   for (const [uid, account] of Object.entries(database.accounts || {})) {
     for (const sessionId of Object.keys(account?.sessions || {})) {
-      sessionIndex.set(sessionId, uid);
+      if (sessionId) sessionIndex.set(sessionId, uid);
+    }
+    if (typeof account?.creator_session_id === 'string' && account.creator_session_id) {
+      sessionIndex.set(account.creator_session_id, uid);
     }
   }
 }
@@ -325,14 +328,35 @@ function numericKeySort(a, b) {
 
 app.get('/v1/auth/session', requireApiKey, (req, res) => {
   const sessionId = String(req.query.sessionId || '');
-  if (!sessionId || sessionId.length > 512) return sendError(res, 400, 'Invalid session ID.');
+  if (!sessionId || sessionId.length > 300) return sendError(res, 400, 'Invalid session ID.');
+
   const uid = sessionIndex.get(sessionId);
   const account = uid ? database.accounts?.[uid] : null;
-  if (account?.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) {
-    const { password, sessions, ...safeAccount } = account;
-    return res.status(200).json({ uid, account: safeAccount });
-  }
-  return res.status(404).json({ uid: null, account: null });
+  const sessionIsValid = Boolean(
+    account &&
+    account.account_status !== 'banned' &&
+    account.account_status !== 'deleted' &&
+    (
+      (account.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) ||
+      account.creator_session_id === sessionId
+    )
+  );
+
+  if (!sessionIsValid) return res.status(404).json({ uid: null, account: null });
+
+  // Return only the fields used by server-side authorization and game state.
+  // Passwords, session collections, and unrelated account data stay on the Mac.
+  return res.status(200).json({
+    uid,
+    account: {
+      username: account.username || uid,
+      displayName: account.displayName || account.username || uid,
+      account_status: account.account_status || 'active',
+      role: account.role || null,
+      verified: Boolean(account.verified),
+      isDeveloper: Boolean(account.isDeveloper)
+    }
+  });
 });
 
 app.get('/v1/chat/sync', requireApiKey, (req, res) => {
