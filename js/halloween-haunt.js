@@ -812,6 +812,108 @@ async function hhOfferOfflineSync() {
     ]);
 }
 
+function hhOfflineCrewTick() {
+    if (!halloweenOfflineMode || !gameState || !Array.isArray(gameState.crew) || !gameState.crew.length) return;
+    const now = Date.now();
+    const start = Number(gameState.startsAt || Date.parse(START_Z));
+    const end = Number(gameState.endsAt || Date.parse(DEADLINE_Z));
+    if (now < start || now >= end) return;
+
+    const previous = Number(gameState._offlineCrewTickAt || now - 1000);
+    const elapsed = Math.min(10000, Math.max(0, now - previous));
+    gameState._offlineCrewTickAt = now;
+    if (!elapsed) return;
+
+    gameState.stats ||= createDefaultStats();
+    gameState.inventory ||= {};
+    gameState.discovered ||= [];
+    gameState.lifetimeCollected ||= {};
+    gameState.feedCandy = Number(gameState.feedCandy || 0);
+    let changed = false;
+
+    for (const worker of gameState.crew) {
+        worker.inventory ||= {};
+        worker.capacity = Math.max(1, Number(worker.capacity || 50));
+        worker.inventoryCount = Object.values(worker.inventory).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+        worker.workMs = Number(worker.workMs || 0);
+        worker.awakeMs = Number(worker.awakeMs || 0);
+        worker.fedUntil = Number(worker.fedUntil || 0);
+        worker.sellReadyAt = Number(worker.sellReadyAt || 0);
+        worker.intervalMs = Math.max(500, Number(worker.intervalMs || 2000));
+
+        if (worker.asleep) continue;
+        const fed = worker.fedUntil > now;
+        if (!fed) {
+            worker.awakeMs += elapsed;
+            if (worker.awakeMs >= 300000 + Number(worker.awakeLevel || 0) * 60000) {
+                worker.asleep = true;
+                changed = true;
+                continue;
+            }
+        }
+
+        const capacity = Math.max(1, Math.floor(worker.capacity * (fed ? 1.25 : 1)));
+        const interval = Math.max(500, worker.intervalMs * (fed ? 0.75 : 1));
+        worker.workMs += elapsed;
+        const ticks = Math.min(10, Math.floor(worker.workMs / interval));
+        worker.workMs -= ticks * interval;
+
+        for (let tick = 0; tick < ticks; tick++) {
+            const held = Object.values(worker.inventory).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+            if (held >= capacity) break;
+            const candy = choosePreviewCandy();
+            const basePower = Math.min(8, 1 + Number(worker.powerLevel || 0));
+            const power = Math.min(capacity - held, basePower + (fed ? Math.max(1, Math.ceil(basePower * 0.25)) : 0));
+            worker.inventory[candy.id] = Number(worker.inventory[candy.id] || 0) + power;
+            worker.inventoryCount = held + power;
+            worker.collectedCount = Number(worker.collectedCount || 0) + power;
+            gameState.stats.crewCollected = Number(gameState.stats.crewCollected || 0) + power;
+            gameState.stats.totalCollected = Number(gameState.stats.totalCollected || 0) + power;
+            gameState.feedCandy += power;
+            gameState.lifetimeCollected[candy.id] = Number(gameState.lifetimeCollected[candy.id] || 0) + power;
+            if (!gameState.discovered.includes(candy.id)) gameState.discovered.push(candy.id);
+            if (candy.rarity === 'Rare' || candy.rarity === 'Epic') gameState.stats.rareCollected = Number(gameState.stats.rareCollected || 0) + power;
+            if (candy.rarity === 'Legendary') gameState.stats.legendaryCollected = Number(gameState.stats.legendaryCollected || 0) + power;
+            changed = true;
+        }
+
+        worker.inventoryCount = Object.values(worker.inventory).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+        if (worker.inventoryCount >= capacity && !worker.sellReadyAt) {
+            worker.sellReadyAt = now + Math.max(4000, 20000 - 2000 * Number(worker.speedLevel || 0)) * (fed ? 0.75 : 1);
+            changed = true;
+        }
+        if (worker.sellReadyAt && now >= worker.sellReadyAt && worker.inventoryCount > 0) {
+            let earned = 0, sold = 0;
+            for (const candy of CANDY_CATALOG) {
+                const qty = Math.max(0, Math.floor(Number(worker.inventory[candy.id] || 0)));
+                if (!qty) continue;
+                const bestShopPrice = Math.max(0, ...(gameState.shops || []).map(shop => Number(shop.prices?.[candy.id] || 0)));
+                const catalogPrice = Number(gameState.candyCatalog?.find(item => item.id === candy.id)?.bestPrice || 0);
+                earned += qty * Math.max(1, bestShopPrice || catalogPrice || 1);
+                sold += qty;
+                worker.inventory[candy.id] = 0;
+            }
+            if (sold > 0) {
+                gameState.cash = Number(gameState.cash || 0) + earned;
+                gameState.stats.lifetimeCash = Number(gameState.stats.lifetimeCash || 0) + earned;
+                gameState.stats.crewSold = Number(gameState.stats.crewSold || 0) + sold;
+                gameState.stats.totalSold = Number(gameState.stats.totalSold || 0) + sold;
+                worker.moneyEarned = Number(worker.moneyEarned || 0) + earned;
+                worker.inventoryCount = 0;
+                worker.sellReadyAt = 0;
+                changed = true;
+            }
+        }
+    }
+
+    if (changed) {
+        try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+        updateUI();
+        if (currentModal === 'crew' || currentModal === 'stats' || currentModal === 'index') renderCurrentModal();
+    }
+}
+setInterval(hhOfflineCrewTick, 1000);
+
 function hhOfflineApi(endpoint,method,payload) {
     const action=(endpoint.split('action=')[1]||'state').split('&')[0];
     const s=gameState;
