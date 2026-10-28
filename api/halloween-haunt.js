@@ -11,7 +11,7 @@
  * Halloween Haunt authoritative event API.
  * All economy changes are server-calculated and committed through the Mac DB CAS transaction.
  */
-import { db } from './db.js';
+import { db, requestMacApi } from './db.js';
 
 const ROOT = '/halloween_haunt';
 const START = Date.parse('2026-10-26T04:00:00.000Z'); // Oct 26, 2026, 12:00 AM EDT
@@ -140,22 +140,27 @@ function publicState(p, root, now) {
   };
 }
 async function authenticate(req) {
-  const sessionId=req.headers['x-session-id'];
-  if(typeof sessionId!=='string' || !sessionId || sessionId.length>300) return null;
-  const snap=await db.ref('/accounts').once('value');
-  const accounts=snap.val()||{};
-  for(const [uid,account] of Object.entries(accounts)) {
-    if(account?.account_status==='banned' || account?.account_status==='deleted') continue;
-    if(account?.sessions?.[sessionId] || account?.creator_session_id===sessionId) {
-      const deviceId=req.headers['x-device-id'];
-      if(deviceId) {
-        const ban=(await db.ref('/banned_devices/'+String(deviceId).replace(/[.#$\[\]/]/g,'_')).once('value')).val();
-        if(ban && (!ban.ban_expires || Number(ban.ban_expires)>Date.now())) return {error:'This device is banned.',status:403};
-      }
-      return {uid,account};
+  const sessionId = req.headers['x-session-id'];
+  if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 300) return null;
+
+  // Ask the Mac API's in-memory session index for one session decision.
+  // Never download or scan the full /accounts collection for a game request.
+  const result = await requestMacApi(
+    'GET',
+    '/v1/auth/session?sessionId=' + encodeURIComponent(sessionId)
+  );
+  if (!result?.authenticated || !result.uid || !result.account) return null;
+
+  const deviceId = req.headers['x-device-id'];
+  if (typeof deviceId === 'string' && deviceId) {
+    const safeDeviceId = deviceId.replace(/[.#$\[\]/]/g, '_');
+    const ban = (await db.ref('/banned_devices/' + safeDeviceId).once('value')).val();
+    if (ban && (!ban.ban_expires || Number(ban.ban_expires) > Date.now())) {
+      return { error: 'This device is banned.', status: 403 };
     }
   }
-  return null;
+
+  return { uid: result.uid, account: result.account };
 }
 
 function sanitizeImportedPlayer(input, uid, account, now) {
@@ -220,11 +225,12 @@ export default async function handler(req,res) {
   // Lightweight diagnostic endpoint. Never returns account data or secrets.
   if (action === 'health') {
     try {
-      await db.ref('/accounts').once('value');
+      // Touch a small event metadata path instead of downloading all account data.
+      await requestMacApi('GET', '/v1/db?path=' + encodeURIComponent(ROOT + '/meta/offerWindow'));
       return res.status(200).json({ ok: true, database: 'reachable', api: 'halloween-haunt' });
     } catch (error) {
       console.error('[Haunt] Health check failed:', error);
-      return res.status(503).json({ ok: false, database: 'unavailable', error: 'The game API cannot reach the Mac database. Check Vercel environment variables and the Cloudflare Tunnel.' });
+      return res.status(503).json({ ok: false, database: 'unavailable', error: 'The game API cannot reach the Mac database API. Check its configuration and network connection.' });
     }
   }
 
