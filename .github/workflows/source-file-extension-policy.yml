@@ -1,4 +1,4 @@
-name: BSMS Web | Source File Extension Policy
+name: BSMS Web
 
 on:
   push:
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   check-source-extensions:
-    name: Allow only JavaScript, HTML, and CSS source files
+    name: File Extension Validation
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
