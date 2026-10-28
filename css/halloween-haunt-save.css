@@ -15,3 +15,37 @@
 .hh-save-secondary:hover{background:#42304e}
 .loading-retry{margin-top:10px}
 @media(max-width:520px){.hh-save-dialog-card{padding:20px}.hh-save-controls{padding:12px}}
+
+
+/* Header save status control and save-information dialog status */
+.hh-save-info-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 145, 50, .4);
+  border-radius: 12px;
+  background: rgba(255, 120, 20, .09);
+  color: #ffd3a1;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.hh-save-info-btn svg { width: 21px; height: 21px; }
+.hh-save-info-btn:hover { background: rgba(255, 120, 20, .18); border-color: rgba(255, 165, 75, .75); transform: translateY(-1px); }
+.hh-save-info-btn:focus-visible { outline: 3px solid #ffd3a1; outline-offset: 3px; }
+#hhSaveStatus {
+  margin-top: 16px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 145, 50, .24);
+  border-radius: 10px;
+  background: rgba(255, 120, 20, .07);
+  color: #ffd3a1;
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .header-stats { gap: 7px; }
+  .hh-save-info-btn { width: 36px; height: 36px; border-radius: 10px; }
+  .hh-save-info-btn svg { width: 19px; height: 19px; }
+}
