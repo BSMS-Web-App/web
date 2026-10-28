@@ -227,7 +227,7 @@ export default async function handler(req,res) {
   // idempotency checks; the client never submits a trusted cash/inventory save.
   if (action === 'sync') {
     const queued = req.body?.actions;
-    if (!Array.isArray(queued) || queued.length < 1 || queued.length > 100) {
+    if (!Array.isArray(queued) || queued.length < 1 || queued.length > 20) {
       return res.status(400).json({ error: 'Invalid sync batch.' });
     }
     const allowed = new Set(['collect', 'sell', 'upgrade', 'crew-action', 'crew-sync', 'crew-pause']);
