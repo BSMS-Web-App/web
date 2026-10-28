@@ -231,7 +231,6 @@ export default async function handler(req,res) {
       return res.status(400).json({ error: 'Invalid sync batch.' });
     }
     const allowed = new Set(['collect', 'sell', 'upgrade', 'crew-action', 'crew-sync', 'crew-pause']);
-    const batchAuthStartedAt = Date.now();
     let batchAuth;
     try {
       batchAuth = await authenticate(req);
