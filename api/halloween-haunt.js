@@ -242,12 +242,27 @@ export default async function handler(req,res) {
       return res.status(200).json({rankings,...status});
     } catch(error) { console.error('[Haunt] Public event leaderboard failed:',error); return res.status(503).json({error:'The event leaderboard is temporarily unavailable.'}); }
   }
+  const authStartedAt = Date.now();
   let auth;
-  try { auth=await authenticate(req); } catch(error) { console.error('[Haunt] Auth/database error:',error); return res.status(503).json({error:'The game API cannot reach the account database. Check the Mac API and Cloudflare Tunnel.'}); }
-  if(!auth)return res.status(401).json({error:'Please sign in to play Halloween Haunt.'});
-  if(auth.error)return res.status(auth.status).json({error:auth.error});
+  try {
+    auth = await authenticate(req);
+  } catch (error) {
+    res.setHeader('Server-Timing', 'auth;dur=' + (Date.now() - authStartedAt));
+    console.error('[Haunt] Auth/database error:', error);
+    return res.status(503).json({ error: 'The game API cannot reach the Mac database API. Check its configuration and network connection.' });
+  }
+  const authDurationMs = Date.now() - authStartedAt;
+  if (!auth) {
+    res.setHeader('Server-Timing', 'auth;dur=' + authDurationMs);
+    return res.status(401).json({ error: 'Please sign in to play Halloween Haunt.' });
+  }
+  if (auth.error) {
+    res.setHeader('Server-Timing', 'auth;dur=' + authDurationMs);
+    return res.status(auth.status).json({ error: auth.error });
+  }
   try {
     let actionResponse = null;
+    const transactionStartedAt = Date.now();
     const transaction=await db.ref(ROOT).transaction(current=>{
       const root=ensureMeta(current||{},now);
       const account=auth.account;
@@ -342,6 +357,8 @@ export default async function handler(req,res) {
       if(requestId && !response.error) player.recentRequests[requestId]=now;
       player.updatedAt=now;actionResponse=response; return root;
     });
+    const transactionDurationMs = Date.now() - transactionStartedAt;
+    res.setHeader('Server-Timing', 'auth;dur=' + authDurationMs + ', db_transaction;dur=' + transactionDurationMs);
     const result=transaction.snapshot?.val();
     if (!transaction.committed) return res.status(503).json({error:'Could not commit your progress. Please retry.'});
     if (!actionResponse) {
