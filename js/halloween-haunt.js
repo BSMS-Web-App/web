@@ -228,8 +228,15 @@ function startServerSyncTimer() {
  setInterval(flushServerActionQueue, HH_SYNC_INTERVAL_MS);
 }
 
+window.addEventListener('offline', () => {
+ if (!gameState) return;
+ halloweenOfflineMode = true;
+ try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+ showToast('Connection lost. Halloween Haunt is continuing in offline mode on this device.');
+});
 window.addEventListener('online', () => {
  if (!halloweenOfflineMode) setTimeout(flushServerActionQueue, 100);
+ else setTimeout(hhOfferOfflineSync, 250);
 });
 
 function performOptimisticAction(endpoint, payload, mutate, successMessage) {
@@ -348,8 +355,9 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
     } catch (e) {
         console.warn('[Halloween Haunt] API request failed:', endpoint, e);
         if (!navigator.onLine && gameState) {
-            // A temporary network outage should not switch the game into manual
-            // offline-save mode. Keep queuing actions so they can sync on reconnect.
+            // Switch the running session to local simulation immediately when the
+            // network disappears; otherwise crew simulation remains disabled.
+            halloweenOfflineMode = true;
             try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
             return hhOfflineApi(endpoint, method, payload);
         }
@@ -417,7 +425,7 @@ async function initGame() {
         leaderboardCache = Array.isArray(leaderboard?.rankings) ? leaderboard.rankings : [];
         updateUI(); updateTimer();
         if (!window.halloweenHauntTimerStarted) { window.halloweenHauntTimerStarted = true; setInterval(updateTimer, 1000); }
-        if (!window.halloweenHauntOnlineIntervalsStarted) { window.halloweenHauntOnlineIntervalsStarted = true; setInterval(syncCrew, 10000); setInterval(refreshLeaderboard, 60000); startServerSyncTimer(); }
+        if (!window.halloweenHauntOnlineIntervalsStarted) { window.halloweenHauntOnlineIntervalsStarted = true; setInterval(syncCrew, 2000); setInterval(refreshLeaderboard, 60000); startServerSyncTimer(); }
         hideLoadingScreen(); maybeShowWelcomeGuide();
     } catch (error) {
         console.error('[Halloween Haunt] Initial load failed:', error);
@@ -431,7 +439,7 @@ function updateTimer(){if(!gameState)return;const now=Date.now(),start=Number(ga
 function eventDuration(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return d>0?d+'d '+h+'h '+m+'m '+s+'s':String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 
 async function syncCrew() {
- if (!gameState || !isEventActive || !gameState.crewUnlocked || document.visibilityState === 'hidden' || halloweenOfflineMode) return;
+ if (!gameState || !isEventActive || !(gameState.crew || []).length || document.visibilityState === 'hidden' || halloweenOfflineMode) return;
  if (pendingServerActions.some(item => item.action === 'crew-sync')) return;
  queueServerAction('crew-sync', {});
 }
@@ -812,6 +820,108 @@ async function hhOfferOfflineSync() {
     ]);
 }
 
+function hhOfflineCrewTick() {
+    if (!halloweenOfflineMode || !gameState || !Array.isArray(gameState.crew) || !gameState.crew.length) return;
+    const now = Date.now();
+    const start = Number(gameState.startsAt || Date.parse(START_Z));
+    const end = Number(gameState.endsAt || Date.parse(DEADLINE_Z));
+    if (now < start || now >= end) return;
+
+    const previous = Number(gameState._offlineCrewTickAt || now - 1000);
+    const elapsed = Math.min(10000, Math.max(0, now - previous));
+    gameState._offlineCrewTickAt = now;
+    if (!elapsed) return;
+
+    gameState.stats ||= createDefaultStats();
+    gameState.inventory ||= {};
+    gameState.discovered ||= [];
+    gameState.lifetimeCollected ||= {};
+    gameState.feedCandy = Number(gameState.feedCandy || 0);
+    let changed = false;
+
+    for (const worker of gameState.crew) {
+        worker.inventory ||= {};
+        worker.capacity = Math.max(1, Number(worker.capacity || 50));
+        worker.inventoryCount = Object.values(worker.inventory).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+        worker.workMs = Number(worker.workMs || 0);
+        worker.awakeMs = Number(worker.awakeMs || 0);
+        worker.fedUntil = Number(worker.fedUntil || 0);
+        worker.sellReadyAt = Number(worker.sellReadyAt || 0);
+        worker.intervalMs = Math.max(500, Number(worker.intervalMs || 2000));
+
+        if (worker.asleep) continue;
+        const fed = worker.fedUntil > now;
+        if (!fed) {
+            worker.awakeMs += elapsed;
+            if (worker.awakeMs >= 300000 + Number(worker.awakeLevel || 0) * 60000) {
+                worker.asleep = true;
+                changed = true;
+                continue;
+            }
+        }
+
+        const capacity = Math.max(1, Math.floor(worker.capacity * (fed ? 1.25 : 1)));
+        const interval = Math.max(500, worker.intervalMs * (fed ? 0.75 : 1));
+        worker.workMs += elapsed;
+        const ticks = Math.min(10, Math.floor(worker.workMs / interval));
+        worker.workMs -= ticks * interval;
+
+        for (let tick = 0; tick < ticks; tick++) {
+            const held = Object.values(worker.inventory).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+            if (held >= capacity) break;
+            const candy = choosePreviewCandy();
+            const basePower = Math.min(8, 1 + Number(worker.powerLevel || 0));
+            const power = Math.min(capacity - held, basePower + (fed ? Math.max(1, Math.ceil(basePower * 0.25)) : 0));
+            worker.inventory[candy.id] = Number(worker.inventory[candy.id] || 0) + power;
+            worker.inventoryCount = held + power;
+            worker.collectedCount = Number(worker.collectedCount || 0) + power;
+            gameState.stats.crewCollected = Number(gameState.stats.crewCollected || 0) + power;
+            gameState.stats.totalCollected = Number(gameState.stats.totalCollected || 0) + power;
+            gameState.feedCandy += power;
+            gameState.lifetimeCollected[candy.id] = Number(gameState.lifetimeCollected[candy.id] || 0) + power;
+            if (!gameState.discovered.includes(candy.id)) gameState.discovered.push(candy.id);
+            if (candy.rarity === 'Rare' || candy.rarity === 'Epic') gameState.stats.rareCollected = Number(gameState.stats.rareCollected || 0) + power;
+            if (candy.rarity === 'Legendary') gameState.stats.legendaryCollected = Number(gameState.stats.legendaryCollected || 0) + power;
+            changed = true;
+        }
+
+        worker.inventoryCount = Object.values(worker.inventory).reduce((sum, qty) => sum + Math.max(0, Number(qty) || 0), 0);
+        if (worker.inventoryCount >= capacity && !worker.sellReadyAt) {
+            worker.sellReadyAt = now + Math.max(4000, 20000 - 2000 * Number(worker.speedLevel || 0)) * (fed ? 0.75 : 1);
+            changed = true;
+        }
+        if (worker.sellReadyAt && now >= worker.sellReadyAt && worker.inventoryCount > 0) {
+            let earned = 0, sold = 0;
+            for (const candy of CANDY_CATALOG) {
+                const qty = Math.max(0, Math.floor(Number(worker.inventory[candy.id] || 0)));
+                if (!qty) continue;
+                const bestShopPrice = Math.max(0, ...(gameState.shops || []).map(shop => Number(shop.prices?.[candy.id] || 0)));
+                const catalogPrice = Number(gameState.candyCatalog?.find(item => item.id === candy.id)?.bestPrice || 0);
+                earned += qty * Math.max(1, bestShopPrice || catalogPrice || 1);
+                sold += qty;
+                worker.inventory[candy.id] = 0;
+            }
+            if (sold > 0) {
+                gameState.cash = Number(gameState.cash || 0) + earned;
+                gameState.stats.lifetimeCash = Number(gameState.stats.lifetimeCash || 0) + earned;
+                gameState.stats.crewSold = Number(gameState.stats.crewSold || 0) + sold;
+                gameState.stats.totalSold = Number(gameState.stats.totalSold || 0) + sold;
+                worker.moneyEarned = Number(worker.moneyEarned || 0) + earned;
+                worker.inventoryCount = 0;
+                worker.sellReadyAt = 0;
+                changed = true;
+            }
+        }
+    }
+
+    if (changed) {
+        try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+        updateUI();
+        if (currentModal === 'crew' || currentModal === 'stats' || currentModal === 'index') renderCurrentModal();
+    }
+}
+setInterval(hhOfflineCrewTick, 1000);
+
 function hhOfflineApi(endpoint,method,payload) {
     const action=(endpoint.split('action=')[1]||'state').split('&')[0];
     const s=gameState;
@@ -1048,7 +1158,7 @@ renderUpgrades = function(c){let arr=[['capacity','Basket Capacity','Carry more 
 renderCrew = function(c){let a=gameState.crew||[],out=hCard('What are Crews?','<p>Crew members collect candy while the game is open. They sell a full basket to the best-paying seller. After five minutes they fall asleep and must be woken manually. Upgrade each member independently or feed them for 20-minute boosts.</p>'+hQ('Crew basics','Crew pauses when the game is closed. Sleeping workers need a manual wake-up. Feeding costs 10× your basket capacity in candy, gives percentage boosts, and prevents sleep for 20 minutes.'),'AUTOMATIC WORK');out+='<div class="hh-summary-grid"><div class="hh-stat-card"><small>Crew members</small><strong>'+a.length+' / 20</strong></div><div class="hh-stat-card"><small>Candy collected</small><strong>'+Number(gameState.stats?.crewCollected||0).toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Candy sold</small><strong>'+Number(gameState.stats?.crewSold||0).toLocaleString()+'</strong></div></div>';if(!a.length)out+=hCard('Hire your first member','<button class="buy-btn" onclick="executeCrew(\'hire\')" '+(gameState.cash<gameState.crewHireCost?'disabled':'')+'>Hire '+HHN[0]+' · '+formatCash(gameState.crewHireCost)+'</button>','RECRUIT');out+='<div class="hh-crew-grid">'+a.map((w,i)=>{let asleep=!!w.asleep,fed=Number(w.fedUntil||0)>Date.now(),cnt=Number(w.inventoryCount||0),cap=Number(w.capacity||10),ups=[['capacity','Basket Capacity',w.capacityLevel||0,65,1.65],['power','Click Power',w.powerLevel||0,80,1.65],['luck','Candy Luck',w.luckLevel||0,95,1.65],['speed','Auto Sell Faster',w.speedLevel||0,75,1.7],['awake','Longer Awake Time',w.awakeLevel||0,100,1.8]];return '<article class="hh-crew-card '+(asleep?'is-asleep':'')+'"><div class="hh-crew-top"><div><span class="hh-badge">'+(asleep?'ASLEEP':fed?'FED BOOST':'WORKING')+'</span><h3>'+escapeHTML(w.name||HHN[i]||('Worker '+(i+1)))+'</h3><p class="hh-muted">'+(asleep?'Needs a manual wake-up':fed?'Boosted for '+Math.max(0,Math.ceil((w.fedUntil-Date.now())/60000))+' min':'Collecting candy automatically')+'</p></div>'+hQ('Worker status','The basket bar shows carried candy. Full baskets sell automatically. Sleeping workers need you to wake them.')+'</div><div class="hh-progress-label"><span>Basket</span><strong>'+cnt+' / '+cap+'</strong></div><div class="hh-progress"><i style="width:'+Math.min(100,cnt/Math.max(1,cap)*100)+'%"></i></div><div style="display:flex;gap:8px;margin:12px 0">'+(asleep?'<button class="buy-btn" onclick="executeCrew(\'wake\','+i+')">Wake up</button>':'<button class="buy-btn" '+(fed?'disabled':'')+' onclick="executeCrew(\'feed\','+i+')">Feed · '+(10*Number(gameState.basketCapacity||50))+' candy</button>')+'</div><div class="hh-upgrade-grid">'+ups.map(([k,n,l,b,m])=>'<div class="hh-upgrade-mini"><span>'+n+'<small>Level '+l+'</small></span><button class="buy-btn" '+(gameState.cash<Math.floor(b*Math.pow(m,l))?'disabled':'')+' onclick="executeCrew(\'upgrade_'+k+'\','+i+')">'+formatCash(Math.floor(b*Math.pow(m,l)))+'</button></div>').join('')+'</div></article>'}).join('')+'</div>';if(a.length<20)out+=hCard('Recruit another member','<p>Each recruit costs more. All members start with the same base stats.</p><button class="buy-btn" onclick="executeCrew(\'hire\')" '+(gameState.cash<gameState.crewHireCost?'disabled':'')+'>Hire '+escapeHTML(HHN[a.length]||'Worker')+' · '+formatCash(gameState.crewHireCost)+'</button>','NEXT RECRUIT');c.innerHTML=out};
 // Sale confirmation is handled once by performOptimisticAction; do not wrap it in a second toast.
 const hUpgrade=window.executeUpgrade;window.executeUpgrade=async function(t){if(t==='autoSell'){if(gameState.upgrades.autoSell.level||gameState.cash<5000){showToast('Auto Sell costs $5,000 and can only be unlocked once.');return}return performOptimisticAction('?action=upgrade',{type:t},s=>{if(s.cash<5000)return;s.cash-=5000;s.stats.cashSpent+=5000;s.stats.upgradesBought++;s.upgrades.autoSell.level=1;s.upgrades.autoSell.nextCost=-1},()=> 'Auto Sell unlocked!')}return hUpgrade(t)};
-window.executeCrew=async function(action,index=0){let map={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]};await performOptimisticAction('?action=crew-action',{action,index},s=>{s.stats||=createDefaultStats();if(action==='hire'){if(s.crew.length>=20||s.cash<s.crewHireCost)return;let cost=s.crewHireCost,i=s.crew.length;s.cash-=cost;s.stats.cashSpent+=cost;s.crewUnlocked=true;s.crew.push({id:'helper-'+(i+1),name:HHN[i]||('Worker '+(i+1)),capacity:10,capacityLevel:0,powerLevel:0,luckLevel:0,speedLevel:0,awakeLevel:0,intervalMs:20000,inventory:{},inventoryCount:0,asleep:false,awakeMs:0,fedUntil:0});s.crewHireCost=Math.floor(cost*1.85);return}let w=s.crew[index];if(!w)return;if(action==='wake'){w.asleep=false;w.awakeMs=0;return}if(action==='feed'){let need=10*Number(s.basketCapacity||50),reserve=Math.max(0,Number(s.feedCandy||0));if(Number(w.fedUntil||0)>Date.now()||reserve<need){showToast('You need '+need+' candy in your Candy Reserve to feed this crew member.');return}s.feedCandy=reserve-need;w.fedUntil=Date.now()+1200000;w.asleep=false;w.awakeMs=0;return}let cfg=map[action];if(!cfg)return;let [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(w[key]||0)));if(s.cash<cost)return;s.cash-=cost;s.stats.cashSpent+=cost;s.stats.upgradesBought++;w[key]=Number(w[key]||0)+1;if(key==='capacityLevel')w.capacity=10+w[key]*10;if(key==='speedLevel')w.intervalMs=Math.max(2000,20000*Math.pow(.85,w.speedLevel))},r=>r.fed?'Fed for 20 minutes.':action==='wake'?null:r.woke?'Crew member awake.':r.hired?'Crew member hired!':'Crew updated!')};
+window.executeCrew=async function(action,index=0){let map={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]};await performOptimisticAction('?action=crew-action',{action,index},s=>{s.stats||=createDefaultStats();if(action==='hire'){if(s.crew.length>=20||s.cash<s.crewHireCost)return;let cost=s.crewHireCost,i=s.crew.length;s.cash-=cost;s.stats.cashSpent+=cost;s.crewUnlocked=true;s.crew.push({id:'helper-'+(i+1),name:HHN[i]||('Worker '+(i+1)),capacity:10,capacityLevel:0,powerLevel:0,luckLevel:0,speedLevel:0,awakeLevel:0,intervalMs:2000,inventory:{},inventoryCount:0,asleep:false,awakeMs:0,fedUntil:0});s.crewHireCost=Math.floor(cost*1.85);return}let w=s.crew[index];if(!w)return;if(action==='wake'){w.asleep=false;w.awakeMs=0;return}if(action==='feed'){let need=10*Number(s.basketCapacity||50),reserve=Math.max(0,Number(s.feedCandy||0));if(Number(w.fedUntil||0)>Date.now()||reserve<need){showToast('You need '+need+' candy in your Candy Reserve to feed this crew member.');return}s.feedCandy=reserve-need;w.fedUntil=Date.now()+1200000;w.asleep=false;w.awakeMs=0;return}let cfg=map[action];if(!cfg)return;let [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(w[key]||0)));if(s.cash<cost)return;s.cash-=cost;s.stats.cashSpent+=cost;s.stats.upgradesBought++;w[key]=Number(w[key]||0)+1;if(key==='capacityLevel')w.capacity=10+w[key]*10;if(key==='speedLevel')w.intervalMs=Math.max(2000,20000*Math.pow(.85,w.speedLevel))},r=>r.fed?'Fed for 20 minutes.':action==='wake'?null:r.woke?'Crew member awake.':r.hired?'Crew member hired!':'Crew updated!')};
 const hSpawn=spawnFallingCandy;spawnFallingCandy=function(id,x,y){const r=hSpawn(id,x,y),els=document.querySelectorAll('.falling-candy'),el=els[els.length-1],c=getCandyObj(id);if(el&&c){const col=HHR[c.rarity]||'#fff';el.style.width='112px';el.style.height='112px';el.style.border='0';el.style.outline='0';el.style.borderRadius='0';el.style.background='transparent';el.style.boxShadow='none';el.style.filter='drop-shadow(0 0 4px '+col+') drop-shadow(0 0 12px '+col+')'}return r};
 const hIndex=renderIndex;renderIndex=function(c){hIndex(c);const paint=()=>c.querySelectorAll('.candy-card').forEach(card=>{let img=card.querySelector('img'),x=CANDY_CATALOG.find(v=>img?.getAttribute('src')?.includes(v.file));if(x){card.style.border='2px solid '+(HHR[x.rarity]||'#fff');card.style.boxShadow='0 0 12px '+(HHR[x.rarity]||'#fff')+'33'}});paint();c.querySelectorAll('select').forEach(x=>x.addEventListener('change',()=>setTimeout(paint,0)))};
 const hUI=updateUI;window.hhAsleepSeen=window.hhAsleepSeen||new Set();updateUI=function(){hUI();if(!gameState)return;let b=[...document.querySelectorAll('.action-btn')].find(x=>x.textContent.includes('Crew')),asleep=(gameState.crew||[]).some(x=>x.asleep);if(b){b.classList.toggle('hh-crew-alert',asleep);if(asleep&&!b.querySelector('.hh-alert-dot'))b.insertAdjacentHTML('beforeend','<i class="hh-alert-dot"></i>');if(!asleep)b.querySelector('.hh-alert-dot')?.remove()}for(let w of gameState.crew||[])if(w.asleep&&!hhAsleepSeen.has(w.id)){hhAsleepSeen.add(w.id);hNotify('crewAsleep','Crew member asleep',(w.name||'A crew member')+' needs to be woken.')}else if(!w.asleep)hhAsleepSeen.delete(w.id);let cap=Number(gameState.basketCapacity||0),cnt=Number(gameState.currentBasketCount||0);if(cap&&cnt>=cap&&!window.hhFull){window.hhFull=true;hNotify('basketFull','Basket full','Your basket is full.')}if(cnt<cap)window.hhFull=false;};
