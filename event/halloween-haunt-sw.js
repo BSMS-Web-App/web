@@ -1,5 +1,5 @@
 /* Halloween Haunt offline application shell and static-asset cache. */
-const CACHE_NAME='bsms-halloween-haunt-v4';
+const CACHE_NAME='bsms-halloween-haunt-v5';
 const SHELL=[
   '/event/halloween-haunt.html',
   '/css/styles.css',
@@ -39,9 +39,15 @@ self.addEventListener('fetch',event=>{
   }
   if(/\.(?:css|js|png|jpe?g|webp|svg|woff2?|ttf|ico)$/i.test(url.pathname)){
     event.respondWith((async()=>{
-      const cache=await caches.open(CACHE_NAME),cached=await cache.match(request);
-      if(cached)return cached;
-      try{const response=await fetch(request);if(response.ok)cache.put(request,response.clone());return response;}catch(_){return new Response('',{status:504,statusText:'Offline asset unavailable'});}
+      const cache=await caches.open(CACHE_NAME);
+      // Prefer fresh code/assets whenever online; use the cached copy only offline.
+      try{
+        const response=await fetch(request,{cache:'no-cache'});
+        if(response.ok)await cache.put(request,response.clone());
+        if(response.ok)return response;
+      }catch(_){}
+      const cached=await cache.match(request);
+      return cached||new Response('',{status:504,statusText:'Offline asset unavailable'});
     })());
   }
 });
