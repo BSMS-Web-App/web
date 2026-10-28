@@ -228,8 +228,15 @@ function startServerSyncTimer() {
  setInterval(flushServerActionQueue, HH_SYNC_INTERVAL_MS);
 }
 
+window.addEventListener('offline', () => {
+ if (!gameState) return;
+ halloweenOfflineMode = true;
+ try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+ showToast('Connection lost. Halloween Haunt is continuing in offline mode on this device.');
+});
 window.addEventListener('online', () => {
  if (!halloweenOfflineMode) setTimeout(flushServerActionQueue, 100);
+ else setTimeout(hhOfferOfflineSync, 250);
 });
 
 function performOptimisticAction(endpoint, payload, mutate, successMessage) {
@@ -348,8 +355,9 @@ async function apiCall(endpoint, method = 'GET', payload = null) {
     } catch (e) {
         console.warn('[Halloween Haunt] API request failed:', endpoint, e);
         if (!navigator.onLine && gameState) {
-            // A temporary network outage should not switch the game into manual
-            // offline-save mode. Keep queuing actions so they can sync on reconnect.
+            // Switch the running session to local simulation immediately when the
+            // network disappears; otherwise crew simulation remains disabled.
+            halloweenOfflineMode = true;
             try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
             return hhOfflineApi(endpoint, method, payload);
         }
