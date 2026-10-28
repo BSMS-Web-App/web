@@ -62,6 +62,8 @@ function recalculateBasketCount(state=gameState){if(!state)return 0;state.invent
 let currentModal = null;
 let offerRefreshTime = 0;
 let isEventActive = false;
+let crewSyncInFlight = false;
+let crewSyncFailures = 0;
 let leaderboardCache = [];
 let pendingClicks = 0;
 let inFlightClicks = 0;
@@ -439,9 +441,41 @@ function updateTimer(){if(!gameState)return;const now=Date.now(),start=Number(ga
 function eventDuration(ms){const t=Math.max(0,Math.floor(ms/1000)),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=t%60;return d>0?d+'d '+h+'h '+m+'m '+s+'s':String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 
 async function syncCrew() {
- if (!gameState || !isEventActive || !(gameState.crew || []).length || document.visibilityState === 'hidden' || halloweenOfflineMode) return;
- if (pendingServerActions.some(item => item.action === 'crew-sync')) return;
- queueServerAction('crew-sync', {});
+ if (!gameState || !isEventActive || !(gameState.crew || []).length || document.visibilityState === 'hidden' || halloweenOfflineMode || crewSyncInFlight) return;
+ // Crew production is time-based state. Send it directly instead of queueing it
+ // behind player clicks/upgrades, then apply the authoritative response so the
+ // basket and cash actually refresh in the open UI.
+ if (pendingServerActions.length || syncInProgress) return;
+ crewSyncInFlight = true;
+ try {
+  const result = await apiCall('?action=crew-sync', 'POST', {});
+  if (result?.state) {
+   crewSyncFailures = 0;
+   if (!pendingServerActions.length && !halloweenOfflineMode) {
+    gameState = cloneGameState(result.state);
+    recalculateBasketCount();
+    updateUI();
+    renderCurrentModal();
+   }
+   return;
+  }
+  // Some browsers keep navigator.onLine=true when the network/API is unreachable.
+  // After repeated transport/server failures, switch to the local simulator rather
+  // than leaving the crew looking active while no production requests succeed.
+  const status = Number(lastApiError?.status || 0);
+  if (!navigator.onLine || !status || status >= 500) {
+   crewSyncFailures++;
+   if (crewSyncFailures >= 2 && gameState && !halloweenOfflineMode) {
+    halloweenOfflineMode = true;
+    try { localStorage.setItem(HH_OFFLINE_KEY, JSON.stringify(gameState)); } catch (_) {}
+    showToast('Crew server sync failed. Continuing with local offline crew simulation.');
+   }
+  }
+ } catch (error) {
+  console.warn('[Halloween Haunt] Crew sync failed:', error);
+ } finally {
+  crewSyncInFlight = false;
+ }
 }
 
 // ------------------------------------------------------------------
@@ -711,6 +745,23 @@ function hhValidateSaveState(state) {
     }
     if (state.discovered.some(id => !validIds.has(id))) throw new Error('The save contains an unknown candy type.');
     if (state.discovered.length > CANDY_CATALOG.length) throw new Error('The save contains too many discovered candies.');
+
+    // Migrate older saves where crew used a 20-second collection interval.
+    // The current server-created crew interval is 2 seconds; keeping the old
+    // value made a 50-candy basket take nearly 17 minutes to fill.
+    state.crew = Array.isArray(state.crew) ? state.crew : [];
+    for (const worker of state.crew) {
+        if (!worker || typeof worker !== 'object') continue;
+        const oldInterval = Number(worker.intervalMs || 0);
+        worker.intervalMs = !Number.isFinite(oldInterval) || oldInterval <= 0 || oldInterval >= 10000 ? 2000 : Math.max(500, oldInterval);
+        worker.inventory = worker.inventory && typeof worker.inventory === 'object' ? worker.inventory : {};
+        worker.inventoryCount = Object.values(worker.inventory).reduce((sum, quantity) => sum + Math.max(0, Number(quantity) || 0), 0);
+        worker.workMs = Math.max(0, Number(worker.workMs) || 0);
+        worker.awakeMs = Math.max(0, Number(worker.awakeMs) || 0);
+        worker.fedUntil = Math.max(0, Number(worker.fedUntil) || 0);
+        worker.sellReadyAt = Math.max(0, Number(worker.sellReadyAt) || 0);
+        worker.lastActionAt = Number(worker.lastActionAt) || Date.now();
+    }
     return state;
 }
 async function hhExportSave() {
@@ -847,7 +898,12 @@ function hhOfflineCrewTick() {
         worker.awakeMs = Number(worker.awakeMs || 0);
         worker.fedUntil = Number(worker.fedUntil || 0);
         worker.sellReadyAt = Number(worker.sellReadyAt || 0);
-        worker.intervalMs = Math.max(500, Number(worker.intervalMs || 2000));
+        const savedInterval = Number(worker.intervalMs || 0);
+        worker.intervalMs = !Number.isFinite(savedInterval) || savedInterval <= 0 || savedInterval >= 10000
+            ? 2000
+            : Math.max(500, savedInterval);
+        // Keep the UI's "next candy" countdown aligned with this local work tick.
+        worker.lastActionAt = now;
 
         if (worker.asleep) continue;
         const fed = worker.fedUntil > now;

@@ -1,5 +1,5 @@
 /* Halloween Haunt offline application shell and static-asset cache. */
-const CACHE_NAME='bsms-halloween-haunt-v5';
+const CACHE_NAME='bsms-halloween-haunt-v6';
 const SHELL=[
   '/event/halloween-haunt.html',
   '/css/styles.css',
