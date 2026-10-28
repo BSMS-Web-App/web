@@ -276,7 +276,18 @@ function escapeHTML(value) { return String(value ?? '').replaceAll('&', '&amp;')
 // API Communication
 // ------------------------------------------------------------------
 function getHalloweenHauntSessionId() {
-    // Prefer the account session object when available.
+    // Match the repository-wide authentication contract used by accounts.js:
+    // session_id is sent as X-Session-ID and the API validates it server-side.
+    try {
+        const sessionId = localStorage.getItem('session_id');
+        if (typeof sessionId === 'string' && sessionId.trim()) {
+            return sessionId.trim();
+        }
+    } catch (error) {
+        console.warn('[Halloween Haunt] Could not read session_id:', error);
+    }
+
+    // Compatibility fallback for a tab where the standard key is missing.
     for (const key of ['bsms_auth_session', 'bsms_session']) {
         try {
             const session = JSON.parse(localStorage.getItem(key) || 'null');
@@ -286,18 +297,6 @@ function getHalloweenHauntSessionId() {
         } catch (error) {
             console.warn('[Halloween Haunt] Could not read saved account session:', error);
         }
-    }
-
-    // The accounts app also stores the active login token in session_id.
-    // It may be a generated device ID on logged-out devices, so always let the
-    // server validate it rather than treating its presence as proof of login.
-    try {
-        const storedSessionId = localStorage.getItem('session_id');
-        if (typeof storedSessionId === 'string' && storedSessionId.trim()) {
-            return storedSessionId.trim();
-        }
-    } catch (error) {
-        console.warn('[Halloween Haunt] Could not read stored session ID:', error);
     }
 
     return '';
