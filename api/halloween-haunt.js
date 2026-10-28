@@ -263,8 +263,11 @@ export default async function handler(req,res) {
   try {
     let actionResponse = null;
     const transactionStartedAt = Date.now();
-    const transaction=await db.ref(ROOT).transaction(current=>{
-      const root=ensureMeta(current||{},now);
+    const playerPath = ROOT + '/players/' + auth.uid;
+    const transaction=await db.ref(playerPath).transaction(currentPlayer=>{
+      // Offers are deterministic for the current five-minute window, so player actions
+      // do not need to read or compare-and-set the entire event and every other player.
+      const root=ensureMeta({meta:{},players:{[auth.uid]:currentPlayer}},now);
       const account=auth.account;
       const player=normalizePlayer(root.players[auth.uid],auth.uid,account,now);
       root.players[auth.uid]=player;
@@ -272,35 +275,35 @@ export default async function handler(req,res) {
       const requestId=typeof req.body?.requestId==='string' && /^[a-zA-Z0-9_-]{8,100}$/.test(req.body.requestId) ? req.body.requestId : null;
       player.recentRequests ||= {};
       for (const [id,at] of Object.entries(player.recentRequests)) if (Number(at)<now-2*60*60*1000) delete player.recentRequests[id];
-      if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root; }
+      if(requestId && player.recentRequests[requestId]) { response={state:publicState(player,root,now),replayed:true}; actionResponse=response; return root.players[auth.uid]; }
       const credit=(amount)=>{amount=Math.max(0,Math.floor(amount));player.cash+=amount;player.stats.lifetimeCash+=amount;player.stats.highScore=Math.max(player.stats.highScore,player.cash);return amount;};
-      if(action==='state') { player.updatedAt=now; actionResponse=response; return root; }
+      if(action==='state') { player.updatedAt=now; actionResponse=response; return root.players[auth.uid]; }
       if(action==='import-save') {
         try {
           root.players[auth.uid]=sanitizeImportedPlayer(req.body?.saveState,auth.uid,account,now);
           actionResponse={state:publicState(root.players[auth.uid],root,now),imported:true};
-          return root;
+          return root.players[auth.uid];
         } catch(error) {
           actionResponse={error:'Save file data is invalid or unsupported.',status:400};
-          return root;
+          return root.players[auth.uid];
         }
       }
       if(action==='crew-pause') {
         player.lastCrewSync=now;
         for(const crew of player.crew||[])crew.lastActionAt=now;
-        actionResponse={state:publicState(player,root,now),crewPaused:true};player.updatedAt=now;return root;
+        actionResponse={state:publicState(player,root,now),crewPaused:true};player.updatedAt=now;return root.players[auth.uid];
       }
       if(status.status!=='active') {
         response.error=status.status==='upcoming'?'Halloween Haunt has not started yet.':'Halloween Haunt has ended. Final standings are locked.';
         response.status=status.status==='upcoming'?425:410;
-        actionResponse=response; return root;
+        actionResponse=response; return root.players[auth.uid];
       }
       const count=()=>{player.currentBasketCount=Object.values(player.inventory).reduce((a,n)=>a+Math.max(0,Number(n)||0),0);return player.currentBasketCount;};
       if(action==='collect') {
         const clickCount = Math.min(50, Math.max(1, Math.floor(Number(req.body?.clickCount) || 1)));
         const requested = Math.min(MAX_CLICK_RATE, 1 + (player.upgrades.power.level || 0));
         const room = Math.max(0, player.basketCapacity - count());
-        if (room <= 0) { response = { state: publicState(player,root,now), collected: 0, basketFull: true }; actionResponse = response; return root; }
+        if (room <= 0) { response = { state: publicState(player,root,now), collected: 0, basketFull: true }; actionResponse = response; return root.players[auth.uid]; }
         const drops = [];
         for (let i = 0; i < Math.min(requested * clickCount, room); i++) {
           const c=rollCandy(player.upgrades.luck.level||0);
@@ -324,14 +327,14 @@ export default async function handler(req,res) {
           earned+=subtotal;sold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:'basket'});
           player.inventory[candy.id]=0;
         }
-        if(!sold){response={state:publicState(player,root,now),earned:0,sold:0,receipts:[],nothingToSell:true};actionResponse=response;return root;}
+        if(!sold){response={state:publicState(player,root,now),earned:0,sold:0,receipts:[],nothingToSell:true};actionResponse=response;return root.players[auth.uid];}
         credit(earned);player.stats.totalSold+=sold;count();response={state:publicState(player,root,now),earned,sold,receipts};
       } else if(action==='upgrade') {
         const type=String(req.body?.type||'');const cfg=UPGRADE_CONFIG[type],u=player.upgrades[type];
-        if(!cfg||!u){response={error:'Unknown upgrade.',status:400};actionResponse=response; return root;}
-        if(u.level>=cfg.max){response={error:'This upgrade is already maxed.',status:409};actionResponse=response; return root;}
+        if(!cfg||!u){response={error:'Unknown upgrade.',status:400};actionResponse=response; return root.players[auth.uid];}
+        if(u.level>=cfg.max){response={error:'This upgrade is already maxed.',status:409};actionResponse=response; return root.players[auth.uid];}
         const cost=Math.floor(cfg.baseCost*Math.pow(1.62,u.level));
-        if(player.cash<cost){response={error:'Not enough cash for this upgrade.',status:409};actionResponse=response; return root;}
+        if(player.cash<cost){response={error:'Not enough cash for this upgrade.',status:409};actionResponse=response; return root.players[auth.uid];}
         player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;u.level++;
         u.nextCost=u.level>=cfg.max?-1:Math.floor(cfg.baseCost*Math.pow(1.62,u.level));
         if(type==='capacity')player.basketCapacity=Math.min(500,player.basketCapacity+10);
@@ -339,14 +342,14 @@ export default async function handler(req,res) {
       } else if(action==='crew-action') {
         const act=String(req.body?.crewAction||req.body?.actionType||req.body?.action||'');const idx=Number.isInteger(req.body?.index)?req.body.index:-1;
         if(act==='hire'){
-          if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};actionResponse=response; return root;}
-          if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};actionResponse=response; return root;}
+          if(player.crew.length>=MAX_CREW){response={error:'Your crew is already at maximum size.',status:409};actionResponse=response; return root.players[auth.uid];}
+          if(player.cash<player.crewHireCost){response={error:'Not enough cash to hire a helper.',status:409};actionResponse=response; return root.players[auth.uid];}
           const cost=player.crewHireCost;player.cash-=cost;player.stats.cashSpent+=cost;player.crewUnlocked=true;
           player.crew.push({id:'helper-'+(player.crew.length+1),name:CREW_NAMES[player.crew.length]||('Worker '+(player.crew.length+1)),speedLevel:0,capacityLevel:0,powerLevel:0,luckLevel:0,awakeLevel:0,inventory:{},inventoryCount:0,capacity:50,intervalMs:2000,asleep:false,awakeMs:0,fedUntil:0,lastActionAt:now,workMs:0,collectedCount:0,moneyEarned:0});
           player.crewHireCost=Math.floor(player.crewHireCost*1.85);response={state:publicState(player,root,now),hired:true,cost};
         } else {
-          const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};actionResponse=response; return root;}
-          if(act==='wake'){crew.asleep=false;crew.awakeMs=0;crew.lastActionAt=now;response={state:publicState(player,root,now),woke:true};}else if(act==='feed'){const need=Math.max(1,Number(player.basketCapacity||50)*10),held=Number(player.feedCandy||0);if(Number(crew.fedUntil||0)>now){response={error:'This crew member is already fed.',status:409};actionResponse=response;return root;}if(held<need){response={error:'Not enough candy in your Candy Reserve. Collect more candy first.',status:409};actionResponse=response;return root;}player.feedCandy=Math.max(0,held-need);crew.fedUntil=now+1200000;crew.asleep=false;crew.awakeMs=0;response={state:publicState(player,root,now),fed:true};}else{const cfgs={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]},cfg=cfgs[act];if(!cfg){response={error:'Unknown crew action.',status:400};actionResponse=response;return root;}const [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(crew[key]||0)));if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response;return root;}player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;crew[key]=Number(crew[key]||0)+1;if(key==='capacityLevel')crew.capacity=Math.min(500,50+crew.capacityLevel*10);response={state:publicState(player,root,now),cost};}
+          const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};actionResponse=response; return root.players[auth.uid];}
+          if(act==='wake'){crew.asleep=false;crew.awakeMs=0;crew.lastActionAt=now;response={state:publicState(player,root,now),woke:true};}else if(act==='feed'){const need=Math.max(1,Number(player.basketCapacity||50)*10),held=Number(player.feedCandy||0);if(Number(crew.fedUntil||0)>now){response={error:'This crew member is already fed.',status:409};actionResponse=response;return root.players[auth.uid];}if(held<need){response={error:'Not enough candy in your Candy Reserve. Collect more candy first.',status:409};actionResponse=response;return root.players[auth.uid];}player.feedCandy=Math.max(0,held-need);crew.fedUntil=now+1200000;crew.asleep=false;crew.awakeMs=0;response={state:publicState(player,root,now),fed:true};}else{const cfgs={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]},cfg=cfgs[act];if(!cfg){response={error:'Unknown crew action.',status:400};actionResponse=response;return root.players[auth.uid];}const [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(crew[key]||0)));if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response;return root.players[auth.uid];}player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;crew[key]=Number(crew[key]||0)+1;if(key==='capacityLevel')crew.capacity=Math.min(500,50+crew.capacityLevel*10);response={state:publicState(player,root,now),cost};}
         }
       } else if(action==='crew-sync') {
         const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));player.lastCrewSync=now;if(elapsed>0&&player.crew.length){for(const crew of player.crew){crew.asleep=!!crew.asleep;crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);if(crew.asleep)continue;const fed=crew.fedUntil>now;if(!fed)crew.awakeMs+=elapsed;crew.lastActionAt=now;if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;continue;}const effectiveCapacity=Math.max(1,Math.floor(Number(crew.capacity||10)*(fed?1.25:1)));const workInterval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));crew.workMs=Number(crew.workMs||0)+elapsed;const ticks=Math.min(10,Math.floor(crew.workMs/workInterval));crew.workMs-=ticks*workInterval;for(let n=0;n<ticks;n++){const held=Object.values(crew.inventory||{}).reduce((x,y)=>x+(Number(y)||0),0);if(held>=effectiveCapacity)break;const c=rollCandy(Math.floor((Number(player.upgrades.luck.level||0)+Number(crew.luckLevel||0))*(fed?1.25:1)));crew.inventory||={};const basePower=Math.min(8,1+Number(crew.powerLevel||0));const power=Math.min(effectiveCapacity-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));for(let k=0;k<power;k++)crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=held+power;player.stats.crewCollected+=power;crew.collectedCount=Number(crew.collectedCount||0)+power;player.feedCandy=Number(player.feedCandy||0)+power;player.stats.totalCollected+=power;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+power;if(!player.discovered.includes(c.id))player.discovered.push(c.id);if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected+=power;if(c.rarity==='Legendary')player.stats.legendaryCollected+=power;count();}if(crew.inventoryCount>=effectiveCapacity&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){let earned=0,sold=0;for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}if(earned){credit(earned);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;crew.sellReadyAt=0;}}}}
@@ -355,14 +358,14 @@ export default async function handler(req,res) {
         response={error:'Unknown Halloween Haunt action.',status:404};
       }
       if(requestId && !response.error) player.recentRequests[requestId]=now;
-      player.updatedAt=now;actionResponse=response; return root;
+      player.updatedAt=now;actionResponse=response; return root.players[auth.uid];
     });
     const transactionDurationMs = Date.now() - transactionStartedAt;
     res.setHeader('Server-Timing', 'auth;dur=' + authDurationMs + ', db_transaction;dur=' + transactionDurationMs);
     const result=transaction.snapshot?.val();
     if (!transaction.committed) return res.status(503).json({error:'Could not commit your progress. Please retry.'});
     if (!actionResponse) {
-      const root=ensureMeta(result||{},Date.now());
+      const root=ensureMeta({meta:{},players:{[auth.uid]:result}},Date.now());
       const player=normalizePlayer(root.players[auth.uid],auth.uid,auth.account,Date.now());
       actionResponse={state:publicState(player,root,Date.now())};
     }
