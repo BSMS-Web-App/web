@@ -342,11 +342,12 @@ app.get('/v1/auth/session', requireApiKey, (req, res) => {
     )
   );
 
-  if (!sessionIsValid) return res.status(404).json({ uid: null, account: null });
+  if (!sessionIsValid) return res.status(200).json({ authenticated: false, uid: null, account: null });
 
   // Return only the fields used by server-side authorization and game state.
   // Passwords, session collections, and unrelated account data stay on the Mac.
   return res.status(200).json({
+    authenticated: true,
     uid,
     account: {
       username: account.username || uid,
