@@ -130,6 +130,7 @@ function persistPendingServerActions() {
  try {
   const sessionId = localStorage.getItem('session_id') || '';
   localStorage.setItem(HH_PENDING_ACTIONS_KEY, JSON.stringify({ sessionId, actions: pendingServerActions }));
+  if (gameState) localStorage.setItem(HH_PENDING_ACTIONS_KEY + '_state', JSON.stringify({ sessionId, state: gameState }));
  } catch (error) {
   console.warn('[Halloween Haunt] Could not persist pending actions:', error);
  }
@@ -145,8 +146,13 @@ function restorePendingServerActions() {
     typeof item.payload === 'object' && typeof item.payload.requestId === 'string'
    ).slice(0, 500);
    pendingOptimisticActions = pendingServerActions.length;
+   if (pendingServerActions.length) {
+    const savedState = JSON.parse(localStorage.getItem(HH_PENDING_ACTIONS_KEY + '_state') || 'null');
+    if (savedState?.sessionId === sessionId && savedState.state) gameState = hhValidateSaveState(savedState.state);
+   }
   } else if (saved) {
    localStorage.removeItem(HH_PENDING_ACTIONS_KEY);
+   localStorage.removeItem(HH_PENDING_ACTIONS_KEY + '_state');
   }
  } catch (error) {
   console.warn('[Halloween Haunt] Could not restore pending actions:', error);
@@ -188,6 +194,7 @@ async function flushServerActionQueue() {
   pendingServerActions.splice(0, batch.length);
   pendingOptimisticActions = pendingServerActions.length;
   persistPendingServerActions();
+  if (!pendingServerActions.length) localStorage.removeItem(HH_PENDING_ACTIONS_KEY + '_state');
 
   const failed = result.results.find(item => Number(item.status) >= 400);
   if (failed?.result?.error) showToast(failed.result.error);
