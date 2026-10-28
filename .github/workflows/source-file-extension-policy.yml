@@ -1,0 +1,61 @@
+name: BSMS Web
+
+on:
+  push:
+    branches:
+      - dev1
+      - main
+      - dev2
+      - dev3
+      - dev4
+  pull_request:
+    branches:
+      - main
+      - dev1
+      - dev2
+      - dev3
+      - dev4
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-source-extensions:
+    name: File Extension Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Reject unsupported source-file extensions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Configuration, documentation, workflows, and static assets can use
+          # their necessary formats. Actual source-code files must use .js,
+          # .html, or .css. In particular, TypeScript and TSX are not allowed.
+          source_extensions='(js|html|css|ts|tsx|jsx|mjs|cjs|vue|svelte|py|php|go|rs|java|kt|swift|rb|sh|sql)'
+
+          violations=()
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            lower_file="${file,,}"
+
+            if [[ "$lower_file" =~ \.($source_extensions)$ ]]; then
+              extension="${BASH_REMATCH[1]}"
+              if [[ "$extension" != "js" && "$extension" != "html" && "$extension" != "css" ]]; then
+                violations+=("$file")
+              fi
+            fi
+          done < <(git ls-files)
+
+          if (( ${#violations[@]} > 0 )); then
+            echo "::error::Unsupported source-code file extension(s) found."
+            echo "Source files must use .js, .html, or .css."
+            printf ' - %s\n' "${violations[@]}"
+            exit 1
+          fi
+
+          echo "Source-file extension policy passed."
