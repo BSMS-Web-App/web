@@ -57,34 +57,12 @@ app.use('/api/halloween-haunt', (req, res) => halloweenHauntHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
 
 // BSMS Chess Arena Member Directory & Account Sync REST Endpoints
-const MEMBERS_DATA_FILE = path.join(__dirname, 'bsms_members.json');
-
 function loadStoredMembers() {
-    const map = new Map();
-    try {
-        if (fs.existsSync(MEMBERS_DATA_FILE)) {
-            const raw = fs.readFileSync(MEMBERS_DATA_FILE, 'utf-8');
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                for (const m of parsed) {
-                    if (m && m.memberId && m.username) {
-                        map.set(m.memberId, { ...m, online: false, status: 'offline' });
-                    }
-                }
-            }
-        }
-    } catch {
-        // ignore read error
-    }
-    return map;
+    return new Map();
 }
 
-function saveStoredMembers(members) {
-    try {
-        fs.writeFileSync(MEMBERS_DATA_FILE, JSON.stringify(Array.from(members.values()), null, 2), 'utf-8');
-    } catch {
-        // ignore write error
-    }
+function saveStoredMembers(_members) {
+    // Keep member registry in-memory to avoid creating untracked local files
 }
 
 const clients = new Map();

@@ -44,10 +44,59 @@ SPDX-License-Identifier: MIT
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;family=Patrick+Hand&amp;display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="js/chess-bundle.css" />
     <link rel="stylesheet" href="/js/chess-bundle.css" />
+    <link rel="stylesheet" href="chess-bundle.css" />
   </head>
-  <body class="bg-[#302e2b] text-white antialiased selection:bg-[#81b64c] selection:text-white">
-    <div id="root"></div>
-    <script type="module" src="/js/chess-bundle.js"></script>
+  <body class="bg-[#302e2b] text-white antialiased selection:bg-[#81b64c] selection:text-white" style="background-color: #302e2b; color: #ffffff; margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+    <div id="root">
+      <div id="chess-boot-screen" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box;">
+        <div style="max-width: 480px; width: 100%; background: #262421; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.4);">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: #81b64c; color: #fff; font-weight: 900; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">♔</div>
+          <h1 style="margin: 0 0 8px; font-size: 20px; font-weight: 800; color: #fff;">Loading BSMS Chess Arena…</h1>
+          <p id="chess-boot-status" style="margin: 0; font-size: 14px; color: #a1a1aa; line-height: 1.5;">Preparing board, openings book, and famous bots…</p>
+          <div id="chess-boot-help" style="display: none; margin-top: 18px; text-align: left; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; font-size: 13px; color: #d4d4d8; line-height: 1.55;">
+            <strong style="color: #f87171; display: block; margin-bottom: 6px;">Chess bundle file not found on server</strong>
+            Make sure both <code style="color: #81b64c;">js/chess-bundle.js</code> and <code style="color: #81b64c;">js/chess-bundle.css</code> are uploaded inside the <code style="color: #fff;">js/</code> folder of your GitHub repository.
+            <div style="margin-top: 14px; text-align: center;">
+              <a href="/" style="display: inline-block; background: #81b64c; color: #fff; text-decoration: none; font-weight: 700; padding: 8px 16px; border-radius: 8px; font-size: 13px;">Back to BSMS Home</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="js/chess-bundle.js" onerror="window.__chessTryFallback && window.__chessTryFallback()"></script>
+    <script>
+      (function () {
+        var triedFallback = false;
+        window.__chessTryFallback = function () {
+          if (triedFallback) return;
+          triedFallback = true;
+          var candidates = ['/js/chess-bundle.js', './chess-bundle.js', '/src/main.tsx'];
+          var idx = 0;
+          function tryNext() {
+            if (idx >= candidates.length) {
+              var help = document.getElementById('chess-boot-help');
+              var status = document.getElementById('chess-boot-status');
+              if (status) status.textContent = 'Could not load js/chess-bundle.js.';
+              if (help) help.style.display = 'block';
+              return;
+            }
+            var s = document.createElement('script');
+            s.type = 'module';
+            s.src = candidates[idx++];
+            s.onerror = tryNext;
+            document.body.appendChild(s);
+          }
+          tryNext();
+        };
+        setTimeout(function () {
+          var boot = document.getElementById('chess-boot-screen');
+          if (boot) {
+            window.__chessTryFallback();
+          }
+        }, 3500);
+      })();
+    </script>
   </body>
 </html>

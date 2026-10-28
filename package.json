@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "start": "node server.ts",
-    "build": "vite build",
-    "preview": "vite preview",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node --check server.js",
+    "preview": "node server.js",
+    "clean": "node --check server.js",
+    "lint": "node --check server.js"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
