@@ -178,7 +178,7 @@ async function flushServerActionQueue() {
  if (syncInProgress || halloweenOfflineMode || !pendingServerActions.length) return;
  if (!navigator.onLine || !(localStorage.getItem('session_id') || '')) return;
  syncInProgress = true;
- const batch = pendingServerActions.slice(0, 100);
+ const batch = pendingServerActions.slice(0, 20);
  try {
   const result = await apiCall('?action=sync', 'POST', {
    actions: batch.map(item => ({ action: item.action, payload: item.payload }))
@@ -217,6 +217,9 @@ async function flushServerActionQueue() {
   console.warn('[Halloween Haunt] Background sync failed; queued actions will be retried:', error);
  } finally {
   syncInProgress = false;
+  if (pendingServerActions.length && !halloweenOfflineMode && navigator.onLine) {
+   setTimeout(flushServerActionQueue, 50);
+  }
  }
 }
 
