@@ -81,7 +81,10 @@ function rebuildSessionIndex() {
   sessionIndex.clear();
   for (const [uid, account] of Object.entries(database.accounts || {})) {
     for (const sessionId of Object.keys(account?.sessions || {})) {
-      sessionIndex.set(sessionId, uid);
+      if (sessionId) sessionIndex.set(sessionId, uid);
+    }
+    if (typeof account?.creator_session_id === 'string' && account.creator_session_id) {
+      sessionIndex.set(account.creator_session_id, uid);
     }
   }
 }
@@ -225,7 +228,7 @@ async function commitMutation(record) {
   // Write-ahead log: persist the operation before publishing it in memory.
   await appendJournal(completeRecord);
   database = nextDatabase;
-  if (completeRecord.path === '/accounts' || /^\/accounts\/[^/]+$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/sessions(?:\/[^/]+)?$/.test(completeRecord.path)) rebuildSessionIndex();
+  if (completeRecord.path === '/accounts' || /^\/accounts\/[^/]+$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/sessions(?:\/[^/]+)?$/.test(completeRecord.path) || /^\/accounts\/[^/]+\/creator_session_id$/.test(completeRecord.path)) rebuildSessionIndex();
   refreshMessageKeyIndex(completeRecord, database);
   sequence = nextSequence;
   mutationsSinceCompact += 1;
@@ -325,14 +328,54 @@ function numericKeySort(a, b) {
 
 app.get('/v1/auth/session', requireApiKey, (req, res) => {
   const sessionId = String(req.query.sessionId || '');
-  if (!sessionId || sessionId.length > 512) return sendError(res, 400, 'Invalid session ID.');
-  const uid = sessionIndex.get(sessionId);
-  const account = uid ? database.accounts?.[uid] : null;
-  if (account?.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sessionId)) {
-    const { password, sessions, ...safeAccount } = account;
-    return res.status(200).json({ uid, account: safeAccount });
+  if (!sessionId || sessionId.length > 300) return sendError(res, 400, 'Invalid session ID.');
+
+  // The index is a fast path, not the source of truth. Session data may have
+  // been written by an older server version or restored before the index was
+  // rebuilt, so validate the indexed account and fall back to the live database.
+  let uid = sessionIndex.get(sessionId) || null;
+  let account = uid ? database.accounts?.[uid] : null;
+  const isValidForAccount = (candidate) => Boolean(
+    candidate &&
+    candidate.account_status !== 'banned' &&
+    candidate.account_status !== 'deleted' &&
+    (
+      (candidate.sessions && Object.prototype.hasOwnProperty.call(candidate.sessions, sessionId)) ||
+      candidate.creator_session_id === sessionId
+    )
+  );
+
+  if (!isValidForAccount(account)) {
+    uid = null;
+    account = null;
+    for (const [candidateUid, candidateAccount] of Object.entries(database.accounts || {})) {
+      if (!isValidForAccount(candidateAccount)) continue;
+      uid = candidateUid;
+      account = candidateAccount;
+      // Repair the index so subsequent requests use the fast path.
+      sessionIndex.set(sessionId, candidateUid);
+      break;
+    }
   }
-  return res.status(404).json({ uid: null, account: null });
+
+  if (!isValidForAccount(account)) {
+    return res.status(200).json({ authenticated: false, uid: null, account: null });
+  }
+
+  // Return only the fields used by server-side authorization and game state.
+  // Passwords, session collections, and unrelated account data stay on the Mac.
+  return res.status(200).json({
+    authenticated: true,
+    uid,
+    account: {
+      username: account.username || uid,
+      displayName: account.displayName || account.username || uid,
+      account_status: account.account_status || 'active',
+      role: account.role || null,
+      verified: Boolean(account.verified),
+      isDeveloper: Boolean(account.isDeveloper)
+    }
+  });
 });
 
 app.get('/v1/chat/sync', requireApiKey, (req, res) => {
