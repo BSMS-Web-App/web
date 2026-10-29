@@ -1,7 +1,7 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 const API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, '');
 const API_KEY = process.env.BSMS_WEB_API_KEY || '';
