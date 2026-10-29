@@ -451,41 +451,7 @@ export default async function handler(req,res) {
           const wager=Math.floor(Number(req.body?.wager)||0);
           if(!player.phase2.gambleUnlocked){response={error:'Unlock gambling for $10,000 first.',status:409};actionResponse=response;return root.players[auth.uid];}
           const minimumWager=Math.max(10000,Math.ceil(Number(player.cash||0)*0.15));
-          if(wager<minimumWager||wager>player.cash){response={error:'Your wager must be at least 
-          player.cash-=wager;player.stats.cashSpent+=wager;
-          const roll=Math.random();
-          const won=roll<0.22;const jackpot=roll<0.025;
-          const payout=won?(jackpot?wager*8:wager*2):0;
-          if(payout)credit(payout);
-          response={state:publicState(player,root,now),gamble:{won,jackpot,payout,wager}};
-        } else {response={error:'Unknown Phase 2 action.',status:400};actionResponse=response;return root.players[auth.uid];}
-        if(cost){player.stats.upgradesBought++;response={state:publicState(player,root,now),purchased:type,cost};}
-      } else if(action==='crew-sync') {
-        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));player.lastCrewSync=now;if(elapsed>0&&player.crew.length){for(const crew of player.crew){crew.asleep=!!crew.asleep;crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);if(crew.asleep)continue;const fed=crew.fedUntil>now;if(!fed)crew.awakeMs+=elapsed;crew.lastActionAt=now;if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;continue;}const effectiveCapacity=Math.max(1,Math.floor(Number(crew.capacity||10)*(fed?1.25:1)));const workInterval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));crew.workMs=Number(crew.workMs||0)+elapsed;const ticks=Math.min(10,Math.floor(crew.workMs/workInterval));crew.workMs-=ticks*workInterval;for(let n=0;n<ticks;n++){const held=Object.values(crew.inventory||{}).reduce((x,y)=>x+(Number(y)||0),0);if(held>=effectiveCapacity)break;const c=rollCandy(Math.floor((Number(player.upgrades.luck.level||0)+Number(crew.luckLevel||0)+Number(player.phase2?.shardUpgrades?.luck||0)*2)*(fed?1.25:1)));if(Math.random()<Math.min(.08,.003+Number(player.phase2?.shardUpgrades?.fortune||0)*.002+(c.rarity==='Legendary'?.012:c.rarity==='Epic'?.004:0)))player.soulShards=Number(player.soulShards||0)+1;crew.inventory||={};const basePower=Math.min(8,1+Number(crew.powerLevel||0));const power=Math.min(effectiveCapacity-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));for(let k=0;k<power;k++)crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=held+power;player.stats.crewCollected+=power;crew.collectedCount=Number(crew.collectedCount||0)+power;player.feedCandy=Number(player.feedCandy||0)+power;player.stats.totalCollected+=power;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+power;if(!player.discovered.includes(c.id))player.discovered.push(c.id);if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected+=power;if(c.rarity==='Legendary')player.stats.legendaryCollected+=power;count();}if(crew.inventoryCount>=effectiveCapacity&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){let earned=0,sold=0;for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers,player);earned+=q*shopPrice(shop,id,root.meta.offers,player);sold+=q;crew.inventory[id]=0;}if(earned){credit(earned);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;crew.sellReadyAt=0;}}}}
-        response={state:publicState(player,root,now),crewCollected:player.stats.crewCollected};
-      } else {
-        response={error:'Unknown Halloween Haunt action.',status:404};
-      }
-      if(requestId && !response.error) player.recentRequests[requestId]=now;
-      player.updatedAt=now;actionResponse=response; return root.players[auth.uid];
-    });
-    const transactionDurationMs = Date.now() - transactionStartedAt;
-    res.setHeader('Server-Timing', 'auth;dur=' + authDurationMs + ', db_transaction;dur=' + transactionDurationMs);
-    const result=transaction.snapshot?.val();
-    if (!transaction.committed) return res.status(503).json({error:'Could not commit your progress. Please retry.'});
-    if (!actionResponse) {
-      const root=ensureMeta({meta:{},players:{[auth.uid]:result}},Date.now());
-      const player=normalizePlayer(root.players[auth.uid],auth.uid,auth.account,Date.now());
-      actionResponse={state:publicState(player,root,Date.now())};
-    }
-    if (actionResponse.error) return res.status(actionResponse.status || 400).json({error:actionResponse.error});
-    return res.status(200).json(actionResponse);
-  } catch(error) {
-    console.error('[Haunt] Request failed:',error);
-    return res.status(500).json({error:'Halloween Haunt could not save your progress. Please try again.'});
-  }
-}
-+minimumWager.toLocaleString()+' (15% of current cash, with a $10,000 minimum) and cannot exceed your cash.',status:409};actionResponse=response;return root.players[auth.uid];}
+          if(wager<minimumWager||wager>player.cash){response={error:'Wager is below the required minimum or exceeds your available cash.',status:409};actionResponse=response;return root.players[auth.uid];}
           player.cash-=wager;player.stats.cashSpent+=wager;
           const roll=Math.random();
           const won=roll<0.22;const jackpot=roll<0.025;
