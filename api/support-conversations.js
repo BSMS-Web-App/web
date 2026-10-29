@@ -12,7 +12,6 @@ const ROOT = '/support_conversations';
 const MAX_SUBJECT = 100;
 const MAX_MESSAGE = 3000;
 const SEND_COOLDOWN_MS = 2500;
-const recentSends = new Map();
 const recentCreates = new Map();
 
 function clean(value, max) {
