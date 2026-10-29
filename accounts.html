@@ -155,6 +155,25 @@ SPDX-License-Identifier: AGPL-3.0-only
       <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password"/>
     </div>
     
+    <div id="signupLegalRequirements" hidden style="margin-top:16px;padding:15px;text-align:left;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);">
+      <p style="font-size:13px;color:var(--fg2);margin:0 0 12px;">Review both documents before creating your account.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+        <strong style="font-size:14px;">Terms of Service</strong>
+        <button type="button" class="btn sec" style="margin:0;padding:7px 11px;font-size:12px;" onclick="window.BSMSLegalUpdates?.review('terms')">View Terms</button>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.4;margin-bottom:14px;">
+        <input id="signupTermsAccepted" type="checkbox" style="margin-top:2px;accent-color:var(--red);">
+        <span>I agree to the Terms of Service.</span>
+      </label>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+        <strong style="font-size:14px;">Privacy Policy</strong>
+        <button type="button" class="btn sec" style="margin:0;padding:7px 11px;font-size:12px;" onclick="window.BSMSLegalUpdates?.review('privacy')">View Privacy</button>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.4;">
+        <input id="signupPrivacyAcknowledged" type="checkbox" style="margin-top:2px;accent-color:var(--red);">
+        <span>I acknowledge the Privacy Policy.</span>
+      </label>
+    </div>
     <button class="btn" id="authSubmitBtn" onclick="handleAuth()" style="margin-top: 14px;" data-ga="auth_submit">Login</button>
     <a href="/" class="btn sec" style="margin-top: 10px;" data-ga="auth_home">Go Back Home</a>
     
