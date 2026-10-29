@@ -77,7 +77,7 @@ function newPlayer(uid, account, now) {
     cash:100, inventory, discovered:[], lifetimeCollected, feedCandy:0,
     basketCapacity:50, currentBasketCount:0,
     upgrades:{capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:5000}},
-    crew:[], crewUnlocked:false, crewHireCost:180, lastCrewSync:now, soulShards:0, phase2:{shopLevels:{corner:0,market:0,arcade:0,pharmacy:0},managerLevel:0,shardUpgrades:{luck:0,fortune:0},gambleUnlocked:false}},
+    crew:[], crewUnlocked:false, crewHireCost:180, lastCrewSync:now, soulShards:0, phase2:{shopLevels:{corner:0,market:0,arcade:0,pharmacy:0},managerLevel:0,shardUpgrades:{luck:0,fortune:0},gambleUnlocked:false},
     stats:{highScore:100,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0},
     createdAt:now, updatedAt:now
   };
