@@ -56,7 +56,9 @@ const SHOPS = [
   {id:'corner',name:'Corner Store',multiplier:1.00},
   {id:'market',name:'Harvest Market',multiplier:1.12},
   {id:'arcade',name:'Midnight Arcade',multiplier:0.94},
-  {id:'pharmacy',name:'Moonlight Pharmacy',multiplier:1.05}
+  {id:'pharmacy',name:'Moonlight Pharmacy',multiplier:1.05},
+  {id:'diner',name:'Witchlight Diner',multiplier:1.18},
+  {id:'bazaar',name:'Graveyard Bazaar',multiplier:1.25}
 ];
 const UPGRADE_CONFIG = {
   capacity:{label:'Basket Capacity',baseCost:45,max:30},
@@ -134,7 +136,7 @@ function publicState(p, root, now) {
     upgrades:JSON.parse(JSON.stringify(p.upgrades)),crew:JSON.parse(JSON.stringify(p.crew)),
     crewUnlocked:p.crewUnlocked,crewHireCost:p.crewHireCost, soulShards:Number(p.soulShards||0),phase2:JSON.parse(JSON.stringify(p.phase2||{shopLevels:{},managerLevel:0,shardUpgrades:{}})),stats:{...p.stats},
     candyCatalog:CANDY.map(c=>({...c,bestPrice:bestPrices[c.id]})),
-    shops:SHOPS.map(s=>({id:s.id,name:s.name,prices:{...offers[s.id]}})),
+    shops:SHOPS.map(shop=>({id:shop.id,name:shop.name,prices:Object.fromEntries(CANDY.map(c=>[c.id,shopPrice(shop,c.id,offers,p)]))})),
     offerWindow:root.meta.offerWindow,offerRefreshAt:root.meta.offerWindow+ROTATION_MS,
     crewAutoSell:!!p.upgrades.autoSell.level
   };
