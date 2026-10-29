@@ -7,7 +7,7 @@
 
   <p>A centralized digital experience featuring messaging, user accounts, interactive games, and useful web tools.</p>
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+  [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
   [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js)](https://nodejs.org/)
   [![Express](https://img.shields.io/badge/Express-5.x-black?logo=express)](https://expressjs.com/)
   [![Database](https://img.shields.io/badge/Database-Self--Hosted-6A5ACD)](https://bsms-web.com)
@@ -93,7 +93,7 @@ If you discover a potential vulnerability, **report it privately** using the pro
 
 ## License
 
-BSMS Web is distributed under the [MIT License](LICENSE).
+BSMS Web is distributed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
 
 ---
 
