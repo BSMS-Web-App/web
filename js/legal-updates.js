@@ -16,6 +16,8 @@
     let reviewLayer = null;
     let previousBodyOverflow = '';
     let isSubmitting = false;
+    let acceptanceSucceeded = false;
+    let statusCheckSequence = 0;
 
     const rawPath = window.location.pathname;
     const currentPath = (rawPath.endsWith('/') ? rawPath.slice(0, -1) : rawPath) || '/';
@@ -63,31 +65,45 @@
         legalShadowRoot = overlayHost.attachShadow({ mode: 'open' });
         const style = document.createElement('style');
         style.textContent = `:host{font-family:'Patrick Hand',cursive;color:#fff;color-scheme:dark}*,*::before,*::after{box-sizing:border-box}button,input{font:inherit}
-.bsms-legal-backdrop{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.86);backdrop-filter:blur(5px);pointer-events:auto}
-.bsms-legal-dialog{width:min(620px,94vw);max-height:min(90vh,860px);overflow-y:auto;background:#000;border:2px solid #BB001E;border-radius:20px;padding:26px 24px 20px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.55);animation:bsmsLegalPopIn .22s ease}
-@keyframes bsmsLegalPopIn{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.bsms-legal-backdrop{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.86);backdrop-filter:blur(0);pointer-events:auto;animation:bsmsLegalBackdropIn .32s ease forwards}
+.bsms-legal-dialog{width:min(620px,94vw);max-height:min(90vh,860px);overflow-y:auto;background:#000;border:2px solid #BB001E;border-radius:20px;padding:26px 24px 20px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.55);animation:bsmsLegalPopIn .48s cubic-bezier(.2,.85,.25,1.15) both;transform-origin:50% 60%}
+@keyframes bsmsLegalBackdropIn{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1;backdrop-filter:blur(7px)}}
+@keyframes bsmsLegalPopIn{0%{opacity:0;transform:scale(.88) translateY(24px)}70%{opacity:1;transform:scale(1.015) translateY(-2px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 .bsms-legal-eyebrow{display:flex;align-items:center;gap:8px;color:#ff5369;font-size:16px;font-weight:700}
 .bsms-legal-dialog h2{font-family:'Patrick Hand',cursive!important;font-size:32px;line-height:1.1;margin:9px 0 8px;color:#fff!important;text-shadow:none!important}
 .bsms-legal-intro{font-size:18px;line-height:1.4;color:rgba(255,255,255,.68);margin:0 0 15px}
-.bsms-legal-policy{padding:14px 15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.13);border-radius:13px;margin-top:11px}
+.bsms-legal-policy{padding:14px 15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.13);border-radius:13px;margin-top:11px;animation:bsmsLegalCardIn .42s cubic-bezier(.2,.75,.25,1) both;transition:background .22s ease,border-color .22s ease,transform .22s ease}
+.bsms-legal-policy:nth-child(2){animation-delay:.09s}
+.bsms-legal-policy:hover{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.25);transform:translateY(-2px)}
+@keyframes bsmsLegalCardIn{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:translateY(0)}}
 .bsms-legal-policy-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .bsms-legal-policy-title{font-size:20px;font-weight:700;color:#fff}
 .bsms-legal-state{font-size:13px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(187,0,30,.17);color:#ff7b8e;border:1px solid rgba(187,0,30,.45)}
 .bsms-legal-state.is-current{background:rgba(255,255,255,.07);color:rgba(255,255,255,.48);border-color:rgba(255,255,255,.12)}
-.bsms-legal-review{width:100%;min-height:40px;border-radius:11px;border:2px solid #BB001E;background:#BB001E;color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+.bsms-legal-review{width:100%;min-height:40px;border-radius:11px;border:2px solid #BB001E;background:#BB001E;color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:background .2s ease,border-color .2s ease,transform .2s ease,box-shadow .2s ease}.bsms-legal-review:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 16px rgba(187,0,30,.24)}
 .bsms-legal-review:hover:not(:disabled),.bsms-legal-accept:hover:not(:disabled){background:#d10022;border-color:#d10022}
 .bsms-legal-review:disabled{opacity:.38;cursor:not-allowed;background:transparent;border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.45)}
 .bsms-legal-check{display:flex;align-items:flex-start;gap:9px;margin-top:11px;color:#fff;font-size:17px;line-height:1.3;cursor:pointer}
-.bsms-legal-check input{appearance:auto;width:17px;height:17px;flex:0 0 17px;margin:3px 0 0;accent-color:#BB001E}
+.bsms-legal-check input{appearance:auto;width:17px;height:17px;flex:0 0 17px;margin:3px 0 0;accent-color:#BB001E;cursor:pointer;transition:transform .18s ease}.bsms-legal-check input:checked{transform:scale(1.12)}
 .bsms-legal-check.is-disabled{color:rgba(255,255,255,.4)}
 .bsms-legal-note{font-size:14px;color:rgba(255,255,255,.48);line-height:1.35;margin:7px 0 0}
 .bsms-legal-actions{display:grid;gap:9px;margin-top:17px}
-.bsms-legal-accept{min-height:46px;border:2px solid #BB001E;border-radius:12px;background:#BB001E;color:#fff;font-size:21px;font-weight:700;cursor:pointer}
+.bsms-legal-accept{min-height:46px;border:2px solid #BB001E;border-radius:12px;background:#BB001E;color:#fff;font-size:21px;font-weight:700;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,background .2s ease,opacity .2s ease}.bsms-legal-accept:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 7px 20px rgba(187,0,30,.28)}
 .bsms-legal-accept:disabled{opacity:.45;cursor:not-allowed}
 .bsms-legal-signout{min-height:42px;border:2px solid rgba(255,255,255,.22);border-radius:12px;background:transparent;color:rgba(255,255,255,.88);font-size:19px;cursor:pointer}.bsms-legal-signout:hover{border-color:#BB001E;background:rgba(187,0,30,.12)}
-.bsms-legal-support{min-height:40px;border:2px solid rgba(255,255,255,.15);border-radius:12px;background:transparent;color:#fff;font-size:19px;cursor:pointer}
+.bsms-legal-support{min-height:40px;border:2px solid rgba(255,255,255,.15);border-radius:12px;background:transparent;color:#fff;font-size:19px;cursor:pointer;transition:border-color .2s ease,background .2s ease,transform .2s ease}.bsms-legal-support:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.06);transform:translateY(-1px)}
 .bsms-legal-error{color:#ff6678;font-size:16px;margin:10px 0 0}
 .bsms-legal-footer{color:rgba(255,255,255,.42);font-size:13px;text-align:center;margin:12px 0 0}
+.bsms-legal-success{min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px 8px;animation:bsmsLegalSuccessIn .5s cubic-bezier(.2,.8,.25,1) both}
+@keyframes bsmsLegalSuccessIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.bsms-legal-success-mark{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;background:rgba(34,197,94,.13);border:2px solid #22c55e;color:#4ade80;box-shadow:0 0 0 0 rgba(34,197,94,.3);animation:bsmsLegalCheckPulse 1.1s ease .2s both}
+.bsms-legal-success-mark svg{width:48px;height:48px;stroke:currentColor;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;animation:bsmsLegalDrawCheck .55s ease .38s forwards}
+@keyframes bsmsLegalCheckPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.35)}100%{box-shadow:0 0 0 18px rgba(34,197,94,0)}}
+@keyframes bsmsLegalDrawCheck{to{stroke-dashoffset:0}}
+.bsms-legal-success h2{margin:23px 0 8px!important;font-size:36px!important;color:#fff!important}
+.bsms-legal-success p{max-width:420px;margin:0 0 24px;color:rgba(255,255,255,.68);font-size:19px;line-height:1.4}
+.bsms-legal-continue{width:100%;max-width:390px;min-height:49px;border:2px solid #22c55e;border-radius:12px;background:#16a34a;color:#fff;font-size:21px;font-weight:700;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+.bsms-legal-continue:hover{transform:translateY(-2px);background:#15803d;box-shadow:0 8px 22px rgba(34,197,94,.22)}
 .bsms-legal-review-layer{position:fixed;inset:0;z-index:2;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:clamp(8px,2vw,24px);pointer-events:auto}
 .bsms-legal-review-panel{width:min(1050px,100%);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border:2px solid #BB001E;border-radius:20px;background:#000}
 .bsms-legal-review-bar{height:58px;flex:0 0 58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.13);color:#fff;font-size:20px;font-weight:700}
@@ -183,7 +199,7 @@
         const required = ['terms', 'privacy'].filter(key => policyState.policies[key].required);
         const checked = required.every(key => overlay.querySelector('[data-accept="' + key + '"]')?.checked);
         const button = overlay.querySelector('#bsms-legal-accept');
-        button.disabled = !checked || isSubmitting;
+        if (button) button.disabled = !checked || isSubmitting;
     }
 
     function openDocument(key, force = false) {
@@ -250,6 +266,34 @@
         window.location.replace('/');
     }
 
+    function showAcceptanceSuccess() {
+        if (!overlay) return;
+        acceptanceSucceeded = true;
+        statusCheckSequence += 1;
+        const dialog = overlay.querySelector('.bsms-legal-dialog');
+        if (!dialog) return;
+
+        dialog.innerHTML = `
+            <section class="bsms-legal-success" role="status" aria-live="polite">
+                <div class="bsms-legal-success-mark" aria-hidden="true">
+                    <svg viewBox="0 0 48 48"><path d="M10 25.5 20 35 39 14"/></svg>
+                </div>
+                <h2>You're all set!</h2>
+                <p>Your Terms of Service and Privacy Policy acknowledgments have been saved successfully.</p>
+                <button type="button" class="bsms-legal-continue">Continue to BSMS Web</button>
+            </section>`;
+        dialog.querySelector('.bsms-legal-continue').addEventListener('click', () => {
+            if (overlay) overlay.remove();
+            overlay = null;
+            policyState = null;
+            if (overlayHost) overlayHost.remove();
+            overlayHost = null;
+            legalShadowRoot = null;
+            document.body.style.overflow = previousBodyOverflow;
+            window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
+        });
+    }
+
     async function submitAcceptance() {
         if (!policyState || isSubmitting) return;
         const termsRequired = policyState.policies.terms.required;
@@ -264,21 +308,16 @@
         error.hidden = true;
 
         try {
-            await apiRequest('accept', {
+            const result = await apiRequest('accept', {
                 termsAccepted,
                 privacyAccepted,
                 versions: policyState.versions
             });
-            closeDocument();
-            overlay.remove();
-            overlay = null;
-            policyState = null;
-            document.body.style.overflow = previousBodyOverflow;
-            if (overlayHost) overlayHost.remove();
-            overlayHost = null;
-            legalShadowRoot = null;
+            if (result.needsAcceptance) {
+                throw new Error('Your acknowledgments were saved, but the latest policy status still requires review. Please try again.');
+            }
             try { localStorage.setItem('bsms_legal_accepted_at', String(Date.now())); } catch {}
-            window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
+            showAcceptanceSuccess();
         } catch (err) {
             error.textContent = err.message || 'Your acceptance could not be saved. Please try again.';
             error.hidden = false;
@@ -292,6 +331,8 @@
     }
 
     async function checkPolicies() {
+        if (acceptanceSucceeded) return;
+        const checkSequence = ++statusCheckSequence;
         if (!sessionId()) {
             closeDocument();
             if (overlay) {
@@ -307,6 +348,7 @@
         }
         try {
             const data = await apiRequest('status');
+            if (checkSequence !== statusCheckSequence || acceptanceSucceeded) return;
             if (data.needsAcceptance) renderStatus(data);
             else if (overlay) {
                 closeDocument();
