@@ -167,8 +167,9 @@
         button.disabled = !checked || isSubmitting;
     }
 
-    function openDocument(key) {
-        if (!policyState || !policyState.policies[key]?.required) return;
+    function openDocument(key, force = false) {
+        if (!['terms', 'privacy'].includes(key)) return;
+        if (!force && (!policyState || !policyState.policies[key]?.required)) return;
         if (reviewLayer) reviewLayer.remove();
         const title = key === 'terms' ? 'Terms of Service' : 'Privacy Policy';
         const path = key === 'terms' ? '/terms?embed=1' : '/privacy?embed=1';
@@ -252,11 +253,12 @@
         check: checkPolicies,
         openDocument: key => {
             if (!policyState) {
-                checkPolicies().then(() => openDocument(key));
+                checkPolicies().then(() => openDocument(key, true));
                 return;
             }
-            openDocument(key);
-        }
+            openDocument(key, true);
+        },
+        review: key => openDocument(key, true)
     });
 
     window.addEventListener('bsms:auth-changed', checkPolicies);
