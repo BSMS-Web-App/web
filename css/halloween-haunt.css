@@ -1065,3 +1065,60 @@ body{background-color:#09030f!important;background-image:radial-gradient(ellipse
 .hh-news-footnote{text-align:center;color:#8f789a;font-size:.72rem;margin:12px 0 0}
 @keyframes hhFogIn{from{opacity:0}to{opacity:1}}
 @media(max-width:520px){.hh-news-overlay{padding:10px;align-items:flex-start}.hh-news-card{margin:auto 0;padding:20px 16px;border-radius:18px}.hh-news-art{font-size:1.8rem}.hh-news-actions{flex-direction:column}.hh-news-list>div{padding:10px}}
+
+
+/* Phase 2 horror pass: obsidian surfaces, blood-red edge light, no decorative emoji */
+body{background-color:#050304!important;background-image:radial-gradient(ellipse at 50% -15%,#5b061b45 0,transparent 48%),radial-gradient(ellipse at 100% 48%,#8d001c24 0,transparent 35%),linear-gradient(180deg,#0c0508 0%,#070405 62%,#020202 100%)!important;color:#f5e9ec}
+.haunt-header{background:linear-gradient(135deg,#10090cfa,#080507f7)!important;border:1px solid #ff334b35!important;border-bottom-color:#a900263d!important;box-shadow:0 8px 35px #000b,0 0 24px #c0002820!important}
+.haunt-header h1{color:#ffe9ed!important;text-shadow:0 0 8px #ff153c70,0 0 24px #a000273d!important}
+.hero-cash{background:linear-gradient(145deg,#12090c,#080507)!important;border:1px solid #d5003338!important;box-shadow:0 0 30px #b0002818,inset 0 1px #ffffff08!important}
+.hero-cash .cash{color:#fff0f2!important;text-shadow:0 0 22px #d0003b50!important}
+.action-nav{background:#070507ee!important;border:1px solid #9f001f55!important;box-shadow:0 12px 44px #000e,0 0 22px #b000291e!important}
+.action-btn{border-color:#6d182b66!important;color:#d8c5ca!important}
+.action-btn.active,.action-btn:hover,.action-btn:focus-visible{color:#fff!important;border-color:#ff3856!important;background:#8e001e24!important;box-shadow:0 0 18px #df002f40,inset 0 0 14px #c000281c!important}
+.haunt-modal{background:linear-gradient(155deg,#13090d,#080507)!important;border-color:#9d16314d!important;box-shadow:0 0 0 1px #e0003020,0 24px 100px #000e,0 0 42px #b0002925!important}
+.modal-header{border-bottom-color:#7f10273d!important}
+.hh-card-ui,.hh-crew-card{background:linear-gradient(145deg,#160b10f7,#090608fa)!important;border-color:#9d1a354f!important;box-shadow:inset 0 1px #ffffff07,0 12px 30px #0006,0 0 18px #a0002010!important}
+.hh-card-heading h3,.hh-card-ui h3{color:#ffe9ed!important;text-shadow:0 0 10px #b000282b}
+.hh-badge{background:#4b091b66!important;border-color:#bd294c88!important;color:#ffc5d0!important}
+.hh-stat-card,.hh-upgrade-mini,.hh-candy-row{background:#070507c9!important;border-color:#7e26374f!important}
+.hh-stat-card strong{color:#fff1f3!important}
+.hh-muted,.hh-card-ui p{color:#c5b3b8}
+.buy-btn,.hh-news-primary{border:1px solid #ff4765!important;background:linear-gradient(135deg,#b50930,#5c071b)!important;color:#fff!important;box-shadow:0 4px 20px #b0003030!important}
+.buy-btn:hover:not(:disabled),.hh-news-primary:hover{background:linear-gradient(135deg,#e10d3d,#7a0823)!important;box-shadow:0 0 22px #ef123d55!important}
+.hh-gamble-card{border-color:#ed1b464f!important;background:radial-gradient(ellipse at 50% 0,#6d001e25,transparent 60%),linear-gradient(145deg,#15080c,#080507)!important;box-shadow:0 0 30px #d0003020!important}
+.hh-gamble-lock-icon{border-color:#ff385b!important;color:#ff8295!important;background:radial-gradient(circle,#b0003033,#090507)!important;box-shadow:0 0 24px #d0003033}
+.hh-gamble-lock-icon svg{width:38px;height:38px}
+.hh-wheel-stage{filter:drop-shadow(0 0 18px #c9003438)}
+.hh-gamble-wheel{border-color:#e8b4bd!important;box-shadow:0 0 0 4px #000b,0 0 28px #ed123c40!important;background:conic-gradient(#6d061d 0deg 180deg,#260b16 180deg 270deg,#b31335 270deg 315deg,#6d061d 315deg 360deg)!important;will-change:transform}
+.hh-gamble-wheel::after{background:linear-gradient(145deg,#ffdbe1,#a5223d)!important;border-color:#310712!important;box-shadow:0 0 14px #ff385b55!important}
+.hh-wheel-pointer{border-top-color:#ff7187!important;filter:drop-shadow(0 0 7px #e00038)!important}
+.hh-wheel-result{color:#ff9cac!important;text-shadow:0 0 12px #b0003033}
+.hh-gamble-wheel.is-spinning{animation:hhWheelSpin 3.2s cubic-bezier(.12,.72,.12,1) forwards}
+@keyframes hhWheelSpin{0%{transform:rotate(0deg)}100%{transform:rotate(1440deg)}}
+.hh-shop-picker-label{display:block;margin:14px 0 7px;color:#f4dbe0;font-size:.85rem;font-weight:800;letter-spacing:.04em}
+.hh-shop-picker-wrap{position:relative;display:flex;align-items:center;margin-bottom:12px}
+.hh-shop-picker-wrap>svg{position:absolute;left:13px;width:20px;height:20px;fill:none;stroke:#ff7187;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.hh-shop-picker{appearance:none;width:100%;min-height:48px;padding:12px 40px 12px 43px;border:1px solid #a6223d88;border-radius:12px;background:linear-gradient(145deg,#18080d,#090608);color:#fff0f3;font:inherit;box-shadow:inset 0 1px #ffffff08,0 0 16px #b0002815;cursor:pointer}
+.hh-shop-picker:focus-visible{outline:2px solid #ff385b;outline-offset:2px}
+.hh-shop-picker option{background:#10070b;color:#fff}
+#hh-ghost-layer span{opacity:.13!important;filter:drop-shadow(0 0 12px #c40035)!important}
+#hh-ghost-layer svg{width:26px;height:26px;fill:#bd193a;stroke:#ff7c92;stroke-width:1;stroke-linecap:round;stroke-linejoin:round}
+.hh-news-overlay{background:radial-gradient(ellipse at center,#480a1b99 0%,#020102f5 75%)!important}
+.hh-news-card{border-color:#b61c3eaa!important;background:radial-gradient(ellipse at 50% -20%,#720d254d,transparent 58%),linear-gradient(150deg,#18090e,#090507 65%,#040304)!important;box-shadow:0 0 0 1px #ff294019,0 28px 100px #000e,0 0 48px #b0002b3d!important}
+.hh-news-card h2{color:#fff0f3!important;text-shadow:0 0 18px #df123f55!important}
+.hh-news-eyebrow{color:#ff7187!important}
+.hh-news-art svg{width:min(150px,45vw);height:auto;stroke:#ff536f;filter:drop-shadow(0 0 12px #c90038)}
+.hh-news-list>div{border-color:#80223a66!important;background:#080507cc!important}
+.hh-news-list>div>span{display:grid;place-items:center;flex:0 0 28px}
+.hh-news-list>div>span svg,.hh-news-spin svg,.hh-news-primary svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.hh-news-list strong{color:#ffe6eb!important}
+.hh-news-list small{color:#c9aeb5!important}
+.hh-news-comeback{border-color:#b21a3d88!important;background:linear-gradient(120deg,#3b0918aa,#16070cdd)!important}
+.hh-news-comeback>strong{color:#ff9aac!important}
+.hh-news-spin{display:flex;align-items:center;justify-content:center;gap:9px;border-color:#ff526e!important;background:linear-gradient(135deg,#b50a31,#5a071a)!important;color:#fff!important;box-shadow:0 0 20px #c4003030!important}
+.hh-news-secondary{border-color:#682234!important;background:#10070b!important;color:#e8cbd2!important}
+.hh-news-actions .hh-news-primary{display:flex;align-items:center;justify-content:center;gap:8px}
+.hh-news-footnote{color:#8d6d75!important}
+.hh-inline-icon{width:23px;height:23px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(prefers-reduced-motion:reduce){.hh-gamble-wheel.is-spinning{animation-duration:.01ms!important}}
