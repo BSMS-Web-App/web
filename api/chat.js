@@ -7,6 +7,7 @@
 import { db, admin, requestMacApi } from './db.js';
 import crypto from 'crypto';
 import { moderateContent } from './moderation.js';
+import { legalAcceptanceRequired } from './legal-policy.js';
 
 async function rejectFlaggedContent(res, value, label = 'Content') {
     const result = await moderateContent(value);
@@ -50,6 +51,9 @@ export default async function handler(req, res) {
                 reason: account.ban_reason || null,
                 ban_expires: account.ban_expires || null
             });
+        }
+        if (legalAcceptanceRequired(account)) {
+            return res.status(428).json({ error: 'Legal policy acceptance is required.', code: 'LEGAL_ACCEPTANCE_REQUIRED' });
         }
 
         await db.ref(`/accounts/${uid}/sessions/${sessionId}/lastActive`).set(Date.now());
