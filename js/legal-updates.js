@@ -11,7 +11,10 @@
     const EXEMPT_PATHS = new Set(['/terms', '/privacy', '/support']);
     let policyState = null;
     let overlay = null;
+    let overlayHost = null;
+    let legalShadowRoot = null;
     let reviewLayer = null;
+    let previousBodyOverflow = '';
     let isSubmitting = false;
 
     const rawPath = window.location.pathname;
@@ -53,42 +56,46 @@
     }
 
     function ensureStyles() {
-        if (document.getElementById('bsms-legal-updates-styles')) return;
+        if (legalShadowRoot) return;
+        overlayHost = document.createElement('div');
+        overlayHost.id = 'bsms-legal-updates-host';
+        overlayHost.style.cssText = 'position:fixed;inset:0;z-index:100000;pointer-events:none;';
+        legalShadowRoot = overlayHost.attachShadow({ mode: 'open' });
         const style = document.createElement('style');
-        style.id = 'bsms-legal-updates-styles';
-        style.textContent = `
-            .bsms-legal-backdrop{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,5,10,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-            .bsms-legal-dialog{width:min(620px,100%);max-height:min(92vh,900px);overflow:auto;background:linear-gradient(145deg,rgba(30,35,49,.98),rgba(13,17,27,.99));border:1px solid rgba(255,255,255,.13);border-radius:25px;padding:clamp(20px,4vw,32px);color:#f5f6fa;box-shadow:0 30px 100px rgba(0,0,0,.55);font-family:inherit}
-            .bsms-legal-eyebrow{display:inline-flex;align-items:center;gap:7px;color:#ffb6c0;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
-            .bsms-legal-dialog h2{font-size:clamp(24px,4vw,32px);line-height:1.15;margin:12px 0;color:#fff}
-            .bsms-legal-intro{color:#b9c1d0;line-height:1.6;margin:0 0 20px;font-size:14px}
-            .bsms-legal-policy{padding:17px;background:rgba(5,8,15,.55);border:1px solid rgba(255,255,255,.09);border-radius:17px;margin-top:12px}
-            .bsms-legal-policy-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-            .bsms-legal-policy-title{font-size:15px;font-weight:750;color:#fff}
-            .bsms-legal-state{font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;padding:5px 8px;border-radius:999px;background:rgba(187,0,30,.16);color:#ffb6c0;border:1px solid rgba(255,80,100,.2)}
-            .bsms-legal-state.is-current{background:rgba(130,145,170,.12);color:#aab3c4;border-color:rgba(160,170,190,.15)}
-            .bsms-legal-review{width:100%;display:flex;justify-content:center;align-items:center;gap:9px;min-height:42px;border-radius:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.045);color:#f3f4f8;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
-            .bsms-legal-review:hover:not(:disabled){background:rgba(187,0,30,.17);border-color:rgba(255,90,110,.4);transform:translateY(-1px)}
-            .bsms-legal-review:disabled{opacity:.35;cursor:not-allowed}
-            .bsms-legal-check{display:flex;align-items:flex-start;gap:10px;margin-top:13px;color:#e5e8ef;font-size:13px;line-height:1.45;cursor:pointer}
-            .bsms-legal-check input{width:17px;height:17px;flex:0 0 17px;margin:1px 0 0;accent-color:#BB001E}
-            .bsms-legal-check.is-disabled{color:#778195;cursor:not-allowed}
-            .bsms-legal-note{font-size:11px;color:#8d98aa;line-height:1.45;margin:9px 0 0}
-            .bsms-legal-actions{display:grid;gap:10px;margin-top:20px}
-            .bsms-legal-accept{min-height:47px;border:0;border-radius:12px;background:linear-gradient(135deg,#d20a2e,#9f001c);color:#fff;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 8px 25px rgba(187,0,30,.2)}
-            .bsms-legal-accept:disabled{opacity:.38;cursor:not-allowed;box-shadow:none}
-            .bsms-legal-support{min-height:42px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:transparent;color:#c4ccda;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
-            .bsms-legal-error{color:#ff9ba8;font-size:12px;line-height:1.45;margin:12px 0 0}
-            .bsms-legal-footer{color:#7e899c;font-size:10px;line-height:1.5;text-align:center;margin:15px 0 0}
-            .bsms-legal-review-layer{position:fixed;inset:0;z-index:100001;background:rgba(3,5,10,.9);display:flex;align-items:center;justify-content:center;padding:clamp(8px,2vw,24px)}
-            .bsms-legal-review-panel{width:min(1050px,100%);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:20px;background:#101521;box-shadow:0 30px 100px rgba(0,0,0,.6)}
-            .bsms-legal-review-bar{height:58px;flex:0 0 58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.1);color:#fff;font-size:14px;font-weight:750}
-            .bsms-legal-back{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e8ebf2;border-radius:9px;padding:8px 12px;font:inherit;font-size:12px;cursor:pointer}
-            .bsms-legal-frame{width:100%;height:100%;border:0;background:#101521}
-            body.bsms-legal-open{overflow:hidden}
-            @media(max-width:600px){.bsms-legal-backdrop{padding:10px;align-items:flex-end}.bsms-legal-dialog{border-radius:22px 22px 14px 14px;max-height:94vh}.bsms-legal-review-layer{padding:0}.bsms-legal-review-panel{height:100%;border-radius:0;border:0}.bsms-legal-review-bar{height:54px;flex-basis:54px}}
-        `;
-        document.head.appendChild(style);
+        style.textContent = `:host{font-family:'Patrick Hand',cursive;color:#fff;color-scheme:dark}*,*::before,*::after{box-sizing:border-box}button,input{font:inherit}
+.bsms-legal-backdrop{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.86);backdrop-filter:blur(5px);pointer-events:auto}
+.bsms-legal-dialog{width:min(620px,94vw);max-height:min(90vh,860px);overflow-y:auto;background:#000;border:2px solid #BB001E;border-radius:20px;padding:26px 24px 20px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.55);animation:bsmsLegalPopIn .22s ease}
+@keyframes bsmsLegalPopIn{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.bsms-legal-eyebrow{display:flex;align-items:center;gap:8px;color:#ff5369;font-size:16px;font-weight:700}
+.bsms-legal-dialog h2{font-family:'Patrick Hand',cursive!important;font-size:32px;line-height:1.1;margin:9px 0 8px;color:#fff!important;text-shadow:none!important}
+.bsms-legal-intro{font-size:18px;line-height:1.4;color:rgba(255,255,255,.68);margin:0 0 15px}
+.bsms-legal-policy{padding:14px 15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.13);border-radius:13px;margin-top:11px}
+.bsms-legal-policy-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.bsms-legal-policy-title{font-size:20px;font-weight:700;color:#fff}
+.bsms-legal-state{font-size:13px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(187,0,30,.17);color:#ff7b8e;border:1px solid rgba(187,0,30,.45)}
+.bsms-legal-state.is-current{background:rgba(255,255,255,.07);color:rgba(255,255,255,.48);border-color:rgba(255,255,255,.12)}
+.bsms-legal-review{width:100%;min-height:40px;border-radius:11px;border:2px solid #BB001E;background:#BB001E;color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+.bsms-legal-review:hover:not(:disabled),.bsms-legal-accept:hover:not(:disabled){background:#d10022;border-color:#d10022}
+.bsms-legal-review:disabled{opacity:.38;cursor:not-allowed;background:transparent;border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.45)}
+.bsms-legal-check{display:flex;align-items:flex-start;gap:9px;margin-top:11px;color:#fff;font-size:17px;line-height:1.3;cursor:pointer}
+.bsms-legal-check input{appearance:auto;width:17px;height:17px;flex:0 0 17px;margin:3px 0 0;accent-color:#BB001E}
+.bsms-legal-check.is-disabled{color:rgba(255,255,255,.4)}
+.bsms-legal-note{font-size:14px;color:rgba(255,255,255,.48);line-height:1.35;margin:7px 0 0}
+.bsms-legal-actions{display:grid;gap:9px;margin-top:17px}
+.bsms-legal-accept{min-height:46px;border:2px solid #BB001E;border-radius:12px;background:#BB001E;color:#fff;font-size:21px;font-weight:700;cursor:pointer}
+.bsms-legal-accept:disabled{opacity:.45;cursor:not-allowed}
+.bsms-legal-support{min-height:40px;border:2px solid rgba(255,255,255,.15);border-radius:12px;background:transparent;color:#fff;font-size:19px;cursor:pointer}
+.bsms-legal-error{color:#ff6678;font-size:16px;margin:10px 0 0}
+.bsms-legal-footer{color:rgba(255,255,255,.42);font-size:13px;text-align:center;margin:12px 0 0}
+.bsms-legal-review-layer{position:fixed;inset:0;z-index:2;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:clamp(8px,2vw,24px);pointer-events:auto}
+.bsms-legal-review-panel{width:min(1050px,100%);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border:2px solid #BB001E;border-radius:20px;background:#000}
+.bsms-legal-review-bar{height:58px;flex:0 0 58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.13);color:#fff;font-size:20px;font-weight:700}
+.bsms-legal-back{border:2px solid rgba(255,255,255,.15);background:transparent;color:#fff;border-radius:10px;padding:6px 12px;font-size:17px;cursor:pointer}
+.bsms-legal-frame{width:100%;height:100%;border:0;background:#000}
+@media(max-width:600px){.bsms-legal-backdrop{padding:10px;align-items:flex-end}.bsms-legal-dialog{border-radius:20px 20px 14px 14px;max-height:94vh;padding:23px 18px 17px}.bsms-legal-dialog h2{font-size:29px}.bsms-legal-policy{padding:12px}.bsms-legal-review-layer{padding:0}.bsms-legal-review-panel{height:100%;border-radius:0;border:0}.bsms-legal-review-bar{height:54px;flex-basis:54px;padding:0 12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}`;
+        legalShadowRoot.appendChild(style);
+        document.body.appendChild(overlayHost);
     }
 
     function createOverlay() {
@@ -112,8 +119,9 @@
                 </div>
                 <p class="bsms-legal-footer">Your acceptance is securely associated with your account. You can review either document again before confirming.</p>
             </section>`;
-        document.body.appendChild(overlay);
-        document.body.classList.add('bsms-legal-open');
+        legalShadowRoot.appendChild(overlay);
+        previousBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
         overlay.querySelector('#bsms-legal-support').addEventListener('click', () => {
             window.location.href = '/support';
         });
@@ -192,7 +200,7 @@
                 </header>
                 <iframe class="bsms-legal-frame" title="${title}" src="${path}"></iframe>
             </section>`;
-        document.body.appendChild(reviewLayer);
+        legalShadowRoot.appendChild(reviewLayer);
         reviewLayer.querySelector('.bsms-legal-back').addEventListener('click', closeDocument);
     }
 
@@ -201,7 +209,7 @@
             reviewLayer.remove();
             reviewLayer = null;
         }
-        if (!overlay) document.body.classList.remove('bsms-legal-open');
+        if (!overlay) document.body.style.overflow = previousBodyOverflow;
     }
 
     async function submitAcceptance() {
@@ -227,7 +235,10 @@
             overlay.remove();
             overlay = null;
             policyState = null;
-            document.body.classList.remove('bsms-legal-open');
+            document.body.style.overflow = previousBodyOverflow;
+            if (overlayHost) overlayHost.remove();
+            overlayHost = null;
+            legalShadowRoot = null;
             try { localStorage.setItem('bsms_legal_accepted_at', String(Date.now())); } catch {}
             window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
         } catch (err) {
@@ -249,7 +260,10 @@
                 overlay.remove();
                 overlay = null;
                 policyState = null;
-                document.body.classList.remove('bsms-legal-open');
+                document.body.style.overflow = previousBodyOverflow;
+            if (overlayHost) overlayHost.remove();
+            overlayHost = null;
+            legalShadowRoot = null;
             }
             return;
         }
@@ -261,7 +275,10 @@
                 overlay.remove();
                 overlay = null;
                 policyState = null;
-                document.body.classList.remove('bsms-legal-open');
+                document.body.style.overflow = previousBodyOverflow;
+            if (overlayHost) overlayHost.remove();
+            overlayHost = null;
+            legalShadowRoot = null;
             }
         } catch (error) {
             if (error.status === 401) return;
