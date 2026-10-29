@@ -15,8 +15,16 @@ async function getAuthenticatedUser(sessionId) {
         '/v1/auth/session?sessionId=' + encodeURIComponent(sessionId)
     );
 
-    if (!result?.uid || !result?.account || result.account.account_status === 'deleted') return null;
-    return { uid: result.uid, account: result.account };
+    if (!result?.uid) return null;
+
+    // Always read the current account record from the same database used for
+    // legal acceptance writes. Do not rely on an account snapshot returned by
+    // the session service, which may be stale immediately after an update.
+    const accountSnapshot = await db.ref('/accounts/' + result.uid).once('value');
+    const account = accountSnapshot.val();
+    if (!account || account.account_status === 'deleted') return null;
+
+    return { uid: result.uid, account };
 }
 
 export default async function handler(req, res) {
@@ -93,6 +101,14 @@ export default async function handler(req, res) {
             }
 
             await db.ref('/accounts/' + user.uid + '/legalAcceptance').update(updates);
+
+            // Confirm the versions were persisted before reporting success.
+            const savedSnapshot = await db.ref('/accounts/' + user.uid).once('value');
+            const savedAccount = savedSnapshot.val() || {};
+            const savedStatus = getLegalPolicyStatus(savedAccount);
+            if (savedStatus.needsAcceptance) {
+                throw new Error('Your acknowledgments could not be verified after saving. Please try again.');
+            }
 
             try {
                 const historyRef = db.ref('/accounts/' + user.uid + '/legalAcceptanceHistory').push();
