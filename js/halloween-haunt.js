@@ -119,6 +119,8 @@ function renderCurrentModal() {
 }
 const HH_PENDING_ACTIONS_KEY = 'bsms_halloween_haunt_pending_actions_v1';
 const HH_SYNC_INTERVAL_MS = 10000;
+let pendingGambleRequestId = null;
+let pendingComebackRequestId = null;
 let pendingOptimisticActions = 0;
 let pendingServerActions = [];
 let syncInProgress = false;
@@ -199,12 +201,20 @@ async function flushServerActionQueue() {
 
   const failed = result.results.find(item => Number(item.status) >= 400);
   if (failed?.result?.error) showToast(failed.result.error);
+  const settledGamble = result.results.find(item => item.action === 'phase2' && item.requestId === pendingGambleRequestId && item.status < 400 && item.result?.gamble)?.result?.gamble || null;
+  const settledComeback = result.results.find(item => item.action === 'phase2' && item.requestId === pendingComebackRequestId && item.status < 400 && item.result?.comebackWheel)?.result?.comebackWheel || null;
+  const failedGamble = result.results.find(item => item.action === 'phase2' && item.requestId === pendingGambleRequestId && item.status >= 400);
+  if (failedGamble) pendingGambleRequestId = null;
+  if (settledComeback) pendingComebackRequestId = null;
 
   if (!pendingServerActions.length && result.state) {
    gameState = cloneGameState(result.state);
    recalculateBasketCount();
    updateUI();
    renderCurrentModal();
+   if (settledGamble) showGambleSettlement(settledGamble);
+   if (settledComeback) { showToast('Comeback Wheel awarded ' + formatCash(settledComeback.payout) + '.'); window.dismissPhase2News?.(); }
+   if (failedGamble && currentModal === 'gamble') renderCurrentModal();
   } else if (!pendingServerActions.length) {
    const authoritative = await apiCall('?action=state');
    if (authoritative?.state) {
