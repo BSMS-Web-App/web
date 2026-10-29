@@ -22,7 +22,16 @@ async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
     try {
         const result = await requestMacApi('GET', '/v1/auth/session?sessionId=' + encodeURIComponent(sessionId));
-        return result?.uid && result?.account ? { uid: result.uid, account: result.account } : null;
+        if (!result?.uid) return null;
+
+        // Legal acceptance is written directly to this database. Always read
+        // the current account record here instead of trusting the potentially
+        // stale account snapshot returned by the session service.
+        const accountSnapshot = await db.ref('/accounts/' + result.uid).once('value');
+        const account = accountSnapshot.val();
+        if (!account || account.account_status === 'deleted') return null;
+
+        return { uid: result.uid, account };
     } catch {
         return null;
     }
