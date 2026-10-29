@@ -19,6 +19,7 @@ import announcementsHandler from './api/announcements.js';
 import versionHandler from './api/version.js';
 import halloweenHauntHandler from './api/halloween-haunt.js';
 import reportsHandler from './api/reports.js';
+import supportConversationsHandler from './api/support-conversations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +50,7 @@ app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/halloween-haunt', (req, res) => halloweenHauntHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
+app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
