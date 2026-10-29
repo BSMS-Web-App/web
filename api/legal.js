@@ -20,6 +20,7 @@ async function getAuthenticatedUser(sessionId) {
 }
 
 export default async function handler(req, res) {
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Method not allowed.' });
@@ -54,10 +55,10 @@ export default async function handler(req, res) {
             const termsAccepted = payload.termsAccepted === true;
             const privacyAccepted = payload.privacyAccepted === true;
 
-            if (payload.versions && (
+            if (!payload.versions ||
                 payload.versions.terms !== LEGAL_POLICY_VERSIONS.terms ||
                 payload.versions.privacy !== LEGAL_POLICY_VERSIONS.privacy
-            )) {
+            ) {
                 return res.status(409).json({
                     error: 'The legal documents changed while you were reviewing them. Please reload and review the current versions.',
                     code: 'LEGAL_VERSION_CHANGED',
