@@ -172,7 +172,7 @@
         });
         updateAcceptButton();
         root.hidden = false;
-        document.body.classList.add('bsms-legal-open');
+        document.body.style.overflow = 'hidden';
     }
 
     function updateAcceptButton() {
@@ -185,13 +185,14 @@
 
     function openDocument(key, force = false) {
         if (!['terms', 'privacy'].includes(key)) return;
+        ensureStyles();
         if (!force && (!policyState || !policyState.policies[key]?.required)) return;
         if (reviewLayer) reviewLayer.remove();
         const title = key === 'terms' ? 'Terms of Service' : 'Privacy Policy';
         const path = key === 'terms' ? '/terms?embed=1' : '/privacy?embed=1';
         reviewLayer = document.createElement('div');
         reviewLayer.className = 'bsms-legal-review-layer';
-        document.body.classList.add('bsms-legal-open');
+        document.body.style.overflow = 'hidden';
         reviewLayer.innerHTML = `
             <section class="bsms-legal-review-panel" role="dialog" aria-modal="true" aria-label="${title}">
                 <header class="bsms-legal-review-bar">
@@ -209,7 +210,12 @@
             reviewLayer.remove();
             reviewLayer = null;
         }
-        if (!overlay) document.body.style.overflow = previousBodyOverflow;
+        if (!overlay) {
+            document.body.style.overflow = previousBodyOverflow;
+            if (overlayHost) overlayHost.remove();
+            overlayHost = null;
+            legalShadowRoot = null;
+        }
     }
 
     async function submitAcceptance() {
@@ -261,7 +267,7 @@
                 overlay = null;
                 policyState = null;
                 document.body.style.overflow = previousBodyOverflow;
-            if (overlayHost) overlayHost.remove();
+                if (overlayHost) overlayHost.remove();
             overlayHost = null;
             legalShadowRoot = null;
             }
