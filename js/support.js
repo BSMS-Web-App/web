@@ -63,6 +63,7 @@
 
     if (type === 'general') {
       generalCard.hidden = false;
+      if (supportAccess) openConversation(supportAccess.conversationId, supportAccess.accessKey).catch(() => {});
       return;
     }
     const session = readSession();
@@ -240,7 +241,18 @@
     clearNotice(message);
     titleInput.focus();
   });
-  document.getElementById('supportBackToTypes').addEventListener('click', () => setType(null));
+  document.getElementById('supportBackToTypes').addEventListener('click', () => {
+    activeType = null;
+    chooser.hidden = false;
+    authCard.hidden = true;
+    formCard.hidden = true;
+    successCard.hidden = true;
+    generalCard.hidden = true;
+    document.querySelectorAll('#contactTypeChooser .contact-type').forEach(button => {
+      button.classList.remove('active');
+      button.setAttribute('aria-pressed', 'false');
+    });
+  });
 
   document.getElementById('supportStartForm').addEventListener('submit', async event => {
     event.preventDefault();
