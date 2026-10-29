@@ -18,7 +18,7 @@
     if (EXEMPT_PATHS.has(currentPath) || new URLSearchParams(window.location.search).get('embed') === '1') return;
 
     function sessionId() {
-        return localStorage.getItem(SESSION_KEY) || '';
+        try { return localStorage.getItem(SESSION_KEY) || ''; } catch { return ''; }
     }
 
     function requestHeaders() {
@@ -236,7 +236,16 @@
     }
 
     async function checkPolicies() {
-        if (!sessionId()) return;
+        if (!sessionId()) {
+            closeDocument();
+            if (overlay) {
+                overlay.remove();
+                overlay = null;
+                policyState = null;
+                document.body.classList.remove('bsms-legal-open');
+            }
+            return;
+        }
         try {
             const data = await apiRequest('status');
             if (data.needsAcceptance) renderStatus(data);
