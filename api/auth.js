@@ -112,8 +112,9 @@ export default async function handler(req, res) {
         'register', 'login', 'logout', 'removeExpiredBan', 'checkBan',
         'getProfile', 'deleteAccount', 'getPublicUsers'
     ]);
+    let legalUser = null;
     if (!publicActions.has(action)) {
-        const legalUser = await getUserBySession(sessionId);
+        legalUser = await getUserBySession(sessionId);
         if (!legalUser) return res.status(401).json({ error: 'Unauthorized.' });
         if (legalAcceptanceRequired(legalUser.account)) {
             return res.status(428).json({
@@ -250,7 +251,7 @@ export default async function handler(req, res) {
             }
 
             case 'logout': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 // Naturally deletes the device ID linkage because it is scoped entirely inside this session node
@@ -262,7 +263,7 @@ export default async function handler(req, res) {
             case 'removeExpiredBan':
             case 'checkBan': {
                 let uid = null; let account = null;
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 
                 if (user) {
                     uid = user.uid; account = user.account;
@@ -280,7 +281,7 @@ export default async function handler(req, res) {
             }
 
             case 'getProfile': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -292,7 +293,7 @@ export default async function handler(req, res) {
             }
 
             case 'updateProfile': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -347,14 +348,14 @@ export default async function handler(req, res) {
             }
 
             case 'removeAvatar': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 await db.ref(`/accounts/${user.uid}/avatar`).remove();
                 return res.status(200).json({ success: true });
             }
 
             case 'changeUsername': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -388,7 +389,7 @@ export default async function handler(req, res) {
             }
 
             case 'changePassword': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -406,7 +407,7 @@ export default async function handler(req, res) {
             }
 
             case 'getSessions': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -416,7 +417,7 @@ export default async function handler(req, res) {
             }
 
             case 'revokeSession': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -429,7 +430,7 @@ export default async function handler(req, res) {
             }
 
             case 'deleteAccount': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
@@ -520,7 +521,7 @@ export default async function handler(req, res) {
             }
 
             case 'follow': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const { targetUid } = payload;
@@ -536,7 +537,7 @@ export default async function handler(req, res) {
             }
 
             case 'unfollow': {
-                const user = await getUserBySession(sessionId);
+                const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
                 
                 const { targetUid } = payload;
