@@ -75,7 +75,7 @@ function newPlayer(uid, account, now) {
     cash:100, inventory, discovered:[], lifetimeCollected, feedCandy:0,
     basketCapacity:50, currentBasketCount:0,
     upgrades:{capacity:{level:0,nextCost:45},power:{level:0,nextCost:60},luck:{level:0,nextCost:90},autoSell:{level:0,nextCost:5000}},
-    crew:[], crewUnlocked:false, crewHireCost:180, lastCrewSync:now,
+    crew:[], crewUnlocked:false, crewHireCost:180, lastCrewSync:now, soulShards:0, phase2:{shopLevels:{corner:0,market:0,arcade:0,pharmacy:0},managerLevel:0,shardUpgrades:{luck:0,fortune:0}},
     stats:{highScore:100,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0},
     createdAt:now, updatedAt:now
   };
@@ -87,7 +87,7 @@ function normalizePlayer(p, uid, account, now) {
   for (const c of CANDY) { p.inventory[c.id]=Number.isFinite(p.inventory[c.id])?p.inventory[c.id]:0; p.lifetimeCollected[c.id]=Number.isFinite(p.lifetimeCollected[c.id])?p.lifetimeCollected[c.id]:0; }
   p.upgrades ||= {};
   for (const [id,cfg] of Object.entries(UPGRADE_CONFIG)) p.upgrades[id] ||= {level:0,nextCost:cfg.baseCost};
-  p.crew ||= []; for(let i=0;i<p.crew.length;i++){const w=p.crew[i];w.name=w.name||CREW_NAMES[i]||('Worker '+(i+1));w.capacityLevel=Number(w.capacityLevel||0);w.powerLevel=Number(w.powerLevel||0);w.luckLevel=Number(w.luckLevel||0);w.awakeLevel=Number(w.awakeLevel||0);w.speedLevel=Number(w.speedLevel||0);w.capacity=Number(w.capacity||50);if(w.capacityLevel===0&&w.capacity<=10)w.capacity=50;w.intervalMs=2000;w.workMs=Number(w.workMs||0);w.inventory||={};w.inventoryCount=Object.values(w.inventory).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);w.fedUntil=Number(w.fedUntil||0);w.awakeMs=Number(w.awakeMs||0);w.collectedCount=Number(w.collectedCount||0);w.moneyEarned=Number(w.moneyEarned||0);} p.stats ||= {};
+  p.soulShards=Math.max(0,Math.min(1000000000,Math.floor(Number(p.soulShards)||0)));p.phase2 ||= {};p.phase2.shopLevels ||= {};p.phase2.shardUpgrades ||= {};p.phase2.managerLevel=Math.max(0,Math.min(1,Math.floor(Number(p.phase2.managerLevel)||0)));for(const shop of SHOPS)p.phase2.shopLevels[shop.id]=Math.max(0,Math.min(5,Math.floor(Number(p.phase2.shopLevels[shop.id])||0)));for(const key of ['luck','fortune'])p.phase2.shardUpgrades[key]=Math.max(0,Math.min(10,Math.floor(Number(p.phase2.shardUpgrades[key])||0))); p.crew ||= []; for(let i=0;i<p.crew.length;i++){const w=p.crew[i];w.name=w.name||CREW_NAMES[i]||('Worker '+(i+1));w.capacityLevel=Number(w.capacityLevel||0);w.powerLevel=Number(w.powerLevel||0);w.luckLevel=Number(w.luckLevel||0);w.awakeLevel=Number(w.awakeLevel||0);w.speedLevel=Number(w.speedLevel||0);w.capacity=Number(w.capacity||50);if(w.capacityLevel===0&&w.capacity<=10)w.capacity=50;w.intervalMs=2000;w.workMs=Number(w.workMs||0);w.inventory||={};w.inventoryCount=Object.values(w.inventory).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);w.fedUntil=Number(w.fedUntil||0);w.awakeMs=Number(w.awakeMs||0);w.collectedCount=Number(w.collectedCount||0);w.moneyEarned=Number(w.moneyEarned||0);} p.stats ||= {};
   for (const [k,v] of Object.entries({highScore:p.cash||0,lifetimeCash:0,cashSpent:0,totalClicks:0,totalCollected:0,totalSold:0,rareCollected:0,legendaryCollected:0,upgradesBought:0,crewCollected:0,crewSold:0})) if (!Number.isFinite(p.stats[k])) p.stats[k]=v;
   p.cash=Math.max(0,Math.floor(Number(p.cash)||0)); p.basketCapacity=Math.max(1,Math.floor(Number(p.basketCapacity)||50));
   p.currentBasketCount=Object.values(p.inventory).reduce((a,n)=>a+n,0);
@@ -126,13 +126,13 @@ function eventStatus(now) {
 function publicState(p, root, now) {
   const offers=root.meta.offers;
   const bestPrices={};
-  for(const c of CANDY) bestPrices[c.id]=Math.max(...SHOPS.map(s=>offers[s.id][c.id]));
+  for(const c of CANDY) bestPrices[c.id]=Math.max(...SHOPS.map(s=>shopPrice(s,c.id,offers,p)));
   return {
     ...eventStatus(now), accountId:p.uid, displayName:p.displayName, cash:p.cash,
     inventory:{...p.inventory}, discovered:[...p.discovered], lifetimeCollected:{...p.lifetimeCollected}, feedCandy:Math.max(0,Math.floor(Number(p.feedCandy)||0)),
     currentBasketCount:p.currentBasketCount,basketCapacity:p.basketCapacity,
     upgrades:JSON.parse(JSON.stringify(p.upgrades)),crew:JSON.parse(JSON.stringify(p.crew)),
-    crewUnlocked:p.crewUnlocked,crewHireCost:p.crewHireCost,stats:{...p.stats},
+    crewUnlocked:p.crewUnlocked,crewHireCost:p.crewHireCost, soulShards:Number(p.soulShards||0),phase2:JSON.parse(JSON.stringify(p.phase2||{shopLevels:{},managerLevel:0,shardUpgrades:{}})),stats:{...p.stats},
     candyCatalog:CANDY.map(c=>({...c,bestPrice:bestPrices[c.id]})),
     shops:SHOPS.map(s=>({id:s.id,name:s.name,prices:{...offers[s.id]}})),
     offerWindow:root.meta.offerWindow,offerRefreshAt:root.meta.offerWindow+ROTATION_MS,
@@ -174,7 +174,7 @@ function sanitizeImportedPlayer(input, uid, account, now) {
     player.lifetimeCollected[candy.id] = cap(input.lifetimeCollected?.[candy.id], 1000000000);
   }
   player.discovered = [...new Set(Array.isArray(input.discovered) ? input.discovered.filter(id => CANDY.some(c => c.id === id)) : [])];
-  player.feedCandy = cap(input.feedCandy, 1000000000);
+  player.feedCandy = cap(input.feedCandy, 1000000000); player.soulShards=cap(input.soulShards,1000000000); player.phase2={shopLevels:{},managerLevel:Math.min(1,cap(input.phase2?.managerLevel,1)),shardUpgrades:{luck:Math.min(10,cap(input.phase2?.shardUpgrades?.luck,10)),fortune:Math.min(10,cap(input.phase2?.shardUpgrades?.fortune,10))}}; for(const shop of SHOPS)player.phase2.shopLevels[shop.id]=Math.min(5,cap(input.phase2?.shopLevels?.[shop.id],5));
   player.basketCapacity = Math.max(1, Math.min(500, cap(input.basketCapacity, 500) || 50));
   for (const [key,cfg] of Object.entries(UPGRADE_CONFIG)) {
     const level = Math.min(cfg.max, cap(input.upgrades?.[key]?.level, cfg.max));
@@ -210,8 +210,9 @@ function rollCandy(luckLevel) {
   for(const item of weighted){r-=item.w;if(r<=0)return item.c;}
   return CANDY[0];
 }
-function bestShopFor(candyId, offers) {
-  return SHOPS.reduce((best,s)=>offers[s.id][candyId]>offers[best.id][candyId]?s:best,SHOPS[0]);
+function shopPrice(shop,candyId,offers,player){const level=Math.max(0,Math.min(5,Number(player?.phase2?.shopLevels?.[shop.id]||0)));const shardLuck=Number(player?.phase2?.shardUpgrades?.fortune||0);return Math.max(1,Math.round(Number(offers[shop.id][candyId]||1)*(1+level*.12+shardLuck*.015)));}
+function bestShopFor(candyId, offers, player) {
+  return SHOPS.reduce((best,s)=>shopPrice(s,candyId,offers,player)>shopPrice(best,candyId,offers,player)?s:best,SHOPS[0]);
 }
 
 function fail(status,error){return {status,error};}
@@ -367,7 +368,8 @@ export default async function handler(req,res) {
         if (room <= 0) { response = { state: publicState(player,root,now), collected: 0, basketFull: true }; actionResponse = response; return root.players[auth.uid]; }
         const drops = [];
         for (let i = 0; i < Math.min(requested * clickCount, room); i++) {
-          const c=rollCandy(player.upgrades.luck.level||0);
+          const c=rollCandy((player.upgrades.luck.level||0)+Number(player.phase2?.shardUpgrades?.luck||0)*2);
+          if(Math.random() < Math.min(.08,.003+Number(player.phase2?.shardUpgrades?.fortune||0)*.002+(c.rarity==='Legendary'?.012:c.rarity==='Epic'?.004:0))) player.soulShards=Number(player.soulShards||0)+1;
           player.inventory[c.id]=(player.inventory[c.id]||0)+1;
           player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+1;player.feedCandy=Number(player.feedCandy||0)+1;
           player.stats.totalCollected++;
@@ -383,8 +385,8 @@ export default async function handler(req,res) {
         let earned=0,sold=0,receipts=[];
         for(const candy of CANDY){
           const qty=Math.max(0,Math.floor(player.inventory[candy.id]||0));if(!qty)continue;
-          const shop=bestShopFor(candy.id,root.meta.offers);
-          const unit=root.meta.offers[shop.id][candy.id],subtotal=unit*qty;
+          const shop=bestShopFor(candy.id,root.meta.offers,player);
+          const unit=shopPrice(shop,candy.id,root.meta.offers,player),subtotal=unit*qty;
           earned+=subtotal;sold+=qty;receipts.push({candyId:candy.id,quantity:qty,shopId:shop.id,unitPrice:unit,total:subtotal,source:'basket'});
           player.inventory[candy.id]=0;
         }
@@ -412,8 +414,43 @@ export default async function handler(req,res) {
           const crew=player.crew[idx];if(!crew){response={error:'Invalid crew member.',status:400};actionResponse=response; return root.players[auth.uid];}
           if(act==='wake'){crew.asleep=false;crew.awakeMs=0;crew.lastActionAt=now;response={state:publicState(player,root,now),woke:true};}else if(act==='feed'){const need=Math.max(1,Number(player.basketCapacity||50)*10),held=Number(player.feedCandy||0);if(Number(crew.fedUntil||0)>now){response={error:'This crew member is already fed.',status:409};actionResponse=response;return root.players[auth.uid];}if(held<need){response={error:'Not enough candy in your Candy Reserve. Collect more candy first.',status:409};actionResponse=response;return root.players[auth.uid];}player.feedCandy=Math.max(0,held-need);crew.fedUntil=now+1200000;crew.asleep=false;crew.awakeMs=0;response={state:publicState(player,root,now),fed:true};}else{const cfgs={upgrade_capacity:['capacityLevel',65,1.65],upgrade_power:['powerLevel',80,1.65],upgrade_luck:['luckLevel',95,1.65],upgrade_speed:['speedLevel',75,1.7],upgrade_awake:['awakeLevel',100,1.8],upgrade_cap:['capacityLevel',65,1.65]},cfg=cfgs[act];if(!cfg){response={error:'Unknown crew action.',status:400};actionResponse=response;return root.players[auth.uid];}const [key,base,mult]=cfg,cost=Math.floor(base*Math.pow(mult,Number(crew[key]||0)));if(player.cash<cost){response={error:'Not enough cash.',status:409};actionResponse=response;return root.players[auth.uid];}player.cash-=cost;player.stats.cashSpent+=cost;player.stats.upgradesBought++;crew[key]=Number(crew[key]||0)+1;if(key==='capacityLevel')crew.capacity=Math.min(500,50+crew.capacityLevel*10);response={state:publicState(player,root,now),cost};}
         }
+      } else if(action==='phase2') {
+        const type=String(req.body?.type||'');
+        player.phase2 ||= {shopLevels:{},managerLevel:0,shardUpgrades:{luck:0,fortune:0}};
+        player.phase2.shopLevels ||= {};player.phase2.shardUpgrades ||= {};
+        let cost=0;
+        if(type==='shop-upgrade'){
+          const id=String(req.body?.shopId||'');const shop=SHOPS.find(x=>x.id===id);
+          if(!shop){response={error:'Unknown shop.',status:400};actionResponse=response;return root.players[auth.uid];}
+          const level=Math.min(5,Math.max(0,Number(player.phase2.shopLevels[id]||0)));
+          if(level>=5){response={error:'This shop is fully upgraded.',status:409};actionResponse=response;return root.players[auth.uid];}
+          cost=[50000,75000,110000,160000,230000][level];
+          if(player.cash<cost){response={error:'Not enough cash for this shop upgrade.',status:409};actionResponse=response;return root.players[auth.uid];}
+          player.cash-=cost;player.stats.cashSpent+=cost;player.phase2.shopLevels[id]=level+1;
+        } else if(type==='manager'){
+          if(player.phase2.managerLevel){response={error:'You already hired the Crew Manager.',status:409};actionResponse=response;return root.players[auth.uid];}
+          cost=250000;if(player.cash<cost){response={error:'The Crew Manager costs $250,000.',status:409};actionResponse=response;return root.players[auth.uid];}
+          player.cash-=cost;player.stats.cashSpent+=cost;player.phase2.managerLevel=1;
+        } else if(type==='shard-upgrade'){
+          const id=String(req.body?.upgradeId||'');const config={luck:{base:3,label:'Shard Luck'},fortune:{base:5,label:'Shard Fortune'}}[id];
+          if(!config){response={error:'Unknown Soul Shard upgrade.',status:400};actionResponse=response;return root.players[auth.uid];}
+          const level=Math.min(10,Math.max(0,Number(player.phase2.shardUpgrades[id]||0)));
+          if(level>=10){response={error:'This Soul Shard upgrade is maxed.',status:409};actionResponse=response;return root.players[auth.uid];}
+          cost=config.base+level*2;if(player.soulShards<cost){response={error:'Not enough Soul Shards.',status:409};actionResponse=response;return root.players[auth.uid];}
+          player.soulShards-=cost;player.phase2.shardUpgrades[id]=level+1;
+        } else if(type==='gamble'){
+          const wager=Math.floor(Number(req.body?.wager)||0);
+          if(wager<10||wager>10000||wager>player.cash){response={error:'Choose a wager from $10 to $10,000 that you can afford.',status:409};actionResponse=response;return root.players[auth.uid];}
+          player.cash-=wager;player.stats.cashSpent+=wager;
+          const roll=Math.random();
+          const won=roll<0.22;const jackpot=roll<0.025;
+          const payout=won?(jackpot?wager*8:wager*2):0;
+          if(payout)credit(payout);
+          response={state:publicState(player,root,now),gamble:{won,jackpot,payout,wager}};
+        } else {response={error:'Unknown Phase 2 action.',status:400};actionResponse=response;return root.players[auth.uid];}
+        if(cost){player.stats.upgradesBought++;response={state:publicState(player,root,now),purchased:type,cost};}
       } else if(action==='crew-sync') {
-        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));player.lastCrewSync=now;if(elapsed>0&&player.crew.length){for(const crew of player.crew){crew.asleep=!!crew.asleep;crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);if(crew.asleep)continue;const fed=crew.fedUntil>now;if(!fed)crew.awakeMs+=elapsed;crew.lastActionAt=now;if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;continue;}const effectiveCapacity=Math.max(1,Math.floor(Number(crew.capacity||10)*(fed?1.25:1)));const workInterval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));crew.workMs=Number(crew.workMs||0)+elapsed;const ticks=Math.min(10,Math.floor(crew.workMs/workInterval));crew.workMs-=ticks*workInterval;for(let n=0;n<ticks;n++){const held=Object.values(crew.inventory||{}).reduce((x,y)=>x+(Number(y)||0),0);if(held>=effectiveCapacity)break;const c=rollCandy(Math.floor((Number(player.upgrades.luck.level||0)+Number(crew.luckLevel||0))*(fed?1.25:1)));crew.inventory||={};const basePower=Math.min(8,1+Number(crew.powerLevel||0));const power=Math.min(effectiveCapacity-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));for(let k=0;k<power;k++)crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=held+power;player.stats.crewCollected+=power;crew.collectedCount=Number(crew.collectedCount||0)+power;player.feedCandy=Number(player.feedCandy||0)+power;player.stats.totalCollected+=power;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+power;if(!player.discovered.includes(c.id))player.discovered.push(c.id);if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected+=power;if(c.rarity==='Legendary')player.stats.legendaryCollected+=power;count();}if(crew.inventoryCount>=effectiveCapacity&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){let earned=0,sold=0;for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers);earned+=q*root.meta.offers[shop.id][id];sold+=q;crew.inventory[id]=0;}if(earned){credit(earned);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;crew.sellReadyAt=0;}}}}
+        const elapsed=Math.min(20000,Math.max(0,now-(player.lastCrewSync||now)));player.lastCrewSync=now;if(elapsed>0&&player.crew.length){for(const crew of player.crew){crew.asleep=!!crew.asleep;crew.awakeMs=Number(crew.awakeMs||0);crew.fedUntil=Number(crew.fedUntil||0);if(crew.asleep&&Number(player.phase2?.managerLevel||0)){crew.asleep=false;crew.awakeMs=0;crew.lastActionAt=now;}if(crew.asleep)continue;if(Number(player.phase2?.managerLevel||0)&&Number(player.feedCandy||0)>=Math.max(1,Number(player.basketCapacity||50)*10)&&Number(crew.fedUntil||0)<=now){player.feedCandy-=Math.max(1,Number(player.basketCapacity||50)*10);crew.fedUntil=now+1200000;crew.asleep=false;crew.awakeMs=0;}const fed=crew.fedUntil>now;if(!fed)crew.awakeMs+=elapsed;crew.lastActionAt=now;if(!fed&&crew.awakeMs>=300000+Number(crew.awakeLevel||0)*60000){crew.asleep=true;continue;}const effectiveCapacity=Math.max(1,Math.floor(Number(crew.capacity||10)*(fed?1.25:1)));const workInterval=Math.max(500,Number(crew.intervalMs||2000)*(fed?.75:1));crew.workMs=Number(crew.workMs||0)+elapsed;const ticks=Math.min(10,Math.floor(crew.workMs/workInterval));crew.workMs-=ticks*workInterval;for(let n=0;n<ticks;n++){const held=Object.values(crew.inventory||{}).reduce((x,y)=>x+(Number(y)||0),0);if(held>=effectiveCapacity)break;const c=rollCandy(Math.floor((Number(player.upgrades.luck.level||0)+Number(crew.luckLevel||0)+Number(player.phase2?.shardUpgrades?.luck||0)*2)*(fed?1.25:1)));if(Math.random()<Math.min(.08,.003+Number(player.phase2?.shardUpgrades?.fortune||0)*.002+(c.rarity==='Legendary'?.012:c.rarity==='Epic'?.004:0)))player.soulShards=Number(player.soulShards||0)+1;crew.inventory||={};const basePower=Math.min(8,1+Number(crew.powerLevel||0));const power=Math.min(effectiveCapacity-held,basePower+(fed?Math.max(1,Math.ceil(basePower*.25)):0));for(let k=0;k<power;k++)crew.inventory[c.id]=(crew.inventory[c.id]||0)+1;crew.inventoryCount=held+power;player.stats.crewCollected+=power;crew.collectedCount=Number(crew.collectedCount||0)+power;player.feedCandy=Number(player.feedCandy||0)+power;player.stats.totalCollected+=power;player.lifetimeCollected[c.id]=(player.lifetimeCollected[c.id]||0)+power;if(!player.discovered.includes(c.id))player.discovered.push(c.id);if(c.rarity==='Rare'||c.rarity==='Epic')player.stats.rareCollected+=power;if(c.rarity==='Legendary')player.stats.legendaryCollected+=power;count();}if(crew.inventoryCount>=effectiveCapacity&&!crew.sellReadyAt)crew.sellReadyAt=now+Math.max(4000,20000-2000*Number(crew.speedLevel||0))*(fed?.75:1);if(crew.sellReadyAt&&now>=crew.sellReadyAt&&crew.inventoryCount>0){let earned=0,sold=0;for(const [id,qty] of Object.entries(crew.inventory)){const q=Math.max(0,Math.floor(qty||0));if(!q)continue;const shop=bestShopFor(id,root.meta.offers,player);earned+=q*shopPrice(shop,id,root.meta.offers,player);sold+=q;crew.inventory[id]=0;}if(earned){credit(earned);crew.moneyEarned=Number(crew.moneyEarned||0)+earned;player.stats.crewSold+=sold;player.stats.totalSold+=sold;crew.inventoryCount=0;crew.sellReadyAt=0;}}}}
         response={state:publicState(player,root,now),crewCollected:player.stats.crewCollected};
       } else {
         response={error:'Unknown Halloween Haunt action.',status:404};
