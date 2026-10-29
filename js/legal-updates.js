@@ -18,7 +18,13 @@
     if (EXEMPT_PATHS.has(currentPath) || new URLSearchParams(window.location.search).get('embed') === '1') return;
 
     function sessionId() {
-        try { return localStorage.getItem(SESSION_KEY) || ''; } catch { return ''; }
+        try {
+            const auth = JSON.parse(localStorage.getItem('bsms_auth_session') || 'null');
+            if (!auth || auth.loggedIn !== true) return '';
+            return localStorage.getItem(SESSION_KEY) || auth.sessionId || '';
+        } catch {
+            return '';
+        }
     }
 
     function requestHeaders() {
@@ -276,7 +282,7 @@
 
     window.addEventListener('bsms:auth-changed', checkPolicies);
     window.addEventListener('storage', event => {
-        if (event.key === SESSION_KEY || event.key === 'bsms_legal_accepted_at') checkPolicies();
+        if (event.key === SESSION_KEY || event.key === 'bsms_auth_session' || event.key === 'bsms_legal_accepted_at') checkPolicies();
     });
     window.addEventListener('focus', () => {
         if (sessionId()) checkPolicies();
