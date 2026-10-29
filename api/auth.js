@@ -7,6 +7,7 @@
 import { db, admin } from './db.js';
 import crypto from 'crypto';
 import { moderateContent } from './moderation.js';
+import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
 
 async function rejectFlaggedContent(res, value, label) {
     const result = await moderateContent(value);
@@ -107,11 +108,29 @@ export default async function handler(req, res) {
     const sessionId = req.headers['x-session-id'];
     const clientDeviceId = req.headers['x-device-id'];
 
+    const publicActions = new Set([
+        'register', 'login', 'logout', 'removeExpiredBan', 'checkBan',
+        'getProfile', 'deleteAccount', 'getPublicUsers'
+    ]);
+    if (!publicActions.has(action)) {
+        const legalUser = await getUserBySession(sessionId);
+        if (!legalUser) return res.status(401).json({ error: 'Unauthorized.' });
+        if (legalAcceptanceRequired(legalUser.account)) {
+            return res.status(428).json({
+                error: 'Please review and accept the current Terms of Service and Privacy Policy before continuing.',
+                code: 'LEGAL_ACCEPTANCE_REQUIRED'
+            });
+        }
+    }
+
     try {
         switch (action) {
             case 'register': {
                 const { email = "", username, password } = payload;
                 if (!username || !password) return res.status(400).json({ error: 'Missing required fields.' });
+                if (payload.termsAccepted !== true || payload.privacyAcknowledged !== true) {
+                    return res.status(400).json({ error: 'You must agree to the Terms of Service and acknowledge the Privacy Policy before creating an account.' });
+                }
 
                 // STRICT: Block registration entirely if device is in /banned_devices
                 const banCheck = await evaluateAndClearBans(null, clientDeviceId, null);
@@ -159,7 +178,11 @@ export default async function handler(req, res) {
                     followers: {},
                     following: {},
                     createdAt: currentTimestamp,
-                    avatar: '', 
+                    avatar: '',
+                    legalAcceptance: {
+                        terms: { version: LEGAL_POLICY_VERSIONS.terms, acceptedAt: currentTimestamp },
+                        privacy: { version: LEGAL_POLICY_VERSIONS.privacy, acceptedAt: currentTimestamp }
+                    },
                     sessions: {
                         [newSessionId]: {
                             createdAt: currentTimestamp,
