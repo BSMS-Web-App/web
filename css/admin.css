@@ -188,3 +188,33 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px;
 }
 .tree-act:hover { color: #fff; border-color: var(--red); background: var(--red); }
+
+
+/* General Support inbox */
+#sidebar{overflow-y:auto}
+.support-admin-layout{display:grid;grid-template-columns:minmax(250px,340px) minmax(0,1fr);gap:16px;min-height:520px;align-items:stretch}
+.support-admin-list,.support-admin-thread{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-width:0}
+.support-admin-list-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);font-size:15px}
+.support-admin-list-head span{background:var(--red);border-radius:20px;padding:2px 9px;color:#fff}
+#support-conversation-list{display:flex;flex-direction:column;max-height:680px;overflow:auto}
+.support-admin-conversation{display:flex;flex-direction:column;gap:5px;width:100%;text-align:left;padding:14px 15px;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--fg);cursor:pointer;font:inherit}
+.support-admin-conversation:hover,.support-admin-conversation.active{background:rgba(187,0,30,.13)}
+.support-admin-conversation.active{box-shadow:inset 3px 0 var(--red)}
+.support-admin-conversation strong{font-size:14px;overflow-wrap:anywhere}
+.support-admin-conversation span,.support-admin-conversation small{font-size:11px;color:var(--fg2)}
+.support-admin-empty{display:grid;place-items:center;min-height:180px;padding:24px;text-align:center;color:var(--fg2);font-size:13px;line-height:1.6}
+.support-admin-thread{padding:18px;display:flex;flex-direction:column}
+.support-admin-thread-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid var(--border);padding-bottom:13px}
+.support-admin-thread-head h2{font-family:var(--font-brand);font-size:27px;margin:0;overflow-wrap:anywhere}
+.support-admin-thread-head p{color:var(--fg2);font-size:11px;margin:4px 0 0;overflow-wrap:anywhere}
+.support-admin-messages{display:flex;flex-direction:column;gap:12px;max-height:520px;min-height:220px;overflow:auto;padding:16px 2px}
+.support-admin-message{max-width:90%;align-self:flex-start;background:var(--panel-alt);border:1px solid var(--border);border-radius:13px;padding:11px 13px}
+.support-admin-message.from-admin{align-self:flex-end;border-color:rgba(187,0,30,.5);background:rgba(187,0,30,.12)}
+.support-admin-message-head{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--fg2);margin-bottom:6px}
+.support-admin-message-head strong{color:var(--fg)}
+.support-admin-message p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;font-size:13px}
+.support-admin-reply{border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.support-admin-reply textarea{resize:vertical;min-height:80px}
+.support-admin-reply>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#support-admin-reply-status{font-size:11px;color:var(--fg2)}
+@media(max-width:900px){.support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-thread-head{flex-wrap:wrap}}
