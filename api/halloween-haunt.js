@@ -440,6 +440,10 @@ export default async function handler(req,res) {
           if(level>=10){response={error:'This Soul Shard upgrade is maxed.',status:409};actionResponse=response;return root.players[auth.uid];}
           cost=config.base+level*2;if(player.soulShards<cost){response={error:'Not enough Soul Shards.',status:409};actionResponse=response;return root.players[auth.uid];}
           player.soulShards-=cost;player.phase2.shardUpgrades[id]=level+1;
+        } else if(type==='comeback-wheel'){
+          if(Number(player.cash)>=100000){response={error:'The Comeback Wheel is only for players under $100,000.',status:409};actionResponse=response;return root.players[auth.uid];}
+          if(player.phase2.comebackWheelClaimed){response={error:'You already claimed your Comeback Wheel spin.',status:409};actionResponse=response;return root.players[auth.uid];}
+          const payout=(1+Math.floor(Math.random()*8))*10000;player.phase2.comebackWheelClaimed=true;player.cash+=payout;player.stats.lifetimeCash+=payout;response={state:publicState(player,root,now),comebackWheel:{payout}};
         } else if(type==='gamble'){
           const wager=Math.floor(Number(req.body?.wager)||0);
           if(wager<10||wager>10000||wager>player.cash){response={error:'Choose a wager from $10 to $10,000 that you can afford.',status:409};actionResponse=response;return root.players[auth.uid];}
