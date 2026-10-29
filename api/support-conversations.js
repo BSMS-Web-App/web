@@ -80,6 +80,7 @@ export default async function handler(req, res) {
                 updatedAt: now,
                 lastMessageAt: now,
                 lastMessageBy: 'visitor',
+                lastVisitorMessageAt: now,
                 messages: {
                     first: { id: 'first', sender: 'visitor', body: message, createdAt: now }
                 }
