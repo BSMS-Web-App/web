@@ -12,6 +12,7 @@
  * All economy changes are server-calculated and committed through the Mac DB CAS transaction.
  */
 import { db, requestMacApi } from './db.js';
+import { legalAcceptanceRequired } from './legal-policy.js';
 
 const ROOT = '/halloween_haunt';
 const START = Date.parse('2026-10-26T04:00:00.000Z'); // Oct 26, 2026, 12:00 AM EDT
