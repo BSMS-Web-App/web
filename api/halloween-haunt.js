@@ -163,6 +163,10 @@ async function authenticate(req) {
     }
   }
 
+  if (legalAcceptanceRequired(result.account)) {
+    return { error: 'Legal policy acceptance is required.', status: 428 };
+  }
+
   return { uid: result.uid, account: result.account };
 }
 
