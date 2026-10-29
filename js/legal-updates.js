@@ -14,7 +14,8 @@
     let reviewLayer = null;
     let isSubmitting = false;
 
-    const currentPath = window.location.pathname.replace(/\\/$/, '') || '/';
+    const rawPath = window.location.pathname;
+    const currentPath = (rawPath.endsWith('/') ? rawPath.slice(0, -1) : rawPath) || '/';
     if (EXEMPT_PATHS.has(currentPath) || new URLSearchParams(window.location.search).get('embed') === '1') return;
 
     function sessionId() {
