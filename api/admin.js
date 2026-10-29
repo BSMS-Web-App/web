@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     const action = req.query.action || payload.action;
 
     // Enforce Moderator read-only restriction
-    if (isMod && action !== 'getUsers' && action !== 'getReports') {
+    if (isMod && !['getUsers', 'getReports', 'getSupportConversations', 'getSupportConversation'].includes(action)) {
         return res.status(403).json({ error: 'Moderator Read-Only: Moderation edits and bans are reserved for administrators.' });
     }
 
@@ -90,6 +90,70 @@ export default async function handler(req, res) {
                 const reportSnap = await reportRef.once('value');
                 if (!reportSnap.exists()) return res.status(404).json({ error: 'Report not found.' });
                 await reportRef.remove();
+                return res.status(200).json({ success: true });
+            }
+
+
+            case 'getSupportConversations': {
+                const supportSnap = await db.ref('/support_conversations').once('value');
+                const conversations = supportSnap.val() || {};
+                const list = Object.values(conversations).filter(item => item && typeof item === 'object').map(item => ({
+                    id: item.id,
+                    subject: item.subject || 'General support',
+                    status: item.status || 'open',
+                    createdAt: item.createdAt || null,
+                    updatedAt: item.updatedAt || null,
+                    lastMessageAt: item.lastMessageAt || item.updatedAt || null,
+                    lastMessageBy: item.lastMessageBy || 'visitor',
+                    messageCount: Object.keys(item.messages || {}).length
+                })).sort((a, b) => Number(b.lastMessageAt || 0) - Number(a.lastMessageAt || 0));
+                return res.status(200).json({ conversations: list, callerRole });
+            }
+
+            case 'getSupportConversation': {
+                const { conversationId } = payload;
+                if (typeof conversationId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(conversationId)) return res.status(400).json({ error: 'Invalid conversation reference.' });
+                const snap = await db.ref('/support_conversations/' + conversationId).once('value');
+                const conversation = snap.val();
+                if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
+                const { accessKeyHash, ...safeConversation } = conversation;
+                safeConversation.messages = Object.values(conversation.messages || {}).sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
+                return res.status(200).json({ conversation: safeConversation, callerRole });
+            }
+
+            case 'replySupportConversation': {
+                if (isMod) return res.status(403).json({ error: 'Moderators have read-only access to support conversations.' });
+                const { conversationId } = payload;
+                const body = typeof payload.message === 'string' ? payload.message.trim() : '';
+                if (typeof conversationId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(conversationId)) return res.status(400).json({ error: 'Invalid conversation reference.' });
+                if (!body || body.length > 3000) return res.status(400).json({ error: 'Replies must contain 1 to 3,000 characters.' });
+                const ref = db.ref('/support_conversations/' + conversationId);
+                const snap = await ref.once('value');
+                const conversation = snap.val();
+                if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
+                if (conversation.status === 'closed') return res.status(409).json({ error: 'This conversation is closed.' });
+                const messageId = 'm_' + crypto.randomBytes(10).toString('hex');
+                const messages = conversation.messages || {};
+                messages[messageId] = {
+                    id: messageId,
+                    sender: 'admin',
+                    senderName: String(staffUser.account.displayName || staffUser.account.username || 'BSMS Web Admin').slice(0, 80),
+                    body,
+                    createdAt: Date.now()
+                };
+                const now = Date.now();
+                await ref.update({ messages, updatedAt: now, lastMessageAt: now, lastMessageBy: 'admin' });
+                return res.status(200).json({ success: true });
+            }
+
+            case 'setSupportConversationStatus': {
+                if (isMod) return res.status(403).json({ error: 'Moderators have read-only access to support conversations.' });
+                const { conversationId, status } = payload;
+                if (typeof conversationId !== 'string' || !/^[a-zA-Z0-9_-]{8,100}$/.test(conversationId) || !['open', 'closed'].includes(status)) return res.status(400).json({ error: 'Invalid conversation or status.' });
+                const ref = db.ref('/support_conversations/' + conversationId);
+                const snap = await ref.once('value');
+                if (!snap.exists()) return res.status(404).json({ error: 'Conversation not found.' });
+                await ref.update({ status, updatedAt: Date.now() });
                 return res.status(200).json({ success: true });
             }
 
