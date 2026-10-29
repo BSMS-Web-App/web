@@ -907,7 +907,7 @@ function hhOfflineCrewTick() {
         // Keep the UI's "next candy" countdown aligned with this local work tick.
         worker.lastActionAt = now;
 
-        hhPhase2Defaults(gameState);if(worker.asleep&&Number(gameState.phase2.managerLevel||0)){worker.asleep=false;worker.awakeMs=0;}if(Number(gameState.phase2.managerLevel||0)&&Number(gameState.feedCandy||0)>=Math.max(1,Number(gameState.basketCapacity||50)*10)&&Number(worker.fedUntil||0)<=now){gameState.feedCandy-=Math.max(1,Number(gameState.basketCapacity||50)*10);worker.fedUntil=now+1200000;worker.asleep=false;worker.awakeMs=0;changed=true;}
+        hhPhase2Defaults(gameState);
         if (worker.asleep) continue;
         const fed = worker.fedUntil > now;
         if (!fed) {
