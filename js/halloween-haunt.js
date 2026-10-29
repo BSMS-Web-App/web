@@ -1311,7 +1311,63 @@ const hUI=updateUI;window.hhAsleepSeen=window.hhAsleepSeen||new Set();updateUI=f
 const hRarityUpdate=updateUI;window.hhKnownRarities=window.hhKnownRarities||null;updateUI=function(){hRarityUpdate();if(!gameState)return;const found=new Set();for(const id of gameState.discovered||[]){const candy=getCandyObj(id);if(candy)found.add(candy.rarity)}if(window.hhKnownRarities===null){window.hhKnownRarities=found;return}for(const rarity of found){if(!window.hhKnownRarities.has(rarity)){window.hhKnownRarities.add(rarity);hNotify('newRarity','New rarity unlocked',rarity+' candy has been discovered!')}}};
 
 // Phase 2 UI and shared online/offline action dispatcher.
-window.executePhase2=async function(type,extra={}){if(!gameState)return;if(type==='gamble'&&(!gameState.phase2?.gambleUnlocked||Math.floor(Number(extra.wager)||0)<5000||Math.floor(Number(extra.wager)||0)>10000)){showToast(!gameState.phase2?.gambleUnlocked?'Unlock gambling first.':'Choose a wager between $5,000 and $10,000.');renderCurrentModal();return;}const result=await apiCall('?action=phase2','POST',{type,...extra});if(!result)return;if(result.error){showToast(result.error);if(currentModal==='gamble')renderCurrentModal();return;}if(type==='gamble'&&result.gamble){const w=document.getElementById('hhGambleWheel'),b=document.getElementById('hhGambleSpin');if(b)b.disabled=true;if(w){w.style.transform='rotate(0deg)';void w.offsetWidth;w.style.transform='rotate('+(result.gamble.jackpot?1507:result.gamble.won?1575:1485)+'deg)';await new Promise(resolve=>setTimeout(resolve,3650));}if(result.state)gameState=cloneGameState(result.state);hhPhase2Defaults(gameState);try{localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(gameState));}catch(_){}updateUI();renderCurrentModal();showToast(result.gamble.jackpot?'JACKPOT! You won '+formatCash(result.gamble.payout)+'!':result.gamble.won?'You won '+formatCash(result.gamble.payout)+'!':'No win this time.');const l=document.getElementById('hhGambleResult');if(l)l.textContent=result.gamble.jackpot?'JACKPOT! You won '+formatCash(result.gamble.payout)+'.':result.gamble.won?'You won '+formatCash(result.gamble.payout)+'.':'The wheel landed on LOSE. You lost '+formatCash(result.gamble.wager)+'.';return result;}if(result.state)gameState=cloneGameState(result.state);hhPhase2Defaults(gameState);try{localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(gameState));}catch(_){}updateUI();if(['shops','upgrades','crew','gamble'].includes(currentModal))renderCurrentModal();else window.openHalloweenPhase2();if(result.comebackWheel){showToast('🎉 Comeback Wheel awarded '+formatCash(result.comebackWheel.payout)+'!');window.dismissPhase2News?.();}else if(result.purchased)showToast('Phase 2 upgrade purchased!');return result;};
+window.executePhase2=async function(type,extra={}){
+ if(!gameState)return;
+ hhPhase2Defaults(gameState);
+ if(type==='gamble'){
+  const cash=Number(gameState.cash||0),wager=Math.floor(Number(extra.wager)||0),minimum=Math.max(10000,Math.ceil(cash*.15));
+  if(!gameState.phase2.gambleUnlocked){showToast('Unlock gambling first.');renderCurrentModal();return;}
+  if(wager<minimum){showToast('Your wager must be at least '+formatCash(minimum)+' (15% of current cash, with a $10,000 minimum).');renderCurrentModal();return;}
+  if(wager>cash){showToast('Your wager cannot exceed your available cash.');renderCurrentModal();return;}
+ }
+ if(halloweenOfflineMode){
+  const result=await hhOfflineApi('?action=phase2','POST',{type,...extra});
+  if(!result)return;
+  if(result.error){showToast(result.error);renderCurrentModal();return;}
+  if(result.state)gameState=cloneGameState(result.state);
+  hhPhase2Defaults(gameState);updateUI();renderCurrentModal();
+  if(result.gamble)showGambleSettlement(result.gamble);
+  if(result.comebackWheel){showToast('Comeback Wheel awarded '+formatCash(result.comebackWheel.payout)+'.');window.dismissPhase2News?.();}
+  if(result.purchased)showToast('Phase 2 upgrade purchased.');
+  return result;
+ }
+ const requestId=makeRequestId('phase2'),payload={type,...extra,requestId};
+ if(pendingServerActions.length>=500){showToast('Your action queue is full. Wait for synchronization before trying again.');return;}
+ if(type==='shop-upgrade'){
+  const id=String(extra.shopId||''),shop=(gameState.shops||[]).find(x=>x.id===id),costs=[50000,75000,110000,160000,230000],level=Number(gameState.phase2.shopLevels[id]||0),cost=costs[level];
+  if(!shop||level>=5||Number(gameState.cash)<cost){showToast(!shop?'Unknown shop.':level>=5?'This shop is fully upgraded.':'Not enough cash for this shop upgrade.');return;}
+  gameState.cash-=cost;gameState.stats.cashSpent=Number(gameState.stats.cashSpent||0)+cost;gameState.stats.upgradesBought=Number(gameState.stats.upgradesBought||0)+1;gameState.phase2.shopLevels[id]=level+1;
+ }else if(type==='gamble-unlock'){
+  if(gameState.phase2.gambleUnlocked||Number(gameState.cash)<10000){showToast(gameState.phase2.gambleUnlocked?'Gambling is already unlocked.':'You need $10,000 to unlock gambling.');return;}
+  gameState.cash-=10000;gameState.stats.cashSpent=Number(gameState.stats.cashSpent||0)+10000;gameState.stats.upgradesBought=Number(gameState.stats.upgradesBought||0)+1;gameState.phase2.gambleUnlocked=true;
+ }else if(type==='shard-upgrade'){
+  const id=String(extra.upgradeId||''),level=Number(gameState.phase2.shardUpgrades[id]||0),base=id==='luck'?3:id==='fortune'?5:0,cost=base+level*2;
+  if(!base||level>=10||Number(gameState.soulShards||0)<cost){showToast(!base||level>=10?'That Soul Shard upgrade is unavailable.':'Not enough Soul Shards.');return;}
+  gameState.soulShards-=cost;gameState.phase2.shardUpgrades[id]=level+1;
+ }else if(type==='gamble'){
+  gameState.cash-=Math.floor(Number(extra.wager)||0);
+  gameState.stats.cashSpent=Number(gameState.stats.cashSpent||0)+Math.floor(Number(extra.wager)||0);
+  pendingGambleRequestId=requestId;
+ }else if(type==='comeback-wheel'){
+  if(Number(gameState.cash)>=100000||gameState.phase2.comebackWheelClaimed){showToast(Number(gameState.cash)>=100000?'The Comeback Wheel is only for players under $100,000.':'You already claimed your Comeback Wheel spin.');return;}
+  pendingComebackRequestId=requestId;
+ }else{showToast('Unknown Phase 2 action.');return;}
+ if(!queueServerAction('phase2',payload)){if(type==='gamble')pendingGambleRequestId=null;return;}
+ try{localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(gameState));}catch(_){}
+ updateUI();
+ if(type==='gamble'){
+  const wheel=document.getElementById('hhGambleWheel'),label=document.getElementById('hhGambleResult'),button=document.getElementById('hhGambleSpin');
+  if(button)button.disabled=true;
+  if(label)label.textContent='The wheel is spinning. Result will settle during the next background sync.';
+  if(wheel){wheel.classList.remove('is-spinning');wheel.style.animation='';wheel.style.transform='rotate(0deg)';void wheel.offsetWidth;wheel.classList.add('is-spinning');}
+ }else{
+  if(['shops','upgrades','crew','gamble','phase2'].includes(currentModal))renderCurrentModal();
+  if(type==='comeback-wheel')showToast('Comeback Wheel queued for the next background sync.');
+  else if(type==='gamble-unlock')showToast('Gambling unlocked locally; syncing in the background.');
+  else showToast('Phase 2 action queued for background sync.');
+ }
+ return {queued:true,requestId};
+};
 window.openHalloweenPhase2=function(){if(!gameState)return;hhPhase2Defaults(gameState);currentModal='phase2';const overlay=document.getElementById('hauntModalOverlay');if(!overlay)return;overlay.classList.add('show');document.getElementById('modalTitle').innerText='Halloween Haunt · Phase 2';const c=document.getElementById('modalBody'),p=gameState.phase2,shards=Number(gameState.soulShards||0),shops=gameState.shops||[],costs=[50000,75000,110000,160000,230000];c.innerHTML='<section class="hh-card-ui hh-comeback-card"><div class="hh-card-heading"><h3>🎡 Comeback Wheel</h3><span class="hh-badge">NEW PLAYER BOOST</span></div><p class="hh-muted">If your cash is below $100,000, claim one free spin for $10,000–$80,000. This is a one-time in-game reward.</p><button class="buy-btn" id="hhPhase2Comeback" '+((Number(gameState.cash)>=100000||p.comebackWheelClaimed)?'disabled':'')+'>'+(p.comebackWheelClaimed?'SPIN CLAIMED':Number(gameState.cash)>=100000?'Available under $100,000':'Spin for $10k–$80k')+'</button></section>'+'<section class="hh-card-ui"><div class="hh-card-heading"><h3>Shop Improvements</h3><span class="hh-badge">CREW SALES BENEFIT TOO</span></div><p class="hh-muted">Each level boosts shop sale prices by 12%. Upgrade costs rise from $50,000 to $230,000.</p><div class="hh-item-grid">'+shops.map(shop=>{const level=Number(p.shopLevels[shop.id]||0),cost=costs[level];return '<div class="hh-candy-row"><span><strong>'+escapeHTML(shop.name)+'</strong><small>Level '+level+'/5 · +'+(level*12)+'% sale value</small></span><button class="buy-btn" '+(level>=5||Number(gameState.cash)<cost?'disabled':'')+' data-shop-upgrade="'+escapeHTML(shop.id)+'">'+(level>=5?'MAXED':formatCash(cost))+'</button></div>';}).join('')+'</div></section><section class="hh-card-ui"><div class="hh-card-heading"><h3>Soul Shard Research</h3><span class="hh-badge">RARE CURRENCY</span></div><p class="hh-muted">Soul Shards are rare candy drops. Shard Luck improves rare-candy odds; Shard Fortune increases shard drop chances and shop value slightly.</p>'+[['luck','Shard Luck',3],['fortune','Shard Fortune',5]].map(([id,label,base])=>{const level=Number(p.shardUpgrades[id]||0),cost=base+level*2;return '<div class="hh-candy-row"><span><strong>'+label+'</strong><small>Level '+level+'/10</small></span><button class="buy-btn" '+(level>=10||shards<cost?'disabled':'')+' data-shard-upgrade="'+id+'">'+(level>=10?'MAXED':cost+' shards')+'</button></div>';}).join('')+'</section>';
  c.querySelector('#hhPhase2Comeback').onclick=()=>window.executePhase2('comeback-wheel');c.querySelectorAll('[data-shop-upgrade]').forEach(b=>b.onclick=()=>window.executePhase2('shop-upgrade',{shopId:b.dataset.shopUpgrade}));c.querySelectorAll('[data-shard-upgrade]').forEach(b=>b.onclick=()=>window.executePhase2('shard-upgrade',{upgradeId:b.dataset.shardUpgrade}));};
 (function addPhase2Button(){const add=()=>{const nav=document.querySelector('.action-nav');if(!nav||nav.querySelector('[data-hh-phase2]'))return;const b=document.createElement('button');b.className='action-btn';b.dataset.hhPhase2='1';b.innerHTML='<span aria-hidden="true">🎃</span><span>Phase 2</span>';b.addEventListener('click',window.openHalloweenPhase2);nav.appendChild(b);};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();setTimeout(add,500);})();
