@@ -38,7 +38,7 @@
     title.textContent='Settings'; overlay.classList.add('show');
     const prefs=getPrefs();
     body.innerHTML=card('Notifications','<p class="hh-muted">Choose exactly which alerts you want to see. Each switch is independent.</p>'+NOTICE_TYPES.map(([id,label,desc])=>'<label class="hh-setting-row"><span><strong>'+label+'</strong><small>'+desc+'</small></span><input type="checkbox" data-hh-pref="'+id+'" '+(prefs[id]===false?'':'checked')+'></label>').join(''),'PREFERENCES')
-      +card('Phase 2 News','<p class="hh-muted">Reopen the announcement with the new shops, Crew Manager, Soul Shards, and Haunted High-Roller.</p><button type="button" class="buy-btn" id="hhReplayPhase2News">View Phase 2 News</button>','WHAT\'S NEW')
+      +card('Phase 2 News','<p class="hh-muted">Reopen the announcement with the new shops, Soul Shards, and Fortune Wheel.</p><button type="button" class="buy-btn" id="hhReplayPhase2News">View Phase 2 News</button>','WHAT\'S NEW')
       +card('Tutorial','<p class="hh-muted">Replay the short guide to review collecting candy, selling, upgrades, and crew.</p><button type="button" class="buy-btn" id="hhRedoTutorial">Redo tutorial</button>','LEARN');
     body.querySelectorAll('[data-hh-pref]').forEach(input=>input.addEventListener('change',()=>{const next=getPrefs();next[input.dataset.hhPref]=input.checked;localStorage.setItem('hh_notification_prefs',JSON.stringify(next));}));
     body.querySelector('#hhReplayPhase2News').addEventListener('click',()=>{if(typeof window.closeModal==='function')window.closeModal();window.replayPhase2News?.();});
@@ -64,8 +64,6 @@
     const crewCollected=Number(state.stats?.crewCollected||0), crewSold=Number(state.stats?.crewSold||0), crewEarnings=(Array.isArray(state.crew)?state.crew:[]).reduce((sum,worker)=>sum+Math.max(0,Number(worker.moneyEarned||0)),0);
     let html=card('What are Crews?','<p>Crew members collect candy automatically while the game is open. When a basket fills, they sell it to the best-paying seller. After five minutes awake, a worker falls asleep and must be woken manually.</p><p class="hh-muted">Feed a worker using candy equal to 10 × your basket capacity. Feeding wakes them and gives percentage-based boosts for 20 minutes. A worker cannot be fed again while the boost is active.</p>'+helpButton('Crew basics','Crew work pauses when the game is closed. Each worker has their own basket, awake timer, and upgrade levels. Full baskets are sold automatically to the best-paying shop.'),'AUTOMATIC WORK');
     html+='<div class="hh-summary-grid"><div class="hh-stat-card"><small>Crew members</small><strong>'+crew.length+' / 20</strong></div><div class="hh-stat-card"><small>Candy collected</small><strong>'+crewCollected.toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Candy sold</small><strong>'+crewSold.toLocaleString()+'</strong></div><div class="hh-stat-card"><small>Crew earnings</small><strong>'+money(crewEarnings)+'</strong></div><div class="hh-stat-card"><small>Candy Reserve</small><strong>'+Number(state.feedCandy||0).toLocaleString()+'</strong><small>Used to feed crew</small></div></div>';
-     const managerOwned=Number(state.phase2?.managerLevel||0)>0;
-     html+=card('Crew Manager','<p class="hh-muted">Automatically wakes sleeping crew and feeds them from Candy Reserve when enough candy is available.</p><button class="buy-btn" type="button" data-hh-manager '+(managerOwned||Number(state.cash)<250000?'disabled':'')+'>'+(managerOwned?'Manager hired':'Hire Crew Manager · $250,000')+'</button>',managerOwned?'AUTOMATION ACTIVE':'PHASE 2 AUTOMATION');
     if(!crew.length){
       html+=card('Hire your first member','<p class="hh-muted">Every recruit starts with the same base stats. Each new recruit costs more than the last.</p><button class="buy-btn" type="button" data-hh-hire '+(Number(state.cash)<Number(state.crewHireCost)?'disabled':'')+'>Hire '+CREW_ROSTER[0]+' · '+money(state.crewHireCost)+'</button>','RECRUIT');
     } else {
@@ -84,7 +82,6 @@
     }
     if(crew.length<20)html+=card('Recruit another member','<p>All recruits start equally. Hiring costs rise each time, up to a maximum of 20 crew members.</p><button class="buy-btn" type="button" data-hh-hire '+(Number(state.cash)<Number(state.crewHireCost)?'disabled':'')+'>Hire '+esc(CREW_ROSTER[crew.length]||'Worker')+' · '+money(state.crewHireCost)+'</button>','NEXT RECRUIT');
     container.innerHTML=html;
-    container.querySelectorAll('[data-hh-manager]').forEach(b=>b.addEventListener('click',()=>window.executePhase2?.('manager')));
     container.querySelectorAll('[data-hh-hire]').forEach(b=>b.addEventListener('click',()=>window.executeCrew?.('hire')));
     container.querySelectorAll('[data-hh-crew]').forEach(b=>b.addEventListener('click',()=>window.executeCrew?.(b.dataset.hhCrew,Number(b.dataset.index))));
   }
