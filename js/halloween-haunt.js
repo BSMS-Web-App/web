@@ -905,6 +905,7 @@ function hhOfflineCrewTick() {
         // Keep the UI's "next candy" countdown aligned with this local work tick.
         worker.lastActionAt = now;
 
+        hhPhase2Defaults(gameState);if(worker.asleep&&Number(gameState.phase2.managerLevel||0)){worker.asleep=false;worker.awakeMs=0;}if(Number(gameState.phase2.managerLevel||0)&&Number(gameState.feedCandy||0)>=Math.max(1,Number(gameState.basketCapacity||50)*10)&&Number(worker.fedUntil||0)<=now){gameState.feedCandy-=Math.max(1,Number(gameState.basketCapacity||50)*10);worker.fedUntil=now+1200000;worker.asleep=false;worker.awakeMs=0;changed=true;}
         if (worker.asleep) continue;
         const fed = worker.fedUntil > now;
         if (!fed) {
@@ -978,6 +979,7 @@ function hhOfflineCrewTick() {
 }
 setInterval(hhOfflineCrewTick, 1000);
 
+function hhPhase2Defaults(state=gameState){if(!state)return;state.soulShards=Math.max(0,Number(state.soulShards)||0);state.phase2 ||= {shopLevels:{},managerLevel:0,shardUpgrades:{luck:0,fortune:0}};state.phase2.shopLevels ||= {};state.phase2.shardUpgrades ||= {};for(const shop of (state.shops||[]))state.phase2.shopLevels[shop.id]=Math.max(0,Math.min(5,Number(state.phase2.shopLevels[shop.id])||0));for(const key of ['luck','fortune'])state.phase2.shardUpgrades[key]=Math.max(0,Math.min(10,Number(state.phase2.shardUpgrades[key])||0));}
 function hhOfflineApi(endpoint,method,payload) {
     const action=(endpoint.split('action=')[1]||'state').split('&')[0];
     const s=gameState;
@@ -985,12 +987,15 @@ function hhOfflineApi(endpoint,method,payload) {
     if(action==='state')return Promise.resolve({state:s});
     if(!s)return Promise.resolve(null);
     if(action==='crew-pause')return Promise.resolve({state:s});
+    hhPhase2Defaults(s);
+    if(action==='phase2'){const type=String(payload?.type||'');let cost=0;if(type==='shop-upgrade'){const id=String(payload?.shopId||''),shop=(s.shops||[]).find(x=>x.id===id),costs=[50000,75000,110000,160000,230000],level=Number(s.phase2.shopLevels[id]||0);if(!shop)return Promise.resolve({state:s,error:'Unknown shop.'});if(level>=5||Number(s.cash||0)<costs[level])return Promise.resolve({state:s,error:level>=5?'This shop is fully upgraded.':'Not enough cash for this shop upgrade.'});cost=costs[level];s.cash-=cost;s.stats.cashSpent=Number(s.stats.cashSpent||0)+cost;s.phase2.shopLevels[id]=level+1;}else if(type==='manager'){if(s.phase2.managerLevel)return Promise.resolve({state:s,error:'You already hired the Crew Manager.'});cost=250000;if(Number(s.cash||0)<cost)return Promise.resolve({state:s,error:'The Crew Manager costs $250,000.'});s.cash-=cost;s.stats.cashSpent=Number(s.stats.cashSpent||0)+cost;s.phase2.managerLevel=1;}else if(type==='shard-upgrade'){const id=String(payload?.upgradeId||''),level=Number(s.phase2.shardUpgrades[id]||0),base=id==='luck'?3:id==='fortune'?5:0;if(!base||level>=10)return Promise.resolve({state:s,error:'That Soul Shard upgrade is unavailable.'});cost=base+level*2;if(Number(s.soulShards||0)<cost)return Promise.resolve({state:s,error:'Not enough Soul Shards.'});s.soulShards-=cost;s.phase2.shardUpgrades[id]=level+1;}else if(type==='gamble'){const wager=Math.floor(Number(payload?.wager)||0);if(wager<10||wager>10000||wager>Number(s.cash||0))return Promise.resolve({state:s,error:'Choose a wager from $10 to $10,000 that you can afford.'});s.cash-=wager;s.stats.cashSpent=Number(s.stats.cashSpent||0)+wager;const roll=Math.random(),won=roll<.22,jackpot=roll<.025,payout=won?(jackpot?wager*8:wager*2):0;if(payout){s.cash+=payout;s.stats.lifetimeCash=Number(s.stats.lifetimeCash||0)+payout;}localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(s));return Promise.resolve({state:s,gamble:{won,jackpot,payout,wager}});}else return Promise.resolve({state:s,error:'Unknown Phase 2 action.'});if(cost)s.stats.upgradesBought=Number(s.stats.upgradesBought||0)+1;localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(s));return Promise.resolve({state:s,purchased:type,cost});}
+    
     if(action==='shops')return Promise.resolve({state:s});
     if(action==='collect'){
       const count=Math.min(50,Math.max(1,Math.floor(Number(payload?.clickCount)||1))),per=Math.min(8,1+Number(s.upgrades?.power?.level||0));
       const room=Math.max(0,Number(s.basketCapacity||50)-Object.values(s.inventory||{}).reduce((a,n)=>a+Number(n||0),0));
       const n=Math.min(room,count*per);
-      for(let i=0;i<n;i++){const candy=choosePreviewCandy();s.inventory[candy.id]=Number(s.inventory[candy.id]||0)+1;s.lifetimeCollected[candy.id]=Number(s.lifetimeCollected[candy.id]||0)+1;if(!s.discovered.includes(candy.id))s.discovered.push(candy.id);}
+      for(let i=0;i<n;i++){const candy=choosePreviewCandy();hhPhase2Defaults(s);if(Math.random()<Math.min(.08,.003+Number(s.phase2.shardUpgrades.fortune||0)*.002+(candy.rarity==='Legendary'?.012:candy.rarity==='Epic'?.004:0)))s.soulShards++;s.inventory[candy.id]=Number(s.inventory[candy.id]||0)+1;s.lifetimeCollected[candy.id]=Number(s.lifetimeCollected[candy.id]||0)+1;if(!s.discovered.includes(candy.id))s.discovered.push(candy.id);}
       s.stats.totalClicks=Number(s.stats.totalClicks||0)+count;s.stats.totalCollected=Number(s.stats.totalCollected||0)+n;
       recalculateBasketCount(s);localStorage.setItem(HH_OFFLINE_KEY,JSON.stringify(s));return Promise.resolve({state:s,drops:[]});
     }
