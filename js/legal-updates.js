@@ -84,6 +84,7 @@
 .bsms-legal-actions{display:grid;gap:9px;margin-top:17px}
 .bsms-legal-accept{min-height:46px;border:2px solid #BB001E;border-radius:12px;background:#BB001E;color:#fff;font-size:21px;font-weight:700;cursor:pointer}
 .bsms-legal-accept:disabled{opacity:.45;cursor:not-allowed}
+.bsms-legal-signout{min-height:42px;border:2px solid rgba(255,255,255,.22);border-radius:12px;background:transparent;color:rgba(255,255,255,.88);font-size:19px;cursor:pointer}.bsms-legal-signout:hover{border-color:#BB001E;background:rgba(187,0,30,.12)}
 .bsms-legal-support{min-height:40px;border:2px solid rgba(255,255,255,.15);border-radius:12px;background:transparent;color:#fff;font-size:19px;cursor:pointer}
 .bsms-legal-error{color:#ff6678;font-size:16px;margin:10px 0 0}
 .bsms-legal-footer{color:rgba(255,255,255,.42);font-size:13px;text-align:center;margin:12px 0 0}
@@ -115,6 +116,7 @@
                 <p id="bsms-legal-error" class="bsms-legal-error" role="alert" hidden></p>
                 <div class="bsms-legal-actions">
                     <button type="button" id="bsms-legal-accept" class="bsms-legal-accept" disabled>Accept updates and continue</button>
+                    <button type="button" id="bsms-legal-signout" class="bsms-legal-signout">Sign Out</button>
                     <button type="button" id="bsms-legal-support" class="bsms-legal-support">Contact Support</button>
                 </div>
                 <p class="bsms-legal-footer">Your acceptance is securely associated with your account. You can review either document again before confirming.</p>
@@ -126,6 +128,7 @@
             window.location.href = '/support';
         });
         overlay.querySelector('#bsms-legal-accept').addEventListener('click', submitAcceptance);
+        overlay.querySelector('#bsms-legal-signout').addEventListener('click', signOutFromPopup);
         return overlay;
     }
 
@@ -216,6 +219,35 @@
             overlayHost = null;
             legalShadowRoot = null;
         }
+    }
+
+    async function signOutFromPopup() {
+        const signOutButton = overlay?.querySelector('#bsms-legal-signout');
+        if (signOutButton) {
+            signOutButton.disabled = true;
+            signOutButton.textContent = 'Signing Out…';
+        }
+
+        try {
+            await fetch('/api/auth', {
+                method: 'POST',
+                headers: requestHeaders(),
+                body: JSON.stringify({ action: 'logout' }),
+                cache: 'no-store'
+            });
+        } catch (error) {
+            console.warn('[BSMS Web :: Legal] Server logout failed; clearing the local session.', error);
+        }
+
+        try {
+            localStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem('bsms_auth_session');
+        } catch (error) {
+            console.warn('[BSMS Web :: Legal] Could not clear local session storage.', error);
+        }
+
+        window.dispatchEvent(new Event('bsms:auth-changed'));
+        window.location.replace('/');
     }
 
     async function submitAcceptance() {
