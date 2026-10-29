@@ -1,0 +1,106 @@
+/*
+ * BSMS Web — Temporary Halloween Haunt visual theme
+ * Scope: homepage, accounts, chat, users directory, games, and support only.
+ * Revert by removing the /css/temporary-haunt-theme.css link from those six pages
+ * and deleting this file. No existing page stylesheets are modified.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --temporary-haunt-bg: #080507;
+  --temporary-haunt-panel: rgba(18, 8, 12, .88);
+  --temporary-haunt-panel-soft: rgba(28, 8, 14, .76);
+  --temporary-haunt-red: #ff2438;
+  --temporary-haunt-red-bright: #ff4052;
+  --temporary-haunt-red-glow: rgba(255, 25, 50, .34);
+  --temporary-haunt-border: rgba(255, 36, 56, .38);
+  --temporary-haunt-text: #f7edf0;
+  --temporary-haunt-muted: #c5aeb4;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--temporary-haunt-bg) !important;
+}
+
+body {
+  background-color: var(--temporary-haunt-bg) !important;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(160, 0, 24, .24), transparent 58%),
+    radial-gradient(ellipse at 0% 100%, rgba(105, 0, 18, .18), transparent 46%) !important;
+  color: var(--temporary-haunt-text);
+  font-family: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6,
+button, input[type="button"], input[type="submit"],
+.btn, .btn-cinematic, nav a,
+.page-title, .hero-title, .contact-heading h1 {
+  font-family: 'Creepster', Georgia, serif !important;
+  letter-spacing: .035em;
+}
+
+h1, h2, h3, .hero h1, .page-header h1,
+.contact-heading h1, .contact-card h2 {
+  color: var(--temporary-haunt-red-bright);
+  text-shadow: 0 0 8px rgba(255, 24, 48, .58), 0 0 24px rgba(255, 24, 48, .25);
+}
+
+a {
+  color: #ff6675;
+}
+
+a:hover {
+  color: #fff0f2;
+  text-shadow: 0 0 12px var(--temporary-haunt-red-glow);
+}
+
+button, .btn, .btn-cinematic, .contact-primary, .contact-secondary,
+input[type="button"], input[type="submit"] {
+  border-color: var(--temporary-haunt-border) !important;
+  box-shadow: 0 0 14px rgba(255, 24, 48, .12);
+  transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+button:hover, .btn:hover, .btn-cinematic:hover, .contact-primary:hover,
+.contact-secondary:hover, input[type="button"]:hover, input[type="submit"]:hover {
+  border-color: rgba(255, 64, 82, .82) !important;
+  box-shadow: 0 0 10px rgba(255, 24, 48, .32), 0 0 28px rgba(255, 24, 48, .16);
+}
+
+.card, .popup, .panel, .modal, .glass-nav, .announcement-card,
+.events-card, .showcase-visual, .chat-panel, .contact-card,
+.contact-heading, .page-header, .user-card, .profile-card,
+.launcher-grid > *, .search-container, .launcher-container,
+#mainContent .hero, #appShell, #mainView, .app-shell,
+.glass-card, .settings-card, .account-card {
+  border-color: var(--temporary-haunt-border) !important;
+  box-shadow: 0 0 18px rgba(255, 24, 48, .10), 0 14px 42px rgba(0, 0, 0, .28);
+}
+
+input, textarea, select, [contenteditable="true"] {
+  color: var(--temporary-haunt-text);
+  background-color: rgba(8, 5, 7, .92);
+  border-color: rgba(255, 36, 56, .35) !important;
+  accent-color: var(--temporary-haunt-red);
+}
+
+input:focus, textarea:focus, select:focus, [contenteditable="true"]:focus {
+  outline-color: var(--temporary-haunt-red) !important;
+  border-color: var(--temporary-haunt-red-bright) !important;
+  box-shadow: 0 0 0 3px rgba(255, 36, 56, .12), 0 0 18px rgba(255, 36, 56, .16) !important;
+}
+
+::selection {
+  color: #fff;
+  background: rgba(187, 0, 30, .75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
