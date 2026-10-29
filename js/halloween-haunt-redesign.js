@@ -38,8 +38,10 @@
     title.textContent='Settings'; overlay.classList.add('show');
     const prefs=getPrefs();
     body.innerHTML=card('Notifications','<p class="hh-muted">Choose exactly which alerts you want to see. Each switch is independent.</p>'+NOTICE_TYPES.map(([id,label,desc])=>'<label class="hh-setting-row"><span><strong>'+label+'</strong><small>'+desc+'</small></span><input type="checkbox" data-hh-pref="'+id+'" '+(prefs[id]===false?'':'checked')+'></label>').join(''),'PREFERENCES')
+      +card('Phase 2 News','<p class="hh-muted">Reopen the announcement with the new shops, Soul Shards, and Fortune Wheel.</p><button type="button" class="buy-btn" id="hhReplayPhase2News">View Phase 2 News</button>','WHAT\'S NEW')
       +card('Tutorial','<p class="hh-muted">Replay the short guide to review collecting candy, selling, upgrades, and crew.</p><button type="button" class="buy-btn" id="hhRedoTutorial">Redo tutorial</button>','LEARN');
     body.querySelectorAll('[data-hh-pref]').forEach(input=>input.addEventListener('change',()=>{const next=getPrefs();next[input.dataset.hhPref]=input.checked;localStorage.setItem('hh_notification_prefs',JSON.stringify(next));}));
+    body.querySelector('#hhReplayPhase2News').addEventListener('click',()=>{if(typeof window.closeModal==='function')window.closeModal();window.replayPhase2News?.();});
     body.querySelector('#hhRedoTutorial').addEventListener('click',()=>{try{localStorage.removeItem('halloween_haunt_guide_seen_v1');}catch{}if(typeof window.closeModal==='function')window.closeModal();if(typeof window.renderWelcomeGuide==='function'){try{helpSection=0;}catch{}window.renderWelcomeGuide();}else if(typeof window.maybeShowWelcomeGuide==='function'){window.maybeShowWelcomeGuide();}});
   }
   const baseOpenModal=window.openModal;
