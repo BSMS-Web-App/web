@@ -133,16 +133,15 @@ export default async function handler(req, res) {
                 if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
                 if (conversation.status === 'closed') return res.status(409).json({ error: 'This conversation is closed.' });
                 const messageId = 'm_' + crypto.randomBytes(10).toString('hex');
-                const messages = conversation.messages || {};
-                messages[messageId] = {
+                const now = Date.now();
+                await db.ref('/support_conversations/' + conversationId + '/messages/' + messageId).set({
                     id: messageId,
                     sender: 'admin',
                     senderName: String(staffUser.account.displayName || staffUser.account.username || 'BSMS Web Admin').slice(0, 80),
                     body,
-                    createdAt: Date.now()
-                };
-                const now = Date.now();
-                await ref.update({ messages, updatedAt: now, lastMessageAt: now, lastMessageBy: 'admin' });
+                    createdAt: now
+                });
+                await ref.update({ updatedAt: now, lastMessageAt: now, lastMessageBy: 'admin' });
                 return res.status(200).json({ success: true });
             }
 
