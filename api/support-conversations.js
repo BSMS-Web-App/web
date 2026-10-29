@@ -13,6 +13,7 @@ const MAX_SUBJECT = 100;
 const MAX_MESSAGE = 3000;
 const SEND_COOLDOWN_MS = 2500;
 const recentSends = new Map();
+const recentCreates = new Map();
 
 function clean(value, max) {
     return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -53,6 +54,14 @@ export default async function handler(req, res) {
 
     try {
         if (action === 'create') {
+            const forwarded = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+            const rateKey = hash(forwarded || 'unknown');
+            const lastCreate = recentCreates.get(rateKey) || 0;
+            if (now - lastCreate < 15000) return res.status(429).json({ error: 'Please wait a few seconds before starting another conversation.' });
+            recentCreates.set(rateKey, now);
+            if (recentCreates.size > 2000) {
+                for (const [key, timestamp] of recentCreates) if (now - timestamp > 60000) recentCreates.delete(key);
+            }
             const subject = clean(payload.subject, MAX_SUBJECT);
             const message = clean(payload.message, MAX_MESSAGE);
             if (subject.length < 4) return res.status(400).json({ error: 'Please enter a subject with at least 4 characters.' });
@@ -105,16 +114,8 @@ export default async function handler(req, res) {
             if (now - lastVisitorMessage < SEND_COOLDOWN_MS) return res.status(429).json({ error: 'Please wait a moment before sending another message.' });
             if (!(await moderate(message))) return res.status(400).json({ error: 'This message could not be accepted by the content filter.' });
 
-            const messageRef = ref.child ? ref.child('messages').push() : null;
-            if (messageRef) {
-                const messageId = messageRef.key;
-                await messageRef.set({ id: messageId, sender: 'visitor', body: message, createdAt: now });
-            } else {
-                const messages = conversation.messages || {};
-                const messageId = 'm_' + crypto.randomBytes(10).toString('hex');
-                messages[messageId] = { id: messageId, sender: 'visitor', body: message, createdAt: now };
-                await ref.update({ messages });
-            }
+            const messageId = 'm_' + crypto.randomBytes(10).toString('hex');
+            await db.ref(ROOT + '/' + conversationId + '/messages/' + messageId).set({ id: messageId, sender: 'visitor', body: message, createdAt: now });
             await ref.update({ updatedAt: now, lastMessageAt: now, lastMessageBy: 'visitor', lastVisitorMessageAt: now });
             const refreshed = await ref.once('value');
             return res.status(200).json({ success: true, conversation: publicConversation(refreshed.val()) });
