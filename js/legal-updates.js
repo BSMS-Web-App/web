@@ -291,6 +291,7 @@
             legalShadowRoot = null;
             document.body.style.overflow = previousBodyOverflow;
             window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
+            window.location.reload();
         });
     }
 
