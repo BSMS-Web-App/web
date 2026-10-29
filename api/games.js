@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { legalAcceptanceRequired } from './legal-policy.js';
 
 // Robust Session & User validator
 async function getUserBySession(sessionId, uidHint) {
@@ -78,6 +79,9 @@ export default async function handler(req, res) {
     const { uid, account } = user;
     if (account.account_status === 'banned') {
         return res.status(403).json({ error: "Account banned.", account_status: "banned" });
+    }
+    if (legalAcceptanceRequired(account)) {
+        return res.status(428).json({ error: "Legal policy acceptance is required.", code: "LEGAL_ACCEPTANCE_REQUIRED" });
     }
 
     if (req.method === 'GET') {
