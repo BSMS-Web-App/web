@@ -38,8 +38,31 @@ SPDX-License-Identifier: AGPL-3.0-only
     </div>
     <p class="contact-eyebrow">BSMS WEB SUPPORT</p>
     <h1>How can we help?</h1>
-    <p class="contact-intro">Tell us about a problem or share an idea for making BSMS Web better. You must be signed in so your submission can be linked to your account.</p>
+    <p class="contact-intro">Choose what you need help with. Bug reports and feature requests are submitted as reports; general support opens a private, ongoing conversation with the BSMS Web team.</p>
   </header>
+
+
+  <section id="contactTypeChooser" class="contact-card contact-chooser">
+    <h2>What would you like to do?</h2>
+    <p>Choose the kind of support you need.</p>
+    <div class="contact-type-grid" role="group" aria-label="Support type">
+      <button type="button" class="contact-type" data-type="bug" aria-pressed="false">
+        <span class="contact-type-icon" aria-hidden="true">!</span>
+        <strong>Bug report</strong>
+        <span>Report something that isn't working correctly.</span>
+      </button>
+      <button type="button" class="contact-type" data-type="feature" aria-pressed="false">
+        <span class="contact-type-icon" aria-hidden="true">+</span>
+        <strong>Feature request</strong>
+        <span>Suggest an idea or improvement.</span>
+      </button>
+      <button type="button" class="contact-type" data-type="general" aria-pressed="false">
+        <span class="contact-type-icon" aria-hidden="true">?</span>
+        <strong>General support</strong>
+        <span>Talk privately with BSMS Web admins and continue the conversation later.</span>
+      </button>
+    </div>
+  </section>
 
   <section id="contactAuthCard" class="contact-card" hidden>
     <h2>Sign in to continue</h2>
@@ -58,22 +81,6 @@ SPDX-License-Identifier: AGPL-3.0-only
     </div>
 
     <form id="contactForm">
-      <div class="contact-type-grid" role="group" aria-label="Submission type">
-        <button type="button" class="contact-type active" data-type="bug" aria-pressed="true">
-          <span class="contact-type-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M9 8 7 5M15 8l2-3M4 10h16M5 14H3m18 0h-2M8 19l-2 2m10-2 2 2M8 8h8v8a4 4 0 0 1-8 0z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <strong>Bug report</strong>
-          <span>Something isn't working correctly.</span>
-        </button>
-        <button type="button" class="contact-type" data-type="feature" aria-pressed="false">
-          <span class="contact-type-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5a6 6 0 0 0-3.7 10.7c.9.7 1.2 1.4 1.2 2.3h5c0-.9.3-1.6 1.2-2.3A6 6 0 0 0 12 3.5zM9.5 19h5M10.2 21h3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <strong>Feature request</strong>
-          <span>Suggest an idea or improvement.</span>
-        </button>
-      </div>
       <input type="hidden" id="contactType" name="type" value="bug">
 
       <div class="contact-field">
@@ -116,6 +123,55 @@ SPDX-License-Identifier: AGPL-3.0-only
       <div id="contactMessage" class="contact-message" role="status" aria-live="polite" hidden></div>
       <button id="contactSubmit" class="contact-primary contact-submit" type="submit">Submit bug report</button>
     </form>
+  </section>
+
+
+  <section id="generalSupportCard" class="contact-card" hidden>
+    <div class="support-chat-top">
+      <div><h2>General support</h2><p>Send a message to the BSMS Web admin team. This is a private support conversation, separate from public chat.</p></div>
+      <button type="button" class="contact-secondary" id="supportBackToTypes">Change type</button>
+    </div>
+    <div id="supportConversationStart">
+      <form id="supportStartForm">
+        <div class="contact-field">
+          <label for="supportSubject">What do you need help with? <span>Required</span></label>
+          <input id="supportSubject" maxlength="100" minlength="4" required placeholder="A short subject">
+        </div>
+        <div class="contact-field">
+          <label for="supportFirstMessage">Your message <span>Required</span></label>
+          <textarea id="supportFirstMessage" rows="5" maxlength="3000" minlength="10" required placeholder="Explain what you need help with..."></textarea>
+        </div>
+        <p class="contact-privacy-note">No account or personal details are required. Your conversation is accessible only with its reference and private access key. Save both somewhere safe so you can return to it.</p>
+        <div id="supportStartMessage" class="contact-message" role="status" aria-live="polite" hidden></div>
+        <button class="contact-primary contact-submit" id="supportStartButton" type="submit">Start support conversation</button>
+      </form>
+      <div class="support-resume-divider"><span>Already started a conversation?</span></div>
+      <form id="supportResumeForm">
+        <div class="contact-field"><label for="supportResumeId">Conversation reference</label><input id="supportResumeId" autocomplete="off" required placeholder="Your conversation reference"></div>
+        <div class="contact-field"><label for="supportResumeKey">Private access key</label><input id="supportResumeKey" autocomplete="off" required placeholder="Your private access key"></div>
+        <div id="supportResumeMessage" class="contact-message" role="status" aria-live="polite" hidden></div>
+        <button class="contact-secondary" type="submit">Open existing conversation</button>
+      </form>
+    </div>
+    <div id="supportCredentialNotice" class="support-credentials" hidden>
+      <h3>Save your conversation access details</h3>
+      <p>These details are your only way to reopen this conversation. They are not connected to an account and cannot be recovered if lost.</p>
+      <label>Conversation reference</label><div class="support-copy-row"><code id="supportCreatedId"></code><button type="button" class="contact-secondary" data-copy-target="supportCreatedId">Copy</button></div>
+      <label>Private access key</label><div class="support-copy-row"><code id="supportCreatedKey"></code><button type="button" class="contact-secondary" data-copy-target="supportCreatedKey">Copy</button></div>
+      <button type="button" class="contact-primary" id="supportContinueButton">I've saved these — continue</button>
+    </div>
+    <div id="supportConversationView" hidden>
+      <div class="support-conversation-header">
+        <div><strong id="supportConversationSubject">Support conversation</strong><span id="supportConversationMeta"></span></div>
+        <button type="button" class="contact-secondary" id="supportShowCredentials">Access details</button>
+      </div>
+      <div id="supportMessages" class="support-messages" aria-live="polite"></div>
+      <form id="supportReplyForm" class="support-reply-form">
+        <label class="sr-only" for="supportReply">Write a message</label>
+        <textarea id="supportReply" rows="3" maxlength="3000" placeholder="Write a message to the BSMS Web team..." required></textarea>
+        <div class="support-reply-actions"><span id="supportReplyStatus"></span><button class="contact-primary" id="supportReplyButton" type="submit">Send message</button></div>
+      </form>
+    </div>
   </section>
 
   <section id="contactSuccessCard" class="contact-card contact-success" hidden>
