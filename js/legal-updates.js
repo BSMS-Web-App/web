@@ -90,7 +90,7 @@
 .bsms-legal-actions{display:grid;gap:9px;margin-top:17px}
 .bsms-legal-accept{min-height:46px;border:2px solid #BB001E;border-radius:12px;background:#BB001E;color:#fff;font-size:21px;font-weight:700;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,background .2s ease,opacity .2s ease}.bsms-legal-accept:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 7px 20px rgba(187,0,30,.28)}
 .bsms-legal-accept:disabled{opacity:.45;cursor:not-allowed}
-.bsms-legal-signout{min-height:42px;border:2px solid rgba(255,255,255,.22);border-radius:12px;background:transparent;color:rgba(255,255,255,.88);font-size:19px;cursor:pointer}.bsms-legal-signout:hover{border-color:#BB001E;background:rgba(187,0,30,.12)}
+.bsms-legal-signout{min-height:42px;border:2px solid rgba(255,255,255,.22);border-radius:12px;background:transparent;color:rgba(255,255,255,.88);font-size:19px;cursor:pointer}.bsms-legal-signout:hover:not(:disabled){border-color:#BB001E;background:rgba(187,0,30,.12);transform:translateY(-1px)}.bsms-legal-signout:disabled{opacity:.5;cursor:wait}
 .bsms-legal-support{min-height:40px;border:2px solid rgba(255,255,255,.15);border-radius:12px;background:transparent;color:#fff;font-size:19px;cursor:pointer;transition:border-color .2s ease,background .2s ease,transform .2s ease}.bsms-legal-support:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.06);transform:translateY(-1px)}
 .bsms-legal-error{color:#ff6678;font-size:16px;margin:10px 0 0}
 .bsms-legal-footer{color:rgba(255,255,255,.42);font-size:13px;text-align:center;margin:12px 0 0}
@@ -104,10 +104,10 @@
 .bsms-legal-success p{max-width:420px;margin:0 0 24px;color:rgba(255,255,255,.68);font-size:19px;line-height:1.4}
 .bsms-legal-continue{width:100%;max-width:390px;min-height:49px;border:2px solid #22c55e;border-radius:12px;background:#16a34a;color:#fff;font-size:21px;font-weight:700;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
 .bsms-legal-continue:hover{transform:translateY(-2px);background:#15803d;box-shadow:0 8px 22px rgba(34,197,94,.22)}
-.bsms-legal-review-layer{position:fixed;inset:0;z-index:2;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:clamp(8px,2vw,24px);pointer-events:auto}
-.bsms-legal-review-panel{width:min(1050px,100%);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border:2px solid #BB001E;border-radius:20px;background:#000}
+.bsms-legal-review-layer{position:fixed;inset:0;z-index:2;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:clamp(8px,2vw,24px);pointer-events:auto;animation:bsmsLegalBackdropIn .24s ease both}
+.bsms-legal-review-panel{width:min(1050px,100%);height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;border:2px solid #BB001E;border-radius:20px;background:#000;animation:bsmsLegalPopIn .34s cubic-bezier(.2,.8,.25,1) both}
 .bsms-legal-review-bar{height:58px;flex:0 0 58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.13);color:#fff;font-size:20px;font-weight:700}
-.bsms-legal-back{border:2px solid rgba(255,255,255,.15);background:transparent;color:#fff;border-radius:10px;padding:6px 12px;font-size:17px;cursor:pointer}
+.bsms-legal-back{border:2px solid rgba(255,255,255,.15);background:transparent;color:#fff;border-radius:10px;padding:6px 12px;font-size:17px;cursor:pointer;transition:background .2s ease,border-color .2s ease,transform .2s ease}.bsms-legal-back:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.35);transform:translateY(-1px)}
 .bsms-legal-frame{width:100%;height:100%;border:0;background:#000}
 @media(max-width:600px){.bsms-legal-backdrop{padding:10px;align-items:flex-end}.bsms-legal-dialog{border-radius:20px 20px 14px 14px;max-height:94vh;padding:23px 18px 17px}.bsms-legal-dialog h2{font-size:29px}.bsms-legal-policy{padding:12px}.bsms-legal-review-layer{padding:0}.bsms-legal-review-panel{height:100%;border-radius:0;border:0}.bsms-legal-review-bar{height:54px;flex-basis:54px;padding:0 12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}`;
@@ -303,6 +303,7 @@
         if (!termsAccepted || !privacyAccepted) return;
 
         isSubmitting = true;
+        statusCheckSequence += 1;
         updateAcceptButton();
         const error = overlay.querySelector('#bsms-legal-error');
         error.hidden = true;
@@ -322,6 +323,7 @@
             error.textContent = err.message || 'Your acceptance could not be saved. Please try again.';
             error.hidden = false;
             if (err.status === 409) {
+                isSubmitting = false;
                 await checkPolicies();
             }
         } finally {
@@ -331,7 +333,7 @@
     }
 
     async function checkPolicies() {
-        if (acceptanceSucceeded) return;
+        if (acceptanceSucceeded || isSubmitting) return;
         const checkSequence = ++statusCheckSequence;
         if (!sessionId()) {
             closeDocument();
