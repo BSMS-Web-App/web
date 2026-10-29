@@ -141,6 +141,7 @@
     }
 
     function renderStatus(data) {
+        if (overlay && policyState && JSON.stringify(policyState.policies) === JSON.stringify(data.policies)) return;
         policyState = data;
         const root = createOverlay();
         const list = root.querySelector('#bsms-legal-policy-list');
@@ -175,6 +176,7 @@
         const path = key === 'terms' ? '/terms?embed=1' : '/privacy?embed=1';
         reviewLayer = document.createElement('div');
         reviewLayer.className = 'bsms-legal-review-layer';
+        document.body.classList.add('bsms-legal-open');
         reviewLayer.innerHTML = `
             <section class="bsms-legal-review-panel" role="dialog" aria-modal="true" aria-label="${title}">
                 <header class="bsms-legal-review-bar">
@@ -192,6 +194,7 @@
             reviewLayer.remove();
             reviewLayer = null;
         }
+        if (!overlay) document.body.classList.remove('bsms-legal-open');
     }
 
     async function submitAcceptance() {
@@ -218,6 +221,7 @@
             overlay = null;
             policyState = null;
             document.body.classList.remove('bsms-legal-open');
+            try { localStorage.setItem('bsms_legal_accepted_at', String(Date.now())); } catch {}
             window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
         } catch (err) {
             error.textContent = err.message || 'Your acceptance could not be saved. Please try again.';
@@ -263,7 +267,7 @@
 
     window.addEventListener('bsms:auth-changed', checkPolicies);
     window.addEventListener('storage', event => {
-        if (event.key === SESSION_KEY) checkPolicies();
+        if (event.key === SESSION_KEY || event.key === 'bsms_legal_accepted_at') checkPolicies();
     });
     window.addEventListener('focus', () => {
         if (sessionId()) checkPolicies();
