@@ -1042,14 +1042,16 @@ function renderShops(container) {
  renderPhase2ShopUpgrades(container);
  container.querySelector('#hhSellAllButton')?.addEventListener('click',()=>window.executeSellAll());
 }
-window.executeSellAll = async function() {
+window.executeSellAll = async function(shopId=null) {
  const count=Object.values(gameState?.inventory||{}).reduce((n,q)=>n+Math.max(0,Number(q)||0),0);
  if(!count){showToast('Your basket is empty. Collect candy before selling.');return;}
- await performOptimisticAction('?action=sell',{},state=>{
-  let earned=0;
-  for(const candy of CANDY_CATALOG){const qty=Math.max(0,Number(state.inventory[candy.id])||0);if(!qty)continue;const shop=[...(state.shops||[])].sort((a,b)=>Number(b.prices?.[candy.id]||0)-Number(a.prices?.[candy.id]||0))[0];earned+=qty*Number(shop?.prices?.[candy.id]||0);state.inventory[candy.id]=0;}
-  state.cash=Number(state.cash||0)+earned;state.currentBasketCount=0;
- },r=>'Sold '+(r.sold||count)+' candies for '+formatCash(r.earned||0)+'.');
+ const shops=gameState?.shops||[],saved=(()=>{try{return localStorage.getItem('hh_selected_shop')||''}catch{return ''}})(),shop=shops.find(x=>x.id===(shopId||saved))||shops[0];
+ if(!shop){showToast('No candy shop is currently available.');return;}
+ await performOptimisticAction('?action=sell',{shopId:shop.id},state=>{
+  let earned=0;const target=(state.shops||[]).find(x=>x.id===shop.id);
+  for(const candy of CANDY_CATALOG){const qty=Math.max(0,Number(state.inventory[candy.id])||0);if(!qty)continue;earned+=qty*Math.max(0,Number(target?.prices?.[candy.id]||0));state.inventory[candy.id]=0;}
+  state.cash=Number(state.cash||0)+earned;state.currentBasketCount=0;state.stats.lifetimeCash=Number(state.stats.lifetimeCash||0)+earned;state.stats.totalSold=Number(state.stats.totalSold||0)+count;
+ },r=>'Sold '+(r.sold||count)+' candies to '+shop.name+' for '+formatCash(r.earned||0)+'.');
 }
 
 window.executeAutoSell = async function() {
