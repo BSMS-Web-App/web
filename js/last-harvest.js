@@ -40,6 +40,18 @@ function render(){
  $('lh-equipment').innerHTML=Object.entries(data.state.equipped).map(([slot,id])=>'<div class="lh-item"><b>'+esc(slot)+'</b><br>'+esc(id.replaceAll('_',' '))+'</div>').join('');
  $('lh-inventory').innerHTML=data.state.inventory.map(id=>'<div class="lh-item">◆ '+esc(id.replaceAll('_',' '))+'</div>').join('');
  pixelScene(stage+1);
+ loadLeaderboard();
+}
+async function loadLeaderboard(){
+ const target=document.querySelector('.lh-leaderboard');
+ if(!target)return;
+ try{
+  const result=await request('GET');
+  const response=await fetch(API+'?action=leaderboard',{headers:{'X-Session-ID':localStorage.getItem('session_id')||''},cache:'no-store'});
+  const board=await response.json();
+  if(!response.ok)throw new Error(board.error||'Unavailable');
+  target.innerHTML='<h2>Contest standings</h2><p>First player to finish all ten chapters wins. Verified completion times are ranked earliest first.</p>'+(board.rankings.length?'<ol class="lh-rankings">'+board.rankings.map(row=>'<li><b>'+esc(row.displayName)+'</b><span>'+new Date(row.completedAt).toLocaleString()+'</span></li>').join('')+'</ol>':'<p class="lh-small">No verified finishers yet.</p>');
+ }catch(e){target.innerHTML='<h2>Contest standings</h2><p class="lh-small">Standings will appear when the private event opens.</p>';}
 }
 async function refresh(){try{data=await request('GET');$('lh-gate').hidden=true;$('lh-game').hidden=false;render();}catch(e){$('lh-gate-message').textContent=e.message;$('lh-gate').hidden=false;$('lh-game').hidden=true;}}
 $('lh-save-party').addEventListener('click',async()=>{if(busy)return;busy=true;try{const result=await request('POST',{action:'save-loadout',character:$('lh-character').value,sidekick:$('lh-sidekick').value,pet:$('lh-pet').value,equipped:data.state.equipped});data.state=result.state;$('lh-stage-status').textContent='Your party has been saved.';}catch(e){$('lh-stage-status').textContent=e.message;}finally{busy=false;}});
