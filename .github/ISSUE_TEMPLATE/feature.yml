@@ -4,6 +4,8 @@ title: "[Feature]: "
 type: Feature
 labels:
   - enhancement
+projects:
+  - BSMS-Web-App/1
 body:
   - type: markdown
     attributes:
