@@ -1,6 +1,7 @@
 name: Task
 description: Track work that needs to be completed in BSMS Web.
 title: "[Task]: "
+type: Task
 labels:
   - task
 body:
