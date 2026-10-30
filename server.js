@@ -18,6 +18,7 @@ import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
 import versionHandler from './api/version.js';
 import halloweenHauntHandler from './api/halloween-haunt.js';
+import lastHarvestHandler from './api/last-harvest.js';
 import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
 
@@ -49,6 +50,7 @@ app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res))
 app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/halloween-haunt', (req, res) => halloweenHauntHandler(req, res));
+app.use('/api/last-harvest', (req, res) => lastHarvestHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 
