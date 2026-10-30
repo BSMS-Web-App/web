@@ -23,7 +23,7 @@ jobs:
             // Keep any existing labels. Only intervene when the issue has none.
             if (issue.labels?.length) return;
 
-            const match = issue.title.match(/^\\[(Bug|Feature|Task)\\]/i);
+            const match = issue.title.match(/^\[(Bug|Feature|Task)\]/i);
             const type = match?.[1]?.toLowerCase();
             const label = type === "bug"
               ? "bug"
