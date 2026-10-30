@@ -7,15 +7,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this template for defects that require engineering investigation or a code change.
-
-        Before submitting, search existing issues and include enough technical detail for another contributor to reproduce the problem. Never include secrets, access tokens, passwords, or private user data.
+        Report defects that need engineering investigation. Include enough detail to reproduce the problem, and never include secrets, passwords, access tokens, or private user data.
 
   - type: dropdown
     id: component
     attributes:
       label: Affected component
-      description: Select the area of the codebase involved.
       options:
         - Accounts / Authentication
         - Chat / Messaging
@@ -31,74 +28,36 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  - type: input
     id: environment
     attributes:
-      label: Affected environment
-      options:
-        - Production
-        - Development deployment
-        - Local development
-        - CI / Build
-        - Multiple environments
-        - Unknown
-    validations:
-      required: true
-
-  - type: input
-    id: branch
-    attributes:
-      label: Branch, commit, or deployment
-      description: Provide the branch name, commit SHA, or deployment URL where the issue occurs.
-      placeholder: "e.g. dev2, abc1234, or deployment URL"
+      label: Where does it happen?
+      description: Include the environment and, if relevant, the branch, commit, or deployment.
+      placeholder: "e.g. Production, dev2, commit abc1234, or https://preview.example.com"
 
   - type: textarea
-    id: summary
+    id: details
     attributes:
-      label: Technical summary
-      description: Describe the defect and its impact.
-      placeholder: Explain what is broken, where it occurs, and who or what it affects.
-    validations:
-      required: true
-
-  - type: textarea
-    id: reproduction
-    attributes:
-      label: Steps to reproduce
-      description: Provide exact steps another developer can follow.
+      label: What happens?
+      description: Combine the reproduction steps, actual behavior, and expected behavior here.
       placeholder: |
-        1. Check out...
-        2. Configure...
-        3. Run...
-        4. Observe...
+        **Steps to reproduce**
+        1. Open...
+        2. Select...
+        3. Observe...
+
+        **Actual behavior**
+        Describe what happens.
+
+        **Expected behavior**
+        Describe what should happen instead.
     validations:
       required: true
 
   - type: textarea
-    id: actual
+    id: evidence
     attributes:
-      label: Actual behavior
-      description: What happens when the defect occurs?
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected behavior
-      description: What should happen instead?
-    validations:
-      required: true
-
-  - type: textarea
-    id: diagnostics
-    attributes:
-      label: Diagnostics and relevant evidence
-      description: Include relevant logs, stack traces, failed requests, screenshots, or test output. Redact sensitive values.
+      label: Logs, screenshots, and extra context (optional)
+      description: Add relevant errors, stack traces, failed requests, screenshots, or investigation notes. Redact sensitive values.
+      placeholder: "Paste relevant console/server output or note what you've already investigated."
       render: text
-
-  - type: textarea
-    id: investigation
-    attributes:
-      label: Investigation notes
-      description: List suspected causes, files/functions involved, debugging already performed, or related commits.
