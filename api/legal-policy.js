@@ -6,7 +6,7 @@
 
 export const LEGAL_POLICY_VERSIONS = Object.freeze({
     terms: '1.0.1',
-    privacy: '1.0.1'
+    privacy: '1.0.2'
 });
 
 export function getLegalPolicyStatus(account = {}) {
