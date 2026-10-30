@@ -1,5 +1,5 @@
 name: Feature Implementation
-description: Propose an engineering feature or substantial improvement for the BSMS Web codebase.
+description: Propose an engineering feature or substantial improvement for BSMS Web.
 title: "[Feature]: "
 labels:
   - enhancement
@@ -7,9 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this template for development work that adds or materially changes functionality.
-
-        This is an engineering planning issue, not a public feature-request form. Describe the desired behavior and how completion can be verified. Do not include secrets or private user data.
+        Use this for development work that adds or materially changes functionality. Describe the goal and how reviewers can tell it is complete. Do not include secrets or private user data.
 
   - type: dropdown
     id: component
@@ -32,50 +30,35 @@ body:
       required: true
 
   - type: textarea
-    id: objective
+    id: proposal
     attributes:
-      label: Objective
-      description: What needs to be implemented?
-      placeholder: State the engineering goal clearly.
-    validations:
-      required: true
-
-  - type: textarea
-    id: context
-    attributes:
-      label: Context and problem
-      description: Explain the current behavior, limitation, or technical need this work addresses.
-    validations:
-      required: true
-
-  - type: textarea
-    id: behavior
-    attributes:
-      label: Proposed behavior
-      description: Describe how the feature should work from a user and system perspective.
-    validations:
-      required: true
-
-  - type: textarea
-    id: implementation
-    attributes:
-      label: Implementation notes
-      description: Suggested architecture, affected files or services, API/data changes, and technical constraints. Mark suggestions as such if the approach is not decided.
-
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: Acceptance criteria
-      description: List observable conditions that must be satisfied before this issue can be closed.
+      label: Feature proposal
+      description: Combine the goal, current problem, and desired behavior.
       placeholder: |
-        - [ ] ...
-        - [ ] ...
-        - [ ] ...
+        **Goal**
+        What should this feature accomplish?
+
+        **Current problem / context**
+        What limitation or need does it address?
+
+        **Proposed behavior**
+        How should it work for users and the system?
     validations:
       required: true
 
   - type: textarea
-    id: dependencies
+    id: plan
     attributes:
-      label: Dependencies and risks
-      description: List related issues, required decisions, migrations, compatibility concerns, or rollout risks.
+      label: Technical approach and completion criteria
+      description: Add implementation ideas, affected files or systems, constraints, dependencies, and testable acceptance criteria.
+      placeholder: |
+        **Implementation notes**
+        Relevant files, APIs, data changes, or suggested approach.
+
+        **Done when**
+        - [ ] ...
+        - [ ] ...
+        - [ ] ...
+
+        **Dependencies / risks**
+        Related issues, migrations, or compatibility concerns (if any).
