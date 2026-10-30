@@ -1,0 +1,34 @@
+<!--
+BSMS Web
+Copyright © 2026 Jellyfish Jelly
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#241a16">
+<title>The Last Harvest - Private Event</title>
+<link rel="stylesheet" href="/css/styles.css">
+<link rel="stylesheet" href="/css/last-harvest.css">
+<script src="/js/ban-check.js"></script><script src="/js/account-check.js"></script>
+</head>
+<body class="lh-body">
+<main class="lh-shell">
+<header class="lh-header"><a href="/events" class="lh-back">← Events</a><div class="lh-mark">✦ THE AUTUMN CHRONICLES ✦</div><h1>THE LAST <span>HARVEST</span></h1><p>A story of friendship, courage, and the feast that holds a kingdom together.</p></header>
+<section id="lh-gate" class="lh-panel"><h2>Private Thanksgiving Contest</h2><p id="lh-gate-message">Checking your event access…</p><a class="lh-button" href="/accounts">Sign in to BSMS Web</a></section>
+<section id="lh-game" hidden>
+<div class="lh-topbar"><div><span class="lh-label">ADVENTURER</span><strong id="lh-player-name">Player</strong></div><div><span class="lh-label">HEALTH</span><strong id="lh-health">30 / 30</strong></div><div><span class="lh-label">COINS</span><strong id="lh-coins">50</strong></div><div><span class="lh-label">XP</span><strong id="lh-xp">0</strong></div></div>
+<div class="lh-layout">
+<aside class="lh-panel lh-sidebar"><h2>Your party</h2><label>Character<select id="lh-character"><option>Harvest Guardian</option><option>Forest Scout</option><option>Harvest Mage</option></select></label><label>Sidekick<select id="lh-sidekick"><option>Rowan</option><option>Hazel</option><option>Flint</option><option>Pip</option><option>Maple</option></select></label><label>Pet<select id="lh-pet"><option>Pumpkin Pup</option><option>Autumn Fox</option><option>Turkey Chick</option><option>Golden Squirrel</option><option>Little Owl</option><option>Cranberry Slime</option></select></label><button class="lh-button" id="lh-save-party">Save party</button><h3>Equipment</h3><div id="lh-equipment" class="lh-equipment"></div><p class="lh-small">Your equipment is saved to your BSMS account.</p></aside>
+<section class="lh-panel lh-adventure"><div class="lh-scene"><canvas id="lh-pixel-scene" width="480" height="220" aria-label="Pixel-art autumn village scene"></canvas><div class="lh-scene-caption" id="lh-scene-caption">Hearthvale Village</div></div><div class="lh-story"><span class="lh-label" id="lh-stage-label">PROLOGUE</span><h2 id="lh-stage-title">The Missing Feast</h2><p id="lh-stage-description">A quiet morning in Hearthvale turns strange when your parents vanish.</p><div class="lh-progress"><div id="lh-progress-fill"></div></div><p id="lh-stage-status" class="lh-small">Loading your adventure…</p><button class="lh-button" id="lh-stage-action" disabled>Loading…</button></div></section>
+<aside class="lh-panel lh-sidebar"><h2>Journal</h2><div id="lh-stage-list" class="lh-stage-list"></div><h3>Inventory</h3><div id="lh-inventory" class="lh-inventory"></div><p class="lh-small">Stages open weekdays at 8:00 AM Eastern. Weekends are rest days.</p></aside>
+</div>
+<section class="lh-panel lh-leaderboard"><h2>Contest standings</h2><p>First player to finish all ten chapters wins. Your personal story is separate from everyone else's.</p><p class="lh-small">The leaderboard will display verified finish times once the contest is enabled.</p></section>
+</section>
+<footer>THE LAST HARVEST · A PRIVATE BSMS WEB EVENT · 16-BIT ADVENTURE</footer>
+</main>
+<script src="/js/last-harvest.js" defer></script>
+</body></html>
