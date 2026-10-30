@@ -1,0 +1,32 @@
+name: Require issue type
+
+on:
+  issues:
+    types:
+      - opened
+
+permissions:
+  issues: write
+
+jobs:
+  ensure-type:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set a type when an issue has none
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            if (!issue || issue.type) return;
+
+            const match = issue.title.match(/^\[(Bug|Feature|Task)\]/i);
+            const type = match?.[1]
+              ? match[1][0].toUpperCase() + match[1].slice(1).toLowerCase()
+              : "Task";
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              type
+            });
