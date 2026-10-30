@@ -1,0 +1,64 @@
+name: Feature
+description: Track a feature or improvement that needs to be built.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to track a feature or improvement that needs to be added to BSMS Web. Do not include secrets or private user data.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of BSMS Web does this affect?
+      options:
+        - Accounts / Authentication
+        - Chat / Messaging
+        - Games
+        - Countdown
+        - Contests
+        - Frontend / UI
+        - Backend / API
+        - Database / Data
+        - Infrastructure / Deployment
+        - Build / Tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain the current situation and why this work is needed.
+      placeholder: |
+        Example: The chat page currently has no way to...
+        Describe the limitation or opportunity this feature should address.
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Describe what needs to be added or changed and how completion will be checked.
+      placeholder: |
+        **Work to complete**
+        Describe the behavior or changes to implement.
+
+        **Done when**
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (optional)
+      description: Add anything useful for planning or completing the work.
+      placeholder: "Add design links, technical notes, dependencies, or related issues."

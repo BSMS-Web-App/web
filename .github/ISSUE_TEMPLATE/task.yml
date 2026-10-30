@@ -1,0 +1,63 @@
+name: Task
+description: Track work that needs to be completed in BSMS Web.
+title: "[Task]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to track planned work, including updates, cleanup, testing, documentation, or infrastructure changes. Do not include secrets or private user data.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of BSMS Web does this work affect?
+      options:
+        - Accounts / Authentication
+        - Chat / Messaging
+        - Games
+        - Countdown
+        - Contests
+        - Frontend / UI
+        - Backend / API
+        - Database / Data
+        - Infrastructure / Deployment
+        - Build / Tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Explain the current situation and why this work is needed.
+      placeholder: |
+        Example: The account settings code needs cleanup because...
+        Describe the goal this task should accomplish.
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: List the work to complete and how completion will be checked.
+      placeholder: |
+        **Work to complete**
+        - ...
+        - ...
+
+        **Done when**
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (optional)
+      description: Add anything useful for planning or completing the work.
+      placeholder: "Add dependencies, blockers, technical notes, links, or related issues."
