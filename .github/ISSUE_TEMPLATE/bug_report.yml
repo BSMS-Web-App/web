@@ -1,5 +1,5 @@
-name: Engineering Bug
-description: Report a reproducible defect in the codebase or a development deployment.
+name: Bug Report
+description: Report a problem with BSMS Web.
 title: "[Bug]: "
 labels:
   - bug
@@ -7,12 +7,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Report defects that need engineering investigation. Include enough detail to reproduce the problem, and never include secrets, passwords, access tokens, or private user data.
+        Use this form to report a problem. Please do not include passwords, access tokens, secrets, or private user data.
 
   - type: dropdown
-    id: component
+    id: area
     attributes:
-      label: Affected component
+      label: Area
+      description: Which part of BSMS Web is affected?
       options:
         - Accounts / Authentication
         - Chat / Messaging
@@ -24,40 +25,45 @@ body:
         - Database / Data
         - Infrastructure / Deployment
         - Build / Tooling
+        - Documentation
         - Other
     validations:
       required: true
 
-  - type: input
-    id: environment
-    attributes:
-      label: Where does it happen?
-      description: Include the environment and, if relevant, the branch, commit, or deployment.
-      placeholder: "e.g. Production, dev2, commit abc1234, or https://preview.example.com"
-
   - type: textarea
-    id: details
+    id: context
     attributes:
-      label: What happens?
-      description: Combine the reproduction steps, actual behavior, and expected behavior here.
+      label: Context
+      description: Where did the problem happen, and what were you trying to do?
       placeholder: |
-        **Steps to reproduce**
-        1. Open...
-        2. Select...
-        3. Observe...
-
-        **Actual behavior**
-        Describe what happens.
-
-        **Expected behavior**
-        Describe what should happen instead.
+        Example: On the production website, I opened the chat page and tried to send a message.
+        Include the environment or deployment if relevant (for example, production or dev2).
     validations:
       required: true
 
   - type: textarea
-    id: evidence
+    id: details
     attributes:
-      label: Logs, screenshots, and extra context (optional)
-      description: Add relevant errors, stack traces, failed requests, screenshots, or investigation notes. Redact sensitive values.
-      placeholder: "Paste relevant console/server output or note what you've already investigated."
+      label: Details
+      description: Explain what happened and what you expected to happen.
+      placeholder: |
+        **Steps to reproduce**
+        1. Open...
+        2. Click...
+        3. ...
+
+        **What happened**
+        Describe the problem.
+
+        **What should happen**
+        Describe the expected result.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (optional)
+      description: Add anything else that could help, such as screenshots, logs, errors, or related issues. Remove private information.
+      placeholder: "Paste a relevant error message, add a screenshot, or share a related issue link."
       render: text
