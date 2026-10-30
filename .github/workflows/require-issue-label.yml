@@ -1,0 +1,60 @@
+name: Require issue labels
+
+on:
+  issues:
+    types:
+      - opened
+      - unlabeled
+
+permissions:
+  issues: write
+
+jobs:
+  ensure-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply a label when an issue has none
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            if (!issue) return;
+
+            // Keep any existing labels. Only intervene when the issue has none.
+            if (issue.labels?.length) return;
+
+            const match = issue.title.match(/^\\[(Bug|Feature|Task)\\]/i);
+            const type = match?.[1]?.toLowerCase();
+            const label = type === "bug"
+              ? "bug"
+              : type === "feature"
+                ? "enhancement"
+                : "task";
+
+            const { owner, repo } = context.repo;
+            const existing = await github.rest.issues.listLabelsForRepo({
+              owner,
+              repo,
+              per_page: 100
+            });
+
+            if (!existing.data.some(item => item.name.toLowerCase() === label)) {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: label,
+                color: label === "bug" ? "d73a4a" : label === "enhancement" ? "a2eeef" : "7057ff",
+                description: label === "bug"
+                  ? "A bug that needs to be fixed"
+                  : label === "enhancement"
+                    ? "A feature or improvement to build"
+                    : "Work that needs to be completed"
+              });
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issue.number,
+              labels: [label]
+            });
