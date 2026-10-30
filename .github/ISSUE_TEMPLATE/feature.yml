@@ -1,6 +1,7 @@
 name: Feature
 description: Track a feature or improvement that needs to be built.
 title: "[Feature]: "
+type: Feature
 labels:
   - enhancement
 body:
