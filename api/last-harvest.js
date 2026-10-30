@@ -88,6 +88,12 @@ export default async function handler(req,res){
  if(!user)return res.status(401).json({error:'Please sign in to continue.'});
  if(!allowedUids().has(user.uid))return res.status(403).json({error:'This account is not on the private event access list.'});
  if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot access this event.'});
+ if(req.method==='GET' && req.query.action==='leaderboard'){
+  const boardSnap=await db.ref('/last_harvest/finishers').once('value');
+  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&allowedUids().has(row.uid)&&typeof row.completedAt==='number');
+  rows.sort((x,y)=>x.completedAt-y.completedAt);
+  return res.status(200).json({success:true,rankings:rows.slice(0,50).map((row,index)=>({rank:index+1,displayName:row.displayName,completedAt:row.completedAt}))});
+ }
  const ref=db.ref('/accounts/'+user.uid+'/last_harvest');
  try{
   const snap=await ref.once('value');
