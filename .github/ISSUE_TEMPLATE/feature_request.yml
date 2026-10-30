@@ -1,5 +1,5 @@
-name: Feature Request
-description: Suggest a new feature or improvement for BSMS Web.
+name: Feature Implementation
+description: Propose an engineering feature or substantial improvement for the BSMS Web codebase.
 title: "[Feature]: "
 labels:
   - enhancement
@@ -7,31 +7,75 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting an improvement to BSMS Web!
+        Use this template for development work that adds or materially changes functionality.
 
-        Tell us about your idea and why you think it would be useful.
+        This is an engineering planning issue, not a public feature-request form. Describe the desired behavior and how completion can be verified. Do not include secrets or private user data.
 
-  - type: textarea
-    id: feature
+  - type: dropdown
+    id: component
     attributes:
-      label: Feature description
-      description: What would you like to see added or changed?
-      placeholder: Describe your idea...
+      label: Component
+      options:
+        - Accounts / Authentication
+        - Chat / Messaging
+        - Games
+        - Countdown
+        - Contests
+        - Frontend / UI
+        - Backend / API
+        - Database / Data
+        - Infrastructure / Deployment
+        - Build / Tooling
+        - Documentation
+        - Other
     validations:
       required: true
 
   - type: textarea
-    id: reason
+    id: objective
     attributes:
-      label: Why would this be useful?
-      description: Explain how this feature would improve BSMS Web.
-      placeholder: This would be useful because...
+      label: Objective
+      description: What needs to be implemented?
+      placeholder: State the engineering goal clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and problem
+      description: Explain the current behavior, limitation, or technical need this work addresses.
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe how the feature should work from a user and system perspective.
     validations:
       required: true
 
   - type: textarea
     id: implementation
     attributes:
-      label: Additional details
-      description: If you have ideas about how this could work, describe them here.
-      placeholder: Any additional ideas or details...
+      label: Implementation notes
+      description: Suggested architecture, affected files or services, API/data changes, and technical constraints. Mark suggestions as such if the approach is not decided.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that must be satisfied before this issue can be closed.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and risks
+      description: List related issues, required decisions, migrations, compatibility concerns, or rollout risks.

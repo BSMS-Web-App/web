@@ -1,5 +1,5 @@
-name: Bug Report
-description: Report a bug or something that isn't working correctly.
+name: Engineering Bug
+description: Report a reproducible defect in the codebase or a development deployment.
 title: "[Bug]: "
 labels:
   - bug
@@ -7,51 +7,98 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a bug in BSMS Web!
+        Use this template for defects that require engineering investigation or a code change.
 
-        Please provide as much information as possible so we can reproduce and fix it.
+        Before submitting, search existing issues and include enough technical detail for another contributor to reproduce the problem. Never include secrets, access tokens, passwords, or private user data.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Select the area of the codebase involved.
+      options:
+        - Accounts / Authentication
+        - Chat / Messaging
+        - Games
+        - Countdown
+        - Contests
+        - Frontend / UI
+        - Backend / API
+        - Database / Data
+        - Infrastructure / Deployment
+        - Build / Tooling
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Affected environment
+      options:
+        - Production
+        - Development deployment
+        - Local development
+        - CI / Build
+        - Multiple environments
+        - Unknown
+    validations:
+      required: true
 
   - type: input
-    id: page
+    id: branch
     attributes:
-      label: Page or Feature
-      description: Which page or feature is affected?
-      placeholder: "Example: Chat, Accounts, Countdown"
+      label: Branch, commit, or deployment
+      description: Provide the branch name, commit SHA, or deployment URL where the issue occurs.
+      placeholder: "e.g. dev2, abc1234, or deployment URL"
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Technical summary
+      description: Describe the defect and its impact.
+      placeholder: Explain what is broken, where it occurs, and who or what it affects.
     validations:
       required: true
 
   - type: textarea
-    id: description
-    attributes:
-      label: What happened?
-      description: Describe the problem.
-      placeholder: Tell us what happened...
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps
+    id: reproduction
     attributes:
       label: Steps to reproduce
-      description: Tell us how to reproduce the problem.
+      description: Provide exact steps another developer can follow.
       placeholder: |
-        1. Go to...
-        2. Click...
-        3. ...
+        1. Check out...
+        2. Configure...
+        3. Run...
+        4. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happens when the defect occurs?
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: What did you expect to happen?
-      placeholder: I expected...
+      label: Expected behavior
+      description: What should happen instead?
     validations:
       required: true
 
   - type: textarea
-    id: additional
+    id: diagnostics
     attributes:
-      label: Additional information
-      description: Add screenshots, error messages, or anything else that might help.
-      placeholder: Anything else we should know?
+      label: Diagnostics and relevant evidence
+      description: Include relevant logs, stack traces, failed requests, screenshots, or test output. Redact sensitive values.
+      render: text
+
+  - type: textarea
+    id: investigation
+    attributes:
+      label: Investigation notes
+      description: List suspected causes, files/functions involved, debugging already performed, or related commits.
