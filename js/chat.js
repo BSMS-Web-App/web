@@ -1,12 +1,7 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
- */
-/*
- * BSMS Web
- * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));

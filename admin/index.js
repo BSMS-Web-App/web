@@ -1,7 +1,7 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 const Admin = {
@@ -24,6 +24,7 @@ const Admin = {
         if (tabId === 'users' || tabId === 'devices') this.loadUsers();
         if (tabId === 'announcements') this.loadAnnouncements();
         if (tabId === 'reports') this.loadReports();
+        if (tabId === 'support') this.loadSupportConversations();
         if (tabId === 'db') this.loadDB();
     },
 
@@ -995,6 +996,127 @@ const Admin = {
         } catch (error) {}
     },
 
+
+    supportConversationsCache: [],
+    activeSupportConversationId: null,
+    activeSupportConversation: null,
+
+    loadSupportConversations: async function() {
+        const list = document.getElementById('support-conversation-list');
+        if (!list) return;
+        list.textContent = 'Loading conversations...';
+        try {
+            const data = await this.apiCall('getSupportConversations');
+            this.supportConversationsCache = Array.isArray(data.conversations) ? data.conversations : [];
+            this.callerRole = data.callerRole || this.callerRole;
+            document.getElementById('supportInboxCount').textContent = String(this.supportConversationsCache.length);
+            const notice = document.getElementById('support-staff-notice');
+            notice.style.display = this.callerRole === 'mod' ? 'block' : 'none';
+            notice.textContent = this.callerRole === 'mod' ? 'Moderator access is read-only. Administrators and the owner can reply to visitors.' : '';
+            this.renderSupportConversationList();
+        } catch (_) { list.textContent = 'Unable to load support conversations.'; }
+    },
+
+    renderSupportConversationList: function() {
+        const list = document.getElementById('support-conversation-list');
+        list.replaceChildren();
+        if (!this.supportConversationsCache.length) {
+            const empty = document.createElement('div');
+            empty.className = 'support-admin-empty';
+            empty.textContent = 'No general support conversations yet.';
+            list.appendChild(empty);
+            return;
+        }
+        this.supportConversationsCache.forEach(item => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'support-admin-conversation' + (item.id === this.activeSupportConversationId ? ' active' : '');
+            const title = document.createElement('strong');
+            title.textContent = item.subject || 'General support';
+            const meta = document.createElement('span');
+            meta.textContent = (item.status === 'closed' ? 'Closed' : 'Open') + ' · ' + (item.messageCount || 0) + ' messages';
+            const latest = document.createElement('small');
+            latest.textContent = (item.lastMessageBy === 'visitor' ? 'Visitor replied' : 'Admin replied') + ' · ' + (item.lastMessageAt ? new Date(Number(item.lastMessageAt)).toLocaleString() : 'No date');
+            button.append(title, meta, latest);
+            button.addEventListener('click', () => this.openSupportConversation(item.id));
+            list.appendChild(button);
+        });
+    },
+
+    openSupportConversation: async function(conversationId) {
+        try {
+            const data = await this.apiCall('getSupportConversation', { conversationId });
+            this.activeSupportConversationId = conversationId;
+            this.renderSupportConversation(data.conversation);
+            this.renderSupportConversationList();
+        } catch (_) {}
+    },
+
+    renderSupportConversation: function(conversation) {
+        document.getElementById('support-admin-empty').hidden = true;
+        document.getElementById('support-admin-thread-view').hidden = false;
+        document.getElementById('support-admin-subject').textContent = conversation.subject || 'General support';
+        document.getElementById('support-admin-meta').textContent = 'Reference: ' + conversation.id + ' · Started ' + (conversation.createdAt ? new Date(Number(conversation.createdAt)).toLocaleString() : 'unknown');
+        const messages = document.getElementById('support-admin-messages');
+        messages.replaceChildren();
+        (conversation.messages || []).forEach(item => {
+            const article = document.createElement('article');
+            article.className = 'support-admin-message ' + (item.sender === 'admin' ? 'from-admin' : 'from-visitor');
+            const head = document.createElement('div');
+            head.className = 'support-admin-message-head';
+            const sender = document.createElement('strong');
+            sender.textContent = item.sender === 'admin' ? (item.senderName || 'BSMS Web Admin') : 'Visitor';
+            const time = document.createElement('time');
+            time.textContent = item.createdAt ? new Date(Number(item.createdAt)).toLocaleString() : '';
+            head.append(sender, time);
+            const body = document.createElement('p');
+            body.textContent = item.body || '';
+            article.append(head, body);
+            messages.appendChild(article);
+        });
+        messages.scrollTop = messages.scrollHeight;
+        this.activeSupportConversation = conversation;
+        const closed = conversation.status === 'closed';
+        const canReply = this.callerRole === 'owner' || this.callerRole === 'admin';
+        document.getElementById('support-admin-reply').disabled = closed || !canReply;
+        document.getElementById('support-admin-send').disabled = closed || !canReply;
+        document.getElementById('support-admin-reply').placeholder = canReply ? (closed ? 'This conversation is closed.' : 'Reply as BSMS Web admin...') : 'Moderator access is read-only.';
+        const statusButton = document.getElementById('support-admin-status');
+        statusButton.textContent = closed ? 'Reopen conversation' : 'Close conversation';
+        statusButton.disabled = !canReply;
+        statusButton.onclick = () => this.setSupportConversationStatus(conversation.id, closed ? 'open' : 'closed');
+    },
+
+    sendSupportReply: async function(event) {
+        event.preventDefault();
+        if (!this.activeSupportConversationId || (this.callerRole !== 'owner' && this.callerRole !== 'admin')) return;
+        const input = document.getElementById('support-admin-reply');
+        const status = document.getElementById('support-admin-reply-status');
+        const button = document.getElementById('support-admin-send');
+        const message = input.value.trim();
+        if (!message) return;
+        button.disabled = true;
+        status.textContent = 'Sending...';
+        try {
+            await this.apiCall('replySupportConversation', { conversationId: this.activeSupportConversationId, message });
+            input.value = '';
+            const data = await this.apiCall('getSupportConversation', { conversationId: this.activeSupportConversationId });
+            this.renderSupportConversation(data.conversation);
+            await this.loadSupportConversations();
+            status.textContent = '';
+        } catch (error) { status.textContent = error.message || 'Unable to send reply.'; }
+        finally { button.disabled = false; }
+    },
+
+    setSupportConversationStatus: async function(conversationId, status) {
+        try {
+            await this.apiCall('setSupportConversationStatus', { conversationId, status });
+            const data = await this.apiCall('getSupportConversation', { conversationId });
+            this.renderSupportConversation(data.conversation);
+            await this.loadSupportConversations();
+        } catch (_) {}
+    },
+
     escapeHTML: function(str) {
         if (!str) return '';
         return String(str)
@@ -1038,4 +1160,5 @@ const Admin = {
 
 window.addEventListener('DOMContentLoaded', () => {
     Admin.loadUsers();
+    document.getElementById('support-admin-reply-form')?.addEventListener('submit', event => Admin.sendSupportReply(event));
 });

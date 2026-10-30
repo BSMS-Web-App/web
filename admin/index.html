@@ -1,7 +1,7 @@
 <!--
 BSMS Web
 Copyright © 2026 Jellyfish Jelly
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: AGPL-3.0-only
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -23,6 +23,7 @@ SPDX-License-Identifier: MIT
     <button class="nav-btn" onclick="Admin.switchTab('announcements', this)">Announcements</button>
     <button class="nav-btn" onclick="Admin.switchTab('chat', this)">Chat Moderation</button>
     <button class="nav-btn" onclick="Admin.switchTab('reports', this)">Reports &amp; Requests</button>
+    <button class="nav-btn" onclick="Admin.switchTab('support', this)">General Support Inbox</button>
     <button class="nav-btn" onclick="Admin.switchTab('devices', this)">Banned Devices</button>
     <button class="nav-btn" id="nav-btn-db" style="display:none;" onclick="Admin.switchTab('db', this)">Raw DB Inspector</button>
     <div style="flex:1"></div>
@@ -186,6 +187,15 @@ SPDX-License-Identifier: MIT
     <div style="text-align:center;color:var(--fg2);padding:30px;">Select Reports &amp; Requests to load submissions.</div>
   </div>
 </div>
+<div id="support-panel" class="panel">
+<div class="panel-header"><div><h1>General Support Inbox</h1><p style="color:var(--fg2);margin:4px 0 0;">Ongoing conversations from visitors who are not signed in.</p></div><button class="btn" onclick="Admin.loadSupportConversations()">Refresh inbox</button></div>
+<div id="support-staff-notice" class="banner-mod" style="display:none;"></div>
+<div class="support-admin-layout">
+<section class="support-admin-list"><div class="support-admin-list-head"><strong>Conversations</strong><span id="supportInboxCount">0</span></div><div id="support-conversation-list"><div class="support-admin-empty">Select General Support Inbox to load conversations.</div></div></section>
+<section class="support-admin-thread"><div id="support-admin-empty" class="support-admin-empty">Choose a conversation to view its message history.</div>
+<div id="support-admin-thread-view" hidden><div class="support-admin-thread-head"><div><h2 id="support-admin-subject">Conversation</h2><p id="support-admin-meta"></p></div><button class="btn sec sm" id="support-admin-status" type="button">Close conversation</button></div>
+<div id="support-admin-messages" class="support-admin-messages"></div>
+<form id="support-admin-reply-form" class="support-admin-reply"><textarea id="support-admin-reply" rows="3" maxlength="3000" placeholder="Reply as BSMS Web admin..." required></textarea><div><span id="support-admin-reply-status"></span><button class="btn" id="support-admin-send" type="submit">Send reply</button></div></form></div></section></div></div>
 </div>
 
 <!-- Edit Account Modal -->

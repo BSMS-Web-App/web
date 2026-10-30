@@ -1,17 +1,18 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  *
  * Halloween Haunt authoritative event API.
  * All economy changes are server-calculated and committed through the Mac DB CAS transaction.
  */
 import { db, requestMacApi } from './db.js';
+import { legalAcceptanceRequired } from './legal-policy.js';
 
 const ROOT = '/halloween_haunt';
 const START = Date.parse('2026-10-26T04:00:00.000Z'); // Oct 26, 2026, 12:00 AM EDT
@@ -160,6 +161,10 @@ async function authenticate(req) {
     if (ban && (!ban.ban_expires || Number(ban.ban_expires) > Date.now())) {
       return { error: 'This device is banned.', status: 403 };
     }
+  }
+
+  if (legalAcceptanceRequired(result.account)) {
+    return { error: 'Legal policy acceptance is required.', status: 428 };
   }
 
   return { uid: result.uid, account: result.account };

@@ -1,12 +1,13 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 import { db, admin, requestMacApi } from './db.js';
 import crypto from 'crypto';
 import { moderateContent } from './moderation.js';
+import { legalAcceptanceRequired } from './legal-policy.js';
 
 async function rejectFlaggedContent(res, value, label = 'Content') {
     const result = await moderateContent(value);
@@ -21,7 +22,16 @@ async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
     try {
         const result = await requestMacApi('GET', '/v1/auth/session?sessionId=' + encodeURIComponent(sessionId));
-        return result?.uid && result?.account ? { uid: result.uid, account: result.account } : null;
+        if (!result?.uid) return null;
+
+        // Legal acceptance is written directly to this database. Always read
+        // the current account record here instead of trusting the potentially
+        // stale account snapshot returned by the session service.
+        const accountSnapshot = await db.ref('/accounts/' + result.uid).once('value');
+        const account = accountSnapshot.val();
+        if (!account || account.account_status === 'deleted') return null;
+
+        return { uid: result.uid, account };
     } catch {
         return null;
     }
@@ -50,6 +60,9 @@ export default async function handler(req, res) {
                 reason: account.ban_reason || null,
                 ban_expires: account.ban_expires || null
             });
+        }
+        if (legalAcceptanceRequired(account)) {
+            return res.status(428).json({ error: 'Legal policy acceptance is required.', code: 'LEGAL_ACCEPTANCE_REQUIRED' });
         }
 
         await db.ref(`/accounts/${uid}/sessions/${sessionId}/lastActive`).set(Date.now());

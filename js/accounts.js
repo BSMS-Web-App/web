@@ -1,7 +1,7 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 // Initialize standard offline checking
@@ -199,9 +199,11 @@ function updateAuthUI() {
     if (authMode === 'signup') {
         title.textContent = 'Create Account'; subtitle.textContent = 'Join the BSMS Web ecosystem';
         btn.textContent = 'Sign Up'; toggleText.textContent = 'Already have an account?'; toggleLink.textContent = 'Log in here';
+        document.getElementById('signupLegalRequirements').hidden = false;
     } else {
         title.textContent = 'Sign In'; subtitle.textContent = 'Access your BSMS Web Account';
         btn.textContent = 'Login'; toggleText.textContent = "Don't have an account?"; toggleLink.textContent = 'Sign up here';
+        document.getElementById('signupLegalRequirements').hidden = true;
     }
 }
 
@@ -213,6 +215,12 @@ async function handleAuth() {
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(user)) return showAlert("Username must start with a letter/number and contain only letters, numbers, dashes, and underscores.");
     if (!pass) return showAlert("Password is required.");
 
+    const termsAccepted = document.getElementById('signupTermsAccepted')?.checked === true;
+    const privacyAcknowledged = document.getElementById('signupPrivacyAcknowledged')?.checked === true;
+    if (authMode === 'signup' && (!termsAccepted || !privacyAcknowledged)) {
+        return showAlert("Please agree to the Terms of Service and acknowledge the Privacy Policy before creating your account.");
+    }
+
     setButtonLoading('authSubmitBtn', true);
 
     try {
@@ -221,7 +229,9 @@ async function handleAuth() {
             body: JSON.stringify({ 
                 action: authMode === 'signup' ? 'register' : 'login',
                 username: user, 
-                password: pass 
+                password: pass,
+                termsAccepted: authMode === 'signup' ? termsAccepted : undefined,
+                privacyAcknowledged: authMode === 'signup' ? privacyAcknowledged : undefined
             })
         });
         
@@ -254,6 +264,7 @@ function completeLogin(data) {
     localStorage.setItem('bsms_session', JSON.stringify(sessionObj));
     authSession = sessionObj;
     currentAccountData = data.profile;
+    window.dispatchEvent(new Event('bsms:auth-changed'));
     
     document.getElementById('authPassword').value = '';
     
@@ -277,6 +288,7 @@ async function logout() {
     }
     localStorage.removeItem(SESSION_KEY);
     authSession = null; currentAccountData = null; pendingAvatarBase64 = null;
+    window.dispatchEvent(new Event('bsms:auth-changed'));
     showToast("Logged out.");
     window.location.hash = '#login';
 }

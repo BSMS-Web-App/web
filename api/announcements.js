@@ -1,11 +1,12 @@
 /*
  * BSMS Web
  * Copyright © 2026 Jellyfish Jelly
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 
 import { db } from './db.js';
 import { moderateContent } from './moderation.js';
+import { legalAcceptanceRequired } from './legal-policy.js';
 
 // Verify session belongs to an owner or admin
 async function verifyStaff(sessionId) {
@@ -70,6 +71,9 @@ export default async function handler(req, res) {
         const staff = await verifyStaff(sessionId);
         if (!staff) {
             return res.status(403).json({ error: "Unauthorized: Administrator or Owner privileges required." });
+        }
+        if (legalAcceptanceRequired(staff.account)) {
+            return res.status(428).json({ error: 'Legal policy acceptance is required.', code: 'LEGAL_ACCEPTANCE_REQUIRED' });
         }
 
         const payload = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
