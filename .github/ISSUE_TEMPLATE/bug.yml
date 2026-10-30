@@ -1,0 +1,69 @@
+name: Bug
+description: Track a bug that needs to be fixed in BSMS Web.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this to track a problem that needs to be fixed. Do not include passwords, access tokens, secrets, or private user data.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of BSMS Web is affected?
+      options:
+        - Accounts / Authentication
+        - Chat / Messaging
+        - Games
+        - Countdown
+        - Contests
+        - Frontend / UI
+        - Backend / API
+        - Database / Data
+        - Infrastructure / Deployment
+        - Build / Tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Where does the problem occur, and what is the current situation?
+      placeholder: |
+        Example: The production chat page fails to send messages.
+        Include the affected environment or deployment if relevant (for example, production or dev2).
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Explain how to reproduce the problem and what needs to be fixed.
+      placeholder: |
+        **Steps to reproduce**
+        1. Open...
+        2. Click...
+        3. ...
+
+        **Actual behavior**
+        What happens now?
+
+        **Expected behavior**
+        What should happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (optional)
+      description: Add anything useful for completing the fix.
+      placeholder: "Add relevant errors, logs, screenshots, links, or related issues. Remove private information."
+      render: text
