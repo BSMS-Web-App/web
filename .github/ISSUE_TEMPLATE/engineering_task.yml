@@ -5,12 +5,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this template for engineering work that is not primarily a bug fix or a new feature.
-
-        Keep the scope specific and define how the work will be verified. Do not include secrets, access tokens, passwords, or private user data.
+        Use this for engineering work that is not primarily a bug fix or a new feature. Keep the task focused and explain how completion will be verified. Do not include secrets or private user data.
 
   - type: dropdown
-    id: type
+    id: category
     attributes:
       label: Task category
       options:
@@ -49,40 +47,22 @@ body:
       required: true
 
   - type: textarea
-    id: objective
+    id: task
     attributes:
-      label: Objective
-      description: What engineering work needs to be completed?
-    validations:
-      required: true
-
-  - type: textarea
-    id: scope
-    attributes:
-      label: Scope
-      description: Define what is included and, where useful, what is explicitly out of scope.
-    validations:
-      required: true
-
-  - type: textarea
-    id: implementation
-    attributes:
-      label: Technical notes
-      description: Relevant files, systems, constraints, proposed approach, or investigation already completed.
-
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: Completion criteria
-      description: How will reviewers verify that the task is complete?
+      label: Task details
+      description: Combine the objective, scope, technical notes, and completion criteria.
       placeholder: |
+        **Objective**
+        What needs to be done, and why?
+
+        **Scope / technical notes**
+        What should change? Include relevant files, systems, constraints, or proposed approach.
+
+        **Completion criteria**
         - [ ] ...
         - [ ] ...
+
+        **Dependencies / risks**
+        Note blockers or related issues, if any.
     validations:
       required: true
-
-  - type: textarea
-    id: dependencies
-    attributes:
-      label: Dependencies and risks
-      description: Related issues, blockers, rollout considerations, or potential risks.
