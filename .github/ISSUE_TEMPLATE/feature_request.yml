@@ -1,5 +1,5 @@
-name: Feature Implementation
-description: Propose an engineering feature or substantial improvement for BSMS Web.
+name: Feature Request
+description: Suggest a feature or improvement for BSMS Web.
 title: "[Feature]: "
 labels:
   - enhancement
@@ -7,12 +7,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this for development work that adds or materially changes functionality. Describe the goal and how reviewers can tell it is complete. Do not include secrets or private user data.
+        Use this form to suggest a new feature or an improvement. Describe the need and the result you would like to see. Do not include secrets or private user data.
 
   - type: dropdown
-    id: component
+    id: area
     attributes:
-      label: Component
+      label: Area
+      description: Which part of BSMS Web would this affect?
       options:
         - Accounts / Authentication
         - Chat / Messaging
@@ -30,35 +31,34 @@ body:
       required: true
 
   - type: textarea
-    id: proposal
+    id: context
     attributes:
-      label: Feature proposal
-      description: Combine the goal, current problem, and desired behavior.
+      label: Context
+      description: Explain the current situation and why this feature would be useful.
       placeholder: |
-        **Goal**
-        What should this feature accomplish?
-
-        **Current problem / context**
-        What limitation or need does it address?
-
-        **Proposed behavior**
-        How should it work for users and the system?
+        Example: The chat page currently has no way to...
+        Explain the problem, limitation, or opportunity this would address.
     validations:
       required: true
 
   - type: textarea
-    id: plan
+    id: details
     attributes:
-      label: Technical approach and completion criteria
-      description: Add implementation ideas, affected files or systems, constraints, dependencies, and testable acceptance criteria.
+      label: Details
+      description: Describe how you would like the feature to work and how we can tell it is complete.
       placeholder: |
-        **Implementation notes**
-        Relevant files, APIs, data changes, or suggested approach.
+        **Suggested behavior**
+        Describe what users should be able to do and how it should work.
 
         **Done when**
         - [ ] ...
         - [ ] ...
-        - [ ] ...
+    validations:
+      required: true
 
-        **Dependencies / risks**
-        Related issues, migrations, or compatibility concerns (if any).
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (optional)
+      description: Add mockups, links, technical ideas, related issues, or anything else that may help.
+      placeholder: "Link a design, mention a related issue, or share an implementation idea."
