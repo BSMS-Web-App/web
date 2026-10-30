@@ -4,6 +4,8 @@ title: "[Bug]: "
 type: Bug
 labels:
   - bug
+projects:
+  - BSMS-Web-App/1
 body:
   - type: markdown
     attributes:
