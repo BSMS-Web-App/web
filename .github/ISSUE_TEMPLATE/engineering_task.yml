@@ -1,0 +1,88 @@
+name: Engineering Task
+description: Track maintenance, refactoring, infrastructure, testing, or documentation work.
+title: "[Task]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for engineering work that is not primarily a bug fix or a new feature.
+
+        Keep the scope specific and define how the work will be verified. Do not include secrets, access tokens, passwords, or private user data.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Task category
+      options:
+        - Refactoring
+        - Maintenance
+        - Infrastructure / Deployment
+        - Security improvement
+        - Testing / Quality
+        - Performance
+        - Documentation
+        - Tooling / CI
+        - Migration
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Accounts / Authentication
+        - Chat / Messaging
+        - Games
+        - Countdown
+        - Contests
+        - Frontend / UI
+        - Backend / API
+        - Database / Data
+        - Infrastructure / Deployment
+        - Build / Tooling
+        - Documentation
+        - Repository-wide
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What engineering work needs to be completed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Define what is included and, where useful, what is explicitly out of scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Technical notes
+      description: Relevant files, systems, constraints, proposed approach, or investigation already completed.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Completion criteria
+      description: How will reviewers verify that the task is complete?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and risks
+      description: Related issues, blockers, rollout considerations, or potential risks.
