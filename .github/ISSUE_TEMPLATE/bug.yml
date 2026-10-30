@@ -1,6 +1,7 @@
 name: Bug
 description: Track a bug that needs to be fixed in BSMS Web.
 title: "[Bug]: "
+type: Bug
 labels:
   - bug
 body:
