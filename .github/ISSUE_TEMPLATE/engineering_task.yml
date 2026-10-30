@@ -1,34 +1,17 @@
-name: Engineering Task
-description: Track maintenance, refactoring, infrastructure, testing, or documentation work.
+name: Task
+description: Track work that needs to be completed in BSMS Web.
 title: "[Task]: "
 body:
   - type: markdown
     attributes:
       value: |
-        Use this for engineering work that is not primarily a bug fix or a new feature. Keep the task focused and explain how completion will be verified. Do not include secrets or private user data.
+        Use this form for planned work, such as updates, cleanup, testing, documentation, or infrastructure changes. Do not include secrets or private user data.
 
   - type: dropdown
-    id: category
+    id: area
     attributes:
-      label: Task category
-      options:
-        - Refactoring
-        - Maintenance
-        - Infrastructure / Deployment
-        - Security improvement
-        - Testing / Quality
-        - Performance
-        - Documentation
-        - Tooling / CI
-        - Migration
-        - Other
-    validations:
-      required: true
-
-  - type: dropdown
-    id: component
-    attributes:
-      label: Component
+      label: Area
+      description: Which part of BSMS Web does this task affect?
       options:
         - Accounts / Authentication
         - Chat / Messaging
@@ -41,28 +24,39 @@ body:
         - Infrastructure / Deployment
         - Build / Tooling
         - Documentation
-        - Repository-wide
         - Other
     validations:
       required: true
 
   - type: textarea
-    id: task
+    id: context
     attributes:
-      label: Task details
-      description: Combine the objective, scope, technical notes, and completion criteria.
+      label: Context
+      description: Explain why this work is needed and what it should accomplish.
       placeholder: |
-        **Objective**
-        What needs to be done, and why?
-
-        **Scope / technical notes**
-        What should change? Include relevant files, systems, constraints, or proposed approach.
-
-        **Completion criteria**
-        - [ ] ...
-        - [ ] ...
-
-        **Dependencies / risks**
-        Note blockers or related issues, if any.
+        Example: The account settings code needs cleanup because...
+        Describe the current situation and the goal of this task.
     validations:
       required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Describe the work to do and how completion should be checked.
+      placeholder: |
+        **Work to complete**
+        List the changes, files, or systems involved.
+
+        **Done when**
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information (optional)
+      description: Add related issues, links, technical notes, dependencies, or possible risks.
+      placeholder: "Mention a blocker, related issue, useful link, or technical detail."
