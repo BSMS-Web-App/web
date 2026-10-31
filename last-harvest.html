@@ -27,14 +27,20 @@
       <div class="lh-eyebrow">A 16-BIT AUTUMN ADVENTURE</div><h1>THE LAST <span>HARVEST</span></h1>
       <p>The Everfeast is fading. Hearthvale needs a hero.</p>
       <label class="lh-field">WHAT IS YOUR NAME?<input id="lh-name-input" maxlength="16" autocomplete="off" placeholder="Enter your name"></label>
-      <div class="lh-class-title">CHOOSE YOUR CLASS</div>
+      <button id="lh-begin" class="lh-gold-button lh-start">BEGIN YOUR STORY</button>
+      <p class="lh-footnote">Your adventure saves on this device.</p>
+    </section>
+  </div>
+  <div id="lh-school-class" class="lh-overlay" hidden>
+    <section class="lh-modal">
+      <div class="lh-eyebrow">HEARTHVALE SCHOOL</div><h2>CHOOSE YOUR PATH</h2>
+      <p>Rowan waits beside you as the instructor explains the three paths. Which one will you follow?</p>
       <div class="lh-class-grid">
         <button class="lh-class selected" data-class="Guardian"><span>🛡️</span><b>GUARDIAN</b><small>Strong defense · steady attacks</small></button>
         <button class="lh-class" data-class="Scout"><span>🏹</span><b>SCOUT</b><small>Quick movement · powerful strikes</small></button>
         <button class="lh-class" data-class="Mage"><span>✨</span><b>MAGE</b><small>Harvest magic · balanced power</small></button>
       </div>
-      <button id="lh-begin" class="lh-gold-button lh-start">BEGIN YOUR STORY</button>
-      <p class="lh-footnote">Your adventure saves on this device.</p>
+      <button id="lh-school-confirm" class="lh-gold-button lh-start">CONFIRM CLASS</button>
     </section>
   </div>
   <div id="lh-touch" class="lh-touch" aria-label="Touch movement controls">
