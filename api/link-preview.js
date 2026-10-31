@@ -142,7 +142,8 @@ export default async function handler(req, res) {
             if (redirectCount === MAX_REDIRECTS) return res.status(400).json({ error: 'Too many redirects.' });
             const nextUrl = new URL(result.redirect, currentUrl);
             if (!['http:', 'https:'].includes(nextUrl.protocol) || nextUrl.username || nextUrl.password ||
-                (nextUrl.port && nextUrl.port !== '80' && nextUrl.port !== '443')) {
+                (nextUrl.protocol === 'http:' && nextUrl.port && nextUrl.port !== '80') ||
+                (nextUrl.protocol === 'https:' && nextUrl.port && nextUrl.port !== '443')) {
                 return res.status(400).json({ error: 'Disallowed redirect target.' });
             }
             currentUrl = nextUrl;
