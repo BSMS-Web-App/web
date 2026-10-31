@@ -119,7 +119,7 @@ drawFence(3,22,3);drawFence(41,22,3);
 /* fountain, sign and village details */
 px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,'#b5d1c9');px(18*TILE+12,12*TILE+8,42,25,'#5cabb4');px(18*TILE+20,12*TILE-7,26,10,'#e8e6cf');px(18*TILE+29,12*TILE-3,8,5,'#7dc9cf');
 px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-10,10*TILE+4,26,3,C.wood);
-for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55');}
+for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55',n.name);}
 if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;drawPerson(a.x,a.y,'#d5b64e','#e8bd58');}
 drawPlayer(state.x,state.y);
 let promptTarget=null,promptDist=Infinity,promptLabel='E · TALK';
@@ -170,7 +170,37 @@ drawCutscenePerson(W*.28,H*.67,'#b86c78','#70485c',1.65);drawCutscenePerson(W*.7
 const light=ctx.createRadialGradient(bx+bw*.5,by+bh*.45,10,bx+bw*.5,by+bh*.45,Math.max(W,H)*.55);light.addColorStop(0,'rgba(255,224,157,.16)');light.addColorStop(1,'rgba(32,23,31,.22)');ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
 ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.075);
 }
-const spriteFrames=new Map();function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;const key=shirt+'|'+hat;let frame=spriteFrames.get(key);if(!frame){frame=document.createElement('canvas');frame.width=24;frame.height=32;const g=frame.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(spriteAtlas,96,0,32,32,0,0,24,32);g.fillStyle=shirt;g.fillRect(6,13,12,11);g.fillStyle=hat;g.fillRect(4,1,16,5);spriteFrames.set(key,frame);}ctx.drawImage(frame,Math.round(x-12),Math.round(y-28+bob),24,32);}
+const spriteFrames=new Map();
+function makeOverworldSprite(shirt,hat,variant=0){
+ const frame=document.createElement('canvas');frame.width=24;frame.height=32;
+ const g=frame.getContext('2d');g.imageSmoothingEnabled=false;
+ const p=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h);};
+ const skin=['#f1b58c','#d99a72','#f0c49b','#b97859'][variant%4];
+ const hair=['#594238','#342f38','#9a633c','#d5b17a','#6a5147'][variant%5];
+ // compact GBA-style silhouette, dark outline and clustered pixel highlights
+ p(6,26,12,3,'#26334a');p(7,28,4,2,'#e2d8c1');p(14,28,4,2,'#e2d8c1');
+ p(5,13,14,13,'#26334a');p(6,14,12,11,shirt);
+ p(3,15,3,8,'#26334a');p(4,16,2,6,skin);p(18,15,3,8,'#26334a');p(18,16,2,6,skin);
+ p(8,4,9,11,'#26334a');p(9,5,7,9,skin);
+ p(7,3,11,4,'#26334a');p(8,2,9,4,hair);p(7,5,3,5,hair);p(16,5,3,5,hair);
+ p(10,9,2,2,'#26334a');p(14,9,2,2,'#26334a');p(11,12,4,1,'#a65f55');
+ // collar, belt, tunic highlights and footwear
+ p(9,14,6,2,'#f0d5a0');p(10,16,4,5,'rgba(255,255,255,.16)');
+ p(7,23,10,2,hat);p(7,25,4,3,'#3b4050');p(14,25,4,3,'#3b4050');
+ if(variant%5===0){p(6,1,12,3,hat);p(8,0,8,2,hat);} // cap
+ if(variant%5===1){p(6,3,3,5,hair);p(15,3,3,5,hair);} // longer hair
+ if(variant%5===2){p(6,1,12,2,hat);p(8,0,8,2,'#e8bd58');} // headband
+ if(variant%5===3){p(5,2,14,3,hat);p(7,0,10,2,hat);} // brimmed hat
+ if(variant%5===4){p(7,2,10,3,hair);p(8,0,8,2,hair);} // short hair
+ return frame;
+}
+function drawPerson(x,y,shirt,hat,name=''){
+ const bob=Math.sin(performance.now()/190+x*.035)*1.1;
+ const variant=[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5;
+ const key=shirt+'|'+hat+'|'+variant;let frame=spriteFrames.get(key);
+ if(!frame){frame=makeOverworldSprite(shirt,hat,variant);spriteFrames.set(key,frame);}
+ ctx.drawImage(frame,Math.round(x-12),Math.round(y-28+bob),24,32);
+}
 const roomFurniture=[
 [[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
 [[.10,.29,.16,.07],[.31,.29,.16,.07],[.52,.29,.16,.07],[.73,.29,.16,.07],[.08,.48,.25,.09],[.68,.48,.24,.09]],
@@ -224,14 +254,25 @@ px(W*.045,H*.2,7,H*.7,palettes.trim);px(W*.948,H*.2,7,H*.7,palettes.trim);
 px(W*.42,H*.12,W*.16,5,palettes.accent);
 ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(palettes.title,W/2,H*.105);
 const nlist=roomNPCs[interiorId];
-nlist.forEach((n,i)=>{const spot=roomNPCSpots[interiorId][i];drawPerson(W*spot.x,H*spot.y,n.color,'#634b3a');});
+nlist.forEach((n,i)=>{const spot=roomNPCSpots[interiorId][i];drawPerson(W*spot.x,H*spot.y,n.color,'#634b3a',n.name);});
 let target=null,dist=Infinity;
 for(let i=0;i<nlist.length;i++){const n=nlist[i],spot=roomNPCSpots[interiorId][i],d=Math.hypot(insidePlayer.x-W*spot.x,insidePlayer.y-H*spot.y);if(d<Math.max(84,W*.095)&&d<dist){target=n;dist=d;}}
 if(target){const i=nlist.indexOf(target),spot=roomNPCSpots[interiorId][i];drawWorldPrompt(W*spot.x,H*spot.y-31,'E · TALK');}
 else if(insidePlayer.y>H*.79)drawWorldPrompt(W*.5,H*.84,'E · EXIT');
 drawPlayer(insidePlayer.x,insidePlayer.y);
 }function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
-function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*1);const index=state.heroClass==='Mage'?1:state.heroClass==='Scout'?2:0;ctx.drawImage(spriteAtlas,index*32,0,32,32,Math.round(x-12-step),Math.round(y-28+bob),24,32);}
+function drawPlayer(x,y){
+ const bob=Math.sin(playerFrame/5)*1.2,step=Math.round(Math.sin(playerFrame*1.8));
+ const index=state.heroClass==='Mage'?1:state.heroClass==='Scout'?2:0;
+ const looks=[
+  {shirt:'#b94b38',hat:'#c44736',trim:'#e8bd58'},
+  {shirt:'#6658a5',hat:'#6554a5',trim:'#c9b8ee'},
+  {shirt:'#4c8955',hat:'#4a8a54',trim:'#e8bd58'}
+ ][index];
+ const key='PLAYER|'+index;let frame=spriteFrames.get(key);
+ if(!frame){frame=makeOverworldSprite(looks.shirt,looks.hat,index);spriteFrames.set(key,frame);}
+ ctx.drawImage(frame,Math.round(x-12-step),Math.round(y-28+bob),24,32);
+}
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;$('lh-dialogue-text').textContent=line[1];drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
