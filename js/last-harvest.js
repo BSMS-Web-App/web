@@ -67,7 +67,7 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
@@ -100,6 +100,15 @@ const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&sign
 if(promptTarget)drawWorldPrompt(promptTarget.x,promptTarget.y-30,promptLabel);
 ctx.restore();return{camX,camY};}
 function drawDreamScene(W,H){px(0,0,W,H,'#49345f');for(let i=0;i<14;i++){px(i*W/14,0,W/14,H*.24,i%2?'#bd874e':'#e2b95c');px(i*W/14,H*.24,W/14,H*.1,'#7b4b68');}px(0,H*.34,W,H*.66,'#704b36');px(0,H*.76,W,H*.24,'#c18b49');for(let i=0;i<12;i++){const x=i*W/11;drawPerson(x,H*.38,'#6b9c70','#d8b86a');}px(W*.2,H*.55,W*.6,H*.26,'#9b633d');px(W*.22,H*.57,W*.56,H*.22,'#c18a48');const a=cinematic.actors;drawPerson(a.MARA.x,a.MARA.y,'#b86c78','#70485c');drawPerson(a.THOMAS.x,a.THOMAS.y,'#577f9b','#4a536e');drawPerson(a.ROWAN.x,a.ROWAN.y,'#bb6542','#9b4a36');drawPlayer(a.HERO.x,a.HERO.y);drawPerson(a.FOE.x,a.FOE.y,'#7d526f','#45364e');ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.12);ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);}
+function drawSchoolScene(W,H){
+px(0,0,W,H,'#7eb6b0');px(0,H*.68,W,H*.32,'#719b60');
+px(W*.08,H*.18,W*.84,H*.55,'#d8c99d');px(W*.08,H*.15,W*.84,H*.12,'#7d5742');px(W*.11,H*.18,W*.78,H*.07,'#a85f3d');
+px(W*.43,H*.25,W*.14,H*.2,'#314b5d');px(W*.45,H*.27,W*.1,H*.16,'#a8d4d5');
+for(let i=0;i<4;i++){px(W*(.16+i*.19),H*.42,W*.12,H*.12,'#80563d');px(W*(.17+i*.19),H*.43,W*.1,H*.08,'#d4ad70');}
+px(W*.44,H*.55,W*.12,H*.08,'#61452f');px(W*.46,H*.52,W*.08,H*.05,'#e2c27d');
+drawPerson(W*.43,H*.68,'#b94b38','#c44736');drawPerson(W*.57,H*.68,'#bb6542','#9b4a36');
+ctx.fillStyle='#fff2c7';ctx.font='bold 20px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE SCHOOL',W/2,H*.1);
+}
 function drawWakeScene(W,H){
 const fy=H*.31;px(0,0,W,H,'#493b49');px(0,0,W,fy,'#8d7780');
 for(let x=0;x<W;x+=Math.max(70,W*.09)){px(x,0,4,fy,'#78616e');px(x+4,0,2,fy,'#a58b8d');}
@@ -180,37 +189,38 @@ save();updateQuest();return;}
 const doors=[{x:10.5,y:10.5,id:0},{x:34,y:10.5,id:1},{x:22,y:22.5,id:2},{x:5.5,y:29.5,id:3}];for(const d of doors){if(Math.hypot(state.x-d.x*TILE,state.y-d.y*TILE)<82){enterBuilding(d.id);return;}}
 const sx=27*TILE,sy=10*TILE;if(Math.hypot(state.x-sx,state.y-sy)<75){setDialogue([['OLD SIGN','AUTUMNWOOD — follow the golden leaves beyond the village.'],['QUEST','Explore Hearthvale and speak with the villagers. The road north-east leads to your first chapter.']]);return;}
 setDialogue([['NARRATOR','The wind carries the smell of cinnamon and fallen leaves. There may be something nearby.']]);}
-function startIntro(){document.body.classList.add('lh-cinematic');state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';state.heroClass=document.querySelector('.lh-class.selected').dataset.class;state.x=20*TILE;state.y=15*TILE;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;state.coins=100;state.stage=0;state.seenIntro=true;save();$('lh-create').hidden=true;updateHud();
+function startIntro(){
+document.body.classList.add('lh-cinematic');
+state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';
+state.x=20*TILE;state.y=15*TILE;state.coins=100;state.stage=0;state.seenIntro=false;
+$('lh-create').hidden=true;updateHud();
 cinematic={phase:'dream',camera:{x:0,y:0},actors:{HERO:{x:innerWidth*.28,y:innerHeight*.68},FOE:{x:innerWidth*.7,y:innerHeight*.68},MARA:{x:innerWidth*.18,y:innerHeight*.48},THOMAS:{x:innerWidth*.82,y:innerHeight*.48},ROWAN:{x:innerWidth*.5,y:innerHeight*.4}}};
 const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
 const moveActor=(name,to,duration=900)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();function step(now){if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;if(p<1)requestAnimationFrame(step);else resolve();}requestAnimationFrame(step);});
 (async()=>{
 await say([['DREAM','The Harvest Festival arena roars with excitement. Golden banners wave as the crowd chants your name!']]);
-await say([['CROWD',''+state.name+'! '+state.name+'! You can do it!'],['ROWAN','Show them what the future champion of Hearthvale can do!']]);
-await moveActor('HERO',{x:innerWidth*.48,y:innerHeight*.68},1100);
-await say([['ANNOUNCER','The challenger enters the arena! The final match begins now!']]);
-await moveActor('FOE',{x:innerWidth*.58,y:innerHeight*.68},650);
-await say([['CHALLENGER','You really think you can beat me?'],['CROWD','We believe in you, '+state.name+'!']]);
-await moveActor('HERO',{x:innerWidth*.57,y:innerHeight*.68},700);
-await say([['NARRATOR','You dash forward, dodge the challenger’s strike, and land one final heroic blow!']]);
-await moveActor('FOE',{x:innerWidth*.77,y:innerHeight*.72},650);
-await say([['ANNOUNCER','THE CHAMPION WINS!'],['CROWD',''+state.name+'! '+state.name+'! HEARTHVALE’S HERO!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest warrior in all of Hearthvale!']]);
+await say([['CROWD',state.name+'! '+state.name+'! You can do it!'],['ROWAN','Show them what the future champion of Hearthvale can do!']]);
+await moveActor('HERO',{x:innerWidth*.48,y:innerHeight*.68},900);
+await say([['ANNOUNCER','The challenger enters the arena! The final match begins now!'],['CHALLENGER','You really think you can beat me?']]);
+await moveActor('HERO',{x:innerWidth*.57,y:innerHeight*.68},650);
+await say([['NARRATOR','You dodge the challenger’s strike and land one final heroic blow!']]);
+await moveActor('FOE',{x:innerWidth*.77,y:innerHeight*.72},600);
+await say([['ANNOUNCER','THE CHAMPION WINS!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest champion in all of Hearthvale!']]);
 cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={HERO:{x:innerWidth*.60,y:innerHeight*.65},MARA:{x:innerWidth*.32,y:innerHeight*.62},THOMAS:{x:innerWidth*.82,y:innerHeight*.62}};
 await say([['NARRATOR','“Wake up, sleepyhead…” A familiar voice pulls you out of the dream.']]);
 cinematic.wakePose='sitting';
-await say([['MARA','There you are. We wanted to see you before we left for the Everfeast preparations.'],['THOMAS','Keep being brave, alright? We will be back before supper.'],[''+state.name,'I will. I promise.'],['MARA','We love you. Never forget that.']]);
-await moveActor('MARA',{x:innerWidth*.42,y:innerHeight*.58},500);
-await moveActor('THOMAS',{x:innerWidth*.58,y:innerHeight*.58},500);
-await say([['NARRATOR','Your parents smile, then step out of the room. It is the last time you will see them before they disappear.']]);
-cinematic.wakePose='standing';
-await say([['NARRATOR','A little later, a distant bell rings. You climb out of bed. Something is wrong in Hearthvale.']]);
-cinematic.phase='outside';cinematic.camera={x:20*TILE,y:15*TILE};cinematic.actors={ROWAN:{x:24*TILE,y:13*TILE},'ELDER MAPLE':{x:15*TILE,y:12*TILE}};
-await moveActor('ROWAN',{x:21*TILE,y:14*TILE},1100);
-await say([['ROWAN',''+state.name+'! Your parents are missing. I have been looking everywhere!']]);
-cinematic.camera={x:16*TILE,y:13*TILE};await moveActor('ELDER MAPLE',{x:17*TILE,y:13*TILE},800);
-await say([['ELDER MAPLE','The keepers of the Everfeast are gone. We need you to help us find them.'],['ROWAN','I saw strange tracks near the fountain. Come on!'],['NARRATOR','Your dream felt so real. But now Hearthvale needs you.']]);
-cinematic=null;document.body.classList.remove('lh-cinematic');questStep=0;updateQuest();save();
-})();}
+await say([['MARA','Good morning! Rowan is waiting outside. You are both old enough to attend Hearthvale School today.'],['THOMAS','The instructor will help you choose the path that suits you. We will see you after lessons.']]);
+await say([['NARRATOR','You get ready, step outside, and meet Rowan. Together, you set off for school.']]);
+cinematic.phase='school';cinematic.actors={HERO:{x:innerWidth*.43,y:innerHeight*.68},ROWAN:{x:innerWidth*.57,y:innerHeight*.68}};
+await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],['INSTRUCTOR','Welcome to Hearthvale School. Every adventurer chooses one path: Guardian, Scout, or Mage. Your choice will shape how you face the world.']]);
+$('lh-school-class').hidden=false;
+await new Promise(resolve=>{window.__lhClassChosen=resolve;});
+cinematic.phase='outside';cinematic.camera={x:20*TILE,y:15*TILE};cinematic.actors={HERO:{x:20*TILE,y:15*TILE},ROWAN:{x:22*TILE,y:14*TILE}};
+await say([['ROWAN','That was exciting! Come on, let’s head home.'],['NARRATOR','By the time you return, the house is quiet. Your parents have already left for the Everfeast preparations. You missed them.']]);
+await say([['ROWAN','Wait… the front door is open. Where are Mara and Thomas?'],['NARRATOR','They were supposed to be back by now. Something is wrong.']]);
+cinematic=null;document.body.classList.remove('lh-cinematic');state.seenIntro=true;questStep=0;updateQuest();save();
+})();
+}
 
 function updateQuest(){const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:chapters[Math.min(state.stage,9)].place.toUpperCase();updateQuest();}
@@ -227,7 +237,8 @@ function releaseJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;joysti
 joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
 canvas.addEventListener('pointerup',e=>{if(dialogue){advanceDialogue();return;}interact();});
 $('lh-next').addEventListener('click',advanceDialogue);
-document.querySelectorAll('.lh-class').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
+document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
+$('lh-school-confirm').addEventListener('click',()=>{const selected=$('lh-school-class').querySelector('.lh-class.selected');state.heroClass=selected.dataset.class;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;$('lh-school-class').hidden=true;updateHud();save();if(window.__lhClassChosen){const done=window.__lhClassChosen;window.__lhClassChosen=null;done();}});
 $('lh-begin').addEventListener('click',startIntro);
 $('lh-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')startIntro();});
 $('lh-menu').addEventListener('click',()=>{ $('lh-menu-stats').textContent=state.name+' · '+state.heroClass+' · '+chapters[Math.min(state.stage,9)].title+' · '+state.coins+' coins';$('lh-game-menu').hidden=false;});
