@@ -27,7 +27,8 @@ export function needsPasswordRehash(storedHash) {
 export async function verifyPassword(password, storedHash) {
     if (typeof password !== 'string' || typeof storedHash !== 'string') return false;
     if (/^[a-f0-9]{64}$/i.test(storedHash)) {
-        // lgtm[js/insufficient-password-hash] Legacy SHA-256 is verified only for migration; new and upgraded passwords use scrypt.
+        // Existing SHA-256 hashes are checked only to migrate legacy accounts after a successful login.
+        // codeql[js/insufficient-password-hash]
         const actual = crypto.createHash('sha256').update(password).digest();
         const expected = Buffer.from(storedHash, 'hex');
         return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
