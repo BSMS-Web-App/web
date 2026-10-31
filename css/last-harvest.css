@@ -85,3 +85,17 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-rpg-modal>#lh-reset{width:100%;margin:0}
 .lh-rpg-modal .lh-footnote{text-align:center}
 @media(max-width:520px){.lh-rpg-content{min-height:165px;padding:11px}.lh-rpg-tabs button{font-size:10px;padding:10px 3px}}
+
+/* Handheld field-map screen */
+.lh-rpg-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+.lh-map-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:2px;padding:6px;background:#26334a;border:3px solid #26334a;box-shadow:inset 0 0 0 2px #fff4d8}
+.lh-map-cell{aspect-ratio:1;min-width:0;background:#79b66c;border:1px solid #5b965b}
+.lh-map-cell.forest{background:repeating-linear-gradient(135deg,#315f48 0 4px,#477c4e 4px 8px);border-color:#294b3b}
+.lh-map-cell.building{background:repeating-linear-gradient(0deg,#b87849 0 5px,#d5a568 5px 8px);border:1px solid #704a32}
+.lh-map-cell.path{background:repeating-linear-gradient(90deg,#d6d8c8 0 8px,#b8c3b9 8px 10px);border-color:#929f9b}
+.lh-map-cell.player{background:#e8bd58;border:2px solid #fff2c7;box-shadow:0 0 0 2px #26334a;position:relative;z-index:1}
+.lh-map-legend{display:flex;flex-wrap:wrap;gap:10px 14px;margin:12px 0 8px;font-size:10px;font-weight:bold}
+.lh-map-legend span{display:flex;align-items:center;gap:5px}
+.lh-map-legend i{display:inline-block;width:12px;height:12px;border:1px solid #26334a}
+.lh-map-legend i.forest{background:#315f48}.lh-map-legend i.building{background:#b87849}.lh-map-legend i.path{background:#d6d8c8}.lh-map-legend i.player{background:#e8bd58}
+.lh-map-note{font-size:10px!important;color:#536b67}
