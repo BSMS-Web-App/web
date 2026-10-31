@@ -44,6 +44,24 @@ function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y
 // clustered highlights and top-down proportions are consistent throughout.
 const C={ink:'#26334a',deep:'#344b45',grass:'#55a66a',grass2:'#63b879',light:'#8bd18a',path:'#c7d0c6',path2:'#e1e4d2',pathShade:'#9daeb0',wood:'#855236',wood2:'#b97845',roof:'#a94f36',roof2:'#d47749',cream:'#f3e6bf',glass:'#75c5d2',blue:'#3d78aa',gold:'#e8bd58',skin:'#f1b58c'};
 function px(x,y,w,h,c){rect(Math.round(x),Math.round(y),w,h,c)}
+/* Original Hearthvale sprite atlas. Frames are generated locally so the game
+   owns its artwork and does not depend on unlicensed franchise graphics. */
+const spriteAtlas=(()=>{const a=document.createElement('canvas');a.width=128;a.height=64;const g=a.getContext('2d');g.imageSmoothingEnabled=false;
+ const frame=(ox,shirt,hat,skin='#e7ad83',accent='#f1d5a0')=>{
+  const p=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(ox+x,y,w,h)};
+  p(5,25,14,5,'#352f3b');p(6,29,5,3,'#39415a');p(13,29,5,3,'#39415a');
+  p(4,12,16,14,'#26334a');p(6,13,12,11,shirt);p(2,15,4,8,skin);p(18,15,4,8,skin);
+  p(7,3,10,12,skin);p(5,1,14,5,hat);p(7,0,10,3,hat);
+  p(8,8,2,2,'#26334a');p(15,8,2,2,'#26334a');p(9,12,6,1,'#9b5e54');
+  p(7,22,4,2,accent);p(13,22,4,2,accent);
+ };
+ frame(0,'#b94b38','#c44736');frame(32,'#6658a5','#6554a5');frame(64,'#4c8955','#4a8a54');frame(96,'#bb6542','#634b3a');
+ return a;
+})();
+const tileAtlas=(()=>{const a=document.createElement('canvas');a.width=96;a.height=32;const g=a.getContext('2d');g.imageSmoothingEnabled=false;
+ const tile=(ox,base,detail,flower)=>{g.fillStyle=base;g.fillRect(ox,0,32,32);for(let y=4;y<32;y+=8)for(let x=3;x<32;x+=9){g.fillStyle=detail;g.fillRect(ox+x,y,2,2);}g.fillStyle=flower;g.fillRect(ox+19,8,3,3);g.fillRect(ox+22,11,2,2);};
+ tile(0,'#75b66a','#68a75f','#e7ca70');tile(32,'#70ad65','#609f59','#d8c36b');tile(64,'#7bb96e','#6ba962','#e4bd62');return a;
+})();
 function drawTree(x,y){const X=x*TILE,Y=y*TILE;
 px(X+12,Y+17,9,16,'#68452e');px(X+9,Y+25,15,5,'#4c392b');
 px(X+2,Y+7,28,18,'#286344');px(X+5,Y+1,22,19,'#347e4b');px(X+9,Y-3,14,13,'#48a65a');
@@ -71,8 +89,7 @@ function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.ph
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
-px(x*TILE,y*TILE,TILE,TILE,(x+y)%2?C.grass:C.grass2);
-if(rand(x,y)>.78){px(x*TILE+5+rand(y,x)*18,y*TILE+5+rand(x+3,y)*18,3,3,C.light);px(x*TILE+12,y*TILE+22,2,2,'#d7c66b');}}
+ctx.drawImage(tileAtlas,((x*7+y*3)%3)*32,0,32,32,x*TILE,y*TILE,TILE,TILE);}
 /* Broad stone paths with alternating diamond-like paving and dark grout */
 function path(x,y,w,h){px(x,y,w,h,C.pathShade);for(let yy=y+2;yy<y+h-2;yy+=24)for(let xx=x+2;xx<x+w-2;xx+=32){px(xx,yy,29,21,C.path2);px(xx+2,yy+2,25,17,C.path);px(xx+14,yy+2,2,17,'#aab9b5');px(xx+2,yy+9,25,2,'#e5e5d3');}}
 path(0,11*TILE,MAP_W*TILE,4*TILE);path(15*TILE,0,4*TILE,MAP_H*TILE);path(19*TILE,14*TILE,10*TILE,2*TILE);
@@ -140,7 +157,7 @@ drawCutscenePerson(W*.28,H*.67,'#b86c78','#70485c',1.65);drawCutscenePerson(W*.7
 const light=ctx.createRadialGradient(bx+bw*.5,by+bh*.45,10,bx+bw*.5,by+bh*.45,Math.max(W,H)*.55);light.addColorStop(0,'rgba(255,224,157,.16)');light.addColorStop(1,'rgba(32,23,31,.22)');ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
 ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.075);
 }
-function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;px(x-9,y+6+bob,18,5,'#352f3b');px(x-7,y+8+bob,5,8,'#3d4050');px(x+2,y+8+bob,5,8,'#3d4050');px(x-10,y-8+bob,20,16,C.ink);px(x-8,y-7+bob,16,13,shirt);px(x-12,y-5+bob,4,10,C.skin);px(x+8,y-5+bob,4,10,C.skin);px(x-7,y-22+bob,14,14,C.skin);px(x-8,y-24+bob,16,5,hat);px(x-7,y-27+bob,14,4,hat);px(x-6,y-16+bob,3,3,C.ink);px(x+3,y-16+bob,3,3,C.ink);px(x-5,y-11+bob,10,2,'#9b5e54');px(x-8,y-5+bob,16,3,'rgba(255,255,255,.18)');px(x-11,y+1+bob,3,3,hat);px(x+8,y+1+bob,3,3,hat);}
+const spriteFrames=new Map();function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;const key=shirt+'|'+hat;let frame=spriteFrames.get(key);if(!frame){frame=document.createElement('canvas');frame.width=24;frame.height=32;const g=frame.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(spriteAtlas,96,0,32,32,0,0,24,32);g.globalCompositeOperation='source-atop';g.fillStyle=shirt;g.fillRect(0,12,24,14);g.fillStyle=hat;g.fillRect(4,0,16,6);g.globalCompositeOperation='source-over';spriteFrames.set(key,frame);}ctx.drawImage(frame,Math.round(x-12),Math.round(y-28+bob),24,32);}
 const roomFurniture=[
 [[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
 [[.10,.29,.16,.07],[.31,.29,.16,.07],[.52,.29,.16,.07],[.73,.29,.16,.07],[.08,.48,.25,.09],[.68,.48,.24,.09]],
@@ -201,12 +218,7 @@ if(target){const i=nlist.indexOf(target),spot=roomNPCSpots[interiorId][i];drawWo
 else if(insidePlayer.y>H*.79)drawWorldPrompt(W*.5,H*.84,'E · EXIT');
 drawPlayer(insidePlayer.x,insidePlayer.y);
 }function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
-function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*2);px(x-9,y+7+bob,18,7,C.ink);px(x-7-step,y+10+bob,5,7,'#39415a');px(x+3+step,y+10+bob,5,7,'#39415a');
-px(x-9,y-8+bob,18,17,C.ink);px(x-7,y-7+bob,14,14,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38');
-px(x-11,y-4+bob,4,10,C.skin);px(x+7,y-4+bob,4,10,C.skin);px(x-7,y-20+bob,14,13,C.skin);
-px(x-9,y-24+bob,18,7,C.ink);px(x-7,y-27+bob,14,6,state.heroClass==='Mage'?'#6554a5':state.heroClass==='Scout'?'#4a8a54':'#c44736');
-px(x-7,y-21+bob,14,3,'#f2d6a2');px(x-5,y-15+bob,3,3,C.ink);px(x+3,y-15+bob,3,3,C.ink);
-px(x-7,y+6+bob,6,5,C.ink);px(x+2,y+6+bob,6,5,C.ink);}
+function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*1);const index=state.heroClass==='Mage'?1:state.heroClass==='Scout'?2:0;ctx.drawImage(spriteAtlas,index*32,0,32,32,Math.round(x-12-step),Math.round(y-28+bob),24,32);}
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;$('lh-dialogue-text').textContent=line[1];drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
