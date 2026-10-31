@@ -53,6 +53,14 @@ const rawFileLimiter = rateLimit({
     message: { error: 'Too many file requests. Please try again shortly.' }
 });
 
+const pageFileLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 300,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many page requests. Please try again shortly.' }
+});
+
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -95,6 +103,9 @@ app.get('/raw/api/db.js', (req, res) => res.type('text/plain').sendFile(path.joi
 app.get('/raw/package.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'package.json')));
 app.get('/raw/vercel.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'vercel.json')));
 app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'server.js')));
+
+// Rate-limit routes that read and serve individual page files.
+app.use(pageFileLimiter);
 
 // Clean URLs
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
