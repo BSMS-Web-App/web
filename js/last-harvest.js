@@ -94,7 +94,7 @@ for(const n of roomNPCs[interiorId])drawPerson(W*n.x,H*n.y,n.color,'#634b3a');
 // Door mat marks the exit; player walks here before leaving.
 px(W*.43,H*.83,W*.14,12,'#a16b3f');px(W*.45,H*.85,W*.1,6,'#e0bd79');
 drawPlayer(insidePlayer.x,insidePlayer.y);}
-function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5;px(x-9,y+7+bob,18,7,C.ink);px(x-7,y+10+bob,5,7,'#39415a');px(x+3,y+10+bob,5,7,'#39415a');
+function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*2);px(x-9,y+7+bob,18,7,C.ink);px(x-7-step,y+10+bob,5,7,'#39415a');px(x+3+step,y+10+bob,5,7,'#39415a');
 px(x-9,y-8+bob,18,17,C.ink);px(x-7,y-7+bob,14,14,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38');
 px(x-11,y-4+bob,4,10,C.skin);px(x+7,y-4+bob,4,10,C.skin);px(x-7,y-20+bob,14,13,C.skin);
 px(x-9,y-24+bob,18,7,C.ink);px(x-7,y-27+bob,14,6,state.heroClass==='Mage'?'#6554a5':state.heroClass==='Scout'?'#4a8a54':'#c44736');
