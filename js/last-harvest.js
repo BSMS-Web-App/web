@@ -25,7 +25,7 @@ try{const old=JSON.parse(localStorage.getItem(SAVE));if(old&&old.name)state={...
 let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalked=false,questStep=0,dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13;
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
 const save=()=>localStorage.setItem(SAVE,JSON.stringify(state));
-function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
+function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
 const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4}];
@@ -33,28 +33,56 @@ function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(tileA
 const trees=[];for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++)if((x<4||y<3||x>MAP_W-5||y>MAP_H-5)&&rand(x,y)>.18)trees.push({x,y});
 const npcs=[{x:16*TILE,y:12*TILE,name:'ELDER MAPLE',color:'#b8c7a1',lines:['The village square feels colder today. Your parents were last seen near the fountain.','The Everfeast is older than Hearthvale. Find the truth, not just the missing keepers.']},{x:22*TILE,y:13*TILE,name:'ROWAN',color:'#bb6542',lines:['I will come with you. We have been friends forever—trust me.','The woods are full of strange creatures. Keep your guard up.']}];
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
-function drawTree(x,y){const px=x*TILE,py=y*TILE;rect(px+9,py+16,14,18,'#69452a');rect(px+2,py+4,28,22,'#275a36');rect(px+5,py,22,22,'#347344');rect(px+8,py+3,6,6,'#699448');rect(px+20,py+10,6,5,'#b65d35')}
-function drawHouse(b,roof='#a85c32'){const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;rect(x,y+20,w,h-20,'#b58c5b');rect(x-8,y,w+16,28,roof);rect(x+10,y+30,24,24,'#8ec5c2');rect(x+w-34,y+30,24,24,'#8ec5c2');rect(x+w/2-13,y+h-38,26,38,'#573725');rect(x+w/2-4,y+h-20,4,4,'#edc66e');}
-function drawWorld(){const W=innerWidth,H=innerHeight;if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}const camX=Math.max(0,Math.min(MAP_W*TILE-W,state.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,state.y-H/2));ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
-for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){rect(x*TILE,y*TILE,TILE,TILE,(x+y)%2?'#57934e':'#609b53');if(rand(x,y)>.86)rect(x*TILE+rand(y,x)*24,y*TILE+rand(x+3,y)*24,3,3,'#8ab45d');}
-rect(0,11*TILE,MAP_W*TILE,4*TILE,'#c3b98e');rect(0,11*TILE,MAP_W*TILE,5,'#e5d8b1');rect(15*TILE,0,4*TILE,MAP_H*TILE,'#c3b98e');rect(15*TILE,0,5,'#e5d8b1');rect(19*TILE,14*TILE,10*TILE,2*TILE,'#c3b98e');
-drawHouse(solids[0],'#bb853d');drawHouse(solids[1],'#8b6540');drawHouse(solids[2],'#9b5838');drawHouse(solids[3],'#c18a42');
-for(const t of trees)drawTree(t.x,t.y);
-/* fountain */rect(18*TILE,12*TILE,3*TILE,2*TILE,'#8eaaa0');rect(18*TILE+10,12*TILE+8,2*TILE-20,24,'#5d9fa2');rect(18*TILE+16,12*TILE-8,28,8,'#d5d5bd');
-/* signpost */rect(27*TILE,10*TILE,5,30,'#654326');rect(27*TILE-15,10*TILE,38,14,'#d6b36c');rect(27*TILE-10,10*TILE+4,26,3,'#654326');
-for(const n of npcs){rect(n.x-7,n.y-17,14,24,n.color);rect(n.x-6,n.y-26,12,11,'#e9b98c');rect(n.x-7,n.y-29,14,5,'#5a3828');rect(n.x-5,n.y-4,4,12,'#493d36');rect(n.x+2,n.y-4,4,12,'#493d36');}
-drawPlayer(state.x,state.y);
-ctx.restore();return{camX,camY};}
-function drawInterior(W,H){
-ctx.clearRect(0,0,W,H);rect(0,0,W,H,'#79563a');rect(0,0,W,Math.max(80,H*.2),'#503a2b');
-for(let y=0;y<H;y+=48)for(let x=0;x<W;x+=48)rect(x+1,y+1,44,44,'#a77b4d');
-rect(W*.12,H*.28,W*.76,H*.58,'#d0a66c');rect(W*.43,H*.58,W*.14,H*.3,'#573725');
-rect(W*.18,H*.34,70,90,'#70462d');rect(W*.72,H*.34,70,90,'#70462d');
-rect(W*.44,H*.25,Math.max(80,W*.12),12,'#d7bd82');
-ctx.fillStyle='#fff0ce';ctx.font='bold 14px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]||'HEARTHVALE HOME',W/2,H*.16);
-drawPlayer(W/2,H*.72);
+
+// Hand-drawn original pixel-art tiles and sprites. The palette, outlines,
+// clustered highlights and top-down proportions are consistent throughout.
+const C={ink:'#26334a',deep:'#344b45',grass:'#55a66a',grass2:'#63b879',light:'#8bd18a',path:'#c7d0c6',path2:'#e1e4d2',pathShade:'#9daeb0',wood:'#855236',wood2:'#b97845',roof:'#a94f36',roof2:'#d47749',cream:'#f3e6bf',glass:'#75c5d2',blue:'#3d78aa',gold:'#e8bd58',skin:'#f1b58c'};
+function px(x,y,w,h,c){rect(Math.round(x),Math.round(y),w,h,c)}
+function drawTree(x,y){const X=x*TILE,Y=y*TILE;
+px(X+12,Y+17,9,16,'#68452e');px(X+9,Y+25,15,5,'#4c392b');
+px(X+2,Y+7,28,18,'#286344');px(X+5,Y+1,22,19,'#347e4b');px(X+9,Y-3,14,13,'#48a65a');
+px(X+6,Y+5,7,6,'#78c96b');px(X+19,Y+3,6,7,'#70c66a');px(X+2,Y+15,7,6,'#3e9853');px(X+21,Y+15,7,5,'#2d7548');
+px(X+13,Y+7,4,3,'#a4d978');}
+function drawHouse(b,roof='#a85c32'){
+const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
+px(x-5,y+12,w+10,h-12,'#35485a');px(x,y+12,w,h-14,'#d7d9c8');px(x+5,y+18,w-10,h-25,'#9aaeb0');
+px(x-8,y+2,w+16,13,'#5a4a3d');px(x-5,y,w+10,11,roof);px(x,y-5,w,8,roof);
+for(let r=0;r<2;r++)for(let c=0;c<Math.floor(w/24);c++){px(x+4+c*24+(r%2)*9,y+2+r*5,17,2,r?'#843f32':'#d98753');}
+px(x+8,y+15,w-16,5,'#f0d7a1');px(x+12,y+24,26,23,'#344c63');px(x+14,y+26,22,18,C.glass);px(x+14,y+34,22,3,'#e7d9aa');px(x+24,y+26,3,18,'#d8e7d8');
+px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,3,'#e7d9aa');px(x+w-26,y+26,3,18,'#d8e7d8');
+px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
+px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*2;rect(x-8,y-8+bob,16,19,'#244b9a');rect(x-7,y-18+bob,14,12,'#edb88d');rect(x-8,y-21+bob,16,6,state.heroClass==='Mage'?'#5b4c9a':state.heroClass==='Scout'?'#47764a':'#a13f32');rect(x-7,y+9+bob,5,8,'#49382d');rect(x+2,y+9+bob,5,8,'#49382d');rect(x-10,y-4+bob,4,10,'#edb88d');rect(x+6,y-4+bob,4,10,'#edb88d');rect(x-4,y-14+bob,2,2,'#30251e');rect(x+3,y-14+bob,2,2,'#30251e');}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+const camX=Math.max(0,Math.min(MAP_W*TILE-W,state.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,state.y-H/2));
+ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
+for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
+px(x*TILE,y*TILE,TILE,TILE,(x+y)%2?C.grass:C.grass2);
+if(rand(x,y)>.78){px(x*TILE+5+rand(y,x)*18,y*TILE+5+rand(x+3,y)*18,3,3,C.light);px(x*TILE+12,y*TILE+22,2,2,'#d7c66b');}}
+/* Broad stone paths with alternating diamond-like paving and dark grout */
+function path(x,y,w,h){px(x,y,w,h,C.pathShade);for(let yy=y+2;yy<y+h-2;yy+=24)for(let xx=x+2;xx<x+w-2;xx+=32){px(xx,yy,29,21,C.path2);px(xx+2,yy+2,25,17,C.path);px(xx+14,yy+2,2,17,'#aab9b5');px(xx+2,yy+9,25,2,'#e5e5d3');}}
+path(0,11*TILE,MAP_W*TILE,4*TILE);path(15*TILE,0,4*TILE,MAP_H*TILE);path(19*TILE,14*TILE,10*TILE,2*TILE);
+drawHouse(solids[0],'#c18a43');drawHouse(solids[1],'#8e5940');drawHouse(solids[2],'#a64e37');drawHouse(solids[3],'#c18a43');
+for(const t of trees)drawTree(t.x,t.y);
+/* fountain, sign and village details */
+px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,'#b5d1c9');px(18*TILE+12,12*TILE+8,42,25,'#5cabb4');px(18*TILE+20,12*TILE-7,26,10,'#e8e6cf');px(18*TILE+29,12*TILE-3,8,5,'#7dc9cf');
+px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-10,10*TILE+4,26,3,C.wood);
+for(const n of npcs)drawPerson(n.x,n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55');
+drawPlayer(state.x,state.y);ctx.restore();return{camX,camY};}
+function drawPerson(x,y,shirt,hat){const bob=0;px(x-8,y-4,16,14,C.ink);px(x-6,y-16,12,13,C.skin);px(x-7,y-20,14,6,hat);px(x-8,y-7,16,12,shirt);px(x-7,y+5,5,8,'#3d4050');px(x+2,y+5,5,8,'#3d4050');px(x-5,y-12,2,2,C.ink);px(x+3,y-12,2,2,C.ink);px(x-11,y-5,4,8,C.skin);px(x+7,y-5,4,8,C.skin);}
+function drawInterior(W,H){ctx.clearRect(0,0,W,H);px(0,0,W,H,'#6e4932');px(0,0,W,H*.18,'#49372f');
+for(let y=H*.2;y<H;y+=32)for(let x=0;x<W;x+=32){px(x+1,y+1,30,30,(x/32+y/32)%2?'#b98955':'#c99a61');px(x+2,y+2,28,2,'#dfb879');}
+px(W*.1,H*.24,W*.8,H*.65,'#6b4935');px(W*.12,H*.26,W*.76,H*.61,'#dfc18a');
+px(W*.17,H*.34,74,90,'#4b3c38');px(W*.18,H*.35,68,82,'#93613e');px(W*.72,H*.34,74,90,'#4b3c38');px(W*.73,H*.35,68,82,'#93613e');
+px(W*.44,H*.56,W*.12,H*.35,'#51382d');px(W*.46,H*.59,W*.08,H*.32,'#98633d');px(W*.28,H*.69,W*.44,18,'#805339');px(W*.3,H*.66,W*.4,8,'#d8b879');
+ctx.fillStyle=C.cream;ctx.font='bold 14px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]||'HEARTHVALE HOME',W/2,H*.15);
+drawPlayer(W/2,H*.72);}
+function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5;px(x-9,y+7+bob,18,7,C.ink);px(x-7,y+10+bob,5,7,'#39415a');px(x+3,y+10+bob,5,7,'#39415a');
+px(x-9,y-8+bob,18,17,C.ink);px(x-7,y-7+bob,14,14,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38');
+px(x-11,y-4+bob,4,10,C.skin);px(x+7,y-4+bob,4,10,C.skin);px(x-7,y-20+bob,14,13,C.skin);
+px(x-9,y-24+bob,18,7,C.ink);px(x-7,y-27+bob,14,6,state.heroClass==='Mage'?'#6554a5':state.heroClass==='Scout'?'#4a8a54':'#c44736');
+px(x-7,y-21+bob,14,3,'#f2d6a2');px(x-5,y-15+bob,3,3,C.ink);px(x+3,y-15+bob,3,3,C.ink);
+px(x-7,y+6+bob,6,5,C.ink);px(x+2,y+6+bob,6,5,C.ink);}
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];$('lh-speaker').textContent=line[0];$('lh-dialogue-text').textContent=line[1];$('lh-dialogue').hidden=false;}
