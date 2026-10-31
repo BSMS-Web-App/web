@@ -133,38 +133,30 @@ const light=ctx.createRadialGradient(bx+bw*.5,by+bh*.45,10,bx+bw*.5,by+bh*.45,Ma
 ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.075);
 }
 function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;px(x-9,y+6+bob,18,5,'#352f3b');px(x-7,y+8+bob,5,8,'#3d4050');px(x+2,y+8+bob,5,8,'#3d4050');px(x-10,y-8+bob,20,16,C.ink);px(x-8,y-7+bob,16,13,shirt);px(x-12,y-5+bob,4,10,C.skin);px(x+8,y-5+bob,4,10,C.skin);px(x-7,y-22+bob,14,14,C.skin);px(x-8,y-24+bob,16,5,hat);px(x-7,y-27+bob,14,4,hat);px(x-6,y-16+bob,3,3,C.ink);px(x+3,y-16+bob,3,3,C.ink);px(x-5,y-11+bob,10,2,'#9b5e54');px(x-8,y-5+bob,16,3,'rgba(255,255,255,.18)');px(x-11,y+1+bob,3,3,hat);px(x+8,y+1+bob,3,3,hat);}
-function drawInterior(W,H){ctx.clearRect(0,0,W,H);px(0,0,W,H,'#59402f');
-// A room with visible timber walls, floorboards, windows, rugs and furniture.
-px(0,0,W,H*.2,'#4a352b');px(0,H*.17,W,H*.035,'#b47a45');
+const roomFurniture=[
+[[.12,.38,.13,.12],[.75,.38,.13,.12],[.39,.43,.22,.09]],
+[[.13,.46,.2,.13],[.67,.46,.2,.13],[.42,.34,.16,.08]],
+[[.12,.38,.09,.17],[.31,.38,.09,.17],[.60,.38,.09,.17],[.79,.38,.09,.17]],
+[[.18,.48,.18,.12],[.64,.48,.18,.12],[.43,.34,.14,.09]]
+];
+function roomBlocked(x,y){const nx=x/innerWidth,ny=y/innerHeight;if(nx<.09||nx>.91||ny<.27||ny>.88)return true;return roomFurniture[interiorId].some(([rx,ry,rw,rh])=>nx>rx-.018&&nx<rx+rw+.018&&ny>ry-.025&&ny<ry+rh+.035);}
+function drawInterior(W,H){
+ctx.clearRect(0,0,W,H);px(0,0,W,H,'#59402f');px(0,0,W,H*.2,'#4a352b');px(0,H*.17,W,H*.035,'#b47a45');
 for(let y=H*.205;y<H;y+=28){px(0,y,W,26,(Math.floor(y/28)%2)?'#b98755':'#c99b66');px(0,y+24,W,3,'#98633f');}
 px(W*.055,H*.23,W*.89,H*.69,'#704a34');px(W*.07,H*.25,W*.86,H*.65,'#dfc28d');
-// windows with crossbars
 for(const wx of [W*.18,W*.76]){px(wx-25,H*.29,52,58,'#493d39');px(wx-21,H*.33,44,48,'#67b7c6');px(wx-2,H*.33,4,48,'#e6d7ae');px(wx-21,H*.53,44,4,'#e6d7ae');}
-// Room structure: dark ceiling beams, skirting, and timber wall panels.
 for(let x=0;x<W;x+=Math.max(90,W*.16)){px(x,H*.19,5,H*.055,'#382b28');px(x+5,H*.2,2,H*.035,'#d0a16b');}
 px(W*.07,H*.88,W*.86,7,'#70472f');px(W*.07,H*.25,7,H*.64,'#8c5a39');px(W*.925,H*.25,7,H*.64,'#8c5a39');
-// room-specific furnishings
-if(interiorId===0){px(W*.38,H*.36,W*.24,55,'#8a5b3a');px(W*.4,H*.34,W*.2,13,'#e4c78c');px(W*.13,H*.64,95,38,'#8a4e3d');px(W*.13,H*.61,95,10,'#d9aa6a');px(W*.73,H*.62,60,48,'#95633e');}
-if(interiorId===1){px(W*.16,H*.58,W*.68,62,'#8b5937');px(W*.18,H*.55,W*.64,16,'#e0b879');px(W*.2,H*.52,24,36,'#d6c18c');px(W*.76,H*.52,24,36,'#d6c18c');px(W*.4,H*.35,W*.2,28,'#8b583a');}
-if(interiorId===2){for(let i=0;i<4;i++){px(W*.12+i*W*.2,H*.38,52,75,'#805136');px(W*.12+i*W*.2,H*.36,52,9,'#e0b879');for(let j=0;j<3;j++)px(W*.14+i*W*.2,H*.42+j*16,28,9,['#c66b45','#75a06b','#d6b65d'][j]);}}
-if(interiorId===3){px(W*.18,H*.57,W*.64,36,'#805136');px(W*.2,H*.53,W*.6,12,'#d5a75e');px(W*.24,H*.47,26,35,'#7b8794');px(W*.66,H*.45,38,40,'#7b8794');px(W*.48,H*.32,42,38,'#c28c4d');}
-// Extra room dressing: patterned rugs, lamps, potted plants, shelves and tiny props.
-px(W*.34,H*.7,W*.32,H*.12,'#a64f3f');px(W*.36,H*.72,W*.28,H*.08,'#d7a65d');px(W*.48,H*.74,W*.04,H*.04,'#f2d58b');
-for(const side of [W*.1,W*.84]){px(side,H*.34,24,48,'#68452e');px(side+3,H*.37,18,4,'#d2a35e');px(side+3,H*.48,18,4,'#d2a35e');px(side+7,H*.3,10,12,'#4b8b5b');px(side+9,H*.28,6,9,'#7abf68');}
-px(W*.08,H*.78,28,20,'#6e4b34');px(W*.085,H*.74,18,12,'#4f8b58');px(W*.09,H*.72,8,9,'#7ac06b');
-px(W*.88,H*.78,24,20,'#6e4b34');px(W*.885,H*.74,16,12,'#4f8b58');
-px(W*.46,H*.28,W*.08,5,'#8a5938');px(W*.49,H*.23,W*.02,12,'#e6c77f');ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
-// Layered warm interior lighting: window spill, lantern pools, and a soft edge vignette.
-function glow(x,y,r,color){const g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'rgba(255,190,100,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
-ctx.save();ctx.globalCompositeOperation='screen';glow(W*.18,H*.39,Math.min(W*.24,H*.42),'rgba(255,218,145,.20)');glow(W*.76,H*.39,Math.min(W*.24,H*.42),'rgba(255,218,145,.20)');glow(W*.12,H*.34,Math.min(W*.16,H*.25),'rgba(255,177,83,.24)');glow(W*.88,H*.34,Math.min(W*.16,H*.25),'rgba(255,177,83,.24)');ctx.restore();
-const vignette=ctx.createRadialGradient(W/2,H*.56,Math.min(W,H)*.2,W/2,H*.56,Math.max(W,H)*.72);vignette.addColorStop(0,'rgba(45,27,18,0)');vignette.addColorStop(1,'rgba(35,22,18,.28)');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+for(const [x,y,w,h] of roomFurniture[interiorId]){const X=W*x,Y=H*y,F=W*w,G=H*h;px(X,Y+G*.18,F,G*.82,'#70472f');px(X+3,Y,F-6,G*.22,'#d0a16b');px(X+6,Y+G*.27,F-12,G*.08,'#c66b45');px(X+6,Y+G*.55,F-12,G*.08,'#75a06b');}
+px(W*.36,H*.72,W*.28,H*.09,'#a64f3f');px(W*.38,H*.74,W*.24,H*.05,'#d7a65d');
+px(W*.09,H*.72,22,20,'#6e4b34');px(W*.095,H*.68,14,12,'#4f8b58');px(W*.88,H*.72,22,20,'#6e4b34');
+px(W*.46,H*.28,W*.08,5,'#8a5938');px(W*.49,H*.23,W*.02,12,'#e6c77f');
+ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
 for(const n of roomNPCs[interiorId])drawPerson(W*n.x,H*n.y,n.color,'#634b3a');
-let roomTarget=null,roomDist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(insidePlayer.x-W*n.x,insidePlayer.y-H*n.y);if(d<Math.max(112,W*.14)&&d<roomDist){roomTarget=n;roomDist=d;}}
-if(roomTarget)drawWorldPrompt(W*roomTarget.x,H*roomTarget.y-32,'E · TALK');else if(insidePlayer.y>H*.68)drawWorldPrompt(W*.5,H*.83,'E · EXIT');
-// Door mat marks the exit; player walks here before leaving.
-px(W*.43,H*.83,W*.14,12,'#a16b3f');px(W*.45,H*.85,W*.1,6,'#e0bd79');
-drawPlayer(insidePlayer.x,insidePlayer.y);}
-function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
+let target=null,dist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(insidePlayer.x-W*n.x,insidePlayer.y-H*n.y);if(d<Math.max(96,W*.12)&&d<dist){target=n;dist=d;}}
+if(target)drawWorldPrompt(W*target.x,H*target.y-32,'E · TALK');else if(insidePlayer.y>H*.68)drawWorldPrompt(W*.5,H*.83,'E · EXIT');
+px(W*.43,H*.83,W*.14,10,'#a16b3f');px(W*.45,H*.85,W*.1,5,'#e0bd79');drawPlayer(insidePlayer.x,insidePlayer.y);
+}function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
 function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*2);px(x-9,y+7+bob,18,7,C.ink);px(x-7-step,y+10+bob,5,7,'#39415a');px(x+3+step,y+10+bob,5,7,'#39415a');
 px(x-9,y-8+bob,18,17,C.ink);px(x-7,y-7+bob,14,14,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38');
 px(x-11,y-4+bob,4,10,C.skin);px(x+7,y-4+bob,4,10,C.skin);px(x-7,y-20+bob,14,13,C.skin);
@@ -236,7 +228,7 @@ cinematic=null;document.body.classList.remove('lh-cinematic');state.seenIntro=tr
 
 function updateQuest(){const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:chapters[Math.min(state.stage,9)].place.toUpperCase();updateQuest();}
-function move(dt){if(dialogue||cinematic||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;let dx=0,dy=0;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;dx+=joystick.x;dy+=joystick.y;if(!dx&&!dy)return;const mag=Math.hypot(dx,dy);dx/=mag;dy/=mag;const speed=state.heroClass==='Scout'?190:state.heroClass==='Guardian'?145:165;if(scene==='inside'){const nx=insidePlayer.x+dx*speed*dt,ny=insidePlayer.y+dy*speed*dt;insidePlayer.x=Math.max(innerWidth*.12,Math.min(innerWidth*.88,nx));insidePlayer.y=Math.max(innerHeight*.28,Math.min(innerHeight*.88,ny));playerFrame+=dt*14;return;}const nx=state.x+dx*speed*dt,ny=state.y+dy*speed*dt;if(!blocked(nx,state.y))state.x=nx;if(!blocked(state.x,ny))state.y=ny;playerFrame+=dt*14;moveCooldown+=dt;if(moveCooldown>.6){moveCooldown=0;save();}}
+function move(dt){if(dialogue||cinematic||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;let dx=0,dy=0;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;dx+=joystick.x;dy+=joystick.y;if(!dx&&!dy)return;const mag=Math.hypot(dx,dy);dx/=mag;dy/=mag;const speed=state.heroClass==='Scout'?190:state.heroClass==='Guardian'?145:165;if(scene==='inside'){const nx=insidePlayer.x+dx*speed*dt,ny=insidePlayer.y+dy*speed*dt;if(!roomBlocked(nx,insidePlayer.y))insidePlayer.x=nx;if(!roomBlocked(insidePlayer.x,ny))insidePlayer.y=ny;insidePlayer.x=Math.max(innerWidth*.1,Math.min(innerWidth*.9,insidePlayer.x));insidePlayer.y=Math.max(innerHeight*.29,Math.min(innerHeight*.87,insidePlayer.y));playerFrame+=dt*14;return;}const nx=state.x+dx*speed*dt,ny=state.y+dy*speed*dt;if(!blocked(nx,state.y))state.x=nx;if(!blocked(state.x,ny))state.y=ny;playerFrame+=dt*14;moveCooldown+=dt;if(moveCooldown>.6){moveCooldown=0;save();}}
 function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);drawWorld();if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
