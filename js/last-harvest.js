@@ -142,10 +142,10 @@ ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center'
 }
 function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;px(x-9,y+6+bob,18,5,'#352f3b');px(x-7,y+8+bob,5,8,'#3d4050');px(x+2,y+8+bob,5,8,'#3d4050');px(x-10,y-8+bob,20,16,C.ink);px(x-8,y-7+bob,16,13,shirt);px(x-12,y-5+bob,4,10,C.skin);px(x+8,y-5+bob,4,10,C.skin);px(x-7,y-22+bob,14,14,C.skin);px(x-8,y-24+bob,16,5,hat);px(x-7,y-27+bob,14,4,hat);px(x-6,y-16+bob,3,3,C.ink);px(x+3,y-16+bob,3,3,C.ink);px(x-5,y-11+bob,10,2,'#9b5e54');px(x-8,y-5+bob,16,3,'rgba(255,255,255,.18)');px(x-11,y+1+bob,3,3,hat);px(x+8,y+1+bob,3,3,hat);}
 const roomFurniture=[
-[[.12,.37,.10,.10],[.77,.37,.10,.10],[.42,.39,.14,.09]],
-[[.18,.39,.14,.10],[.66,.39,.14,.10],[.40,.56,.20,.08]],
-[[.13,.37,.08,.15],[.29,.37,.08,.15],[.63,.37,.08,.15],[.79,.37,.08,.15]],
-[[.18,.42,.18,.09],[.65,.42,.18,.09],[.44,.55,.12,.08]]
+[[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
+[[.10,.29,.16,.07],[.31,.29,.16,.07],[.52,.29,.16,.07],[.73,.29,.16,.07],[.08,.48,.25,.09],[.68,.48,.24,.09]],
+[[.13,.37,.08,.15],[.29,.37,.08,.15],[.63,.37,.08,.15],[.79,.37,.08,.15],[.38,.59,.24,.08]],
+[[.22,.51,.56,.11],[.43,.39,.14,.09],[.10,.26,.12,.07],[.24,.26,.12,.07],[.38,.26,.12,.07],[.52,.26,.12,.07],[.66,.26,.12,.07],[.80,.26,.12,.07]]
 ];
 const roomNPCSpots=[
 [{x:.31,y:.68},{x:.69,y:.68}],
@@ -222,7 +222,7 @@ if(name==='MARA')shirt='#b86c78';
 if(name==='THOMAS')shirt='#577f9b';
 p.fillStyle='#172a3a';p.fillRect(17,45,30,8);p.fillStyle=shirt;p.fillRect(15,26,34,23);p.fillStyle='#f1b58c';p.fillRect(21,11,22,20);p.fillStyle=hair;p.fillRect(19,8,26,9);p.fillRect(17,13,5,8);p.fillRect(42,13,5,8);p.fillStyle='#26334a';p.fillRect(25,21,4,4);p.fillRect(36,21,4,4);p.fillStyle='#f3e6bf';p.fillRect(23,29,18,3);
 }
-function positionSpeechBubble(name){const el=$('lh-dialogue');let p=null;if(cinematic&&cinematic.actors&&cinematic.actors[name])p=cinematic.actors[name];else if(scene==='outside'){const n=npcs.find(v=>v.name===name);if(n)p={x:n.x,y:n.y};}else if(scene==='inside'){const n=roomNPCs[interiorId].find(v=>v.name===name);if(n)p={x:innerWidth*n.x,y:innerHeight*n.y};}if(p&&scene==='outside'&&!cinematic){const camX=Math.max(0,Math.min(MAP_W*TILE-innerWidth,state.x-innerWidth/2)),camY=Math.max(0,Math.min(MAP_H*TILE-innerHeight,state.y-innerHeight/2));p={x:p.x-camX,y:p.y-camY};}if(p){el.style.left=Math.max(12,Math.min(innerWidth-12,p.x))+'px';el.style.top=Math.max(70,p.y-88)+'px';el.style.bottom='auto';el.style.transform='translate(-50%,-100%)';}else{el.style.left='50%';el.style.top='auto';el.style.bottom='18px';el.style.transform='translateX(-50%)';}}
+function positionSpeechBubble(name){const el=$('lh-dialogue');let p=null;if(cinematic&&cinematic.actors&&cinematic.actors[name])p=cinematic.actors[name];else if(scene==='outside'){const n=npcs.find(v=>v.name===name);if(n)p={x:n.x,y:n.y};}else if(scene==='inside'){const i=roomNPCs[interiorId].findIndex(v=>v.name===name);if(i>=0){const spot=roomNPCSpots[interiorId][i];p={x:innerWidth*spot.x,y:innerHeight*spot.y};}}if(p&&scene==='outside'&&!cinematic){const camX=Math.max(0,Math.min(MAP_W*TILE-innerWidth,state.x-innerWidth/2)),camY=Math.max(0,Math.min(MAP_H*TILE-innerHeight,state.y-innerHeight/2));p={x:p.x-camX,y:p.y-camY};}if(p){el.style.left=Math.max(12,Math.min(innerWidth-12,p.x))+'px';el.style.top=Math.max(70,p.y-88)+'px';el.style.bottom='auto';el.style.transform='translate(-50%,-100%)';}else{el.style.left='50%';el.style.top='auto';el.style.bottom='18px';el.style.transform='translateX(-50%)';}}
 function closeDialogue(){ $('lh-dialogue').hidden=true;dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
 function advanceDialogue(){if(!dialogue)return;dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer={x:innerWidth/2,y:innerHeight*.76};updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
