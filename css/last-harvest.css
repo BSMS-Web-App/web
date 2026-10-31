@@ -52,3 +52,10 @@
 .lh-touch{pointer-events:none}
 .lh-joystick{pointer-events:auto}
 @media(pointer:coarse),(max-width:800px){.lh-dialogue{bottom:145px}.lh-cinematic .lh-dialogue{bottom:16px}}
+
+/* Prevent accidental double-tap zoom while preserving browser pinch zoom. */
+html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
+.lh-menu-button,.lh-gold-button,.lh-secondary-button,.lh-class {
+  touch-action: manipulation;
+}
+.lh-joystick,.lh-stick { touch-action: none; }
