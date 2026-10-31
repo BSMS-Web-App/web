@@ -36,3 +36,19 @@
 /* Clear, dedicated interaction control */
 .lh-action-touch{font-family:ui-monospace,monospace;font-weight:1000;touch-action:manipulation;cursor:pointer;}
 .lh-action-touch:active{transform:translateY(2px);filter:brightness(1.15)}
+
+/* Cutscene presentation: let the scene fill the screen. */
+.lh-cinematic .lh-hud,
+.lh-cinematic .lh-location,
+.lh-cinematic .lh-quest,
+.lh-cinematic .lh-controls-hint,
+.lh-cinematic .lh-touch{display:none!important}
+.lh-cinematic .lh-dialogue{z-index:9;left:50%;top:auto;bottom:22px;transform:translateX(-50%);width:min(620px,calc(100% - 28px));min-height:0;padding:10px 15px 12px;border:2px solid #f3e6bf;border-radius:12px;background:#263f52ee;box-shadow:0 4px 0 #172a3a,0 8px 24px #0006}
+.lh-dialogue{left:50%;width:min(430px,calc(100% - 28px));min-height:0;padding:9px 13px 10px;border:2px solid #f3e6bf;border-radius:12px;background:#263f52f2;box-shadow:0 3px 0 #172a3a,0 6px 18px #0006}
+.lh-dialogue:after{content:"";position:absolute;left:50%;bottom:-11px;width:17px;height:17px;background:#263f52;border-right:2px solid #f3e6bf;border-bottom:2px solid #f3e6bf;transform:translateX(-50%) rotate(45deg)}
+.lh-speaker{font-size:10px;letter-spacing:.1em}
+.lh-dialogue p{font-size:clamp(12px,1.5vw,15px);line-height:1.35;margin:5px 0 0}
+.lh-dialogue button{display:none}
+.lh-touch{pointer-events:none}
+.lh-joystick{pointer-events:auto}
+@media(pointer:coarse),(max-width:800px){.lh-dialogue{bottom:145px}.lh-cinematic .lh-dialogue{bottom:16px}}
