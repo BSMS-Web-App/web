@@ -59,3 +59,10 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
   touch-action: manipulation;
 }
 .lh-joystick,.lh-stick { touch-action: none; }
+
+/* Compact dialogue portrait and responsive speaker layout */
+.lh-dialogue-speaker{display:flex;align-items:flex-start;gap:14px;min-width:0}
+#lh-portrait{width:64px;height:64px;flex:0 0 64px;image-rendering:pixelated;border:3px solid #f3e6bf;background:#243b49}
+.lh-dialogue-speaker>div{min-width:0;flex:1}
+.lh-dialogue-speaker p{margin-top:8px}
+@media(max-width:520px){#lh-portrait{width:52px;height:52px;flex-basis:52px}.lh-dialogue-speaker{gap:9px}}
