@@ -36,7 +36,7 @@ export async function verifyPassword(password, storedHash) {
     if (!match) return false;
     const [, n, r, p, salt, expectedHex] = match;
     if (Number(n) !== COST || Number(r) !== BLOCK_SIZE || Number(p) !== PARALLELIZATION) return false;
-    const actual = await scrypt(password, salt, KEY_LENGTH, { N: COST, r: BLOCK_SIZE, p: PARALLELIZATION, maxmem: 64 * 1024 * 1024 });
+    const actual = await scrypt(password, salt, KEY_LENGTH, { N: COST, r: BLOCK_SIZE, p: PARALLELIZATION, maxmem: 256 * 1024 * 1024 });
     const expected = Buffer.from(expectedHex, 'hex');
     return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
 }
