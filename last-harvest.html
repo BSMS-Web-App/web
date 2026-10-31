@@ -15,6 +15,7 @@
     <button id="lh-menu" class="lh-menu-button">MENU</button>
   </div>
   <div id="lh-location" class="lh-location">HEARTHVALE VILLAGE</div>
+  <aside id="lh-quest" class="lh-quest"><b>✦ CURRENT QUEST</b><span id="lh-quest-text">Speak with Elder Maple</span></aside>
   <div class="lh-controls-hint">WASD / ARROWS TO MOVE · E / SPACE TO INTERACT</div>
   <div id="lh-dialogue" class="lh-dialogue" hidden>
     <div class="lh-speaker" id="lh-speaker">ELDER MAPLE</div>
@@ -37,10 +38,7 @@
     </section>
   </div>
   <div id="lh-touch" class="lh-touch" aria-label="Touch movement controls">
-    <div class="lh-dpad">
-      <button data-dir="up" aria-label="Move up">▲</button>
-      <div><button data-dir="left" aria-label="Move left">◀</button><button data-dir="down" aria-label="Move down">▼</button><button data-dir="right" aria-label="Move right">▶</button></div>
-    </div>
+    <div id="lh-joystick" class="lh-joystick" role="application" aria-label="Virtual movement joystick"><div id="lh-stick" class="lh-stick"></div></div>
     <button id="lh-action-touch" class="lh-action-touch">A<br><small>ACT</small></button>
   </div>
   <div id="lh-game-menu" class="lh-overlay" hidden>
