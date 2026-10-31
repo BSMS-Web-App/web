@@ -59,7 +59,7 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
@@ -76,6 +76,8 @@ px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-1
 for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55');}
 if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;drawPerson(a.x,a.y,'#d5b64e','#e8bd58');}
 drawPlayer(state.x,state.y);ctx.restore();return{camX,camY};}
+function drawDreamScene(W,H){px(0,0,W,H,'#49345f');for(let i=0;i<14;i++){px(i*W/14,0,W/14,H*.24,i%2?'#bd874e':'#e2b95c');px(i*W/14,H*.24,W/14,H*.1,'#7b4b68');}px(0,H*.34,W,H*.66,'#704b36');px(0,H*.76,W,H*.24,'#c18b49');for(let i=0;i<12;i++){const x=i*W/11;drawPerson(x,H*.38,'#6b9c70','#d8b86a');}px(W*.2,H*.55,W*.6,H*.26,'#9b633d');px(W*.22,H*.57,W*.56,H*.22,'#c18a48');const a=cinematic.actors;drawPerson(a.MARA.x,a.MARA.y,'#b86c78','#70485c');drawPerson(a.THOMAS.x,a.THOMAS.y,'#577f9b','#4a536e');drawPerson(a.ROWAN.x,a.ROWAN.y,'#bb6542','#9b4a36');drawPlayer(a.HERO.x,a.HERO.y);drawPerson(a.FOE.x,a.FOE.y,'#7d526f','#45364e');ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.12);ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);}
+function drawWakeScene(W,H){px(0,0,W,H,'#463b4d');px(0,0,W,H*.22,'#6c6472');px(W*.08,H*.12,W*.2,H*.34,'#343d54');px(W*.1,H*.14,W*.16,H*.29,'#75a9b3');px(W*.18,H*.14,5,H*.29,'#e4d6b0');px(0,H*.72,W,H*.28,'#a77b54');px(W*.24,H*.52,W*.52,H*.3,'#654638');px(W*.26,H*.5,W*.48,H*.28,'#d6b27a');px(W*.28,H*.47,W*.44,H*.08,'#f0d6a0');px(W*.3,H*.52,W*.4,H*.19,'#9b6c50');px(W*.44,H*.54,W*.12,H*.13,'#d6b27a');drawPerson(W*.35,H*.56,'#b86c78','#70485c');drawPerson(W*.65,H*.56,'#577f9b','#4a536e');drawPlayer(W*.5,H*.72);ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.12);}
 function drawPerson(x,y,shirt,hat){const bob=0;px(x-8,y-4,16,14,C.ink);px(x-6,y-16,12,13,C.skin);px(x-7,y-20,14,6,hat);px(x-8,y-7,16,12,shirt);px(x-7,y+5,5,8,'#3d4050');px(x+2,y+5,5,8,'#3d4050');px(x-5,y-12,2,2,C.ink);px(x+3,y-12,2,2,C.ink);px(x-11,y-5,4,8,C.skin);px(x+7,y-5,4,8,C.skin);}
 function drawInterior(W,H){ctx.clearRect(0,0,W,H);px(0,0,W,H,'#59402f');
 // A room with visible timber walls, floorboards, windows, rugs and furniture.
@@ -118,11 +120,34 @@ const doors=[{x:10.5,y:10.5,id:0},{x:34,y:10.5,id:1},{x:22,y:22.5,id:2},{x:5.5,y
 const sx=27*TILE,sy=10*TILE;if(Math.hypot(state.x-sx,state.y-sy)<75){setDialogue([['OLD SIGN','AUTUMNWOOD — follow the golden leaves beyond the village.'],['QUEST','Explore Hearthvale and speak with the villagers. The road north-east leads to your first chapter.']]);return;}
 setDialogue([['NARRATOR','The wind carries the smell of cinnamon and fallen leaves. There may be something nearby.']]);}
 function startIntro(){state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';state.heroClass=document.querySelector('.lh-class.selected').dataset.class;state.x=20*TILE;state.y=15*TILE;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;state.coins=100;state.stage=0;state.seenIntro=true;save();$('lh-create').hidden=true;updateHud();
-// Scripted opening cinematic: actors move on-screen while the camera pans between them.
-cinematic={time:0,camera:{x:20*TILE,y:15*TILE},actors:{CHAMPION:{x:17*TILE,y:15*TILE},ROWAN:{x:24*TILE,y:13*TILE},'ELDER MAPLE':{x:15*TILE,y:12*TILE}}};
-const say=(lines)=>new Promise(resolve=>setDialogue(lines,resolve));
-const moveActor=(name,to,duration=1100)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();function step(now){if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration);const eased=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*eased;a.y=from.y+(to.y-from.y)*eased;if(p<1)requestAnimationFrame(step);else resolve();}requestAnimationFrame(step);});
-(async()=>{await say([['DREAM','A golden stadium stretches beneath an endless autumn sky. The crowd cheers as a champion steps forward.']]);cinematic.camera={x:17*TILE,y:15*TILE};await moveActor('CHAMPION',{x:19*TILE,y:15*TILE});await say([['DREAM','The champion raises a shining harvest blade. The crowd begins chanting your name: '+state.name+'!'],['DREAM','You step forward, ready to become the greatest warrior Hearthvale has ever known…']]);cinematic.camera={x:20*TILE,y:15*TILE};await say([['NARRATOR','A distant bell rings. The golden sky fades.']]);cinematic.actors.CHAMPION.x=17*TILE;cinematic.actors.CHAMPION.y=15*TILE;await say([['NARRATOR','You wake in your room. Morning light spills across the floor. Outside, the village bell is silent.']]);cinematic.camera={x:20*TILE,y:14*TILE};await moveActor('ROWAN',{x:21*TILE,y:14*TILE},1300);await say([['ROWAN',''+state.name+'! You are awake! Your parents are missing. I have been looking everywhere!']]);cinematic.camera={x:16*TILE,y:13*TILE};await moveActor('ELDER MAPLE',{x:17*TILE,y:13*TILE},900);await say([['ELDER MAPLE','The keepers of the Everfeast are gone. We need you to help us find them.'],['ROWAN','I saw strange tracks near the fountain. Come on—we have to move!'],['NARRATOR','Your dream of becoming a hero will have to wait. Hearthvale needs you now.']]);cinematic=null;questStep=0;updateQuest();save();})();}
+cinematic={phase:'dream',camera:{x:0,y:0},actors:{HERO:{x:innerWidth*.28,y:innerHeight*.68},FOE:{x:innerWidth*.7,y:innerHeight*.68},MARA:{x:innerWidth*.18,y:innerHeight*.48},THOMAS:{x:innerWidth*.82,y:innerHeight*.48},ROWAN:{x:innerWidth*.5,y:innerHeight*.4}}};
+const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
+const moveActor=(name,to,duration=900)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();function step(now){if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;if(p<1)requestAnimationFrame(step);else resolve();}requestAnimationFrame(step);});
+(async()=>{
+await say([['DREAM','The Harvest Festival arena roars with excitement. Golden banners wave as the crowd chants your name!']]);
+await say([['CROWD',''+state.name+'! '+state.name+'! You can do it!'],['ROWAN','Show them what the future champion of Hearthvale can do!']]);
+await moveActor('HERO',{x:innerWidth*.48,y:innerHeight*.68},1100);
+await say([['ANNOUNCER','The challenger enters the arena! The final match begins now!']]);
+await moveActor('FOE',{x:innerWidth*.58,y:innerHeight*.68},650);
+await say([['CHALLENGER','You really think you can beat me?'],['CROWD','We believe in you, '+state.name+'!']]);
+await moveActor('HERO',{x:innerWidth*.57,y:innerHeight*.68},700);
+await say([['NARRATOR','You dash forward, dodge the challenger’s strike, and land one final heroic blow!']]);
+await moveActor('FOE',{x:innerWidth*.77,y:innerHeight*.72},650);
+await say([['ANNOUNCER','THE CHAMPION WINS!'],['CROWD',''+state.name+'! '+state.name+'! HEARTHVALE’S HERO!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest warrior in all of Hearthvale!']]);
+cinematic.phase='wake';cinematic.actors={HERO:{x:innerWidth*.5,y:innerHeight*.72},MARA:{x:innerWidth*.35,y:innerHeight*.56},THOMAS:{x:innerWidth*.65,y:innerHeight*.56}};
+await say([['NARRATOR','“Wake up, sleepyhead…” A familiar voice pulls you out of the dream.']]);
+await say([['MARA','There you are. We wanted to see you before we left for the Everfeast preparations.'],['THOMAS','Keep being brave, alright? We will be back before supper.'],[''+state.name,'I will. I promise.'],['MARA','We love you. Never forget that.']]);
+await moveActor('MARA',{x:innerWidth*.42,y:innerHeight*.58},500);
+await moveActor('THOMAS',{x:innerWidth*.58,y:innerHeight*.58},500);
+await say([['NARRATOR','Your parents smile, then step out of the room. It is the last time you will see them before they disappear.'],['NARRATOR','A little later, a distant bell rings. You climb out of bed. Something is wrong in Hearthvale.']]);
+cinematic.phase='outside';cinematic.camera={x:20*TILE,y:15*TILE};cinematic.actors={ROWAN:{x:24*TILE,y:13*TILE},'ELDER MAPLE':{x:15*TILE,y:12*TILE}};
+await moveActor('ROWAN',{x:21*TILE,y:14*TILE},1100);
+await say([['ROWAN',''+state.name+'! Your parents are missing. I have been looking everywhere!']]);
+cinematic.camera={x:16*TILE,y:13*TILE};await moveActor('ELDER MAPLE',{x:17*TILE,y:13*TILE},800);
+await say([['ELDER MAPLE','The keepers of the Everfeast are gone. We need you to help us find them.'],['ROWAN','I saw strange tracks near the fountain. Come on!'],['NARRATOR','Your dream felt so real. But now Hearthvale needs you.']]);
+cinematic=null;questStep=0;updateQuest();save();
+})();}
+
 function updateQuest(){const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:chapters[Math.min(state.stage,9)].place.toUpperCase();updateQuest();}
 function move(dt){if(dialogue||cinematic||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;let dx=0,dy=0;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;dx+=joystick.x;dy+=joystick.y;if(!dx&&!dy)return;const mag=Math.hypot(dx,dy);dx/=mag;dy/=mag;const speed=state.heroClass==='Scout'?190:state.heroClass==='Guardian'?145:165;if(scene==='inside'){const nx=insidePlayer.x+dx*speed*dt,ny=insidePlayer.y+dy*speed*dt;insidePlayer.x=Math.max(innerWidth*.12,Math.min(innerWidth*.88,nx));insidePlayer.y=Math.max(innerHeight*.28,Math.min(innerHeight*.88,ny));playerFrame+=dt*14;return;}const nx=state.x+dx*speed*dt,ny=state.y+dy*speed*dt;if(!blocked(nx,state.y))state.x=nx;if(!blocked(state.x,ny))state.y=ny;playerFrame+=dt*14;moveCooldown+=dt;if(moveCooldown>.6){moveCooldown=0;save();}}
