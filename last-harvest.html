@@ -47,10 +47,14 @@
 
   </div>
   <div id="lh-game-menu" class="lh-overlay" hidden>
-    <section class="lh-modal lh-menu-modal"><h2>ADVENTURE MENU</h2><div class="lh-menu-stats" id="lh-menu-stats"></div>
-      <button id="lh-resume" class="lh-gold-button">RESUME GAME</button>
+    <section class="lh-modal lh-menu-modal lh-rpg-modal">
+      <div class="lh-rpg-heading"><div><div class="lh-eyebrow">HEARTHVALE ADVENTURE</div><h2>FIELD JOURNAL</h2></div><button id="lh-resume" class="lh-close-button" aria-label="Close menu">✕</button></div>
+      <nav class="lh-rpg-tabs" aria-label="Adventure menu">
+        <button class="active" data-rpg-tab="status">STATUS</button><button data-rpg-tab="bag">BAG</button><button data-rpg-tab="journal">JOURNAL</button>
+      </nav>
+      <div id="lh-rpg-content" class="lh-rpg-content" aria-live="polite"></div>
       <button id="lh-reset" class="lh-secondary-button">START A NEW ADVENTURE</button>
-      <p class="lh-footnote">Progress is saved locally on this device.</p>
+      <p class="lh-footnote">Your progress is saved on this device.</p>
     </section>
   </div>
 </main>
