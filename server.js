@@ -17,7 +17,6 @@ import profanityFilterHandler from './api/profanity-filter.js';
 import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
 import versionHandler from './api/version.js';
-import halloweenHauntHandler from './api/halloween-haunt.js';
 import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
 
@@ -35,6 +34,8 @@ app.get('/account', (req, res) => res.redirect(301, '/accounts'));
 app.get('/c', (req, res) => res.redirect(301, '/chat'));
 app.get('/games', (req, res) => res.redirect(301, '/g'));
 app.get('/rooms', (req, res) => res.redirect(301, '/chat'));
+app.get('/event/halloween-haunt', (req, res) => res.redirect(301, '/events'));
+app.all('/api/halloween-haunt', (req, res) => res.status(410).json({ error: 'This event has ended.' }));
 
 // API Routes
 app.use('/api/auth', (req, res) => authHandler(req, res));
@@ -48,7 +49,6 @@ app.use('/api/export-data', (req, res) => exportDataHandler(req, res));
 app.use('/api/profanity-filter', (req, res) => profanityFilterHandler(req, res));
 app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 app.use('/api/version', (req, res) => versionHandler(req, res));
-app.use('/api/halloween-haunt', (req, res) => halloweenHauntHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 

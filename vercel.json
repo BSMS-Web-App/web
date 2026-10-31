@@ -25,6 +25,11 @@
       "source": "/contact",
       "destination": "/support",
       "permanent": true
+    },
+    {
+      "source": "/event/halloween-haunt",
+      "destination": "/events",
+      "permanent": true
     }
   ],
   "git": {
