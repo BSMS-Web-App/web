@@ -9,14 +9,14 @@ import { promisify } from 'node:util';
 
 const scrypt = promisify(crypto.scrypt);
 const KEY_LENGTH = 64;
-const COST = 16384;
+const COST = 131072;
 const BLOCK_SIZE = 8;
 const PARALLELIZATION = 1;
 
 export async function hashPassword(password) {
     if (typeof password !== 'string' || !password) throw new TypeError('Password must be a non-empty string.');
     const salt = crypto.randomBytes(16).toString('hex');
-    const key = await scrypt(password, salt, KEY_LENGTH, { N: COST, r: BLOCK_SIZE, p: PARALLELIZATION, maxmem: 64 * 1024 * 1024 });
+    const key = await scrypt(password, salt, KEY_LENGTH, { N: COST, r: BLOCK_SIZE, p: PARALLELIZATION, maxmem: 256 * 1024 * 1024 });
     return '$scrypt$' + COST + '$' + BLOCK_SIZE + '$' + PARALLELIZATION + '$' + salt + '$' + key.toString('hex');
 }
 
@@ -27,6 +27,7 @@ export function needsPasswordRehash(storedHash) {
 export async function verifyPassword(password, storedHash) {
     if (typeof password !== 'string' || typeof storedHash !== 'string') return false;
     if (/^[a-f0-9]{64}$/i.test(storedHash)) {
+        // lgtm[js/insufficient-password-hash] Legacy SHA-256 is verified only for migration; new and upgraded passwords use scrypt.
         const actual = crypto.createHash('sha256').update(password).digest();
         const expected = Buffer.from(storedHash, 'hex');
         return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
