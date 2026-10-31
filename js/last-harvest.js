@@ -78,12 +78,13 @@ function path(x,y,w,h){px(x,y,w,h,C.pathShade);for(let yy=y+2;yy<y+h-2;yy+=24)fo
 path(0,11*TILE,MAP_W*TILE,4*TILE);path(15*TILE,0,4*TILE,MAP_H*TILE);path(19*TILE,14*TILE,10*TILE,2*TILE);
 drawHouse(solids[0],'#c18a43');drawHouse(solids[1],'#8e5940');drawHouse(solids[2],'#a64e37');drawHouse(solids[3],'#c18a43');
 for(const t of trees)drawTree(t.x,t.y);
-// Hand-placed landmarks and decorative sprite clusters make the village feel lived-in.
-for(const p of [[12,9],[14,10],[29,9],[32,15],[12,19],[27,20],[9,24],[39,25],[17,28],[31,29]])drawBush(p[0],p[1]);
-for(const p of [[15,10],[24,10],[13,17],[26,17],[30,23],[11,27],[35,27]])drawFlower(p[0],p[1]);
-for(const p of [[15,14],[29,14],[12,22],[32,20]])drawLamp(p[0],p[1]);
-drawBench(16,15);drawBench(24,15);drawPumpkin(13,12);drawPumpkin(26,18);drawRock(9,18);drawRock(37,17);drawFence(3,22,4);drawFence(40,22,4);
-drawSign(27,9,'TOWN');drawSign(15,10,'INN');
+// Props are placed only in clear grass pockets: never on roads, building footprints, or the fountain.
+function clearPropTile(tx,ty){const onRoad=(ty>=11&&ty<15)||(tx>=15&&tx<19)||(tx>=19&&tx<29&&ty>=14&&ty<16);const inHouse=solids.some(b=>tx>=b.x-1&&tx<b.x+b.w+1&&ty>=b.y-1&&ty<b.y+b.h+1);const nearFountain=tx>=17&&tx<=22&&ty>=11&&ty<=14;return !onRoad&&!inHouse&&!nearFountain&&tx>2&&tx<MAP_W-3&&ty>2&&ty<MAP_H-3;}
+const props=[
+['bush',11,8],['flower',15,8],['bush',27,8],['flower',39,8],['lamp',5,17],['bush',11,18],['flower',28,18],['lamp',33,18],['pumpkin',13,20],['rock',37,20],['bench',9,16],['bench',39,16],['bush',12,23],['flower',15,23],['bush',29,23],['flower',34,24],['lamp',10,27],['lamp',37,27],['rock',14,29],['pumpkin',32,29]
+];
+for(const [kind,x,y] of props){if(!clearPropTile(x,y))continue;({bush:drawBush,flower:drawFlower,lamp:drawLamp,bench:drawBench,pumpkin:drawPumpkin,rock:drawRock})[kind](x,y);}
+drawFence(3,22,3);drawFence(41,22,3);
 /* fountain, sign and village details */
 px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,'#b5d1c9');px(18*TILE+12,12*TILE+8,42,25,'#5cabb4');px(18*TILE+20,12*TILE-7,26,10,'#e8e6cf');px(18*TILE+29,12*TILE-3,8,5,'#7dc9cf');
 px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-10,10*TILE+4,26,3,C.wood);
@@ -107,6 +108,9 @@ for(let y=H*.205;y<H;y+=28){px(0,y,W,26,(Math.floor(y/28)%2)?'#b98755':'#c99b66'
 px(W*.055,H*.23,W*.89,H*.69,'#704a34');px(W*.07,H*.25,W*.86,H*.65,'#dfc28d');
 // windows with crossbars
 for(const wx of [W*.18,W*.76]){px(wx-25,H*.29,52,58,'#493d39');px(wx-21,H*.33,44,48,'#67b7c6');px(wx-2,H*.33,4,48,'#e6d7ae');px(wx-21,H*.53,44,4,'#e6d7ae');}
+// Room structure: dark ceiling beams, skirting, and timber wall panels.
+for(let x=0;x<W;x+=Math.max(90,W*.16)){px(x,H*.19,5,H*.055,'#382b28');px(x+5,H*.2,2,H*.035,'#d0a16b');}
+px(W*.07,H*.88,W*.86,7,'#70472f');px(W*.07,H*.25,7,H*.64,'#8c5a39');px(W*.925,H*.25,7,H*.64,'#8c5a39');
 // room-specific furnishings
 if(interiorId===0){px(W*.38,H*.36,W*.24,55,'#8a5b3a');px(W*.4,H*.34,W*.2,13,'#e4c78c');px(W*.13,H*.64,95,38,'#8a4e3d');px(W*.13,H*.61,95,10,'#d9aa6a');px(W*.73,H*.62,60,48,'#95633e');}
 if(interiorId===1){px(W*.16,H*.58,W*.68,62,'#8b5937');px(W*.18,H*.55,W*.64,16,'#e0b879');px(W*.2,H*.52,24,36,'#d6c18c');px(W*.76,H*.52,24,36,'#d6c18c');px(W*.4,H*.35,W*.2,28,'#8b583a');}
@@ -118,6 +122,10 @@ for(const side of [W*.1,W*.84]){px(side,H*.34,24,48,'#68452e');px(side+3,H*.37,1
 px(W*.08,H*.78,28,20,'#6e4b34');px(W*.085,H*.74,18,12,'#4f8b58');px(W*.09,H*.72,8,9,'#7ac06b');
 px(W*.88,H*.78,24,20,'#6e4b34');px(W*.885,H*.74,16,12,'#4f8b58');
 px(W*.46,H*.28,W*.08,5,'#8a5938');px(W*.49,H*.23,W*.02,12,'#e6c77f');ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
+// Layered warm interior lighting: window spill, lantern pools, and a soft edge vignette.
+function glow(x,y,r,color){const g=ctx.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'rgba(255,190,100,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
+ctx.save();ctx.globalCompositeOperation='screen';glow(W*.18,H*.39,Math.min(W*.24,H*.42),'rgba(255,218,145,.20)');glow(W*.76,H*.39,Math.min(W*.24,H*.42),'rgba(255,218,145,.20)');glow(W*.12,H*.34,Math.min(W*.16,H*.25),'rgba(255,177,83,.24)');glow(W*.88,H*.34,Math.min(W*.16,H*.25),'rgba(255,177,83,.24)');ctx.restore();
+const vignette=ctx.createRadialGradient(W/2,H*.56,Math.min(W,H)*.2,W/2,H*.56,Math.max(W,H)*.72);vignette.addColorStop(0,'rgba(45,27,18,0)');vignette.addColorStop(1,'rgba(35,22,18,.28)');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
 for(const n of roomNPCs[interiorId])drawPerson(W*n.x,H*n.y,n.color,'#634b3a');
 let roomTarget=null,roomDist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(insidePlayer.x-W*n.x,insidePlayer.y-H*n.y);if(d<Math.max(112,W*.14)&&d<roomDist){roomTarget=n;roomDist=d;}}
 if(roomTarget)drawWorldPrompt(W*roomTarget.x,H*roomTarget.y-32,'E · TALK');else if(insidePlayer.y>H*.68)drawWorldPrompt(W*.5,H*.83,'E · EXIT');
