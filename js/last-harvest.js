@@ -49,6 +49,14 @@ px(X+12,Y+17,9,16,'#68452e');px(X+9,Y+25,15,5,'#4c392b');
 px(X+2,Y+7,28,18,'#286344');px(X+5,Y+1,22,19,'#347e4b');px(X+9,Y-3,14,13,'#48a65a');
 px(X+6,Y+5,7,6,'#78c96b');px(X+19,Y+3,6,7,'#70c66a');px(X+2,Y+15,7,6,'#3e9853');px(X+21,Y+15,7,5,'#2d7548');
 px(X+13,Y+7,4,3,'#a4d978');}
+function drawFlower(x,y,color='#e6b95d'){const X=x*TILE,Y=y*TILE;px(X+14,Y+18,3,9,'#39794b');px(X+9,Y+23,12,3,'#39794b');px(X+10,Y+11,5,5,color);px(X+17,Y+11,5,5,color);px(X+10,Y+17,5,5,color);px(X+17,Y+17,5,5,color);px(X+14,Y+14,4,4,'#f7e6a0');}
+function drawBush(x,y){const X=x*TILE,Y=y*TILE;px(X+3,Y+14,26,13,'#24583c');px(X+1,Y+8,14,16,'#347e4b');px(X+15,Y+6,16,18,'#286b43');px(X+7,Y+4,12,13,'#4ca45a');px(X+8,Y+8,5,4,'#8acb68');px(X+21,Y+11,4,4,'#75bd5d');}
+function drawLamp(x,y){const X=x*TILE,Y=y*TILE;px(X+14,Y+9,4,23,'#574638');px(X+9,Y+6,14,3,'#574638');px(X+10,Y-1,12,12,'#5a4637');px(X+12,Y+1,8,8,'#f3d88b');px(X+13,Y+2,6,6,'#fff1b4');}
+function drawBench(x,y){const X=x*TILE,Y=y*TILE;px(X+4,Y+12,24,7,'#68452e');px(X+5,Y+10,22,4,'#b87942');px(X+7,Y+19,3,8,'#4c392b');px(X+22,Y+19,3,8,'#4c392b');}
+function drawPumpkin(x,y){const X=x*TILE,Y=y*TILE;px(X+8,Y+13,17,13,'#b95f32');px(X+5,Y+16,23,8,'#d77b37');px(X+12,Y+9,9,5,'#e69a43');px(X+15,Y+6,4,5,'#477447');px(X+11,Y+17,2,4,'#713e2c');px(X+20,Y+17,2,4,'#713e2c');}
+function drawRock(x,y){const X=x*TILE,Y=y*TILE;px(X+7,Y+13,18,12,'#64747a');px(X+11,Y+8,11,8,'#87969a');px(X+12,Y+10,5,3,'#bac2b6');px(X+8,Y+22,16,3,'#4b5b60');}
+function drawSign(x,y,label){const X=x*TILE,Y=y*TILE;px(X+14,Y+12,4,18,'#68452e');px(X+3,Y+4,26,12,'#68452e');px(X+5,Y+6,22,8,'#e1c17c');ctx.fillStyle='#62452e';ctx.font='bold 6px ui-monospace';ctx.textAlign='center';ctx.fillText(label,X+16,Y+12);}
+function drawFence(x,y,len=3){for(let i=0;i<len;i++){const X=(x+i)*TILE,Y=y*TILE;px(X+5,Y+10,4,21,'#68452e');px(X+21,Y+10,4,21,'#68452e');px(X+3,Y+12,24,5,'#b77a43');px(X+3,Y+22,24,4,'#95613a');}}
 function drawHouse(b,roof='#a85c32'){
 const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
 px(x-5,y+12,w+10,h-12,'#35485a');px(x,y+12,w,h-14,'#d7d9c8');px(x+5,y+18,w-10,h-25,'#9aaeb0');
@@ -70,6 +78,12 @@ function path(x,y,w,h){px(x,y,w,h,C.pathShade);for(let yy=y+2;yy<y+h-2;yy+=24)fo
 path(0,11*TILE,MAP_W*TILE,4*TILE);path(15*TILE,0,4*TILE,MAP_H*TILE);path(19*TILE,14*TILE,10*TILE,2*TILE);
 drawHouse(solids[0],'#c18a43');drawHouse(solids[1],'#8e5940');drawHouse(solids[2],'#a64e37');drawHouse(solids[3],'#c18a43');
 for(const t of trees)drawTree(t.x,t.y);
+// Hand-placed landmarks and decorative sprite clusters make the village feel lived-in.
+for(const p of [[12,9],[14,10],[29,9],[32,15],[12,19],[27,20],[9,24],[39,25],[17,28],[31,29]])drawBush(p[0],p[1]);
+for(const p of [[15,10],[24,10],[13,17],[26,17],[30,23],[11,27],[35,27]])drawFlower(p[0],p[1]);
+for(const p of [[15,14],[29,14],[12,22],[32,20]])drawLamp(p[0],p[1]);
+drawBench(16,15);drawBench(24,15);drawPumpkin(13,12);drawPumpkin(26,18);drawRock(9,18);drawRock(37,17);drawFence(3,22,4);drawFence(40,22,4);
+drawSign(27,9,'TOWN');drawSign(15,10,'INN');
 /* fountain, sign and village details */
 px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,'#b5d1c9');px(18*TILE+12,12*TILE+8,42,25,'#5cabb4');px(18*TILE+20,12*TILE-7,26,10,'#e8e6cf');px(18*TILE+29,12*TILE-3,8,5,'#7dc9cf');
 px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-10,10*TILE+4,26,3,C.wood);
@@ -91,7 +105,12 @@ if(interiorId===0){px(W*.38,H*.36,W*.24,55,'#8a5b3a');px(W*.4,H*.34,W*.2,13,'#e4
 if(interiorId===1){px(W*.16,H*.58,W*.68,62,'#8b5937');px(W*.18,H*.55,W*.64,16,'#e0b879');px(W*.2,H*.52,24,36,'#d6c18c');px(W*.76,H*.52,24,36,'#d6c18c');px(W*.4,H*.35,W*.2,28,'#8b583a');}
 if(interiorId===2){for(let i=0;i<4;i++){px(W*.12+i*W*.2,H*.38,52,75,'#805136');px(W*.12+i*W*.2,H*.36,52,9,'#e0b879');for(let j=0;j<3;j++)px(W*.14+i*W*.2,H*.42+j*16,28,9,['#c66b45','#75a06b','#d6b65d'][j]);}}
 if(interiorId===3){px(W*.18,H*.57,W*.64,36,'#805136');px(W*.2,H*.53,W*.6,12,'#d5a75e');px(W*.24,H*.47,26,35,'#7b8794');px(W*.66,H*.45,38,40,'#7b8794');px(W*.48,H*.32,42,38,'#c28c4d');}
-ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
+// Extra room dressing: patterned rugs, lamps, potted plants, shelves and tiny props.
+px(W*.34,H*.7,W*.32,H*.12,'#a64f3f');px(W*.36,H*.72,W*.28,H*.08,'#d7a65d');px(W*.48,H*.74,W*.04,H*.04,'#f2d58b');
+for(const side of [W*.1,W*.84]){px(side,H*.34,24,48,'#68452e');px(side+3,H*.37,18,4,'#d2a35e');px(side+3,H*.48,18,4,'#d2a35e');px(side+7,H*.3,10,12,'#4b8b5b');px(side+9,H*.28,6,9,'#7abf68');}
+px(W*.08,H*.78,28,20,'#6e4b34');px(W*.085,H*.74,18,12,'#4f8b58');px(W*.09,H*.72,8,9,'#7ac06b');
+px(W*.88,H*.78,24,20,'#6e4b34');px(W*.885,H*.74,16,12,'#4f8b58');
+px(W*.46,H*.28,W*.08,5,'#8a5938');px(W*.49,H*.23,W*.02,12,'#e6c77f');ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
 for(const n of roomNPCs[interiorId])drawPerson(W*n.x,H*n.y,n.color,'#634b3a');
 // Door mat marks the exit; player walks here before leaving.
 px(W*.43,H*.83,W*.14,12,'#a16b3f');px(W*.45,H*.85,W*.1,6,'#e0bd79');
