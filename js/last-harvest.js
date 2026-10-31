@@ -89,7 +89,14 @@ px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,
 px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-10,10*TILE+4,26,3,C.wood);
 for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55');}
 if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;drawPerson(a.x,a.y,'#d5b64e','#e8bd58');}
-drawPlayer(state.x,state.y);ctx.restore();return{camX,camY};}
+drawPlayer(state.x,state.y);
+let promptTarget=null,promptDist=Infinity,promptLabel='E · TALK';
+for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<104&&d<promptDist){promptTarget=n;promptDist=d;promptLabel='E · TALK';}}
+const doors=[{x:10.5,y:10.5},{x:34,y:10.5},{x:22,y:22.5},{x:5.5,y:29.5}];
+for(const d of doors){const wx=d.x*TILE,wy=d.y*TILE,dd=Math.hypot(state.x-wx,state.y-wy);if(dd<112&&dd<promptDist){promptTarget={x:wx,y:wy};promptDist=dd;promptLabel='E · ENTER';}}
+const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&signDist<promptDist){promptTarget={x:27*TILE,y:10*TILE};promptLabel='E · READ';}
+if(promptTarget)drawWorldPrompt(promptTarget.x,promptTarget.y-30,promptLabel);
+ctx.restore();return{camX,camY};}
 function drawDreamScene(W,H){px(0,0,W,H,'#49345f');for(let i=0;i<14;i++){px(i*W/14,0,W/14,H*.24,i%2?'#bd874e':'#e2b95c');px(i*W/14,H*.24,W/14,H*.1,'#7b4b68');}px(0,H*.34,W,H*.66,'#704b36');px(0,H*.76,W,H*.24,'#c18b49');for(let i=0;i<12;i++){const x=i*W/11;drawPerson(x,H*.38,'#6b9c70','#d8b86a');}px(W*.2,H*.55,W*.6,H*.26,'#9b633d');px(W*.22,H*.57,W*.56,H*.22,'#c18a48');const a=cinematic.actors;drawPerson(a.MARA.x,a.MARA.y,'#b86c78','#70485c');drawPerson(a.THOMAS.x,a.THOMAS.y,'#577f9b','#4a536e');drawPerson(a.ROWAN.x,a.ROWAN.y,'#bb6542','#9b4a36');drawPlayer(a.HERO.x,a.HERO.y);drawPerson(a.FOE.x,a.FOE.y,'#7d526f','#45364e');ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.12);ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);}
 function drawWakeScene(W,H){px(0,0,W,H,'#463b4d');px(0,0,W,H*.22,'#6c6472');px(W*.08,H*.12,W*.2,H*.34,'#343d54');px(W*.1,H*.14,W*.16,H*.29,'#75a9b3');px(W*.18,H*.14,5,H*.29,'#e4d6b0');px(0,H*.72,W,H*.28,'#a77b54');px(W*.24,H*.52,W*.52,H*.3,'#654638');px(W*.26,H*.5,W*.48,H*.28,'#d6b27a');px(W*.28,H*.47,W*.44,H*.08,'#f0d6a0');px(W*.3,H*.52,W*.4,H*.19,'#9b6c50');px(W*.44,H*.54,W*.12,H*.13,'#d6b27a');drawPerson(W*.35,H*.56,'#b86c78','#70485c');drawPerson(W*.65,H*.56,'#577f9b','#4a536e');drawPlayer(W*.5,H*.72);ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.12);}
 function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.4;px(x-8,y-4,16,14,C.ink);px(x-6,y-16,12,13,C.skin);px(x-7,y-20,14,6,hat);px(x-8,y-7,16,12,shirt);px(x-7,y+5,5,8,'#3d4050');px(x+2,y+5,5,8,'#3d4050');px(x-5,y-12,2,2,C.ink);px(x+3,y-12,2,2,C.ink);px(x-11,y-5,4,8,C.skin);px(x+7,y-5,4,8,C.skin);}
@@ -112,9 +119,12 @@ px(W*.08,H*.78,28,20,'#6e4b34');px(W*.085,H*.74,18,12,'#4f8b58');px(W*.09,H*.72,
 px(W*.88,H*.78,24,20,'#6e4b34');px(W*.885,H*.74,16,12,'#4f8b58');
 px(W*.46,H*.28,W*.08,5,'#8a5938');px(W*.49,H*.23,W*.02,12,'#e6c77f');ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
 for(const n of roomNPCs[interiorId])drawPerson(W*n.x,H*n.y,n.color,'#634b3a');
+let roomTarget=null,roomDist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(insidePlayer.x-W*n.x,insidePlayer.y-H*n.y);if(d<Math.max(112,W*.14)&&d<roomDist){roomTarget=n;roomDist=d;}}
+if(roomTarget)drawWorldPrompt(W*roomTarget.x,H*roomTarget.y-32,'E · TALK');else if(insidePlayer.y>H*.68)drawWorldPrompt(W*.5,H*.83,'E · EXIT');
 // Door mat marks the exit; player walks here before leaving.
 px(W*.43,H*.83,W*.14,12,'#a16b3f');px(W*.45,H*.85,W*.1,6,'#e0bd79');
 drawPlayer(insidePlayer.x,insidePlayer.y);}
+function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
 function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*2);px(x-9,y+7+bob,18,7,C.ink);px(x-7-step,y+10+bob,5,7,'#39415a');px(x+3+step,y+10+bob,5,7,'#39415a');
 px(x-9,y-8+bob,18,17,C.ink);px(x-7,y-7+bob,14,14,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38');
 px(x-11,y-4+bob,4,10,C.skin);px(x+7,y-4+bob,4,10,C.skin);px(x-7,y-20+bob,14,13,C.skin);
