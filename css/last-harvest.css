@@ -6,3 +6,29 @@
 .lh-quest b,.lh-quest span{display:block}.lh-quest b{font-size:9px;letter-spacing:.14em;color:#f4c76e;margin-bottom:5px}.lh-quest span{line-height:1.4}
 @media(pointer:coarse),(max-width:800px){.lh-joystick{width:124px;height:124px}.lh-quest{top:108px;right:10px;width:42vw;font-size:10px}}
 @media(max-width:520px){.lh-joystick{width:112px;height:112px}.lh-stick{width:48px;height:48px;margin:-24px}.lh-quest{top:100px}}
+
+/* Unified handheld-era pixel RPG presentation */
+.lh-body{font-family:"Courier New",monospace;image-rendering:pixelated;background:#243b49}
+.lh-game{background:#55a66a}
+.lh-game canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+.lh-hud{background:linear-gradient(#26384eeF,#26384ebd,transparent);border-bottom:3px solid #182b3c;padding-bottom:14px}
+.lh-brand{color:#ffe18a;text-shadow:2px 2px #26334a,3px 3px #26334a;letter-spacing:.08em}
+.lh-stats{font-weight:900;color:#fff4d4;text-shadow:2px 2px #26334a}
+.lh-menu-button,.lh-gold-button,.lh-secondary-button{border:3px solid #26334a;border-radius:0;box-shadow:inset 0 0 0 2px #f3e6bf,3px 3px 0 #172a3a;font-weight:900;text-shadow:none}
+.lh-menu-button{background:#d9a94e;color:#26334a}
+.lh-gold-button{background:#e9bd59;color:#26334a}
+.lh-secondary-button{background:#789caa;color:#172b3d}
+.lh-location,.lh-quest{border:3px solid #26334a;border-radius:0;box-shadow:inset 0 0 0 2px #f3e6bf,3px 3px 0 #172a3a;background:#314b5ddd;color:#fff0c8}
+.lh-quest b{color:#ffe18a}
+.lh-dialogue{border:4px solid #26334a;border-radius:0;box-shadow:inset 0 0 0 3px #f3e6bf,5px 5px 0 #172a3a;background:#314b5d;min-height:150px}
+.lh-speaker{color:#ffe18a;text-shadow:1px 1px #26334a}
+.lh-dialogue p{color:#fff4d8;text-shadow:1px 1px #26334a}
+.lh-overlay{background:#172a3bdc;backdrop-filter:none}
+.lh-modal{border:5px solid #26334a;border-radius:0;box-shadow:inset 0 0 0 3px #f3e6bf,7px 7px 0 #111e2b;background:#39576a}
+.lh-modal h1{text-shadow:3px 3px #26334a}
+.lh-field input{border:3px solid #26334a;border-radius:0;background:#e5e2c9;color:#26334a}
+.lh-class{border:3px solid #26334a;border-radius:0;background:#2d485b;box-shadow:inset 0 0 0 2px #91a9a3}
+.lh-class.selected{border:3px solid #f5d77d;box-shadow:inset 0 0 0 2px #26334a;background:#526d65}
+.lh-joystick{border:4px solid #26334a;border-radius:50%;background:#314b5dcc;box-shadow:inset 0 0 0 4px #f3e6bf,3px 3px 0 #172a3a}
+.lh-stick{border:4px solid #26334a;background:#e8bd58;border-radius:50%;box-shadow:inset 0 0 0 2px #fff0bd,2px 2px 0 #172a3a}
+.lh-action-touch{border:4px solid #26334a;border-radius:50%;background:#d66b48;box-shadow:inset 0 0 0 3px #f3e6bf,3px 3px 0 #172a3a;color:#fff4d8}
