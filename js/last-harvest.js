@@ -58,9 +58,22 @@ const spriteAtlas=(()=>{const a=document.createElement('canvas');a.width=128;a.h
  frame(0,'#b94b38','#c44736');frame(32,'#6658a5','#6554a5');frame(64,'#4c8955','#4a8a54');frame(96,'#bb6542','#634b3a');
  return a;
 })();
-const tileAtlas=(()=>{const a=document.createElement('canvas');a.width=96;a.height=32;const g=a.getContext('2d');g.imageSmoothingEnabled=false;
- const tile=(ox,base,detail,flower)=>{g.fillStyle=base;g.fillRect(ox,0,32,32);for(let y=4;y<32;y+=8)for(let x=3;x<32;x+=9){g.fillStyle=detail;g.fillRect(ox+x,y,2,2);}g.fillStyle=flower;g.fillRect(ox+19,8,3,3);g.fillRect(ox+22,11,2,2);};
- tile(0,'#75b66a','#68a75f','#e7ca70');tile(32,'#70ad65','#609f59','#d8c36b');tile(64,'#7bb96e','#6ba962','#e4bd62');return a;
+const tileAtlas=(()=>{const a=document.createElement('canvas');a.width=192;a.height=32;const g=a.getContext('2d');g.imageSmoothingEnabled=false;
+ const tiles=[
+  {base:'#75b66a',shade:'#68a75f',light:'#91ce79',accent:'#e7ca70',kind:0},
+  {base:'#70ad65',shade:'#609f59',light:'#86c477',accent:'#d8c36b',kind:0},
+  {base:'#7bb96e',shade:'#6ba962',light:'#a0d27c',accent:'#e4bd62',kind:1},
+  {base:'#689f61',shade:'#568d55',light:'#83ba6d',accent:'#c9a85c',kind:2},
+  {base:'#82b96d',shade:'#70a65e',light:'#a6ce7b',accent:'#f0d18a',kind:1},
+  {base:'#6da76b',shade:'#5d965e',light:'#91c17b',accent:'#d9b65f',kind:2}
+ ];
+ tiles.forEach((t,i)=>{const ox=i*32;g.fillStyle=t.base;g.fillRect(ox,0,32,32);
+  for(let y=3;y<32;y+=7)for(let x=2;x<32;x+=8){g.fillStyle=((x+y+i)%3===0)?t.shade:t.light;g.fillRect(ox+x,y,2,2);}
+  if(t.kind===1){g.fillStyle=t.accent;g.fillRect(ox+7,8,3,3);g.fillRect(ox+10,11,2,2);g.fillRect(ox+23,22,3,3);g.fillRect(ox+21,20,2,2);}
+  if(t.kind===2){g.fillStyle='#c18b48';g.fillRect(ox+5,5,3,2);g.fillRect(ox+18,15,3,2);g.fillRect(ox+25,6,2,3);g.fillStyle=t.accent;g.fillRect(ox+13,24,3,3);}
+  if(i===4){g.fillStyle='#b97845';g.fillRect(ox+4,17,5,2);g.fillRect(ox+22,5,4,2);}
+ });
+ return a;
 })();
 function drawTree(x,y){const X=x*TILE,Y=y*TILE;
 px(X+12,Y+17,9,16,'#68452e');px(X+9,Y+25,15,5,'#4c392b');
@@ -89,7 +102,7 @@ function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.ph
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
-ctx.drawImage(tileAtlas,((x*7+y*3)%3)*32,0,32,32,x*TILE,y*TILE,TILE,TILE);}
+const tileRoll=rand(x+41,y+17);const tileIndex=tileRoll<.43?0:tileRoll<.62?1:tileRoll<.77?2:tileRoll<.88?3:tileRoll<.96?4:5;ctx.drawImage(tileAtlas,tileIndex*32,0,32,32,x*TILE,y*TILE,TILE,TILE);}
 /* Broad stone paths with alternating diamond-like paving and dark grout */
 function path(x,y,w,h){px(x,y,w,h,C.pathShade);for(let yy=y+2;yy<y+h-2;yy+=24)for(let xx=x+2;xx<x+w-2;xx+=32){px(xx,yy,29,21,C.path2);px(xx+2,yy+2,25,17,C.path);px(xx+14,yy+2,2,17,'#aab9b5');px(xx+2,yy+9,25,2,'#e5e5d3');}}
 path(0,11*TILE,MAP_W*TILE,4*TILE);path(15*TILE,0,4*TILE,MAP_H*TILE);path(19*TILE,14*TILE,10*TILE,2*TILE);
