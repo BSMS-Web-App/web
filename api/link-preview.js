@@ -90,8 +90,9 @@ function extractMetadata(html, pageUrl) {
         return '';
     };
     const unescapeHtml = (value) => String(value || '')
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#39;|&#039;/g, "'").trim();
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;|&#039;/g, "'")
+        .replace(/&amp;/g, '&').trim();
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
     let image = readMeta('og:image');
     if (image) {
