@@ -100,8 +100,30 @@ const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&sign
 if(promptTarget)drawWorldPrompt(promptTarget.x,promptTarget.y-30,promptLabel);
 ctx.restore();return{camX,camY};}
 function drawDreamScene(W,H){px(0,0,W,H,'#49345f');for(let i=0;i<14;i++){px(i*W/14,0,W/14,H*.24,i%2?'#bd874e':'#e2b95c');px(i*W/14,H*.24,W/14,H*.1,'#7b4b68');}px(0,H*.34,W,H*.66,'#704b36');px(0,H*.76,W,H*.24,'#c18b49');for(let i=0;i<12;i++){const x=i*W/11;drawPerson(x,H*.38,'#6b9c70','#d8b86a');}px(W*.2,H*.55,W*.6,H*.26,'#9b633d');px(W*.22,H*.57,W*.56,H*.22,'#c18a48');const a=cinematic.actors;drawPerson(a.MARA.x,a.MARA.y,'#b86c78','#70485c');drawPerson(a.THOMAS.x,a.THOMAS.y,'#577f9b','#4a536e');drawPerson(a.ROWAN.x,a.ROWAN.y,'#bb6542','#9b4a36');drawPlayer(a.HERO.x,a.HERO.y);drawPerson(a.FOE.x,a.FOE.y,'#7d526f','#45364e');ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.12);ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);}
-function drawWakeScene(W,H){px(0,0,W,H,'#463b4d');px(0,0,W,H*.22,'#6c6472');px(W*.08,H*.12,W*.2,H*.34,'#343d54');px(W*.1,H*.14,W*.16,H*.29,'#75a9b3');px(W*.18,H*.14,5,H*.29,'#e4d6b0');px(0,H*.72,W,H*.28,'#a77b54');px(W*.24,H*.52,W*.52,H*.3,'#654638');px(W*.26,H*.5,W*.48,H*.28,'#d6b27a');px(W*.28,H*.47,W*.44,H*.08,'#f0d6a0');px(W*.3,H*.52,W*.4,H*.19,'#9b6c50');px(W*.44,H*.54,W*.12,H*.13,'#d6b27a');drawPerson(W*.35,H*.56,'#b86c78','#70485c');drawPerson(W*.65,H*.56,'#577f9b','#4a536e');drawPlayer(W*.5,H*.72);ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.12);}
-function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.4;px(x-8,y-4,16,14,C.ink);px(x-6,y-16,12,13,C.skin);px(x-7,y-20,14,6,hat);px(x-8,y-7,16,12,shirt);px(x-7,y+5,5,8,'#3d4050');px(x+2,y+5,5,8,'#3d4050');px(x-5,y-12,2,2,C.ink);px(x+3,y-12,2,2,C.ink);px(x-11,y-5,4,8,C.skin);px(x+7,y-5,4,8,C.skin);}
+function drawWakeScene(W,H){
+const fy=H*.31;px(0,0,W,H,'#493b49');px(0,0,W,fy,'#8d7780');
+for(let x=0;x<W;x+=Math.max(70,W*.09)){px(x,0,4,fy,'#78616e');px(x+4,0,2,fy,'#a58b8d');}
+px(0,fy,W,8,'#4e3940');
+for(let y=fy+8;y<H;y+=32){px(0,y,W,29,(Math.floor(y/32)%2)?'#a97853':'#b9855d');px(0,y+28,W,4,'#80513b');for(let x=(Math.floor(y/32)%2)*42;x<W;x+=84)px(x,y,2,29,'#986542');}
+px(W*.06,H*.09,W*.2,H*.23,'#343d54');px(W*.075,H*.105,W*.17,H*.195,'#6caab8');px(W*.155,H*.105,5,H*.195,'#ead8ad');px(W*.075,H*.2,W*.17,5,'#ead8ad');
+px(W*.38,H*.11,W*.2,H*.09,'#694b48');px(W*.395,H*.125,W*.17,H*.06,'#bd8b62');px(W*.43,H*.135,W*.1,H*.04,'#e2c58d');
+px(W*.07,H*.39,W*.17,H*.25,'#634333');px(W*.085,H*.41,W*.14,H*.21,'#8e5e3d');for(let i=0;i<3;i++){px(W*.095,H*(.44+i*.055),W*.12,H*.012,'#d5ae75');px(W*(.11+i*.04),H*(.42+i*.055),W*.025,H*.03,['#a94f3e','#5b8b64','#d0a34d'][i]);}
+px(W*.77,H*.4,W*.14,H*.23,'#76503a');px(W*.785,H*.415,W*.11,H*.2,'#b37c4c');px(W*.8,H*.39,W*.08,H*.025,'#e1bd80');
+px(W*.2,H*.68,W*.6,H*.2,'#75443c');px(W*.22,H*.7,W*.56,H*.16,'#c18a58');for(let i=0;i<5;i++)px(W*(.25+i*.105),H*.73,W*.075,H*.09,i%2?'#d9b06f':'#b87950');
+const bx=W*.43,by=H*.47,bw=W*.34,bh=H*.3;
+px(bx-12,by+bh-4,bw+24,24,'#49342e');px(bx,by+bh-17,bw,20,'#70452f');px(bx-8,by+10,12,bh-10,'#805239');px(bx+bw-4,by+10,12,bh-10,'#805239');
+px(bx,by,bw,bh-10,'#e0c18c');px(bx+8,by+8,bw-16,bh-28,'#f0dfb6');px(bx+10,by+10,bw-20,13,'#b56d63');
+px(bx+14,by+17,bw*.32,34,'#f7e8c7');px(bx+bw*.57,by+17,bw*.3,34,'#f7e8c7');px(bx+12,by+51,bw-24,bh-78,'#6c8b91');px(bx+17,by+55,bw-34,bh-87,'#87a6a0');
+const pose=cinematic.wakePose||'lying';
+if(pose==='lying'){px(bx+bw*.5-15,by+24,30,24,'#d7a06e');px(bx+bw*.5-12,by+22,24,7,'#493b49');px(bx+bw*.5-8,by+32,4,3,C.ink);px(bx+bw*.5+5,by+32,4,3,C.ink);px(bx+bw*.5-26,by+43,52,10,state.heroClass==='Mage'?'#6554a5':state.heroClass==='Scout'?'#4a8a54':'#c44736');px(bx+bw*.5-31,by+50,62,48,'#66888b');px(bx+bw*.5-31,by+50,62,5,'#a8c1b0');}
+else if(pose==='sitting')drawPlayer(bx+bw*.5,by+bh-42);else drawPlayer(bx+bw*.5,by+bh+4);
+px(bx-55,by+bh-35,42,35,'#795039');px(bx-59,by+bh-39,50,7,'#d2a36d');px(bx-45,by+bh-60,22,22,'#f0c66c');px(bx-41,by+bh-68,14,10,'#f8e5a7');
+px(bx+bw+25,by+bh-29,25,9,'#684638');px(bx+bw+55,by+bh-29,25,9,'#684638');
+drawPerson(W*.32,H*.62,'#b86c78','#70485c');drawPerson(W*.82,H*.62,'#577f9b','#4a536e');
+const light=ctx.createRadialGradient(bx+bw*.5,by+bh*.45,10,bx+bw*.5,by+bh*.45,Math.max(W,H)*.55);light.addColorStop(0,'rgba(255,224,157,.16)');light.addColorStop(1,'rgba(32,23,31,.22)');ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
+ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.075);
+}
+function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;px(x-9,y+6+bob,18,5,'#352f3b');px(x-7,y+8+bob,5,8,'#3d4050');px(x+2,y+8+bob,5,8,'#3d4050');px(x-10,y-8+bob,20,16,C.ink);px(x-8,y-7+bob,16,13,shirt);px(x-12,y-5+bob,4,10,C.skin);px(x+8,y-5+bob,4,10,C.skin);px(x-7,y-22+bob,14,14,C.skin);px(x-8,y-24+bob,16,5,hat);px(x-7,y-27+bob,14,4,hat);px(x-6,y-16+bob,3,3,C.ink);px(x+3,y-16+bob,3,3,C.ink);px(x-5,y-11+bob,10,2,'#9b5e54');px(x-8,y-5+bob,16,3,'rgba(255,255,255,.18)');px(x-11,y+1+bob,3,3,hat);px(x+8,y+1+bob,3,3,hat);}
 function drawInterior(W,H){ctx.clearRect(0,0,W,H);px(0,0,W,H,'#59402f');
 // A room with visible timber walls, floorboards, windows, rugs and furniture.
 px(0,0,W,H*.2,'#4a352b');px(0,H*.17,W,H*.035,'#b47a45');
@@ -173,12 +195,15 @@ await moveActor('HERO',{x:innerWidth*.57,y:innerHeight*.68},700);
 await say([['NARRATOR','You dash forward, dodge the challenger’s strike, and land one final heroic blow!']]);
 await moveActor('FOE',{x:innerWidth*.77,y:innerHeight*.72},650);
 await say([['ANNOUNCER','THE CHAMPION WINS!'],['CROWD',''+state.name+'! '+state.name+'! HEARTHVALE’S HERO!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest warrior in all of Hearthvale!']]);
-cinematic.phase='wake';cinematic.actors={HERO:{x:innerWidth*.5,y:innerHeight*.72},MARA:{x:innerWidth*.35,y:innerHeight*.56},THOMAS:{x:innerWidth*.65,y:innerHeight*.56}};
+cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={HERO:{x:innerWidth*.60,y:innerHeight*.65},MARA:{x:innerWidth*.32,y:innerHeight*.62},THOMAS:{x:innerWidth*.82,y:innerHeight*.62}};
 await say([['NARRATOR','“Wake up, sleepyhead…” A familiar voice pulls you out of the dream.']]);
+cinematic.wakePose='sitting';
 await say([['MARA','There you are. We wanted to see you before we left for the Everfeast preparations.'],['THOMAS','Keep being brave, alright? We will be back before supper.'],[''+state.name,'I will. I promise.'],['MARA','We love you. Never forget that.']]);
 await moveActor('MARA',{x:innerWidth*.42,y:innerHeight*.58},500);
 await moveActor('THOMAS',{x:innerWidth*.58,y:innerHeight*.58},500);
-await say([['NARRATOR','Your parents smile, then step out of the room. It is the last time you will see them before they disappear.'],['NARRATOR','A little later, a distant bell rings. You climb out of bed. Something is wrong in Hearthvale.']]);
+await say([['NARRATOR','Your parents smile, then step out of the room. It is the last time you will see them before they disappear.']]);
+cinematic.wakePose='standing';
+await say([['NARRATOR','A little later, a distant bell rings. You climb out of bed. Something is wrong in Hearthvale.']]);
 cinematic.phase='outside';cinematic.camera={x:20*TILE,y:15*TILE};cinematic.actors={ROWAN:{x:24*TILE,y:13*TILE},'ELDER MAPLE':{x:15*TILE,y:12*TILE}};
 await moveActor('ROWAN',{x:21*TILE,y:14*TILE},1100);
 await say([['ROWAN',''+state.name+'! Your parents are missing. I have been looking everywhere!']]);
