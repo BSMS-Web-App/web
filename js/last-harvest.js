@@ -173,13 +173,25 @@ px(x-7,y-21+bob,14,3,'#f2d6a2');px(x-5,y-15+bob,3,3,C.ink);px(x+3,y-15+bob,3,3,C
 px(x-7,y+6+bob,6,5,C.ink);px(x+2,y+6+bob,6,5,C.ink);}
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
-function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];$('lh-speaker').textContent=line[0];$('lh-dialogue-text').textContent=line[1];$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
+function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;$('lh-dialogue-text').textContent=line[1];drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
+function drawDialoguePortrait(name){
+const c=$('lh-portrait'),p=c.getContext('2d');p.clearRect(0,0,64,64);p.fillStyle='#26334a';p.fillRect(0,0,64,64);
+let shirt='#b94b38',hair='#634b3a';
+const all=[...npcs,...roomNPCs.flat()];
+const npc=all.find(n=>n.name===name);
+if(npc)shirt=npc.color;
+if(name==='ROWAN')shirt='#bb6542';
+if(name==='ELDER MAPLE')shirt='#b8c7a1';
+if(name==='MARA')shirt='#b86c78';
+if(name==='THOMAS')shirt='#577f9b';
+p.fillStyle='#172a3a';p.fillRect(17,45,30,8);p.fillStyle=shirt;p.fillRect(15,26,34,23);p.fillStyle='#f1b58c';p.fillRect(21,11,22,20);p.fillStyle=hair;p.fillRect(19,8,26,9);p.fillRect(17,13,5,8);p.fillRect(42,13,5,8);p.fillStyle='#26334a';p.fillRect(25,21,4,4);p.fillRect(36,21,4,4);p.fillStyle='#f3e6bf';p.fillRect(23,29,18,3);
+}
 function positionSpeechBubble(name){const el=$('lh-dialogue');let p=null;if(cinematic&&cinematic.actors&&cinematic.actors[name])p=cinematic.actors[name];else if(scene==='outside'){const n=npcs.find(v=>v.name===name);if(n)p={x:n.x,y:n.y};}else if(scene==='inside'){const n=roomNPCs[interiorId].find(v=>v.name===name);if(n)p={x:innerWidth*n.x,y:innerHeight*n.y};}if(p&&scene==='outside'&&!cinematic){const camX=Math.max(0,Math.min(MAP_W*TILE-innerWidth,state.x-innerWidth/2)),camY=Math.max(0,Math.min(MAP_H*TILE-innerHeight,state.y-innerHeight/2));p={x:p.x-camX,y:p.y-camY};}if(p){el.style.left=Math.max(12,Math.min(innerWidth-12,p.x))+'px';el.style.top=Math.max(70,p.y-88)+'px';el.style.bottom='auto';el.style.transform='translate(-50%,-100%)';}else{el.style.left='50%';el.style.top='auto';el.style.bottom='18px';el.style.transform='translateX(-50%)';}}
 function closeDialogue(){ $('lh-dialogue').hidden=true;dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
 function advanceDialogue(){if(!dialogue)return;dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer={x:innerWidth/2,y:innerHeight*.76};updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
-function interact(){if(transitioning)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(pxp-W*n.x,pyp-H*n.y);if(d<Math.max(92,W*.12)&&d<dist){target=n;dist=d;}}if(target){setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>H*.78){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['NARRATOR','There is no one close enough to talk to. Walk up to a person and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(transitioning)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(pxp-W*n.x,pyp-H*n.y);if(d<Math.max(92,W*.12)&&d<dist){target=n;dist=d;}}if(target){setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>H*.78){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<64&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.name==='ELDER MAPLE'&&questStep===0){questStep=1;setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
@@ -188,7 +200,7 @@ else setDialogue(found.lines.map(t=>[found.name,t]));
 save();updateQuest();return;}
 const doors=[{x:10.5,y:10.5,id:0},{x:34,y:10.5,id:1},{x:22,y:22.5,id:2},{x:5.5,y:29.5,id:3}];for(const d of doors){if(Math.hypot(state.x-d.x*TILE,state.y-d.y*TILE)<82){enterBuilding(d.id);return;}}
 const sx=27*TILE,sy=10*TILE;if(Math.hypot(state.x-sx,state.y-sy)<75){setDialogue([['OLD SIGN','AUTUMNWOOD — follow the golden leaves beyond the village.'],['QUEST','Explore Hearthvale and speak with the villagers. The road north-east leads to your first chapter.']]);return;}
-setDialogue([['NARRATOR','The wind carries the smell of cinnamon and fallen leaves. There may be something nearby.']]);}
+setDialogue([['ROWAN','The wind smells like cinnamon and fallen leaves. Maybe there is something nearby.']]);}
 function startIntro(){
 document.body.classList.add('lh-cinematic');
 state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';
