@@ -1,43 +1,55 @@
-<!--
-BSMS Web
-Copyright © 2026 Jellyfish Jelly
-SPDX-License-Identifier: AGPL-3.0-only
--->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#241a16">
-<title>The Last Harvest - Public Test</title>
-<link rel="stylesheet" href="/css/styles.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#17251c">
+<title>The Last Harvest — Adventure</title>
 <link rel="stylesheet" href="/css/last-harvest.css">
-
 </head>
 <body class="lh-body">
-<main class="lh-shell">
-<header class="lh-header"><a href="/events" class="lh-back">← Events</a><div class="lh-mark">✦ THE AUTUMN CHRONICLES ✦</div><h1>THE LAST <span>HARVEST</span></h1><p>A story of friendship, courage, and the feast that holds a kingdom together.</p></header>
-<section id="lh-gate" class="lh-panel"><h2>Public Test Build</h2><p id="lh-gate-message">Loading the public test…</p><p>This is a testing version. Progress is saved only on this device and does not count toward official contest standings.</p></section>
-<section id="lh-game" hidden>
-<div class="lh-topbar"><div><span class="lh-label">ADVENTURER</span><strong id="lh-player-name">Player</strong></div><div><span class="lh-label">HEALTH</span><strong id="lh-health">30 / 30</strong></div><div><span class="lh-label">COINS</span><strong id="lh-coins">50</strong></div><div><span class="lh-label">XP</span><strong id="lh-xp">0</strong></div></div>
-<div class="lh-layout">
-<aside class="lh-panel lh-sidebar"><h2>Your party</h2><label>Character<select id="lh-character"><option>Harvest Guardian</option><option>Forest Scout</option><option>Harvest Mage</option></select></label><label>Sidekick<select id="lh-sidekick"><option>Rowan</option><option>Hazel</option><option>Flint</option><option>Pip</option><option>Maple</option></select></label><label>Pet<select id="lh-pet"><option>Pumpkin Pup</option><option>Autumn Fox</option><option>Turkey Chick</option><option>Golden Squirrel</option><option>Little Owl</option><option>Cranberry Slime</option></select></label><button class="lh-button" id="lh-save-party">Save party</button><h3>Party bonuses</h3><p class="lh-small">Your sidekick helps in battle. Your pet grants a passive bonus.</p></aside>
-<section class="lh-panel lh-adventure"><div class="lh-scene"><canvas id="lh-pixel-scene" width="480" height="220" aria-label="Pixel-art autumn village scene"></canvas><div class="lh-scene-caption" id="lh-scene-caption">Hearthvale Village</div></div><div class="lh-story"><span class="lh-label" id="lh-stage-label">PROLOGUE</span><h2 id="lh-stage-title">The Missing Feast</h2><p id="lh-stage-description">A quiet morning in Hearthvale turns strange when your parents vanish.</p><div class="lh-progress"><div id="lh-progress-fill"></div></div><p id="lh-stage-status" class="lh-small">Loading your adventure…</p><div id="lh-gameplay" class="lh-gameplay">
-<div class="lh-questbar"><span id="lh-quest">QUEST: Find the missing keepers</span><span id="lh-location">HEARTHVALE</span></div>
-<div class="lh-battle"><div id="lh-enemy-art" class="lh-enemy-art">🎃</div><div class="lh-battle-info"><b id="lh-enemy-name">Pumpkin Sentinel</b><div class="lh-hp"><i id="lh-enemy-hp"></i></div><small id="lh-enemy-health">Enemy HP</small></div><div class="lh-hero-art">🧑‍🌾</div></div>
-<div class="lh-actions"><button class="lh-button" id="lh-attack">Attack</button><button class="lh-button" id="lh-skill">Sidekick skill</button><button class="lh-button" id="lh-use-potion">Use potion</button><button class="lh-button" id="lh-guard">Guard</button></div>
-<p id="lh-combat-log" class="lh-combat-log" aria-live="polite">A rustling comes from the village square…</p>
-<div class="lh-game-tabs"><button class="lh-tab active" data-tab="inventory">Inventory</button><button class="lh-tab" data-tab="shop">Shop</button><button class="lh-tab" data-tab="journal">Journal</button></div>
-<div id="lh-tab-inventory" class="lh-tab-content"><div id="lh-inventory" class="lh-inventory"></div><h3>Equipped gear</h3><div id="lh-equipment" class="lh-equipment"></div></div>
-<div id="lh-tab-shop" class="lh-tab-content" hidden><p class="lh-small">Spend coins on supplies and upgrades.</p><div id="lh-shop-items" class="lh-shop-items"></div></div>
-<div id="lh-tab-journal" class="lh-tab-content" hidden><p id="lh-journal-text"></p><div id="lh-stage-list" class="lh-stage-list"></div></div>
-</div></div></section>
-<aside class="lh-panel lh-sidebar"><h2>Journal</h2><div id="lh-stage-list" class="lh-stage-list"></div><p class="lh-small">Public test: all ten chapters are playable now. Official schedule: weekdays at 8:00 AM Eastern.</p></aside>
-</div>
-<section class="lh-panel lh-leaderboard"><h2>Public test build</h2><p>Complete all ten chapters to finish the story. Demo progress is local and does not count as an official entry.</p></section>
-</section>
-<footer>THE LAST HARVEST · A PRIVATE BSMS WEB EVENT · 16-BIT ADVENTURE</footer>
+<main id="lh-game" class="lh-game">
+  <canvas id="lh-world" aria-label="The Last Harvest pixel-art game world"></canvas>
+  <div class="lh-hud">
+    <div class="lh-brand">✦ THE LAST HARVEST</div>
+    <div class="lh-stats"><span id="lh-name-hud">ADVENTURER</span><span id="lh-class-hud">CLASS</span><span>♥ <b id="lh-health">40</b></span><span>✦ <b id="lh-coins">100</b></span></div>
+    <button id="lh-menu" class="lh-menu-button">MENU</button>
+  </div>
+  <div id="lh-location" class="lh-location">HEARTHVALE VILLAGE</div>
+  <div class="lh-controls-hint">WASD / ARROWS TO MOVE · E / SPACE TO INTERACT</div>
+  <div id="lh-dialogue" class="lh-dialogue" hidden>
+    <div class="lh-speaker" id="lh-speaker">ELDER MAPLE</div>
+    <p id="lh-dialogue-text"></p>
+    <button id="lh-next" class="lh-gold-button">CONTINUE ▶</button>
+  </div>
+  <div id="lh-create" class="lh-overlay">
+    <section class="lh-modal">
+      <div class="lh-eyebrow">A 16-BIT AUTUMN ADVENTURE</div><h1>THE LAST <span>HARVEST</span></h1>
+      <p>The Everfeast is fading. Hearthvale needs a hero.</p>
+      <label class="lh-field">WHAT IS YOUR NAME?<input id="lh-name-input" maxlength="16" autocomplete="off" placeholder="Enter your name"></label>
+      <div class="lh-class-title">CHOOSE YOUR CLASS</div>
+      <div class="lh-class-grid">
+        <button class="lh-class selected" data-class="Guardian"><span>🛡️</span><b>GUARDIAN</b><small>Strong defense · steady attacks</small></button>
+        <button class="lh-class" data-class="Scout"><span>🏹</span><b>SCOUT</b><small>Quick movement · powerful strikes</small></button>
+        <button class="lh-class" data-class="Mage"><span>✨</span><b>MAGE</b><small>Harvest magic · balanced power</small></button>
+      </div>
+      <button id="lh-begin" class="lh-gold-button lh-start">BEGIN YOUR STORY</button>
+      <p class="lh-footnote">Your adventure saves on this device.</p>
+    </section>
+  </div>
+  <div id="lh-touch" class="lh-touch" aria-label="Touch movement controls">
+    <div class="lh-dpad">
+      <button data-dir="up" aria-label="Move up">▲</button>
+      <div><button data-dir="left" aria-label="Move left">◀</button><button data-dir="down" aria-label="Move down">▼</button><button data-dir="right" aria-label="Move right">▶</button></div>
+    </div>
+    <button id="lh-action-touch" class="lh-action-touch">A<br><small>ACT</small></button>
+  </div>
+  <div id="lh-game-menu" class="lh-overlay" hidden>
+    <section class="lh-modal lh-menu-modal"><h2>ADVENTURE MENU</h2><div class="lh-menu-stats" id="lh-menu-stats"></div>
+      <button id="lh-resume" class="lh-gold-button">RESUME GAME</button>
+      <button id="lh-reset" class="lh-secondary-button">START A NEW ADVENTURE</button>
+      <p class="lh-footnote">Progress is saved locally on this device.</p>
+    </section>
+  </div>
 </main>
 <script src="/js/last-harvest.js" defer></script>
 </body></html>
