@@ -114,7 +114,7 @@ px(W*.08,H*.18,W*.84,H*.55,'#d8c99d');px(W*.08,H*.15,W*.84,H*.12,'#7d5742');px(W
 px(W*.43,H*.25,W*.14,H*.2,'#314b5d');px(W*.45,H*.27,W*.1,H*.16,'#a8d4d5');
 for(let i=0;i<4;i++){px(W*(.16+i*.19),H*.42,W*.12,H*.12,'#80563d');px(W*(.17+i*.19),H*.43,W*.1,H*.08,'#d4ad70');}
 px(W*.44,H*.55,W*.12,H*.08,'#61452f');px(W*.46,H*.52,W*.08,H*.05,'#e2c27d');
-drawPerson(W*.43,H*.68,'#b94b38','#c44736');drawPerson(W*.57,H*.68,'#bb6542','#9b4a36');
+drawCutscenePlayer(W*.43,H*.68,1.7);drawCutscenePerson(W*.57,H*.68,'#bb6542','#9b4a36',1.7);
 ctx.fillStyle='#fff2c7';ctx.font='bold 20px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE SCHOOL',W/2,H*.1);
 }
 function drawWakeScene(W,H){
