@@ -1,63 +1,77 @@
-/* THE LAST HARVEST — complete playable story RPG demo. */
-(function(){
-'use strict';
-const KEY='last_harvest_rpg_v3';
+/* THE LAST HARVEST — full-screen top-down pixel adventure */
+(()=>{'use strict';
+const $=id=>document.getElementById(id),canvas=$('lh-world'),ctx=canvas.getContext('2d'),SAVE='last_harvest_adventure_v4';
+const TILE=32,MAP_W=48,MAP_H=36;
+const story=[
+['ELDER MAPLE','The harvest bell should have rung by now. Something is wrong in Hearthvale.'],
+['ROWAN','Your parents are missing. I saw strange lights near the old fountain. Come on—we have to find them!'],
+['ELDER MAPLE','Mara and Thomas are the keepers of the Everfeast. Without them, the ancient promise will fade.'],
+['NARRATOR','And so your journey begins. The road beyond the village leads into Autumnwood…']
+];
 const chapters=[
-{place:'Hearthvale Village',title:'The Missing Feast',quest:'Find the missing keepers',story:'The morning bell rings, but the village square is empty. Your parents, Mara and Thomas, are the keepers of the Everfeast: an ancient promise that keeps Hearthvale’s harvest alive. They have vanished. Your best friend Rowan joins you at the fountain, where a strange harvest sigil glows beneath the water.',enemy:'Pumpkin Sentinel',emoji:'🎃',hp:28,attack:5,drop:'Acorn Helmet',after:'The sentinel crumbles into leaves. Beneath it lies a map marked with a path into Autumnwood. Rowan says he knows a shortcut—but will not explain how.'},
-{place:'Autumnwood Forest',title:'The Whispering Woods',quest:'Follow the golden leaves',story:'The trees whisper your name as you follow golden leaves. The forest remembers every promise made beneath its branches. A Thornback Stag blocks the old road, guarding footprints that lead back toward Hearthvale.',enemy:'Thornback Stag',emoji:'🦌',hp:36,attack:6,drop:'Forest Bow',after:'The stag lowers its antlers and lets you pass. One set of footprints belongs to someone from your own village.'},
-{place:'Golden Apple Valley',title:'The Forgotten Orchard',quest:'Search the oldest tree',story:'Every apple in the valley has turned grey. At the oldest tree, you find a cellar and a message: your parents were taken below the valley, to a place called the Sunken Pantry.',enemy:'Rotten Harvest Golem',emoji:'🪵',hp:44,attack:7,drop:'Golden Apple',after:'A note addressed to Rowan slips from the roots. He quickly pockets it and says it is nothing.'},
-{place:'The Sunken Pantry',title:'The Sunken Pantry',quest:'Recover the keeper ledger',story:'A flooded city sleeps beneath the orchard. In its pantry vault, a Drowned Chef guards the keeper ledger. The pages describe a bargain made generations ago—and a name written in the margin: Hollow King.',enemy:'Drowned Chef',emoji:'🧑‍🍳',hp:50,attack:8,drop:'Pantry Key',after:'The ledger reveals the Hollow King once protected Hearthvale. A letter to Rowan says: “The fifth bell. Keep your promise.”'},
-{place:'Shadowmarket',title:'The Feast of Shadows',quest:'Find Rowan in the market',story:'Lanterns flicker over a market where merchants trade secrets. Rowan disappears into the crowd. A masked merchant tells you someone from your own village arranged the kidnapping.',enemy:'Masked Butcher',emoji:'🎭',hp:58,attack:9,drop:'Shadow Cloak',after:'You find Rowan’s note: “I am sorry. Meet me at the Broken Banquet Hall. You deserve the truth.”'},
-{place:'Broken Banquet Hall',title:'The Betrayal',quest:'Confront your oldest friend',story:'Rowan admits he helped the kidnappers. He believed the Everfeast was built on an injustice and wanted the truth exposed. He never expected your parents to be taken. He challenges you, then promises to help if you can stop the Hollow King.',enemy:'Rowan — training duel',emoji:'🛡️',hp:64,attack:9,drop:'Fortress Key',after:'Rowan yields and gives you the fortress key. “I will earn your trust back,” he says.'},
-{place:'Frostfall Mountains',title:'The Frozen Feast',quest:'Reach the old watchtower',story:'Snow covers the old watchtower. The Frostbound Turkey King guards its entrance. Inside, records reveal the Hollow King was once the valley’s protector. The founders broke their promise and erased his family from history.',enemy:'Frostbound Turkey King',emoji:'🦃',hp:72,attack:10,drop:'Frostbite Bow',after:'The records show the Hollow King took the keepers to force Hearthvale to face its past—not to destroy the village.'},
-{place:'The Hollow Fortress',title:'The Hollow Fortress',quest:'Uncover the first promise',story:'The fortress is filled with portraits whose faces have been scratched away. You find the original pact: the Everfeast was meant to be shared with every valley, but Hearthvale’s founders kept its magic. The Hollow King wants the pact restored.',enemy:'Hollow Knight',emoji:'⚔️',hp:82,attack:11,drop:'Everfeast Charm',after:'The truth is clear. The Hollow King waits at the sanctuary. Rowan stands beside you, trying to make things right.'},
-{place:'Everfeast Sanctuary',title:'The Final Harvest',quest:'Face the Hollow King',story:'At the sanctuary, the Hollow King begins the final ritual. Your parents are alive behind the Everfeast seal. The Hollow King says the old magic will collapse unless Hearthvale shares it. Rowan offers to help repair the pact.',enemy:'The Hollow King',emoji:'👑',hp:100,attack:12,drop:'Hollow Crown',after:'The Hollow King falls to his knees. The seal opens—but the sanctuary begins to collapse. Reach the Heart of Hearthvale before the last bell.'},
-{place:'Heart of Hearthvale',title:'The Last Harvest',quest:'Restore the Everfeast',story:'You reach the Heart with Rowan. Your parents are freed, and Elder Maple reveals the final truth: the Everfeast was never meant to belong to one village. Together, everyone renews the promise and shares the harvest magic. The Hollow King is offered a place at the table.',enemy:'The Heart Guardian',emoji:'🌳',hp:115,attack:13,drop:'Everfeast Crown',after:'The feast is saved. Your parents embrace you, Rowan apologizes, and the village welcomes the Hollow King home. After the credits, Elder Maple discovers a tiny door beneath the old fountain. A note reads: “The winter story begins soon.”'}];
-const items={
-'Wooden Harvest Sword':{slot:'weapon',atk:3,price:0,desc:'A sturdy starter blade.'},
-'Pumpkin Plate':{slot:'armor',def:2,price:0,desc:'A tough shell of armor.'},
-'Acorn Helmet':{slot:'helmet',def:1,price:0,desc:'A little extra protection.'},
-'Autumn Boots':{slot:'boots',def:1,price:0,desc:'Made for forest paths.'},
-'Forest Bow':{slot:'weapon',atk:6,price:85,desc:'A bow woven from living branches.'},
-'Golden Apple':{type:'potion',heal:24,price:35,desc:'Restores 24 health.'},
-'Pantry Key':{type:'quest',price:0,desc:'A key from the Sunken Pantry.'},
-'Shadow Cloak':{slot:'armor',def:5,price:0,desc:'A cloak stitched from market shadows.'},
-'Fortress Key':{type:'quest',price:0,desc:'Opens the Hollow Fortress.'},
-'Frostbite Bow':{slot:'weapon',atk:10,price:190,desc:'Cold as the mountain wind.'},
-'Everfeast Charm':{slot:'accessory',atk:3,def:3,price:0,desc:'Carries the first promise.'},
-'Hollow Crown':{slot:'helmet',def:7,price:0,desc:'The crown of a forgotten protector.'},
-'Everfeast Crown':{slot:'helmet',def:10,atk:5,price:0,desc:'A promise shared by all.'},
-'Berry Tonic':{type:'potion',heal:18,price:25,desc:'Restores 18 health.'},
-'Harvest Elixir':{type:'potion',heal:40,price:65,desc:'Restores 40 health.'},
-'Iron Harvest Blade':{slot:'weapon',atk:9,price:140,desc:'A reliable forged blade.'},
-'Guardian Armor':{slot:'armor',def:8,price:160,desc:'Armor for a village champion.'}};
-const skills={Rowan:{name:'Helping Strike',damage:9},Hazel:{name:'Harvest Heal',heal:14},Flint:{name:'Guardian Shield',guard:true},Pip:{name:'Double Attack',damage:14},Maple:{name:'Acorn Blast',damage:12}};
-const pets={'Pumpkin Pup':'Finds extra coins.','Autumn Fox':'May find an extra item.','Turkey Chick':'Adds 2 battle damage.','Golden Squirrel':'May find bonus coins.','Little Owl':'Offers hints.','Cranberry Slime':'Restores 3 health after wins.'};
-const fresh=()=>({stage:0,coins:100,xp:0,health:40,maxHealth:40,character:'Harvest Guardian',sidekick:'Rowan',pet:'Pumpkin Pup',inventory:['Wooden Harvest Sword','Pumpkin Plate','Acorn Helmet','Autumn Boots','Berry Tonic'],equipped:{weapon:'Wooden Harvest Sword',armor:'Pumpkin Plate',helmet:'Acorn Helmet',boots:'Autumn Boots'},wins:[]});
-let state,enemyHP=0,enemyMax=0,guarding=false,busy=false;const $=id=>document.getElementById(id);
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY));return v&&Array.isArray(v.inventory)?{...fresh(),...v}:fresh();}catch(e){return fresh();}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state));}
-function say(t){$('lh-combat-log').textContent=t;}
-function stats(){let atk=state.character==='Forest Scout'?3:state.character==='Harvest Mage'?2:1,def=state.character==='Harvest Guardian'?2:0;Object.values(state.equipped).forEach(id=>{const it=items[id];if(it){atk+=it.atk||0;def+=it.def||0;}});if(state.pet==='Turkey Chick')atk+=2;return{atk,def};}
-function scene(){const c=$('lh-pixel-scene'),x=c.getContext('2d');x.imageSmoothingEnabled=false;x.clearRect(0,0,480,220);const r=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h);};r(0,0,480,220,'#293b34');r(0,145,480,75,'#70502e');for(let i=0;i<27;i++){const xx=(i*67)%480;r(xx,24+(i*23)%92,18,18,['#b65e2e','#d08a3e','#e0b14d'][i%3]);r(xx+6,42+(i*23)%92,7,27,'#513927');}r(55,100,115,75,'#80502e');r(42,87,140,20,'#bd7435');r(290,95,115,80,'#84522e');r(278,82,140,20,'#c0803a');r(216,145,15,18,'#f1c66d');r(211,162,25,24,'#365a9a');r(213,185,7,18,'#30231c');r(228,185,7,18,'#30231c');x.fillStyle='#f6d98c';x.font='bold 12px monospace';x.fillText('HEARTHVALE • CHAPTER '+(state.stage+1),12,18);}
-function render(){const done=state.stage>=10,ch=chapters[Math.min(state.stage,9)];$('lh-player-name').textContent='Adventurer';$('lh-health').textContent=state.health+' / '+state.maxHealth;$('lh-coins').textContent=state.coins.toLocaleString();$('lh-xp').textContent=state.xp.toLocaleString();$('lh-character').value=state.character;$('lh-sidekick').value=state.sidekick;$('lh-pet').value=state.pet;$('lh-stage-label').textContent=done?'STORY COMPLETE':'CHAPTER '+(state.stage+1)+' / 10';$('lh-stage-title').textContent=done?'The Last Harvest':ch.title;$('lh-stage-description').textContent=done?chapters[9].after:ch.story;$('lh-scene-caption').textContent=done?'Hearthvale Restored':ch.place;$('lh-quest').textContent=done?'QUEST: THE FEAST IS RESTORED':'QUEST: '+ch.quest.toUpperCase();$('lh-location').textContent=done?'EPILOGUE':ch.place.toUpperCase();$('lh-progress-fill').style.width=(state.stage*10)+'%';$('lh-stage-status').textContent=done?'You completed the ten-chapter story.':'Defeat the chapter guardian to advance.';$('lh-stage-list').innerHTML=chapters.map((v,i)=>'<div class="lh-stage '+(i<state.stage?'done':i===state.stage?'open':'')+'">'+(i<state.stage?'✓':(i+1)+'.')+' '+v.title+(i>=state.stage?' 🔒':'')+'</div>').join('');$('lh-journal-text').textContent=done?chapters[9].after:ch.story;scene();renderBattle();renderInventory();renderShop();$('lh-skill').textContent=skills[state.sidekick].name;}
-function renderBattle(){if(state.stage>=10){$('lh-battle').innerHTML='<div class="lh-victory">🏆<h3>THE LAST HARVEST</h3><p>The Everfeast belongs to everyone.</p></div>';['lh-attack','lh-skill','lh-use-potion','lh-guard'].forEach(id=>$(id).disabled=true);return;}const ch=chapters[state.stage];if(enemyMax===0){enemyMax=ch.hp;enemyHP=ch.hp;}$('lh-enemy-name').textContent=ch.enemy;$('lh-enemy-art').textContent=ch.emoji;$('lh-enemy-health').textContent='Enemy HP: '+enemyHP+' / '+enemyMax;$('lh-enemy-hp').style.width=Math.max(0,enemyHP/enemyMax*100)+'%';['lh-attack','lh-skill','lh-use-potion','lh-guard'].forEach(id=>$(id).disabled=busy);}
-function renderInventory(){const inv=$('lh-inventory');inv.innerHTML=state.inventory.map((id,i)=>{const it=items[id];if(!it)return'';const equipped=Object.values(state.equipped).includes(id);return '<div class="lh-item"><b>'+id+'</b><p>'+it.desc+'</p><button class="lh-mini" data-item="'+i+'">'+(equipped?'Equipped':it.slot?'Equip':it.type==='potion'?'Use':'Inspect')+'</button></div>';}).join('')||'<p>Empty bag.</p>';$('lh-equipment').innerHTML=Object.entries(state.equipped).map(([slot,id])=>'<div class="lh-item"><b>'+slot.toUpperCase()+'</b><br>'+(id||'Empty')+'</div>').join('');inv.querySelectorAll('[data-item]').forEach(b=>b.addEventListener('click',()=>useItem(Number(b.dataset.item))));}
-function useItem(i){const id=state.inventory[i],it=items[id];if(!it)return;if(it.slot){state.equipped[it.slot]=id;say('Equipped '+id+'.');}else if(it.type==='potion'){if(state.health===state.maxHealth){say('Health is already full.');return;}state.health=Math.min(state.maxHealth,state.health+it.heal);state.inventory.splice(i,1);say('Used '+id+' and restored '+it.heal+' health.');}else say(it.desc);save();render();}
-const stock=['Berry Tonic','Harvest Elixir','Iron Harvest Blade','Guardian Armor','Forest Bow','Frostbite Bow'];
-function renderShop(){$('lh-shop-items').innerHTML=stock.map(id=>'<div class="lh-item"><b>'+id+'</b><p>'+items[id].desc+'</p><span>'+items[id].price+' coins</span> <button class="lh-mini" data-buy="'+id+'">Buy</button></div>').join('');$('lh-shop-items').querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>buy(b.dataset.buy)));}
-function buy(id){const it=items[id];if(state.coins<it.price){say('Not enough coins. Win battles or choose a cheaper item.');return;}state.coins-=it.price;state.inventory.push(id);save();say('Purchased '+id+'.');render();}
-function enemyTurn(){const ch=chapters[state.stage],s=stats();let damage=Math.max(1,ch.attack-s.def);if(guarding){damage=Math.max(1,Math.floor(damage/2));guarding=false;}state.health=Math.max(0,state.health-damage);if(state.health===0){state.health=Math.ceil(state.maxHealth*.6);state.coins=Math.max(0,state.coins-10);say('You retreat to the village healer. Health restored; 10 coins paid. Try again!');}else say(ch.enemy+' hits you for '+damage+' damage.');save();}
-function winBattle(){const ch=chapters[state.stage],reward=35+state.stage*15+(state.pet==='Pumpkin Pup'?12:0);state.coins+=reward;state.xp+=100+state.stage*40;if(ch.drop&&!state.inventory.includes(ch.drop)&&items[ch.drop])state.inventory.push(ch.drop);else if(ch.drop&&!items[ch.drop])state.inventory.push(ch.drop);if(state.pet==='Cranberry Slime')state.health=Math.min(state.maxHealth,state.health+3);state.wins.push(state.stage);say(ch.after+' Reward: '+reward+' coins and '+(100+state.stage*40)+' XP.');state.stage++;state.health=Math.min(state.maxHealth,state.health+12);enemyHP=0;enemyMax=0;save();render();}
-function hit(amount,label){if(busy||state.stage>=10)return;busy=true;enemyHP=Math.max(0,enemyHP-amount);say(label+' deals '+amount+' damage!');renderBattle();if(enemyHP<=0){winBattle();busy=false;render();return;}setTimeout(()=>{enemyTurn();busy=false;renderBattle();render();},220);}
-function attack(){hit(7+stats().atk+Math.floor(Math.random()*4),'Your attack');}
-function skill(){const sk=skills[state.sidekick];if(sk.heal){state.health=Math.min(state.maxHealth,state.health+sk.heal);say(state.sidekick+' restores '+sk.heal+' health.');save();enemyTurn();render();return;}if(sk.guard){guarding=true;say(state.sidekick+' raises a shield.');enemyTurn();render();return;}hit(sk.damage+stats().atk,state.sidekick+' uses '+sk.name);}
-function potion(){const i=state.inventory.findIndex(id=>items[id]?.type==='potion');if(i<0){say('No healing items. Visit the shop.');return;}useItem(i);enemyTurn();render();}
-function guard(){guarding=true;say('You brace for the next attack.');enemyTurn();render();}
-function tab(name){document.querySelectorAll('.lh-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.lh-tab-content').forEach(el=>el.hidden=el.id!=='lh-tab-'+name);}
-$('lh-save-party').addEventListener('click',()=>{state.character=$('lh-character').value;state.sidekick=$('lh-sidekick').value;state.pet=$('lh-pet').value;save();render();say('Party saved. '+skills[state.sidekick].name+': '+(skills[state.sidekick].heal?'heals '+skills[state.sidekick].heal+' HP':skills[state.sidekick].guard?'reduces the next hit':'deals bonus damage')+'. Pet bonus: '+pets[state.pet]);});
-$('lh-attack').addEventListener('click',attack);$('lh-skill').addEventListener('click',skill);$('lh-use-potion').addEventListener('click',potion);$('lh-guard').addEventListener('click',guard);document.querySelectorAll('.lh-tab').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
-['character','sidekick','pet'].forEach(k=>$('lh-'+k).addEventListener('change',e=>{state[k]=e.target.value;save();render();}));
-if(new URLSearchParams(location.search).has('reset'))localStorage.removeItem(KEY);
-state=load();$('lh-gate').hidden=true;$('lh-game').hidden=false;render();say('Welcome to Hearthvale. Your journey begins at the village fountain.');
+{place:'Hearthvale Village',title:'The Missing Feast',quest:'Find the missing keepers',enemy:'Pumpkin Sentinel'},
+{place:'Autumnwood Forest',title:'The Whispering Woods',quest:'Follow the golden leaves',enemy:'Thornback Stag'},
+{place:'Golden Apple Valley',title:'The Forgotten Orchard',quest:'Search the oldest tree',enemy:'Rotten Harvest Golem'},
+{place:'The Sunken Pantry',title:'The Sunken Pantry',quest:'Recover the keeper ledger',enemy:'Drowned Chef'},
+{place:'Shadowmarket',title:'The Feast of Shadows',quest:'Find Rowan in the market',enemy:'Masked Merchant'},
+{place:'Broken Banquet Hall',title:'The Betrayal',quest:'Confront your oldest friend',enemy:'Rowan'},
+{place:'Frostfall Mountains',title:'The Frozen Feast',quest:'Reach the old watchtower',enemy:'Turkey King'},
+{place:'The Hollow Fortress',title:'The Hollow Fortress',quest:'Uncover the first promise',enemy:'Hollow Knight'},
+{place:'Everfeast Sanctuary',title:'The Final Harvest',quest:'Face the Hollow King',enemy:'Hollow King'},
+{place:'Heart of Hearthvale',title:'The Last Harvest',quest:'Restore the Everfeast',enemy:'Heart Guardian'}
+];
+let state={name:'',heroClass:'Guardian',x:MAP_W*TILE/2,y:MAP_H*TILE/2,stage:0,coins:100,hp:40,cutscene:0,seenIntro:false};
+try{const old=JSON.parse(localStorage.getItem(SAVE));if(old&&old.name)state={...state,...old};}catch(e){}
+let keys={},touch={},dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13;
+const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
+const save=()=>localStorage.setItem(SAVE,JSON.stringify(state));
+function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
+addEventListener('resize',resize);resize();
+function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
+const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4}];
+function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(tileAt(tx,ty))return true;for(const b of solids)if(tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h)return true;for(const t of trees)if(Math.hypot(x-(t.x*TILE+16),y-(t.y*TILE+18))<20)return true;return false;}
+const trees=[];for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++)if((x<4||y<3||x>MAP_W-5||y>MAP_H-5)&&rand(x,y)>.18)trees.push({x,y});
+const npcs=[{x:16*TILE,y:12*TILE,name:'ELDER MAPLE',color:'#b8c7a1',lines:['The village square feels colder today. Your parents were last seen near the fountain.','The Everfeast is older than Hearthvale. Find the truth, not just the missing keepers.']},{x:22*TILE,y:13*TILE,name:'ROWAN',color:'#bb6542',lines:['I will come with you. We have been friends forever—trust me.','The woods are full of strange creatures. Keep your guard up.']}];
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
+function drawTree(x,y){const px=x*TILE,py=y*TILE;rect(px+9,py+16,14,18,'#69452a');rect(px+2,py+4,28,22,'#275a36');rect(px+5,py,22,22,'#347344');rect(px+8,py+3,6,6,'#699448');rect(px+20,py+10,6,5,'#b65d35')}
+function drawHouse(b,roof='#a85c32'){const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;rect(x,y+20,w,h-20,'#b58c5b');rect(x-8,y,w+16,28,roof);rect(x+10,y+30,24,24,'#8ec5c2');rect(x+w-34,y+30,24,24,'#8ec5c2');rect(x+w/2-13,y+h-38,26,38,'#573725');rect(x+w/2-4,y+h-20,4,4,'#edc66e');}
+function drawWorld(){const W=innerWidth,H=innerHeight,camX=Math.max(0,Math.min(MAP_W*TILE-W,state.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,state.y-H/2));ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
+for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){rect(x*TILE,y*TILE,TILE,TILE,(x+y)%2?'#57934e':'#609b53');if(rand(x,y)>.86)rect(x*TILE+rand(y,x)*24,y*TILE+rand(x+3,y)*24,3,3,'#8ab45d');}
+rect(0,11*TILE,MAP_W*TILE,4*TILE,'#c3b98e');rect(0,11*TILE,MAP_W*TILE,5,'#e5d8b1');rect(15*TILE,0,4*TILE,MAP_H*TILE,'#c3b98e');rect(15*TILE,0,5,'#e5d8b1');rect(19*TILE,14*TILE,10*TILE,2*TILE,'#c3b98e');
+drawHouse(solids[0],'#bb853d');drawHouse(solids[1],'#8b6540');drawHouse(solids[2],'#9b5838');drawHouse(solids[3],'#c18a42');
+for(const t of trees)drawTree(t.x,t.y);
+/* fountain */rect(18*TILE,12*TILE,3*TILE,2*TILE,'#8eaaa0');rect(18*TILE+10,12*TILE+8,2*TILE-20,24,'#5d9fa2');rect(18*TILE+16,12*TILE-8,28,8,'#d5d5bd');
+/* signpost */rect(27*TILE,10*TILE,5,30,'#654326');rect(27*TILE-15,10*TILE,38,14,'#d6b36c');rect(27*TILE-10,10*TILE+4,26,3,'#654326');
+for(const n of npcs){rect(n.x-7,n.y-17,14,24,n.color);rect(n.x-6,n.y-26,12,11,'#e9b98c');rect(n.x-7,n.y-29,14,5,'#5a3828');rect(n.x-5,n.y-4,4,12,'#493d36');rect(n.x+2,n.y-4,4,12,'#493d36');}
+drawPlayer(state.x,state.y);
+ctx.restore();return{camX,camY};}
+function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*2;rect(x-8,y-8+bob,16,19,'#244b9a');rect(x-7,y-18+bob,14,12,'#edb88d');rect(x-8,y-21+bob,16,6,state.heroClass==='Mage'?'#5b4c9a':state.heroClass==='Scout'?'#47764a':'#a13f32');rect(x-7,y+9+bob,5,8,'#49382d');rect(x+2,y+9+bob,5,8,'#49382d');rect(x-10,y-4+bob,4,10,'#edb88d');rect(x+6,y-4+bob,4,10,'#edb88d');rect(x-4,y-14+bob,2,2,'#30251e');rect(x+3,y-14+bob,2,2,'#30251e');}
+function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
+let dialogueDone=null;
+function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];$('lh-speaker').textContent=line[0];$('lh-dialogue-text').textContent=line[1];$('lh-dialogue').hidden=false;}
+function closeDialogue(){ $('lh-dialogue').hidden=true;dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
+function advanceDialogue(){if(!dialogue)return;dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
+function interact(){if(dialogue){advanceDialogue();return;}if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<64&&d<dist){found=n;dist=d;}}
+if(found){setDialogue(found.lines.map(t=>[found.name,t]));return;}
+const sx=27*TILE,sy=10*TILE;if(Math.hypot(state.x-sx,state.y-sy)<75){setDialogue([['OLD SIGN','AUTUMNWOOD — follow the golden leaves beyond the village.'],['QUEST','Explore Hearthvale and speak with the villagers. The road north-east leads to your first chapter.']]);return;}
+setDialogue([['NARRATOR','The wind carries the smell of cinnamon and fallen leaves. There may be something nearby.']]);}
+function startIntro(){state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';state.heroClass=document.querySelector('.lh-class.selected').dataset.class;state.x=20*TILE;state.y=15*TILE;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;state.coins=100;state.stage=0;state.seenIntro=true;save();$('lh-create').hidden=true;updateHud();setDialogue([['NARRATOR','Hearthvale. A peaceful village at the edge of the autumn woods…'],['NARRATOR','Every year, the Everfeast brings warmth and abundance to the valley. This year, the harvest bell never rang.'],['ELDER MAPLE',''+state.name+'! Thank goodness you are here. Your parents have disappeared!'],['ROWAN','We found strange tracks near the fountain. Come on, '+state.name+'—let’s find them!'],['NARRATOR','Your journey to uncover the truth behind the Everfeast begins now.']],()=>{save();});}
+function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=chapters[Math.min(state.stage,9)].place.toUpperCase();}
+function move(dt){if(dialogue||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;let dx=0,dy=0;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;if(!dx&&!dy)return;const mag=Math.hypot(dx,dy);dx/=mag;dy/=mag;const speed=state.heroClass==='Scout'?190:state.heroClass==='Guardian'?145:165;const nx=state.x+dx*speed*dt,ny=state.y+dy*speed*dt;if(!blocked(nx,state.y))state.x=nx;if(!blocked(state.x,ny))state.y=ny;playerFrame+=dt*14;moveCooldown+=dt;if(moveCooldown>.6){moveCooldown=0;save();}}
+function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);drawWorld();requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
+addEventListener('keyup',e=>{keys[e.key]=false;});
+document.querySelectorAll('[data-dir]').forEach(b=>{const dir=b.dataset.dir;const on=e=>{e.preventDefault();touch[dir]=true;};const off=e=>{e.preventDefault();touch[dir]=false;};b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);});
+$('lh-action-touch').addEventListener('pointerdown',e=>{e.preventDefault();interact();});
+$('lh-next').addEventListener('click',advanceDialogue);
+document.querySelectorAll('.lh-class').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
+$('lh-begin').addEventListener('click',startIntro);
+$('lh-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')startIntro();});
+$('lh-menu').addEventListener('click',()=>{ $('lh-menu-stats').textContent=state.name+' · '+state.heroClass+' · '+chapters[Math.min(state.stage,9)].title+' · '+state.coins+' coins';$('lh-game-menu').hidden=false;});
+$('lh-resume').addEventListener('click',()=>{$('lh-game-menu').hidden=true;});
+$('lh-reset').addEventListener('click',()=>{if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){localStorage.removeItem(SAVE);location.reload();}});
+if(state.name){$('lh-create').hidden=true;updateHud();}else{$('lh-create').hidden=false;}
+if(!state.seenIntro&&state.name){$('lh-create').hidden=false;}
 })();
