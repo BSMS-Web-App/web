@@ -2,6 +2,11 @@
 (function(){
 'use strict';
 const API='/api/last-harvest';
+const DEMO=new URLSearchParams(location.search).get('mode')==='demo';
+const DEMO_KEY='last_harvest_public_demo_v1';
+const demoFresh=()=>({state:{version:1,character:'Harvest Guardian',sidekick:'Rowan',pet:'Pumpkin Pup',stage:0,inventory:['wooden_sword','pumpkin_armor','acorn_helmet','autumn_boots'],equipped:{weapon:'wooden_sword',armor:'pumpkin_armor',helmet:'acorn_helmet',boots:'autumn_boots'},coins:50,xp:0,health:30,maxHealth:30,completedAt:null,updatedAt:Date.now()},openStage:10,displayName:'Demo Player'});
+function demoLoad(){try{return JSON.parse(localStorage.getItem(DEMO_KEY))||demoFresh();}catch{return demoFresh();}}
+function demoSave(){localStorage.setItem(DEMO_KEY,JSON.stringify(data));}
 const chapters=[
  {place:'Hearthvale Village',title:'The Missing Feast',text:'The morning bell rings, but the village square is empty. Your parents, the keepers of the Everfeast, have vanished. Rowan promises to help you search the village. A strange harvest sigil is carved into the old fountain.'},
  {place:'Autumnwood Forest',title:'The Whispering Woods',text:'The trees whisper names as you follow a trail of golden leaves. A Thornback Stag guards the path. Beyond it, you find footprints that belong to someone from Hearthvale.'},
@@ -17,7 +22,7 @@ const chapters=[
 let data=null, busy=false;
 const $=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-async function request(method,body){const session=localStorage.getItem('session_id')||'';const r=await fetch(API,{method,headers:{'Content-Type':'application/json','X-Session-ID':session},...(body?{body:JSON.stringify(body)}:{})});const j=await r.json().catch(()=>({error:'Unexpected server response.'}));if(!r.ok)throw new Error(j.error||'Request failed.');return j;}
+async function request(method,body){if(DEMO){if(method==='GET')return data;if(body?.action==='save-loadout'){data.state={...data.state,character:body.character,sidekick:body.sidekick,pet:body.pet,equipped:body.equipped};demoSave();return {state:data.state};}if(body?.action==='complete-stage'){const stage=Number(body.stage);if(stage!==data.state.stage+1||stage>10)throw new Error('Complete chapters in order.');data.state={...data.state,stage,xp:data.state.xp+stage*100,coins:data.state.coins+stage*25,health:30,completedAt:stage===10?Date.now():data.state.completedAt};demoSave();return {state:data.state,finished:stage===10};}throw new Error('Unknown demo action.');}const session=localStorage.getItem('session_id')||'';const r=await fetch(API,{method,headers:{'Content-Type':'application/json','X-Session-ID':session},...(body?{body:JSON.stringify(body)}:{})});const j=await r.json().catch(()=>({error:'Unexpected server response.'}));if(!r.ok)throw new Error(j.error||'Request failed.');return j;}
 function pixelScene(stage){
  const c=$('lh-pixel-scene'),x=c.getContext('2d');x.imageSmoothingEnabled=false;x.clearRect(0,0,480,220);
  const rect=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
@@ -45,6 +50,7 @@ function render(){
 async function loadLeaderboard(){
  const target=document.querySelector('.lh-leaderboard');
  if(!target)return;
+ if(DEMO){target.innerHTML='<h2>Public Test Build</h2><p>All ten chapters are open for testing. Your progress is saved only in this browser on this device.</p><p class="lh-small">This test has no official leaderboard and cannot determine a contest winner.</p>';return;}
  try{
   const result=await request('GET');
   const response=await fetch(API+'?action=leaderboard',{headers:{'X-Session-ID':localStorage.getItem('session_id')||''},cache:'no-store'});
@@ -53,8 +59,9 @@ async function loadLeaderboard(){
   target.innerHTML='<h2>Contest standings</h2><p>First player to finish all ten chapters wins. Verified completion times are ranked earliest first.</p>'+(board.rankings.length?'<ol class="lh-rankings">'+board.rankings.map(row=>'<li><b>'+esc(row.displayName)+'</b><span>'+new Date(row.completedAt).toLocaleString()+'</span></li>').join('')+'</ol>':'<p class="lh-small">No verified finishers yet.</p>');
  }catch(e){target.innerHTML='<h2>Contest standings</h2><p class="lh-small">Standings will appear when the private event opens.</p>';}
 }
-async function refresh(){try{data=await request('GET');$('lh-gate').hidden=true;$('lh-game').hidden=false;render();}catch(e){$('lh-gate-message').textContent=e.message;$('lh-gate').hidden=false;$('lh-game').hidden=true;}}
+async function refresh(){try{if(DEMO){data=demoLoad();demoSave();}else{data=await request('GET');}$('lh-gate').hidden=true;$('lh-game').hidden=false;render();}catch(e){$('lh-gate-message').textContent=e.message;$('lh-gate').hidden=false;$('lh-game').hidden=true;}}
 $('lh-save-party').addEventListener('click',async()=>{if(busy)return;busy=true;try{const result=await request('POST',{action:'save-loadout',character:$('lh-character').value,sidekick:$('lh-sidekick').value,pet:$('lh-pet').value,equipped:data.state.equipped});data.state=result.state;$('lh-stage-status').textContent='Your party has been saved.';}catch(e){$('lh-stage-status').textContent=e.message;}finally{busy=false;}});
 $('lh-stage-action').addEventListener('click',async()=>{if(busy||!data)return;busy=true;render();try{const result=await request('POST',{action:'complete-stage',stage:data.state.stage+1});data.state=result.state;render();}catch(e){$('lh-stage-status').textContent=e.message;}finally{busy=false;render();}});
+if(DEMO){document.body.classList.add('lh-demo');$('lh-gate-message').textContent='Public test mode is active.';}
 refresh();
 })();
