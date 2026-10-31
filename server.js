@@ -5,6 +5,7 @@
  */
 
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -24,6 +25,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again shortly.' }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many authentication attempts. Please try again later.' },
+    skip: (req) => !['login', 'register'].includes(String(req.query.action || req.body?.action || '').toLowerCase())
+});
+
+const rawFileLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many file requests. Please try again shortly.' }
+});
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
@@ -38,6 +66,10 @@ app.get('/event/halloween-haunt', (req, res) => res.redirect(301, '/events'));
 app.all('/api/halloween-haunt', (req, res) => res.status(410).json({ error: 'This event has ended.' }));
 
 // API Routes
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
+app.use('/games/saves', apiLimiter);
+app.use('/raw', rawFileLimiter);
 app.use('/api/auth', (req, res) => authHandler(req, res));
 app.use('/api/admin', (req, res) => adminHandler(req, res));
 app.use('/api/chat', (req, res) => chatHandler(req, res));
@@ -78,14 +110,29 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.htm
 app.get('/401', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.html')));
 app.get('/users', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
+app.get('/events', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get('/verity', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
+app.get('/metadata.json', (req, res) => res.sendFile(path.join(__dirname, 'metadata.json')));
+app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/accounts.html', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
+app.get('/chat.html', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
+app.get('/countdown.html', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
+app.get('/g.html', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
+app.get('/support.html', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
+app.get('/privacy.html', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/401.html', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
+app.get('/users.html', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
+app.get('/events.html', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
+app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get('/verity.html', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
 
-// Static asset folders
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
-app.use('/img', express.static(path.join(__dirname, 'img')));
-app.use('/js', express.static(path.join(__dirname, 'js')));
-
-// General static serving with clean URL support
-app.use(express.static(__dirname, { extensions: ['html'] }));
+// Serve only intentionally public asset directories. The repository root contains
+// server code, API handlers, configuration, and deployment metadata and must not be static.
+app.use('/admin', express.static(path.join(__dirname, 'admin'), { dotfiles: 'deny', index: false }));
+app.use('/css', express.static(path.join(__dirname, 'css'), { dotfiles: 'deny', index: false }));
+app.use('/img', express.static(path.join(__dirname, 'img'), { dotfiles: 'deny', index: false }));
+app.use('/js', express.static(path.join(__dirname, 'js'), { dotfiles: 'deny', index: false }));
 
 // 404 handler
 app.use((req, res) => {

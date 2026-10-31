@@ -6,12 +6,8 @@
 
 import { db } from './db.js';
 import crypto from 'crypto';
+import { hashPassword } from './passwords.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
-
-// Matches auth.js password hashing
-function hashPassword(password) {
-    return crypto.createHash('sha256').update(password).digest('hex');
-}
 
 // Verify session belongs to an owner, admin or moderator
 async function verifyStaff(sessionId) {
@@ -243,9 +239,9 @@ export default async function handler(req, res) {
 
                 const finalUpdates = { ...updates };
                 
-                // If admin typed a new password, hash it using auth.js SHA-256 standard
+                // If admin typed a new password, store a modern scrypt hash.
                 if (newPassword && newPassword.trim() !== '') {
-                    finalUpdates.password = hashPassword(newPassword.trim());
+                    finalUpdates.password = await hashPassword(newPassword.trim());
                 }
 
                 await db.ref(`/accounts/${targetUid}`).update(finalUpdates);
