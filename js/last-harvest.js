@@ -99,7 +99,15 @@ for(const d of doors){const wx=d.x*TILE,wy=d.y*TILE,dd=Math.hypot(state.x-wx,sta
 const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&signDist<promptDist){promptTarget={x:27*TILE,y:10*TILE};promptLabel='E · READ';}
 if(promptTarget)drawWorldPrompt(promptTarget.x,promptTarget.y-30,promptLabel);
 ctx.restore();return{camX,camY};}
-function drawDreamScene(W,H){px(0,0,W,H,'#49345f');for(let i=0;i<14;i++){px(i*W/14,0,W/14,H*.24,i%2?'#bd874e':'#e2b95c');px(i*W/14,H*.24,W/14,H*.1,'#7b4b68');}px(0,H*.34,W,H*.66,'#704b36');px(0,H*.76,W,H*.24,'#c18b49');for(let i=0;i<12;i++){const x=i*W/11;drawPerson(x,H*.38,'#6b9c70','#d8b86a');}px(W*.2,H*.55,W*.6,H*.26,'#9b633d');px(W*.22,H*.57,W*.56,H*.22,'#c18a48');const a=cinematic.actors;drawPerson(a.MARA.x,a.MARA.y,'#b86c78','#70485c');drawPerson(a.THOMAS.x,a.THOMAS.y,'#577f9b','#4a536e');drawPerson(a.ROWAN.x,a.ROWAN.y,'#bb6542','#9b4a36');drawPlayer(a.HERO.x,a.HERO.y);drawPerson(a.FOE.x,a.FOE.y,'#7d526f','#45364e');ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.12);ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);}
+function drawCutscenePerson(x,y,shirt,hat,scale=1.75){
+const z=scale;px(x-10*z,y+6*z,20*z,6*z,'#352f3b');px(x-7*z,y+10*z,5*z,7*z,'#3d4050');px(x+2*z,y+10*z,5*z,7*z,'#3d4050');
+px(x-10*z,y-9*z,20*z,17*z,C.ink);px(x-8*z,y-8*z,16*z,14*z,shirt);px(x-12*z,y-5*z,4*z,10*z,C.skin);px(x+8*z,y-5*z,4*z,10*z,C.skin);
+px(x-7*z,y-23*z,14*z,14*z,C.skin);px(x-9*z,y-27*z,18*z,6*z,C.ink);px(x-7*z,y-30*z,14*z,5*z,hat);px(x-6*z,y-17*z,3*z,3*z,C.ink);px(x+3*z,y-17*z,3*z,3*z,C.ink);
+}
+function drawCutscenePlayer(x,y,scale=1.75){
+drawCutscenePerson(x,y,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38',state.heroClass==='Mage'?'#6554a5':state.heroClass==='Scout'?'#4a8a54':'#c44736',scale);
+}
+function drawDreamScene(W,H){px(0,0,W,H,'#49345f');for(let i=0;i<14;i++){px(i*W/14,0,W/14,H*.24,i%2?'#bd874e':'#e2b95c');px(i*W/14,H*.24,W/14,H*.1,'#7b4b68');}px(0,H*.34,W,H*.66,'#704b36');px(0,H*.76,W,H*.24,'#c18b49');for(let i=0;i<12;i++){const x=i*W/11;drawPerson(x,H*.38,'#6b9c70','#d8b86a');}px(W*.2,H*.55,W*.6,H*.26,'#9b633d');px(W*.22,H*.57,W*.56,H*.22,'#c18a48');const a=cinematic.actors;drawCutscenePerson(a.MARA.x,a.MARA.y,'#b86c78','#70485c',1.65);drawCutscenePerson(a.THOMAS.x,a.THOMAS.y,'#577f9b','#4a536e',1.65);drawCutscenePerson(a.ROWAN.x,a.ROWAN.y,'#bb6542','#9b4a36',1.65);drawCutscenePlayer(a.HERO.x,a.HERO.y,1.8);drawCutscenePerson(a.FOE.x,a.FOE.y,'#7d526f','#45364e',2.05);ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.12);ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);ctx.fillStyle='#fff2c7';ctx.font='bold 13px ui-monospace';ctx.fillText('CHALLENGER',a.FOE.x,a.FOE.y-58);}
 function drawSchoolScene(W,H){
 px(0,0,W,H,'#7eb6b0');px(0,H*.68,W,H*.32,'#719b60');
 px(W*.08,H*.18,W*.84,H*.55,'#d8c99d');px(W*.08,H*.15,W*.84,H*.12,'#7d5742');px(W*.11,H*.18,W*.78,H*.07,'#a85f3d');
@@ -119,43 +127,79 @@ px(W*.38,H*.11,W*.2,H*.09,'#694b48');px(W*.395,H*.125,W*.17,H*.06,'#bd8b62');px(
 px(W*.07,H*.39,W*.17,H*.25,'#634333');px(W*.085,H*.41,W*.14,H*.21,'#8e5e3d');for(let i=0;i<3;i++){px(W*.095,H*(.44+i*.055),W*.12,H*.012,'#d5ae75');px(W*(.11+i*.04),H*(.42+i*.055),W*.025,H*.03,['#a94f3e','#5b8b64','#d0a34d'][i]);}
 px(W*.77,H*.4,W*.14,H*.23,'#76503a');px(W*.785,H*.415,W*.11,H*.2,'#b37c4c');px(W*.8,H*.39,W*.08,H*.025,'#e1bd80');
 px(W*.2,H*.68,W*.6,H*.2,'#75443c');px(W*.22,H*.7,W*.56,H*.16,'#c18a58');for(let i=0;i<5;i++)px(W*(.25+i*.105),H*.73,W*.075,H*.09,i%2?'#d9b06f':'#b87950');
-const bx=W*.43,by=H*.47,bw=W*.34,bh=H*.3;
+const bx=W*.43,by=H*.49,bw=W*.28,bh=H*.25;
 px(bx-12,by+bh-4,bw+24,24,'#49342e');px(bx,by+bh-17,bw,20,'#70452f');px(bx-8,by+10,12,bh-10,'#805239');px(bx+bw-4,by+10,12,bh-10,'#805239');
 px(bx,by,bw,bh-10,'#e0c18c');px(bx+8,by+8,bw-16,bh-28,'#f0dfb6');px(bx+10,by+10,bw-20,13,'#b56d63');
 px(bx+14,by+17,bw*.32,34,'#f7e8c7');px(bx+bw*.57,by+17,bw*.3,34,'#f7e8c7');px(bx+12,by+51,bw-24,bh-78,'#6c8b91');px(bx+17,by+55,bw-34,bh-87,'#87a6a0');
 const pose=cinematic.wakePose||'lying';
 if(pose==='lying'){px(bx+bw*.5-15,by+24,30,24,'#d7a06e');px(bx+bw*.5-12,by+22,24,7,'#493b49');px(bx+bw*.5-8,by+32,4,3,C.ink);px(bx+bw*.5+5,by+32,4,3,C.ink);px(bx+bw*.5-26,by+43,52,10,state.heroClass==='Mage'?'#6554a5':state.heroClass==='Scout'?'#4a8a54':'#c44736');px(bx+bw*.5-31,by+50,62,48,'#66888b');px(bx+bw*.5-31,by+50,62,5,'#a8c1b0');}
-else if(pose==='sitting')drawPlayer(bx+bw*.5,by+bh-42);else drawPlayer(bx+bw*.5,by+bh+4);
+else if(pose==='sitting')drawCutscenePlayer(bx+bw*.5,by+bh-22,1.65);else drawCutscenePlayer(bx+bw*.5,by+bh+8,1.65);
 px(bx-55,by+bh-35,42,35,'#795039');px(bx-59,by+bh-39,50,7,'#d2a36d');px(bx-45,by+bh-60,22,22,'#f0c66c');px(bx-41,by+bh-68,14,10,'#f8e5a7');
 px(bx+bw+25,by+bh-29,25,9,'#684638');px(bx+bw+55,by+bh-29,25,9,'#684638');
-drawPerson(W*.32,H*.62,'#b86c78','#70485c');drawPerson(W*.82,H*.62,'#577f9b','#4a536e');
+drawCutscenePerson(W*.28,H*.67,'#b86c78','#70485c',1.65);drawCutscenePerson(W*.72,H*.67,'#577f9b','#4a536e',1.65);
 const light=ctx.createRadialGradient(bx+bw*.5,by+bh*.45,10,bx+bw*.5,by+bh*.45,Math.max(W,H)*.55);light.addColorStop(0,'rgba(255,224,157,.16)');light.addColorStop(1,'rgba(32,23,31,.22)');ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
 ctx.fillStyle='#fff2c7';ctx.font='bold 18px ui-monospace';ctx.textAlign='center';ctx.fillText('HEARTHVALE — MORNING',W/2,H*.075);
 }
 function drawPerson(x,y,shirt,hat){const bob=Math.sin(performance.now()/190+x*.035)*1.2;px(x-9,y+6+bob,18,5,'#352f3b');px(x-7,y+8+bob,5,8,'#3d4050');px(x+2,y+8+bob,5,8,'#3d4050');px(x-10,y-8+bob,20,16,C.ink);px(x-8,y-7+bob,16,13,shirt);px(x-12,y-5+bob,4,10,C.skin);px(x+8,y-5+bob,4,10,C.skin);px(x-7,y-22+bob,14,14,C.skin);px(x-8,y-24+bob,16,5,hat);px(x-7,y-27+bob,14,4,hat);px(x-6,y-16+bob,3,3,C.ink);px(x+3,y-16+bob,3,3,C.ink);px(x-5,y-11+bob,10,2,'#9b5e54');px(x-8,y-5+bob,16,3,'rgba(255,255,255,.18)');px(x-11,y+1+bob,3,3,hat);px(x+8,y+1+bob,3,3,hat);}
 const roomFurniture=[
-[[.12,.38,.13,.12],[.75,.38,.13,.12],[.39,.43,.22,.09]],
-[[.13,.46,.2,.13],[.67,.46,.2,.13],[.42,.34,.16,.08]],
-[[.12,.38,.09,.17],[.31,.38,.09,.17],[.60,.38,.09,.17],[.79,.38,.09,.17]],
-[[.18,.48,.18,.12],[.64,.48,.18,.12],[.43,.34,.14,.09]]
+[[.12,.37,.10,.10],[.77,.37,.10,.10],[.42,.39,.14,.09]],
+[[.18,.39,.14,.10],[.66,.39,.14,.10],[.40,.56,.20,.08]],
+[[.13,.37,.08,.15],[.29,.37,.08,.15],[.63,.37,.08,.15],[.79,.37,.08,.15]],
+[[.18,.42,.18,.09],[.65,.42,.18,.09],[.44,.55,.12,.08]]
 ];
-function roomBlocked(x,y){const nx=x/innerWidth,ny=y/innerHeight;if(nx<.09||nx>.91||ny<.27||ny>.88)return true;return roomFurniture[interiorId].some(([rx,ry,rw,rh])=>nx>rx-.018&&nx<rx+rw+.018&&ny>ry-.025&&ny<ry+rh+.035);}
+const roomNPCSpots=[
+[{x:.31,y:.68},{x:.69,y:.68}],
+[{x:.31,y:.70},{x:.69,y:.70}],
+[{x:.39,y:.69},{x:.62,y:.69}],
+[{x:.32,y:.70},{x:.68,y:.70}]
+];
+function roomBlocked(x,y){
+const nx=x/innerWidth,ny=y/innerHeight;
+if(nx<.09||nx>.91||ny<.28||ny>.89)return true;
+return roomFurniture[interiorId].some(([rx,ry,rw,rh])=>nx>rx-.012&&nx<rx+rw+.012&&ny>ry-.02&&ny<ry+rh+.025);
+}
 function drawInterior(W,H){
-ctx.clearRect(0,0,W,H);px(0,0,W,H,'#59402f');px(0,0,W,H*.2,'#4a352b');px(0,H*.17,W,H*.035,'#b47a45');
-for(let y=H*.205;y<H;y+=28){px(0,y,W,26,(Math.floor(y/28)%2)?'#b98755':'#c99b66');px(0,y+24,W,3,'#98633f');}
-px(W*.055,H*.23,W*.89,H*.69,'#704a34');px(W*.07,H*.25,W*.86,H*.65,'#dfc28d');
-for(const wx of [W*.18,W*.76]){px(wx-25,H*.29,52,58,'#493d39');px(wx-21,H*.33,44,48,'#67b7c6');px(wx-2,H*.33,4,48,'#e6d7ae');px(wx-21,H*.53,44,4,'#e6d7ae');}
-for(let x=0;x<W;x+=Math.max(90,W*.16)){px(x,H*.19,5,H*.055,'#382b28');px(x+5,H*.2,2,H*.035,'#d0a16b');}
-px(W*.07,H*.88,W*.86,7,'#70472f');px(W*.07,H*.25,7,H*.64,'#8c5a39');px(W*.925,H*.25,7,H*.64,'#8c5a39');
-for(const [x,y,w,h] of roomFurniture[interiorId]){const X=W*x,Y=H*y,F=W*w,G=H*h;px(X,Y+G*.18,F,G*.82,'#70472f');px(X+3,Y,F-6,G*.22,'#d0a16b');px(X+6,Y+G*.27,F-12,G*.08,'#c66b45');px(X+6,Y+G*.55,F-12,G*.08,'#75a06b');}
-px(W*.36,H*.72,W*.28,H*.09,'#a64f3f');px(W*.38,H*.74,W*.24,H*.05,'#d7a65d');
-px(W*.09,H*.72,22,20,'#6e4b34');px(W*.095,H*.68,14,12,'#4f8b58');px(W*.88,H*.72,22,20,'#6e4b34');
-px(W*.46,H*.28,W*.08,5,'#8a5938');px(W*.49,H*.23,W*.02,12,'#e6c77f');
-ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(['MAPLE COTTAGE','VILLAGE INN','TILLY’S GENERAL STORE','ORIN’S WORKSHOP'][interiorId],W/2,H*.14);
-for(const n of roomNPCs[interiorId])drawPerson(W*n.x,H*n.y,n.color,'#634b3a');
-let target=null,dist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(insidePlayer.x-W*n.x,insidePlayer.y-H*n.y);if(d<Math.max(96,W*.12)&&d<dist){target=n;dist=d;}}
-if(target)drawWorldPrompt(W*target.x,H*target.y-32,'E · TALK');else if(insidePlayer.y>H*.68)drawWorldPrompt(W*.5,H*.83,'E · EXIT');
-px(W*.43,H*.83,W*.14,10,'#a16b3f');px(W*.45,H*.85,W*.1,5,'#e0bd79');drawPlayer(insidePlayer.x,insidePlayer.y);
+ctx.clearRect(0,0,W,H);
+const palettes=[
+{wall:'#ead9bd',floor:'#b9855d',trim:'#714832',accent:'#a85b48',title:'MAPLE COTTAGE'},
+{wall:'#d5b88a',floor:'#80563e',trim:'#49352d',accent:'#c18a49',title:'HEARTHVALE INN'},
+{wall:'#e4c991',floor:'#c99a61',trim:'#704a32',accent:'#b85c43',title:'TILLY’S GENERAL STORE'},
+{wall:'#aeb7ad',floor:'#8b6749',trim:'#493c34',accent:'#6c7d86',title:'ORIN’S WORKSHOP'}
+][interiorId];
+px(0,0,W,H,palettes.trim);
+if(interiorId===0){
+px(W*.05,H*.19,W*.9,H*.7,palettes.wall);
+px(W*.05,H*.19,W*.9,H*.07,'#8b5b42');
+for(let i=0;i<5;i++)px(W*(.08+i*.17),H*.27,W*.14,4,'#d0b48c');
+px(W*.42,H*.23,W*.16,H*.18,'#714b38');px(W*.445,H*.25,W*.11,H*.14,'#a64e3e');px(W*.47,H*.29,W*.06,H*.09,'#f1a45c');
+px(W*.11,H*.38,W*.12,H*.12,'#79513a');px(W*.13,H*.4,W*.08,H*.08,'#d0a36d');
+}else if(interiorId===1){
+px(0,0,W,H*.23,'#4d382f');px(W*.08,H*.22,W*.84,H*.67,palettes.wall);
+for(let i=0;i<4;i++){px(W*(.1+i*.21),H*.29,W*.16,H*.035,'#9b714c');px(W*(.12+i*.21),H*.33,W*.12,H*.02,'#d5b780');}
+px(W*.08,H*.48,W*.25,H*.09,'#70462f');px(W*.1,H*.5,W*.21,H*.05,'#c18a49');
+px(W*.68,H*.48,W*.24,H*.09,'#70462f');px(W*.7,H*.5,W*.20,H*.05,'#c18a49');
+}else if(interiorId===2){
+px(W*.04,H*.18,W*.92,H*.72,palettes.wall);
+px(W*.08,H*.26,W*.84,H*.035,'#a56e43');
+for(const x of [.11,.32,.57,.78]){px(W*x,H*.34,W*.1,H*.19,'#70462f');for(let j=0;j<3;j++)px(W*(x+.012),H*(.37+j*.05),W*.076,H*.018,['#c96f4e','#7d9b69','#e0b85f'][j]);}
+px(W*.38,H*.59,W*.24,H*.08,'#a64f3f');px(W*.4,H*.61,W*.2,H*.04,'#d8aa66');
+}else{
+px(W*.05,H*.2,W*.9,H*.69,'#b3b9a8');
+for(let i=0;i<6;i++){px(W*(.1+i*.14),H*.26,W*.12,H*.018,'#765139');px(W*(.11+i*.14),H*.29,W*.1,H*.045,'#8e6849');}
+px(W*.22,H*.51,W*.56,H*.11,'#594638');px(W*.25,H*.53,W*.5,H*.06,'#b87945');
+px(W*.43,H*.43,W*.14,H*.08,'#5a5550');px(W*.46,H*.39,W*.08,H*.06,'#a6a8a0');
+}
+for(let y=H*.9;y<H;y+=26){px(0,y,W,23,palettes.floor);px(0,y+22,W,4,palettes.trim);}
+px(W*.045,H*.2,7,H*.7,palettes.trim);px(W*.948,H*.2,7,H*.7,palettes.trim);
+px(W*.42,H*.12,W*.16,5,palettes.accent);
+ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(palettes.title,W/2,H*.105);
+const nlist=roomNPCs[interiorId];
+nlist.forEach((n,i)=>{const spot=roomNPCSpots[interiorId][i];drawPerson(W*spot.x,H*spot.y,n.color,'#634b3a');});
+let target=null,dist=Infinity;
+for(let i=0;i<nlist.length;i++){const n=nlist[i],spot=roomNPCSpots[interiorId][i],d=Math.hypot(insidePlayer.x-W*spot.x,insidePlayer.y-H*spot.y);if(d<Math.max(84,W*.095)&&d<dist){target=n;dist=d;}}
+if(target){const i=nlist.indexOf(target),spot=roomNPCSpots[interiorId][i];drawWorldPrompt(W*spot.x,H*spot.y-31,'E · TALK');}
+else if(insidePlayer.y>H*.79)drawWorldPrompt(W*.5,H*.84,'E · EXIT');
+drawPlayer(insidePlayer.x,insidePlayer.y);
 }function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
 function drawPlayer(x,y){const bob=Math.sin(playerFrame/5)*1.5,step=Math.round(Math.sin(playerFrame*1.8)*2);px(x-9,y+7+bob,18,7,C.ink);px(x-7-step,y+10+bob,5,7,'#39415a');px(x+3+step,y+10+bob,5,7,'#39415a');
 px(x-9,y-8+bob,18,17,C.ink);px(x-7,y-7+bob,14,14,state.heroClass==='Mage'?'#6658a5':state.heroClass==='Scout'?'#4c8955':'#b94b38');
@@ -183,7 +227,7 @@ function closeDialogue(){ $('lh-dialogue').hidden=true;dialogue=null;if(dialogue
 function advanceDialogue(){if(!dialogue)return;dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer={x:innerWidth/2,y:innerHeight*.76};updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
-function interact(){if(transitioning)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(const n of roomNPCs[interiorId]){const d=Math.hypot(pxp-W*n.x,pyp-H*n.y);if(d<Math.max(92,W*.12)&&d<dist){target=n;dist=d;}}if(target){setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>H*.78){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(transitioning)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<Math.max(84,W*.095)&&d<dist){target=n;dist=d;}}if(target){setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>H*.78){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<64&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.name==='ELDER MAPLE'&&questStep===0){questStep=1;setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
@@ -207,21 +251,21 @@ await say([['CROWD',state.name+'! '+state.name+'! You can do it!'],['ROWAN','Sho
 await moveActor('HERO',{x:innerWidth*.48,y:innerHeight*.68},900);
 await say([['ANNOUNCER','The challenger enters the arena! The final match begins now!'],['CHALLENGER','You really think you can beat me?']]);
 await moveActor('HERO',{x:innerWidth*.57,y:innerHeight*.68},650);
-await say([['NARRATOR','You dodge the challenger’s strike and land one final heroic blow!']]);
+await say([['ROWAN','You dodge the challenger’s move and land one final heroic strike!']]);
 await moveActor('FOE',{x:innerWidth*.77,y:innerHeight*.72},600);
 await say([['ANNOUNCER','THE CHAMPION WINS!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest champion in all of Hearthvale!']]);
 cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={HERO:{x:innerWidth*.60,y:innerHeight*.65},MARA:{x:innerWidth*.32,y:innerHeight*.62},THOMAS:{x:innerWidth*.82,y:innerHeight*.62}};
-await say([['NARRATOR','“Wake up, sleepyhead…” A familiar voice pulls you out of the dream.']]);
+await say([['MARA','Wake up, sleepyhead… You were dreaming about the championship again.']]);
 cinematic.wakePose='sitting';
 await say([['MARA','Good morning! Rowan is waiting outside. You are both old enough to attend Hearthvale School today.'],['THOMAS','The instructor will help you choose the path that suits you. We will see you after lessons.']]);
-await say([['NARRATOR','You get ready, step outside, and meet Rowan. Together, you set off for school.']]);
+await say([['ROWAN','Ready? Let’s head to school together.']]);
 cinematic.phase='school';cinematic.actors={HERO:{x:innerWidth*.43,y:innerHeight*.68},ROWAN:{x:innerWidth*.57,y:innerHeight*.68}};
 await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],['INSTRUCTOR','Welcome to Hearthvale School. Every adventurer chooses one path: Guardian, Scout, or Mage. Your choice will shape how you face the world.']]);
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
 cinematic.phase='outside';cinematic.camera={x:20*TILE,y:15*TILE};cinematic.actors={HERO:{x:20*TILE,y:15*TILE},ROWAN:{x:22*TILE,y:14*TILE}};
-await say([['ROWAN','That was exciting! Come on, let’s head home.'],['NARRATOR','By the time you return, the house is quiet. Your parents have already left for the Everfeast preparations. You missed them.']]);
-await say([['ROWAN','Wait… the front door is open. Where are Mara and Thomas?'],['NARRATOR','They were supposed to be back by now. Something is wrong.']]);
+await say([['ROWAN','That was exciting! Come on, let’s head home.'],['ROWAN','The house is quiet… Your parents must have already left for the Everfeast preparations. We just missed them.']]);
+await say([['ROWAN','Wait… the front door is open. Where are Mara and Thomas?'],['ROWAN','They were supposed to be back by now. Something is wrong.']]);
 cinematic=null;document.body.classList.remove('lh-cinematic');state.seenIntro=true;questStep=0;updateQuest();save();
 })();
 }
