@@ -66,3 +66,22 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-dialogue-speaker>div{min-width:0;flex:1}
 .lh-dialogue-speaker p{margin-top:8px}
 @media(max-width:520px){#lh-portrait{width:52px;height:52px;flex-basis:52px}.lh-dialogue-speaker{gap:9px}}
+
+/* Field-journal menu: original Hearthvale presentation with classic handheld RPG structure */
+.lh-rpg-modal{width:min(560px,100%);text-align:left;padding:clamp(16px,3vw,26px)}
+.lh-rpg-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.lh-rpg-heading h2{margin:6px 0 12px;color:#ffe18a;font-size:clamp(20px,4vw,28px);letter-spacing:.08em}
+.lh-close-button{width:38px;height:38px;border:3px solid #26334a;background:#d9e0d1;color:#26334a;font:900 18px ui-monospace;box-shadow:inset 0 0 0 2px #fff4d8;cursor:pointer}
+.lh-rpg-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:5px;background:#172a3a;border:3px solid #26334a}
+.lh-rpg-tabs button{padding:11px 5px;border:2px solid #536d7a;background:#314b5d;color:#f3e6bf;font:900 11px ui-monospace;letter-spacing:.08em;cursor:pointer}
+.lh-rpg-tabs button.active{background:#e8bd58;color:#26334a;border-color:#fff0bd}
+.lh-rpg-content{min-height:190px;margin:12px 0;padding:15px;background:#e5e2c9;color:#26334a;border:3px solid #26334a;box-shadow:inset 0 0 0 2px #fff4d8}
+.lh-rpg-content h3{margin:0 0 12px;color:#8c4c32;font-size:13px;letter-spacing:.08em}
+.lh-rpg-content p{margin:7px 0;font-size:12px;line-height:1.5}
+.lh-rpg-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lh-rpg-stat{padding:9px;background:#d0d8c5;border:2px solid #8b9c88;font-size:11px}
+.lh-rpg-stat b{display:block;margin-bottom:4px;color:#795039;font-size:9px;letter-spacing:.1em}
+.lh-rpg-empty{padding:18px 8px;text-align:center;color:#536b67;font-size:12px;line-height:1.6}
+.lh-rpg-modal>#lh-reset{width:100%;margin:0}
+.lh-rpg-modal .lh-footnote{text-align:center}
+@media(max-width:520px){.lh-rpg-content{min-height:165px;padding:11px}.lh-rpg-tabs button{font-size:10px;padding:10px 3px}}
