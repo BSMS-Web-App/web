@@ -107,8 +107,7 @@ function drawHouse(b,roof='#a85c32'){
   ctx.drawImage(buildingSheet,src[0],src[1],src[2],src[3],x-8,y-10,w+16,h+18);
   return;
  }
- 
-const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
+
 px(x-5,y+12,w+10,h-12,'#35485a');px(x,y+12,w,h-14,'#d7d9c8');px(x+5,y+18,w-10,h-25,'#9aaeb0');
 px(x-8,y+2,w+16,13,'#5a4a3d');px(x-5,y,w+10,11,roof);px(x,y-5,w,8,roof);
 for(let r=0;r<2;r++)for(let c=0;c<Math.floor(w/24);c++){px(x+4+c*24+(r%2)*9,y+2+r*5,17,2,r?'#843f32':'#d98753');}
