@@ -62,7 +62,7 @@ function drawPerson(x,y,shirt,hat,name=''){
  if(Math.hypot(dx,dy)<140)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);
  drawSprite(row,face,0,x,y);
 }
-const C={ink:const C={ink:'#26334a',deep:'#344b45',grass:'#55a66a',grass2:'#63b879',light:'#8bd18a',path:'#c7d0c6',path2:'#e1e4d2',pathShade:'#9daeb0',wood:'#855236',wood2:'#b97845',roof:'#a94f36',roof2:'#d47749',cream:'#f3e6bf',glass:'#75c5d2',blue:'#3d78aa',gold:'#e8bd58',skin:'#f1b58c'};
+const C={ink:'#26334a',deep:'#344b45',grass:'#55a66a',grass2:'#63b879',light:'#8bd18a',path:'#c7d0c6',path2:'#e1e4d2',pathShade:'#9daeb0',wood:'#855236',wood2:'#b97845',roof:'#a94f36',roof2:'#d47749',cream:'#f3e6bf',glass:'#75c5d2',blue:'#3d78aa',gold:'#e8bd58',skin:'#f1b58c'};
 function px(x,y,w,h,c){rect(Math.round(x),Math.round(y),w,h,c)}
 /* Original Hearthvale sprite atlas. Frames are generated locally so the game
    owns its artwork and does not depend on unlicensed franchise graphics. */
@@ -180,7 +180,7 @@ function drawDreamScene(W,H){
  for(let r=0;r<2;r++){const by=H*.31+r*H*.055;px(0,by+10,W,8,'#6a4a38');for(let x=(r%2)*28;x<W;x+=56)drawSpriteK([5,7,10,12,9,14,16][((x/56|0)+r)%7],0,0,x+20,by+10,2);}
  px(0,H*.44,W,H*.56,'#dcbc7c');for(let y=H*.44;y<H;y+=32)for(let x=0;x<W;x+=32){const r=rand(x/32,y/32);if(r>.68)px(x+8+r*10,y+9,4,2,'#c09858');}
  ctx.strokeStyle='#b88850';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(W/2,H*.76,W*.32,H*.13,0,0,6.3);ctx.stroke();
- [[a.MARA,14,0,null],[a.THOMAS,8,0,null],[a.ROWAN,2,0,null],[a.HERO,heroRow(),facing,state.heroClass],[a.FOE,20,2,'Foe']].sort((p,q)=>p[0].y-q[0].y).forEach(([p,row,face,g])=>{drawSpriteK(row,face,0,p.x,p.y,k*(g==='Foe'?1.12:1));if(g)drawGear(p.x,p.y,k,face,g);});
+ [[a.MARA,14,0,null],[a.THOMAS,8,0,null],[a.ROWAN,2,0,null],[a.HERO,heroRow(),facing,state.heroClass],[a.FOE,20,2,'Foe']].sort((p,q)=>p[0].y-q[0].y).forEach(([p,row,face,g])=>{drawSpriteK(row,face,0,p.x,p.y,k*(g==='Foe'?1.12:1));/* class-specific appearance comes from the character sheet row */});
  ctx.fillStyle='#fff2c7';ctx.font='bold 22px ui-monospace';ctx.textAlign='center';ctx.fillText('HARVEST FESTIVAL CHAMPIONSHIP',W/2,H*.08);
  ctx.font='bold 14px ui-monospace';ctx.fillText('THE CROWD IS CHEERING FOR YOU!',W/2,H*.2);
  ctx.font='bold 13px ui-monospace';ctx.fillText('CHALLENGER',a.FOE.x,a.FOE.y-58);
