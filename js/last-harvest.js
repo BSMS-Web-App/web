@@ -314,7 +314,11 @@ joy.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e);});
 function releaseJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;joystick.x=joystick.y=0;stick.style.transform='translate(0,0)';}
 joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
-canvas.addEventListener('pointerup',e=>{if(dialogue){advanceDialogue();return;}interact();});
+// Tapping the world must never trigger a random NPC conversation.
+canvas.addEventListener('pointerup',()=>{});
+$('lh-dialogue').addEventListener('pointerup',e=>{e.preventDefault();advanceDialogue();});
+$('lh-dialogue').addEventListener('click',e=>{if(e.target!==$('lh-next'))advanceDialogue();});
+
 $('lh-next').addEventListener('click',advanceDialogue);
 document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
 $('lh-school-confirm').addEventListener('click',()=>{const selected=$('lh-school-class').querySelector('.lh-class.selected');state.heroClass=selected.dataset.class;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;$('lh-school-class').hidden=true;updateHud();save();if(window.__lhClassChosen){const done=window.__lhClassChosen;window.__lhClassChosen=null;done();}});
