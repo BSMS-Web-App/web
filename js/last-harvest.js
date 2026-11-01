@@ -77,11 +77,18 @@ const tileAtlas=(()=>{const a=document.createElement('canvas');a.width=192;a.hei
  });
  return a;
 })();
-function drawTree(x,y){const X=x*TILE,Y=y*TILE;
-px(X+12,Y+17,9,16,'#68452e');px(X+9,Y+25,15,5,'#4c392b');
-px(X+2,Y+7,28,18,'#286344');px(X+5,Y+1,22,19,'#347e4b');px(X+9,Y-3,14,13,'#48a65a');
-px(X+6,Y+5,7,6,'#78c96b');px(X+19,Y+3,6,7,'#70c66a');px(X+2,Y+15,7,6,'#3e9853');px(X+21,Y+15,7,5,'#2d7548');
-px(X+13,Y+7,4,3,'#a4d978');}
+function drawTree(x,y){
+ const X=x*TILE,Y=y*TILE;
+ if(buildingSheet.complete&&buildingSheet.naturalWidth){
+  const variant=(x+y)%2;
+  ctx.drawImage(buildingSheet,variant?588:529,0,variant?61:58,91,X-10,Y-27,52,60);
+  return;
+ }
+ px(X+12,Y+17,9,16,'#68452e');px(X+9,Y+25,15,5,'#4c392b');
+ px(X+2,Y+7,28,18,'#286344');px(X+5,Y+1,22,19,'#347e4b');px(X+9,Y-3,14,13,'#48a65a');
+ px(X+6,Y+5,7,6,'#78c96b');px(X+19,Y+3,6,7,'#70c66a');px(X+2,Y+15,7,6,'#3e9853');px(X+21,Y+15,7,5,'#2d7548');
+ px(X+13,Y+7,4,3,'#a4d978');
+}
 function drawFlower(x,y,color='#e6b95d'){const X=x*TILE,Y=y*TILE;px(X+14,Y+18,3,9,'#39794b');px(X+9,Y+23,12,3,'#39794b');px(X+10,Y+11,5,5,color);px(X+17,Y+11,5,5,color);px(X+10,Y+17,5,5,color);px(X+17,Y+17,5,5,color);px(X+14,Y+14,4,4,'#f7e6a0');}
 function drawBush(x,y){const X=x*TILE,Y=y*TILE;px(X+3,Y+14,26,13,'#24583c');px(X+1,Y+8,14,16,'#347e4b');px(X+15,Y+6,16,18,'#286b43');px(X+7,Y+4,12,13,'#4ca45a');px(X+8,Y+8,5,4,'#8acb68');px(X+21,Y+11,4,4,'#75bd5d');}
 function drawLamp(x,y){const X=x*TILE,Y=y*TILE;px(X+14,Y+9,4,23,'#574638');px(X+9,Y+6,14,3,'#574638');px(X+10,Y-1,12,12,'#5a4637');px(X+12,Y+1,8,8,'#f3d88b');px(X+13,Y+2,6,6,'#fff1b4');}
