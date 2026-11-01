@@ -174,6 +174,11 @@ function drawCutscenePlayer(x,y,scale=1.75){
  drawSpriteK(heroRow(),facing,0,x,y+10*scale,scale*2);
 }
 function drawDreamScene(W,H){
+ // Cutscenes own the entire canvas: clear any previous village frame before drawing.
+ const dpr=Math.min(devicePixelRatio||1,2);
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#2b2140';ctx.fillRect(0,0,W,H);
  const a=cinematic.actors,k=Math.max(3,Math.round(H/190));
  px(0,0,W,H,'#2b2140');px(0,0,W,H*.42,'#4b3562');
  for(let i=0;i<9;i++){const x=W*(i+.5)/9;px(x-16,H*.08,32,H*.15,i%2?'#c8502c':'#e8b84c');px(x-16,H*.23,32,6,i%2?'#8a3418':'#b8902c');}
@@ -186,6 +191,7 @@ function drawDreamScene(W,H){
  ctx.font='bold 13px ui-monospace';ctx.fillText('CHALLENGER',a.FOE.x,a.FOE.y-58);
 }
 function drawSchoolScene(W,H){
+ const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
  const a=cinematic.actors,k=Math.max(3,Math.round(H/190));
  px(0,0,W,H,'#789f8c');px(0,H*.7,W,H*.3,'#63865b');
  px(W*.06,H*.08,W*.88,H*.65,'#c9b18b');px(W*.06,H*.08,W*.88,H*.09,'#654832');
@@ -197,6 +203,7 @@ function drawSchoolScene(W,H){
  drawSpriteK(heroRow(),0,0,a.HERO.x,a.HERO.y,k);drawSpriteK(2,0,0,a.ROWAN.x,a.ROWAN.y,k);
 }
 function drawWakeScene(W,H){
+ const dpr=Math.min(devicePixelRatio||1,2);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
  const k=Math.max(3,Math.round(H/190)),a=cinematic.actors,pose=cinematic.wakePose||'lying';
  px(0,0,W,H,'#493b49');px(0,0,W,H*.34,'#8d7780');
  for(let x=0;x<W;x+=Math.max(70,W*.09)){px(x,0,4,H*.34,'#78616e');px(x+4,0,2,H*.34,'#a58b8d');}
