@@ -99,3 +99,10 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-map-legend i{display:inline-block;width:12px;height:12px;border:1px solid #26334a}
 .lh-map-legend i.forest{background:#315f48}.lh-map-legend i.building{background:#b87849}.lh-map-legend i.path{background:#d6d8c8}.lh-map-legend i.player{background:#e8bd58}
 .lh-map-note{font-size:10px!important;color:#536b67}
+
+/* Touch action button: explicit interaction, never triggered by tapping the map. */
+.lh-touch-action{pointer-events:auto}
+#lh-touch-action{pointer-events:auto;align-self:center;min-width:76px;min-height:58px;padding:8px;border:4px solid #26334a;border-radius:50%;background:#d66b48;color:#fff4d8;font:900 11px ui-monospace;box-shadow:inset 0 0 0 3px #f3e6bf,3px 3px 0 #172a3a;touch-action:manipulation}
+#lh-dialogue{cursor:pointer;touch-action:manipulation;pointer-events:auto}
+#lh-dialogue button{display:none}
+@media(pointer:coarse),(max-width:800px){#lh-touch-action{display:block}}
