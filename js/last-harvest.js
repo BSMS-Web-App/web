@@ -42,6 +42,8 @@ function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y
 
 // Hand-drawn original pixel-art tiles and sprites. The palette, outlines,
 // clustered highlights and top-down proportions are consistent throughout.
+const characterSheet=new Image();characterSheet.src='/img/last-harvest/characters.png';
+const buildingSheet=new Image();buildingSheet.src='/img/last-harvest/buildings.png';
 const C={ink:'#26334a',deep:'#344b45',grass:'#55a66a',grass2:'#63b879',light:'#8bd18a',path:'#c7d0c6',path2:'#e1e4d2',pathShade:'#9daeb0',wood:'#855236',wood2:'#b97845',roof:'#a94f36',roof2:'#d47749',cream:'#f3e6bf',glass:'#75c5d2',blue:'#3d78aa',gold:'#e8bd58',skin:'#f1b58c'};
 function px(x,y,w,h,c){rect(Math.round(x),Math.round(y),w,h,c)}
 /* Original Hearthvale sprite atlas. Frames are generated locally so the game
@@ -89,6 +91,16 @@ function drawRock(x,y){const X=x*TILE,Y=y*TILE;px(X+7,Y+13,18,12,'#64747a');px(X
 function drawSign(x,y,label){const X=x*TILE,Y=y*TILE;px(X+14,Y+12,4,18,'#68452e');px(X+3,Y+4,26,12,'#68452e');px(X+5,Y+6,22,8,'#e1c17c');ctx.fillStyle='#62452e';ctx.font='bold 6px ui-monospace';ctx.textAlign='center';ctx.fillText(label,X+16,Y+12);}
 function drawFence(x,y,len=3){for(let i=0;i<len;i++){const X=(x+i)*TILE,Y=y*TILE;px(X+5,Y+10,4,21,'#68452e');px(X+21,Y+10,4,21,'#68452e');px(X+3,Y+12,24,5,'#b77a43');px(X+3,Y+22,24,4,'#95613a');}}
 function drawHouse(b,roof='#a85c32'){
+ const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
+ if(buildingSheet.complete&&buildingSheet.naturalWidth){
+  const sources=[
+   [0,0,94,96],[96,0,98,105],[197,0,92,104],[291,0,72,99]
+  ];
+  const index=solids.indexOf(b),src=sources[Math.max(0,Math.min(3,index))];
+  ctx.drawImage(buildingSheet,src[0],src[1],src[2],src[3],x-8,y-10,w+16,h+18);
+  return;
+ }
+ 
 const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
 px(x-5,y+12,w+10,h-12,'#35485a');px(x,y+12,w,h-14,'#d7d9c8');px(x+5,y+18,w-10,h-25,'#9aaeb0');
 px(x-8,y+2,w+16,13,'#5a4a3d');px(x-5,y,w+10,11,roof);px(x,y-5,w,8,roof);
@@ -97,6 +109,7 @@ px(x+8,y+15,w-16,5,'#f0d7a1');px(x+12,y+24,26,23,'#344c63');px(x+14,y+26,22,18,C
 px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,3,'#e7d9aa');px(x+w-26,y+26,3,18,'#d8e7d8');
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
+
 }
 function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
@@ -194,12 +207,21 @@ function makeOverworldSprite(shirt,hat,variant=0){
  if(variant%5===4){p(7,2,10,3,hair);p(8,0,8,2,hair);} // short hair
  return frame;
 }
+function spriteFrame(row,col,x,y,w=32,h=40){
+ if(!characterSheet.complete||!characterSheet.naturalWidth)return false;
+ const sx=(col%12)*16,sy=(row%24)*24;
+ const frame=Math.floor(performance.now()/170)%3;
+ ctx.drawImage(characterSheet,sx+frame*16,sy,16,24,Math.round(x-w/2),Math.round(y-h+4),w,h);
+ return true;
+}
 function drawPerson(x,y,shirt,hat,name=''){
- const bob=Math.sin(performance.now()/190+x*.035)*1.1;
- const variant=[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5;
- const key=shirt+'|'+hat+'|'+variant;let frame=spriteFrames.get(key);
- if(!frame){frame=makeOverworldSprite(shirt,hat,variant);spriteFrames.set(key,frame);}
- ctx.drawImage(frame,Math.round(x-12),Math.round(y-28+bob),24,32);
+ const bob=Math.sin(performance.now()/190+x*.035)*.7;
+ const row=3+([...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%21);
+ if(!spriteFrame(row,0,x,y+bob,30,40)){
+  const key=shirt+'|'+hat+'|'+row;let frame=spriteFrames.get(key);
+  if(!frame){frame=makeOverworldSprite(shirt,hat,row%5);spriteFrames.set(key,frame);}
+  ctx.drawImage(frame,Math.round(x-12),Math.round(y-28+bob),24,32);
+ }
 }
 const roomFurniture=[
 [[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
@@ -262,16 +284,18 @@ else if(insidePlayer.y>H*.79)drawWorldPrompt(W*.5,H*.84,'E · EXIT');
 drawPlayer(insidePlayer.x,insidePlayer.y);
 }function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
 function drawPlayer(x,y){
- const bob=Math.sin(playerFrame/5)*1.2,step=Math.round(Math.sin(playerFrame*1.8));
- const index=state.heroClass==='Mage'?1:state.heroClass==='Scout'?2:0;
- const looks=[
-  {shirt:'#b94b38',hat:'#c44736',trim:'#e8bd58'},
-  {shirt:'#6658a5',hat:'#6554a5',trim:'#c9b8ee'},
-  {shirt:'#4c8955',hat:'#4a8a54',trim:'#e8bd58'}
- ][index];
- const key='PLAYER|'+index;let frame=spriteFrames.get(key);
- if(!frame){frame=makeOverworldSprite(looks.shirt,looks.hat,index);spriteFrames.set(key,frame);}
- ctx.drawImage(frame,Math.round(x-12-step),Math.round(y-28+bob),24,32);
+ const bob=Math.sin(playerFrame/5)*.8;
+ const row=state.heroClass==='Mage'?1:state.heroClass==='Scout'?2:0;
+ let col=0;
+ if(keys.ArrowUp||keys.w||keys.W)col=3;
+ else if(keys.ArrowLeft||keys.a||keys.A)col=6;
+ else if(keys.ArrowRight||keys.d||keys.D)col=9;
+ if(!spriteFrame(row,col,x,y+bob,32,42)){
+  const looks=[{shirt:'#b94b38',hat:'#c44736'},{shirt:'#6658a5',hat:'#6554a5'},{shirt:'#4c8955',hat:'#4a8a54'}][row];
+  const key='PLAYER|'+row;let frame=spriteFrames.get(key);
+  if(!frame){frame=makeOverworldSprite(looks.shirt,looks.hat,row);spriteFrames.set(key,frame);}
+  ctx.drawImage(frame,Math.round(x-12),Math.round(y-28+bob),24,32);
+ }
 }
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
