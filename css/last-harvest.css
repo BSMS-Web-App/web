@@ -106,3 +106,8 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 #lh-dialogue{cursor:pointer;touch-action:manipulation;pointer-events:auto}
 #lh-dialogue button{display:none}
 @media(pointer:coarse),(max-width:800px){#lh-touch-action{display:block}}
+
+#lh-dialogue{box-sizing:border-box;max-width:calc(100vw - 28px);overflow-wrap:anywhere}
+.lh-cinematic #lh-dialogue{position:absolute;left:50%;right:auto;top:auto;bottom:max(16px,env(safe-area-inset-bottom));width:min(620px,calc(100vw - 28px));max-width:calc(100vw - 28px);transform:translateX(-50%)}
+.lh-cinematic .lh-dialogue-speaker,.lh-cinematic .lh-dialogue-speaker>div{min-width:0;overflow-wrap:anywhere}
+.lh-cinematic #lh-dialogue-text{max-width:100%;overflow-wrap:anywhere}
