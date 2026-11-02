@@ -100,35 +100,18 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-map-legend i.forest{background:#315f48}.lh-map-legend i.building{background:#b87849}.lh-map-legend i.path{background:#d6d8c8}.lh-map-legend i.player{background:#e8bd58}
 .lh-map-note{font-size:10px!important;color:#536b67}
 
-/* Touch action button: explicit interaction, never triggered by tapping the map. */
-.lh-touch-action{pointer-events:auto}
-#lh-touch-action{pointer-events:auto;align-self:center;min-width:76px;min-height:58px;padding:8px;border:4px solid #26334a;border-radius:50%;background:#d66b48;color:#fff4d8;font:900 11px ui-monospace;box-shadow:inset 0 0 0 3px #f3e6bf,3px 3px 0 #172a3a;touch-action:manipulation}
-#lh-dialogue{cursor:pointer;touch-action:manipulation;pointer-events:auto}
-#lh-dialogue button{display:none}
-@media(pointer:coarse),(max-width:800px){#lh-touch-action{display:block}}
-
-#lh-dialogue{box-sizing:border-box;max-width:calc(100vw - 28px);overflow-wrap:anywhere}
-.lh-cinematic #lh-dialogue{position:absolute;left:50%;right:auto;top:auto;bottom:max(16px,env(safe-area-inset-bottom));width:min(620px,calc(100vw - 28px));max-width:calc(100vw - 28px);transform:translateX(-50%)}
-.lh-cinematic .lh-dialogue-speaker,.lh-cinematic .lh-dialogue-speaker>div{min-width:0;overflow-wrap:anywhere}
-.lh-cinematic #lh-dialogue-text{max-width:100%;overflow-wrap:anywhere}
-
-/* Keep the actual world canvas as the full-screen drawing surface. */
-#lh-world{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}
-#lh-portrait{width:64px;height:64px;flex:0 0 64px}
-
-/* Turn-based battle UI */
-.lh-battle-overlay{z-index:12;background:#142438ef}
-.lh-battle-card{width:min(680px,100%);max-height:calc(100dvh - 24px);overflow:auto;padding:clamp(14px,3vw,26px);background:#39576a;border:5px solid #26334a;box-shadow:inset 0 0 0 3px #f3e6bf,7px 7px 0 #111e2b;color:#fff4d8}
-.lh-battle-top{display:flex;justify-content:space-between;align-items:center;gap:16px}
-.lh-battle-top small{font-size:10px;letter-spacing:.15em;color:#ffe18a}
-.lh-battle-top h2{margin:5px 0;font-size:clamp(18px,4vw,26px);color:#fff0c8}
-.lh-enemy-hp{width:min(220px,40%);font-size:11px;text-align:right}
-.lh-enemy-hp>div,.lh-player-bars>div{height:10px;background:#1c2d3b;border:2px solid #26334a;margin-top:5px}
-.lh-enemy-hp i,.lh-player-bars i{display:block;height:100%;width:100%;background:#d85e4b;transition:width .2s}
-#lh-battle-canvas{display:block;width:100%;height:auto;max-height:220px;margin:12px 0;border:3px solid #26334a;image-rendering:pixelated}
-#lh-battle-log{min-height:42px;margin:10px 0;padding:10px;background:#263f52;border:2px solid #f3e6bf;font-size:13px;line-height:1.5}
-.lh-player-bars{display:grid;grid-template-columns:auto 1fr auto 1fr;align-items:center;gap:8px;font-size:11px}
-.lh-player-bars>div:nth-of-type(1) i{background:#68bd70}.lh-player-bars>div:nth-of-type(2) i{background:#62b8d0}
-.lh-battle-actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:14px}
-.lh-battle-actions button{min-height:48px;padding:7px 4px;border:3px solid #26334a;background:#e8bd58;box-shadow:inset 0 0 0 2px #fff0bd;color:#26334a;font:900 10px ui-monospace;cursor:pointer}
-@media(max-width:520px){.lh-battle-actions{grid-template-columns:repeat(3,minmax(0,1fr))}.lh-player-bars{grid-template-columns:auto 1fr}.lh-battle-card{padding:12px}}
+/* ===== Pokémon-style UI (GBA era): white boxes, dark borders, pixel font ===== */
+.lh-body,.lh-body button,.lh-body input{font-family:"Press Start 2P",ui-monospace,monospace}
+.lh-body canvas{image-rendering:pixelated}
+.lh-hud{background:linear-gradient(#f0f0f8,#c8c8d8)!important;border-bottom:4px solid #383838!important}
+.lh-brand,.lh-stats{color:#383838!important;text-shadow:none!important;font-size:10px!important}
+.lh-location,.lh-quest{background:#f8f8f8!important;color:#383838!important;border:4px solid #383838!important;border-radius:8px!important;box-shadow:inset 0 0 0 3px #f8f8f8,inset 0 0 0 5px #6878a8!important;font-size:9px!important;line-height:1.6!important}
+.lh-quest b{color:#d03030!important}
+.lh-controls-hint{font-size:8px!important}
+.lh-menu-button{background:#f8f8f8!important;color:#383838!important;border:4px solid #383838!important;border-radius:8px!important;font-size:10px!important}
+.lh-dialogue{left:50%!important;top:auto!important;bottom:calc(14px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;width:min(720px,calc(100% - 24px))!important;min-height:96px!important;padding:18px 22px!important;background:#f8f8f8!important;border:4px solid #383838!important;border-radius:10px!important;box-shadow:inset 0 0 0 3px #f8f8f8,inset 0 0 0 6px #6878a8!important}
+.lh-dialogue:after{left:auto!important;right:20px!important;bottom:10px!important;width:auto!important;height:auto!important;background:none!important;border:0!important;transform:none!important;content:"\25BC"!important;color:#d03030;font-size:12px;animation:lhblink .8s steps(2) infinite}
+@keyframes lhblink{50%{opacity:0}}
+.lh-dialogue-speaker{display:block!important}.lh-dialogue-speaker canvas{display:none!important}
+.lh-speaker{position:absolute;top:-26px;left:14px;padding:6px 10px;background:#f8f8f8;border:4px solid #383838;border-bottom:0;border-radius:8px 8px 0 0;color:#383838!important;text-shadow:none!important;font-size:10px!important;letter-spacing:0!important}
+.lh-dialogue p{color:#383838!important;text-shadow:none!important;font-size:clamp(10px,1.7vw,14px)!important;line-height:2!important;margin:0!important}
