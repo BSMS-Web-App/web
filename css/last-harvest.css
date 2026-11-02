@@ -111,3 +111,7 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-cinematic #lh-dialogue{position:absolute;left:50%;right:auto;top:auto;bottom:max(16px,env(safe-area-inset-bottom));width:min(620px,calc(100vw - 28px));max-width:calc(100vw - 28px);transform:translateX(-50%)}
 .lh-cinematic .lh-dialogue-speaker,.lh-cinematic .lh-dialogue-speaker>div{min-width:0;overflow-wrap:anywhere}
 .lh-cinematic #lh-dialogue-text{max-width:100%;overflow-wrap:anywhere}
+
+/* Keep the actual world canvas as the full-screen drawing surface. */
+#lh-world{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}
+#lh-portrait{width:64px;height:64px;flex:0 0 64px}
