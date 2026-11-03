@@ -132,11 +132,11 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .pk-menu button:active{background:#e8e0a0}
 
 /* ===== Kenney UI Pack Pixel Adventure panels ===== */
-.pk-box,.pk-bottom p,.lh-dialogue{border:0!important;box-shadow:none!important;background:none!important;border-image:url(/img/last-harvest/ui-cream.png?v=5) 9 fill/27px stretch!important;image-rendering:pixelated}
-.lh-quest,.lh-location{border:0!important;box-shadow:none!important;background:none!important;border-image:url(/img/last-harvest/ui-cream.png?v=5) 9 fill/18px stretch!important;image-rendering:pixelated}
-.pk-menu{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=5) 9 fill/27px stretch!important;image-rendering:pixelated}
+.pk-box,.pk-bottom p,.lh-dialogue{border:0!important;box-shadow:none!important;background:none!important;border-image:url(/img/last-harvest/ui-cream.png?v=6) 9 fill/27px stretch!important;image-rendering:pixelated}
+.lh-quest,.lh-location{border:0!important;box-shadow:none!important;background:none!important;border-image:url(/img/last-harvest/ui-cream.png?v=6) 9 fill/18px stretch!important;image-rendering:pixelated}
+.pk-menu{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=6) 9 fill/27px stretch!important;image-rendering:pixelated}
 .pk-menu button{color:#fff0d0!important}
 .pk-menu button:active{background:rgba(255,240,208,.18)!important}
-.lh-menu-button{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=5) 9 fill/18px stretch!important;color:#fff0d0!important;image-rendering:pixelated}
-.lh-speaker{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-ribbon.png?v=5) 0 14 fill/0 14px stretch!important;color:#fff!important;padding:6px 28px!important;top:-24px!important;image-rendering:pixelated}
-.pk-me small:before{content:"";display:inline-block;width:16px;height:16px;margin-right:6px;vertical-align:middle;background:url(/img/last-harvest/heart.png?v=5) 0 0/16px 16px;image-rendering:pixelated}
+.lh-menu-button{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=6) 9 fill/18px stretch!important;color:#fff0d0!important;image-rendering:pixelated}
+.lh-speaker{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-ribbon.png?v=6) 0 14 fill/0 14px stretch!important;color:#fff!important;padding:6px 28px!important;top:-24px!important;image-rendering:pixelated}
+.pk-me small:before{content:"";display:inline-block;width:16px;height:16px;margin-right:6px;vertical-align:middle;background:url(/img/last-harvest/heart.png?v=6) 0 0/16px 16px;image-rendering:pixelated}
