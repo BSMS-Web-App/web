@@ -140,3 +140,22 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-menu-button{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=6) 9 fill/18px stretch!important;color:#fff0d0!important;image-rendering:pixelated}
 .lh-speaker{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-ribbon.png?v=6) 0 14 fill/0 14px stretch!important;color:#fff!important;padding:6px 28px!important;top:-24px!important;image-rendering:pixelated}
 .pk-me small:before{content:"";display:inline-block;width:16px;height:16px;margin-right:6px;vertical-align:middle;background:url(/img/last-harvest/heart.png?v=6) 0 0/16px 16px;image-rendering:pixelated}
+
+/* ===== v7 battle polish: skill picker, boss panel, entrance animations ===== */
+.pk-foe{animation:pkInL .5s steps(8) both}.pk-me{animation:pkInR .5s steps(8) both}
+@keyframes pkInL{from{transform:translateX(-130%)}to{transform:none}}
+@keyframes pkInR{from{transform:translateX(130%)}to{transform:none}}
+#pk-ui.intro .pk-menu{opacity:.35;pointer-events:none}
+.pk-box u.mid{background:#e8c038!important}.pk-box u.low{background:#e03838!important}
+.pk-foe.boss{min-width:min(380px,62vw)}.pk-foe.boss b{color:#a01828}.pk-foe.boss small{font-size:9px;letter-spacing:.08em;color:#a01828}.pk-foe.boss i{height:14px}
+.pk-menu button b{display:block;font-weight:400}
+.pk-menu.sk{width:min(62%,540px);grid-template-columns:1fr 1fr;align-content:stretch}
+.pk-menu.sk button{padding:6px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:clamp(8px,1.35vw,12px)}
+.pk-menu.sk button em{font-style:normal;font-size:clamp(7px,1vw,9px);opacity:.8;white-space:nowrap}
+.pk-menu.sk button.sel{background:rgba(255,240,208,.25)}
+.pk-menu.sk button.sel:before{content:"\25B6 "}
+.pk-menu.sk button.back{grid-column:1/-1;justify-content:center}
+.pk-menu button:disabled{opacity:.35;cursor:default}
+.lh-battling .lh-hud,.lh-battling .lh-location,.lh-battling .lh-quest,.lh-battling .lh-touch,.lh-battling .lh-controls-hint{display:none!important}
+.pk-menu.sk button{position:relative;padding-left:20px}
+.pk-menu.sk button:hover:before,.pk-menu.sk button.sel:before{position:absolute;left:4px}
