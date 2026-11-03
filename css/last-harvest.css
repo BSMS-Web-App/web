@@ -115,3 +115,28 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 .lh-dialogue-speaker{display:block!important}.lh-dialogue-speaker canvas{display:none!important}
 .lh-speaker{position:absolute;top:-26px;left:14px;padding:6px 10px;background:#f8f8f8;border:4px solid #383838;border-bottom:0;border-radius:8px 8px 0 0;color:#383838!important;text-shadow:none!important;font-size:10px!important;letter-spacing:0!important}
 .lh-dialogue p{color:#383838!important;text-shadow:none!important;font-size:clamp(10px,1.7vw,14px)!important;line-height:2!important;margin:0!important}
+
+/* ===== Battle screen (Pokemon style) ===== */
+#pk-ui{position:fixed;inset:0;z-index:40;pointer-events:none;font-family:"Press Start 2P",ui-monospace,monospace;color:#383838}
+#pk-ui[hidden]{display:none}
+.pk-box{position:absolute;background:#f8f8f8;border:4px solid #383838;border-radius:8px;box-shadow:inset 0 0 0 3px #f8f8f8,inset 0 0 0 5px #6878a8;padding:12px 16px;font-size:11px;line-height:1.9;min-width:min(300px,44vw)}
+.pk-foe{left:4vw;top:14vh}.pk-me{right:4vw;bottom:calc(30vh + 18px)}
+.pk-box b{display:block;font-weight:400}.pk-box small{display:block;font-size:10px;margin-top:2px}
+.pk-box i{display:block;height:10px;background:#505850;border:2px solid #383838;border-radius:6px;margin-top:6px;overflow:hidden}
+.pk-box u{display:block;height:100%;background:#48c048;transition:width .4s}.pk-box .mp u{background:#58a8f8}
+.pk-bottom{position:absolute;left:0;right:0;bottom:0;height:30vh;min-height:150px;background:#383838;display:flex;gap:10px;padding:10px;box-sizing:border-box;pointer-events:auto}
+.pk-bottom p{flex:1;margin:0;background:#f8f8f8;border:4px solid #6878a8;border-radius:8px;padding:16px 20px;font-size:clamp(11px,1.8vw,16px);line-height:2}
+.pk-menu{width:min(46%,420px);display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#f8f8f8;border:4px solid #d85848;border-radius:8px;padding:10px}
+.pk-menu button{font:inherit;font-size:clamp(10px,1.6vw,14px);background:transparent;border:0;text-align:left;padding:8px;color:#383838;cursor:pointer}
+.pk-menu button:hover:before,.pk-menu button:active:before{content:"\25B6 "}
+.pk-menu button:active{background:#e8e0a0}
+
+/* ===== Kenney UI Pack Pixel Adventure panels ===== */
+.pk-box,.pk-bottom p,.lh-dialogue{border:0!important;box-shadow:none!important;background:none!important;border-image:url(/img/last-harvest/ui-cream.png?v=5) 9 fill/27px stretch!important;image-rendering:pixelated}
+.lh-quest,.lh-location{border:0!important;box-shadow:none!important;background:none!important;border-image:url(/img/last-harvest/ui-cream.png?v=5) 9 fill/18px stretch!important;image-rendering:pixelated}
+.pk-menu{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=5) 9 fill/27px stretch!important;image-rendering:pixelated}
+.pk-menu button{color:#fff0d0!important}
+.pk-menu button:active{background:rgba(255,240,208,.18)!important}
+.lh-menu-button{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-brown.png?v=5) 9 fill/18px stretch!important;color:#fff0d0!important;image-rendering:pixelated}
+.lh-speaker{border:0!important;background:none!important;border-image:url(/img/last-harvest/ui-ribbon.png?v=5) 0 14 fill/0 14px stretch!important;color:#fff!important;padding:6px 28px!important;top:-24px!important;image-rendering:pixelated}
+.pk-me small:before{content:"";display:inline-block;width:16px;height:16px;margin-right:6px;vertical-align:middle;background:url(/img/last-harvest/heart.png?v=5) 0 0/16px 16px;image-rendering:pixelated}
