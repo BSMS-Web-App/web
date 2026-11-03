@@ -6,6 +6,7 @@
 
 import { db, admin } from './db.js';
 import crypto from 'crypto';
+import { hashPassword, verifyPassword, needsPasswordRehash } from './passwords.js';
 import { moderateContent } from './moderation.js';
 import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
 
@@ -23,11 +24,6 @@ function mediaUrl(value) {
         return `/api/media?id=${encodeURIComponent(value.mediaId)}`;
     }
     return value;
-}
-
-// Secure password hashing
-function hashPassword(password) {
-    return crypto.createHash('sha256').update(password).digest('hex');
 }
 
 // Session validator
@@ -169,7 +165,7 @@ export default async function handler(req, res) {
                     email,
                     username,
                     displayName: username,
-                    password: hashPassword(password),
+                    password: await hashPassword(password),
                     account_status: 'active',
                     role: 'user',
                     verified: false,
@@ -212,7 +208,6 @@ export default async function handler(req, res) {
                 const { username, password } = payload;
                 if (!username || !password) return res.status(400).json({ error: 'Missing credentials.' });
 
-                const hashedPw = hashPassword(password);
                 const accountsSnap = await db.ref('/accounts').once('value');
                 const accounts = accountsSnap.val() || {};
                 
@@ -223,10 +218,12 @@ export default async function handler(req, res) {
                 for (const [id, acc] of Object.entries(accounts)) {
                     const accUserLower = acc.username ? acc.username.toLowerCase() : '';
                     const accEmailLower = acc.email ? acc.email.toLowerCase() : '';
-                    if ((accUserLower === inputLower || accEmailLower === inputLower) && acc.password === hashedPw) {
-                        targetUid = id;
-                        targetAcc = acc;
-                        break;
+                    if (accUserLower === inputLower || accEmailLower === inputLower) {
+                        if (await verifyPassword(password, acc.password)) {
+                            targetUid = id;
+                            targetAcc = acc;
+                            break;
+                        }
                     }
                 }
 
@@ -236,6 +233,12 @@ export default async function handler(req, res) {
                 const banCheck = await evaluateAndClearBans(targetUid, clientDeviceId, targetAcc);
                 if (banCheck.isBanned) {
                     return res.status(403).json({ error: 'Banned.', account_status: 'banned', banType: banCheck.banType, reason: banCheck.banReason, ban_expires: banCheck.banExpires });
+                }
+
+                if (needsPasswordRehash(targetAcc.password)) {
+                    const upgradedHash = await hashPassword(password);
+                    await db.ref(`/accounts/${targetUid}/password`).set(upgradedHash);
+                    targetAcc.password = upgradedHash;
                 }
 
                 const newSessionId = sessionId || crypto.randomUUID();
@@ -398,11 +401,11 @@ export default async function handler(req, res) {
                 const { currentPassword, newPassword } = payload;
                 if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing password fields.' });
                 
-                if (user.account.password !== hashPassword(currentPassword)) {
+                if (!await verifyPassword(currentPassword, user.account.password)) {
                     return res.status(401).json({ error: 'Incorrect current password.' });
                 }
 
-                await db.ref(`/accounts/${user.uid}/password`).set(hashPassword(newPassword));
+                await db.ref(`/accounts/${user.uid}/password`).set(await hashPassword(newPassword));
                 return res.status(200).json({ success: true });
             }
 
@@ -436,7 +439,7 @@ export default async function handler(req, res) {
                 const banCheck = await evaluateAndClearBans(user.uid, clientDeviceId, user.account);
                 if (banCheck.isBanned) return res.status(403).json({ error: 'Banned.', account_status: 'banned', banType: banCheck.banType, reason: banCheck.banReason, ban_expires: banCheck.banExpires });
                 
-                if (user.account.password !== hashPassword(payload.password)) {
+                if (!await verifyPassword(payload.password, user.account.password)) {
                     return res.status(401).json({ error: 'Incorrect password.' });
                 }
                 

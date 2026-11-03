@@ -5,6 +5,7 @@
  */
 import 'dotenv/config';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -28,6 +29,16 @@ if (API_KEY.length < 32) {
 
 const app = express();
 app.disable('x-powered-by');
+
+const mediaReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many media requests. Please try again shortly.' }
+});
+
+app.use('/v1/media', mediaReadLimiter);
 app.use(express.json({ limit: MAX_BODY_BYTES, strict: true }));
 
 let database = {};

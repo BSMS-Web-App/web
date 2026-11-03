@@ -85,6 +85,8 @@ window.addEventListener('keydown', (e) => {
 });
 
 const Utils = {
+    safeKey: (value) => { const key = String(value ?? ''); return /^[A-Za-z0-9_-]{1,128}$/.test(key) ? key : ''; },
+    jsArg: (value) => Utils.escapeHTML(JSON.stringify(String(value)).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')),
     escapeHTML: (str) => {
         if(typeof str !== 'string') return '';
         return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
@@ -161,34 +163,37 @@ const Utils = {
     nameColor: (uid) => {
         if (!uid || uid === BOT_UID) return null;
         const acc = State.accountsCache[uid];
-        if (acc && (acc.nameColor || acc.chatColor)) return acc.nameColor || acc.chatColor;
-        if (State.user && (State.user.uid === uid || State.user.username === uid)) {
-            if (State.user.nameColor || State.user.chatColor) return State.user.nameColor || State.user.chatColor;
-            try {
-                const s = JSON.parse(localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session') || '{}');
-                if (s.nameColor || s.chatColor) return s.nameColor || s.chatColor;
-            } catch(e) {}
+        let candidate = acc && (acc.nameColor || acc.chatColor);
+        if (!candidate && State.user && (State.user.uid === uid || State.user.username === uid)) {
+            candidate = State.user.nameColor || State.user.chatColor;
+            if (!candidate) {
+                try {
+                    const session = JSON.parse(localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session') || '{}');
+                    candidate = session.nameColor || session.chatColor;
+                } catch(e) {}
+            }
         }
-        return '#ef4444';
+        const color = String(candidate || '#ef4444').trim();
+        return /^#[0-9a-f]{3,8}$/i.test(color) || /^[a-z]{1,20}$/i.test(color) ? color : '#ef4444';
     },
     getBadgesHTML: (uid) => {
         if (uid === BOT_UID) return `<span class="bot-badge">Official</span>`;
         const acc = State.accountsCache[uid];
         if (!acc) return '';
         let html = '';
-        const safeName = Utils.escapeHTML(acc.displayName || acc.username || uid);
+        const safeName = Utils.escapeHTML(JSON.stringify(String(acc.displayName || acc.username || uid)).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026'));
         if (acc.verified) {
-            html += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal('${safeName}')"><use href="#ico-verified"></use></svg>`;
+            html += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal(${safeName})"><use href="#ico-verified"></use></svg>`;
         }
         if (acc.role === 'owner') {
-            html += `<span class="owner-badge" title="Platform Owner" onclick="event.stopPropagation(); UI.showOwnerModal('${safeName}')">Owner</span>`;
+            html += `<span class="owner-badge" title="Platform Owner" onclick="event.stopPropagation(); UI.showOwnerModal(${safeName})">Owner</span>`;
         } else if (acc.role === 'admin') {
-            html += `<span class="admin-badge" title="Administrator" onclick="event.stopPropagation(); UI.showAdminModal('${safeName}')">Admin</span>`;
+            html += `<span class="admin-badge" title="Administrator" onclick="event.stopPropagation(); UI.showAdminModal(${safeName})">Admin</span>`;
         } else if (acc.role === 'mod') {
-            html += `<span class="mod-badge" title="Community Moderator" onclick="event.stopPropagation(); UI.showModModal('${safeName}')">Mod</span>`;
+            html += `<span class="mod-badge" title="Community Moderator" onclick="event.stopPropagation(); UI.showModModal(${safeName})">Mod</span>`;
         }
         if (acc.isDeveloper) {
-            html += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal('${safeName}')"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
+            html += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal(${safeName})"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
         }
         return html;
     }
@@ -665,8 +670,8 @@ const SearchManager = {
                     let html = '';
                     matches.slice(0,10).forEach(u => {
                         const sColor = Utils.nameColor(u.uid);
-                        const sColorStyle = sColor ? `style="color:${sColor}; font-weight:bold;"` : '';
-                        html += `<div class="member-item" style="cursor:pointer;" onclick="GroupManager.sendInvite('${u.uid}')">
+                        const sColorStyle = sColor ? `style="color:${Utils.escapeHTML(sColor)}; font-weight:bold;"` : '';
+                        html += `<div class="member-item" style="cursor:pointer;" onclick="GroupManager.sendInvite('${Utils.safeKey(u.uid)}')">
                             <div class="member-info"><div style="font-weight:bold;color:var(--fg); display:flex; align-items:center;"><span ${sColorStyle}>${Utils.escapeHTML(u.displayName)}</span> ${Utils.getBadgesHTML(u.uid)}</div></div>
                             <button class="btn" style="width:auto;padding:4px 10px;font-size:0.9rem;">Invite</button>
                         </div>`;
@@ -688,9 +693,9 @@ const SearchManager = {
                 const dot = u.online ? `<div class="status-dot online"></div>` : `<div class="status-dot"></div>`;
                 const avHtml = u.avatar ? `<img src="${Utils.escapeHTML(u.avatar)}">` : u.displayName.charAt(0).toUpperCase();
                 const uColor = Utils.nameColor(u.uid);
-                const uColorStyle = uColor ? `style="color:${uColor}; font-weight:bold;"` : '';
+                const uColorStyle = uColor ? `style="color:${Utils.escapeHTML(uColor)}; font-weight:bold;"` : '';
                 html += `
-                <div class="search-item" onclick="SearchManager.startDM('${u.uid}')">
+                <div class="search-item" onclick="SearchManager.startDM('${Utils.safeKey(u.uid)}')">
                     <div class="c-av" style="width:40px; height:40px; font-size:1.2rem;">
                         <div class="c-av-inner">${avHtml}</div>
                         ${dot}
@@ -753,7 +758,7 @@ const SidebarManager = {
                 else if (lastM.contentType === 'audio') previewText = "Voice message";
                 else if (lastM.contentType === 'file' || lastM.contentType === 'image') previewText = "Attachment";
                 else if (lastM.contentType === 'poll') previewText = "Poll";
-                else previewText = Utils.escapeHTML(lastM.content || '');
+                else previewText = String(lastM.content || '');
                 unread = lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true);
             }
             arr.push({ id, c, sortTime, preview: previewText, unread });
@@ -796,19 +801,20 @@ const SidebarManager = {
             const dot = (c._type === 'dms' && !isOfficial) ? `<div class="status-dot ${isOnline ? 'online' : ''}"></div>` : '';
             const badge = item.unread ? `<div class="unread-badge"></div>` : '';
             const offCls = isOfficial ? 'official' : '';
-            const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${targetUid}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
+            const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${Utils.safeKey(targetUid)}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
 
-            const nameColor = (targetUid && Utils.nameColor(targetUid)) ? `style="color:${Utils.nameColor(targetUid)}; font-weight:bold;"` : '';
+            const nameColorValue = targetUid ? Utils.nameColor(targetUid) : null;
+            const nameColor = nameColorValue ? `style="color:${Utils.escapeHTML(nameColorValue)}; font-weight:bold;"` : '';
 
             html += `
-            <div class="chat-row ${activeCls} ${unreadCls}" data-cid="${Utils.escapeHTML(id)}" onclick="ChatManager.open('${id}')">
+            <div class="chat-row ${activeCls} ${unreadCls}" data-cid="${Utils.escapeHTML(id)}" onclick="ChatManager.open('${Utils.safeKey(id)}')">
                 <div ${pfpAttr}>
                     <div class="c-av-inner">${avHtml}</div>
                     ${dot}
                 </div>
                 <div class="c-info">
                     <div class="c-name" ${nameColor}>${Utils.escapeHTML(title)} ${targetUid ? Utils.getBadgesHTML(targetUid) : ''}</div>
-                    <div class="c-prev">${item.preview}</div>
+                    <div class="c-prev">${Utils.escapeHTML(String(item.preview || ''))}</div>
                 </div>
                 ${badge}
             </div>`;
@@ -1366,7 +1372,7 @@ const ChatManager = {
             } else {
                 const acc = State.accountsCache[otherUid] || { displayName: otherUid };
                 const nColor = Utils.nameColor(otherUid);
-                const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+                const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
                 nEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(acc.displayName || otherUid)}</span> ${Utils.getBadgesHTML(otherUid)}`;
                 
                 if (acc.account_status === 'banned') {
@@ -1593,7 +1599,7 @@ const ChatManager = {
                 const sAcc = State.accountsCache[m.senderUid] || {};
                 const sDisp = Utils.displayName(m.senderUid, c);
                 const sAvHtml = sAcc.avatar ? `<img src="${Utils.escapeHTML(sAcc.avatar)}">` : sDisp.charAt(0).toUpperCase();
-                pfpElement = `<div class="msg-pfp-trigger user-pfp-trigger" data-uid="${m.senderUid}" title="Click or hover to view profile" style="margin-bottom:4px;">
+                pfpElement = `<div class="msg-pfp-trigger user-pfp-trigger" data-uid="${Utils.safeKey(m.senderUid)}" title="Click or hover to view profile" style="margin-bottom:4px;">
                     <div class="c-av" style="width:34px;height:34px;font-size:0.95rem;">
                         <div class="c-av-inner">${sAvHtml}</div>
                     </div>
@@ -1601,17 +1607,17 @@ const ChatManager = {
             }
         }
 
-        let html = `<div class="msg-row ${cls}" id="msg-${msgId}">`;
+        let html = `<div class="msg-row ${cls}" id="msg-${Utils.safeKey(msgId)}">`;
         if (!isMine) html += `<div class="msg-theirs-container">${pfpElement}<div class="msg-theirs-body" style="flex:1; overflow:hidden;">`;
 
         if (!isSysBot) {
             const disp = Utils.displayName(m.senderUid, c);
             const nColor = Utils.nameColor(m.senderUid) || m.senderColor;
-            const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+            const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
             if (!isMine) {
-                html += `<div class="msg-author user-pfp-trigger" data-uid="${m.senderUid}" ${colorStyle} title="Click or hover to view profile" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
+                html += `<div class="msg-author user-pfp-trigger" data-uid="${Utils.safeKey(m.senderUid)}" ${colorStyle} title="Click or hover to view profile" onclick="SearchManager.startDM('${Utils.safeKey(m.senderUid)}')">${Utils.escapeHTML(disp)}</div>`;
             } else {
-                html += `<div class="msg-author my-msg-author" data-uid="${m.senderUid}" style="align-self:flex-end; text-align:right; margin:0 12px 4px; ${nColor ? `color:${nColor}; font-weight:bold;` : ''}" title="You">${Utils.escapeHTML(disp)}</div>`;
+                html += `<div class="msg-author my-msg-author" data-uid="${Utils.safeKey(m.senderUid)}" style="align-self:flex-end; text-align:right; margin:0 12px 4px; ${nColor ? `color:${nColor}; font-weight:bold;` : ''}" title="You">${Utils.escapeHTML(disp)}</div>`;
             }
         }
         if (isSysBot) html += `<div class="msg-author">BSMS Web</div>`;
@@ -1634,9 +1640,9 @@ const ChatManager = {
                 if(repMsg) {
                     const repDisp = Utils.displayName(repMsg.senderUid, c);
                     const repColor = Utils.nameColor(repMsg.senderUid) || repMsg.senderColor;
-                    const repColorStyle = repColor ? `style="color:${repColor}; font-weight:bold;"` : '';
+                    const repColorStyle = repColor ? `style="color:${Utils.escapeHTML(repColor)}; font-weight:bold;"` : '';
                     let repSnippet = repMsg.status?.unsent ? "Unsent message" : (repMsg.status?.deletedByMod ? "Deleted message" : (repMsg.contentType === 'text' ? repMsg.content : (repMsg.contentType === 'poll' ? repMsg.content.pollQuestion : (repMsg.contentType === 'audio' ? 'Voice message' : 'Attachment'))));
-                    content += `<div class="quote-box" onclick="ScrollManager.scrollToMessage('${m.status.repliedTo}')">
+                    content += `<div class="quote-box" onclick="ScrollManager.scrollToMessage('${Utils.safeKey(m.status.repliedTo)}')">
                         <strong ${repColorStyle}>${Utils.escapeHTML(repDisp)}</strong>
                         ${Utils.escapeHTML(repSnippet)}
                     </div>`;
@@ -1646,14 +1652,14 @@ const ChatManager = {
             if (m.contentType === 'audio') {
                 content += `
                 <div class="audio-player">
-                    <button class="ap-btn" id="ap-btn-${msgId}"><svg class="ic"><use href="#ico-play"></use></svg></button>
-                    <div class="ap-track"><div class="ap-progress" id="ap-prog-${msgId}"></div></div>
-                    <div class="ap-time" id="ap-time-${msgId}">0:00</div>
-                    <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
+                    <button class="ap-btn" id="ap-btn-${Utils.safeKey(msgId)}"><svg class="ic"><use href="#ico-play"></use></svg></button>
+                    <div class="ap-track"><div class="ap-progress" id="ap-prog-${Utils.safeKey(msgId)}"></div></div>
+                    <div class="ap-time" id="ap-time-${Utils.safeKey(msgId)}">0:00</div>
+                    <audio id="ap-src-${Utils.safeKey(msgId)}" src="${Utils.escapeHTML(m.content)}"></audio>
                 </div>`;
             } else if (m.contentType === 'file' || m.contentType === 'image') {
                 content += `
-                <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:4px; max-width:320px;">
+                <div class="attachment-item" id="att-wrap-${Utils.safeKey(msgId)}" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:4px; max-width:320px;">
                     <div style="display:flex; align-items:center; gap:8px; color:var(--fg2); font-size:0.9rem;">
                         <svg class="ic" style="width:18px; height:18px; flex-shrink:0;"><use href="#ico-file"></use></svg>
                         <span>File and image attachments are disabled. This attachment is unavailable.</span>
@@ -1664,11 +1670,12 @@ const ChatManager = {
                 if (typeof inv === 'string') {
                     try { inv = JSON.parse(inv); } catch(e) { inv = { groupName: m.content }; }
                 }
-                const gCid = inv.groupCid || '';
-                const gName = inv.groupName || 'Group Chat';
-                const gCode = inv.joinCode || '';
+                const gCid = Utils.safeKey(inv.groupCid);
+                const gName = typeof inv.groupName === 'string' ? inv.groupName.slice(0, 100) : 'Group Chat';
+                const gCode = Utils.safeKey(inv.joinCode);
                 const isMember = Boolean(State.channels[gCid]);
-                const count = isMember ? Object.keys(State.channels[gCid].members).length : (inv.memberCount || 1);
+                const requestedCount = Number(inv.memberCount);
+                const count = isMember ? Object.keys(State.channels[gCid].members || {}).length : (Number.isFinite(requestedCount) ? Math.max(1, Math.min(100000, Math.trunc(requestedCount))) : 1);
                 const avHtml = inv.groupIcon ? `<img src="${Utils.escapeHTML(inv.groupIcon)}">` : gName.charAt(0).toUpperCase();
 
                 content += `
@@ -1681,9 +1688,9 @@ const ChatManager = {
                         </div>
                     </div>
                     ${isMember ? `
-                        <button class="btn sec invite-card-btn" onclick="ChatManager.open('${gCid}')">Open Group</button>
+                        <button class="btn sec invite-card-btn" onclick="ChatManager.open('${Utils.safeKey(gCid)}')">Open Group</button>
                     ` : `
-                        <button class="btn invite-card-btn" onclick="GroupManager.joinByInviteCard('${Utils.escapeHTML(gCode)}', '${gCid}')">Join Group</button>
+                        <button class="btn invite-card-btn" onclick="GroupManager.joinByInviteCard('${Utils.safeKey(gCode)}', '${Utils.safeKey(gCid)}')">Join Group</button>
                     `}
                 </div>`;
             } else if (m.contentType === 'poll') {
@@ -1702,7 +1709,7 @@ const ChatManager = {
                     }
                     const pct = totalVotes > 0 ? Math.round((optVotes / totalVotes) * 100) : 0;
                     content += `
-                    <div class="poll-opt" style="border-color:${iVoted ? 'var(--chat-accent, var(--accent))' : 'transparent'};" onclick="ComposerManager.vote('${msgId}', '${optKey}')">
+                    <div class="poll-opt" style="border-color:${iVoted ? 'var(--chat-accent, var(--accent))' : 'transparent'};" onclick="ComposerManager.vote('${Utils.safeKey(msgId)}', '${Utils.safeKey(optKey)}')">
                         <div class="bar" style="width:${pct}%;"></div>
                         <div class="content"><span>${Utils.escapeHTML(m.content.pollOptions[optKey])}</span><span>${pct}%</span></div>
                     </div>`;
@@ -1712,7 +1719,7 @@ const ChatManager = {
                 const textWithLinks = Utils.linkifyText(m.content);
                 content += `<div class="msg-text">${textWithLinks}</div>`;
                 if (urls.length > 0) {
-                    content += `<div class="link-preview-container" id="lp-${msgId}" data-url="${Utils.escapeHTML(urls[0])}"></div>`;
+                    content += `<div class="link-preview-container" id="lp-${Utils.safeKey(msgId)}" data-url="${Utils.escapeHTML(urls[0])}"></div>`;
                 }
             }
 
@@ -1721,7 +1728,7 @@ const ChatManager = {
 
             html += `<div class="msg-bubble-wrap">
                 <div class="msg-bubble">${content}<div class="msg-meta">${editStr}${timeStr}</div></div>`;
-            if (!isSysBot) html += `<div class="msg-ctx-trigger" onclick="ContextMenu.open(event, '${msgId}')"><svg class="ic"><use href="#ico-dots"></use></svg></div>`;
+            if (!isSysBot) html += `<div class="msg-ctx-trigger" onclick="ContextMenu.open(event, '${Utils.safeKey(msgId)}')"><svg class="ic"><use href="#ico-dots"></use></svg></div>`;
 
             if(m.reactions) {
                 let rxCounts = {}; let selfReactions = {};
@@ -1733,7 +1740,7 @@ const ChatManager = {
                 html += `<div class="rx-rack">`;
                 for(let e in rxCounts) {
                     let rcls = selfReactions[e] ? 'rx-badge self' : 'rx-badge';
-                    html += `<div class="${rcls}" onclick="ContextMenu.react('${e}', '${msgId}')">${e} <span class="rx-count">${rxCounts[e]>1?rxCounts[e]:''}</span></div>`;
+                    html += `<div class="${rcls}" onclick="ContextMenu.react(${Utils.jsArg(e)}, '${Utils.safeKey(msgId)}')" >${Utils.escapeHTML(String(e))} <span class="rx-count">${rxCounts[e]>1?rxCounts[e]:''}</span></div>`;
                 }
                 html += `</div>`;
             }
@@ -1741,7 +1748,7 @@ const ChatManager = {
             html += `</div>`;
         }
 
-        if (isMine) html += `<div class="msg-status" id="stat-${msgId}"></div>`;
+        if (isMine) html += `<div class="msg-status" id="stat-${Utils.safeKey(msgId)}"></div>`;
         if (!isMine) html += `</div></div>`;
         html += `</div>`;
         return html;
@@ -1935,7 +1942,7 @@ const ProfileHoverManager = {
         const uEl = document.getElementById('phpUsername');
 
         const nColor = Utils.nameColor(uid);
-        const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+        const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
         if (avEl) avEl.innerHTML = avHtml;
         if (nameEl) nameEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(dName)}</span> ${Utils.getBadgesHTML(uid)}`;
         if (uEl) uEl.textContent = `@${uName}`;
@@ -2746,7 +2753,7 @@ const GroupManager = {
             if (c && c.joinRequests) {
                 delete c.joinRequests[targetUid];
             }
-            const itemEl = document.getElementById(`req-item-${targetUid}`);
+            const itemEl = document.getElementById(`req-item-${Utils.safeKey(targetUid)}`);
             if (itemEl) itemEl.remove();
 
             const remaining = c && c.joinRequests ? Object.keys(c.joinRequests).length : 0;
@@ -2777,7 +2784,7 @@ const GroupManager = {
         for (let mId in c.members) {
             let u = State.accountsCache[mId] || { displayName: mId };
             if (u.account_status === 'banned') continue;
-            let role = c.members[mId].role || 'member';
+            let role = ['member', 'moderator', 'owner'].includes(c.members[mId].role) ? c.members[mId].role : 'member';
             let nick = c.members[mId].nickname;
             let uName = Utils.username(mId);
             let disp = nick ? `${nick} (@${uName})` : `${u.displayName || uName} (@${uName})`;
@@ -2786,23 +2793,23 @@ const GroupManager = {
             if (State.currentRole === 'owner' && mId !== State.user.uid) {
                 act = `
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <select onchange="GroupManager.setRole('${mId}', this.value)" style="background:var(--input-bg); border:1px solid var(--border); padding:4px; border-radius:8px; font-size:0.9rem;">
+                    <select onchange="GroupManager.setRole('${Utils.safeKey(mId)}', this.value)" style="background:var(--input-bg); border:1px solid var(--border); padding:4px; border-radius:8px; font-size:0.9rem;">
                         <option value="member" ${role==='member'?'selected':''}>Member</option>
                         <option value="moderator" ${role==='moderator'?'selected':''}>Moderator</option>
                         <option value="transfer">Transfer Owner</option>
                     </select>
-                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${mId}')">Kick</button>
+                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${Utils.safeKey(mId)}')">Kick</button>
                 </div>`;
             } else if (State.currentRole === 'moderator' && role === 'member') {
                 act = `
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span class="role-badge">${role}</span>
-                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${mId}')">Kick</button>
+                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${Utils.safeKey(mId)}')">Kick</button>
                 </div>`;
             } else { act = `<span class="role-badge">${role}</span>`; }
 
             let mColor = Utils.nameColor(mId);
-            let mColorStyle = mColor ? `style="color:${mColor}; font-weight:bold;"` : '';
+            let mColorStyle = mColor ? `style="color:${Utils.escapeHTML(mColor)}; font-weight:bold;"` : '';
 
             html += `
             <div class="member-item">
