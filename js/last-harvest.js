@@ -39,14 +39,14 @@ const roomNPCs=[
 [{x:.34,y:.56,name:'SHOPKEEPER TILLY',color:'#b95c49',lines:['Welcome to Tilly’s General Store! I sell supplies for the road.','Your parents bought a healing tonic here yesterday. They seemed worried.']},{x:.68,y:.48,name:'FINN',color:'#5d8b63',lines:['I help stock the shelves. Someone took all the lantern oil last night.','I found a strange black feather by the back door.']}],
 [{x:.34,y:.56,name:'OLD CRAFTSMAN ORIN',color:'#7885a7',lines:['Your parents asked me to keep this old map safe.','The symbol on it matches the seal beneath the village fountain.']},{x:.68,y:.48,name:'WREN THE APPRENTICE',color:'#bd8c53',lines:['I am learning to repair tools. The workshop has been busy lately.','Orin knows more about the Everfeast than he lets on.']}]
 ];
-const TRN=["AGATHA", "ARCHIE", "BILL", "BLAINE", "BRAWLY", "BRENDAN", "BRUNO", "DR FUJI", "DRAKE", "FLANNERY", "GIOVANNI", "GLACIA", "JUAN", "KOGA", "LANCE", "LORELEI", "MAXIE", "MAY", "NORMAN", "OAK", "PHOEBE", "ROXANNE", "SABRINA", "SIDNEY", "STEVEN 2", "STEVEN", "SURGE", "TATE & LIZA", "WALLACE", "WALLY", "WATSON", "WINONA"];
 const GUARDS=[
-{id:'north',name:'GATEKEEPER BRAWN',tx:16,ty:5,gate:{x:15,y:5,w:4,h:1},img:'BRAWLY',hp:34,atk:6,reward:60,lines:['Halt! The north road is closed until the harvest bell rings.','If you want to pass, prove you can protect Hearthvale!'],win:['Hmph... you fight like a true keeper. The north road is open.']},
-{id:'east',name:'GATEKEEPER WINONA',tx:40,ty:12,gate:{x:40,y:11,w:1,h:4},img:'WINONA',hp:40,atk:7,reward:75,lines:['The east road is closed. Too many strangers lately.','Show me your strength and I will let you through!'],win:['Impressive! Go on — the east road is yours.']},
-{id:'south',name:'PUMPKIN SENTINEL',tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},mon:110,hp:48,atk:8,reward:100,lines:['*The old Pumpkin Sentinel rattles awake and bars the south road.*'],win:['The Sentinel crumbles into harvest dust. The south road is clear.']}
+{id:'north',name:'GATEKEEPER BRAWN',tx:16,ty:5,gate:{x:15,y:5,w:4,h:1},row:6,hp:34,atk:6,reward:60,lines:['Halt! The north road is closed until the harvest bell rings.','If you want to pass, prove you can protect Hearthvale!'],win:['Hmph... you fight like a true keeper. The north road is open.']},
+{id:'east',name:'GATEKEEPER WINONA',tx:40,ty:12,gate:{x:40,y:11,w:1,h:4},row:23,hp:40,atk:7,reward:75,lines:['The east road is closed. Too many strangers lately.','Show me your strength and I will let you through!'],win:['Impressive! Go on — the east road is yours.']},
+{id:'south',name:'PUMPKIN SENTINEL',tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},mi:9,boss:true,hp:48,atk:8,reward:100,lines:['*The old Pumpkin Sentinel rattles awake and bars the south road.*'],win:['The Sentinel crumbles into harvest dust. The south road is clear.']}
 ];
 state.beaten=state.beaten||{};
 GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
+const POS={'ELDER MAPLE':[12,12],'ROWAN':[21,12],'MILLIE':[16,20],'GUS':[17,26],'PIPER':[30,13]};npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
 npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
 
@@ -124,64 +124,55 @@ ctx.restore();return{camX,camY};}
 const CS_ROW={'#b86c78':14,'#577f9b':8,'#bb6542':2,'#7d526f':20,'#6b9c70':5,'#d5b64e':10};
 function drawCutscenePerson(x,y,shirt,hat,scale=1.75){drawSpriteK(CS_ROW[shirt]??7,0,0,x,y+10*scale,scale*2);}
 function drawCutscenePlayer(x,y,scale=1.75){drawSpriteK(state.heroClass==='Mage'?20:state.heroClass==='Scout'?1:0,0,0,x,y+10*scale,scale*2);}
-const GEAR_COL={Guardian:['#aab4c4','#6e788c','#ffffff'],Scout:['#7a9a52','#4e6a34','#c8e090'],Mage:['#7a52b8','#4a2e82','#d8b8ff'],Foe:['#4a3858','#241830','#9a5a8a']};
-/* pixel-art armor + weapons drawn over the character sprite (x = centre, fy = feet, k = pixel scale) */
-function drawGear(x,fy,k,face,cls){const C=GEAR_COL[cls];if(!C)return;const m=face===2?-1:1,side=face>1;
- const s=(px,py,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x+(m<0?-px-w:px)*k),Math.round(fy+py*k),w*k,h*k);};
- if(!side){s(-9,-15,5,4,C[0]);s(4,-15,5,4,C[0]);s(-9,-15,5,1,C[2]);s(4,-15,5,1,C[2]);s(-9,-12,5,1,C[1]);s(4,-12,5,1,C[1]);s(-4,-12,8,5,C[0]);s(-4,-12,8,1,C[2]);s(-4,-8,8,1,C[1]);s(-1,-11,2,2,'#e8c050');}
- else{s(-3,-15,6,4,C[0]);s(-3,-15,6,1,C[2]);s(-3,-12,6,5,C[0]);s(-3,-8,6,1,C[1]);}
- const fx=side?3:8;
- if(cls==='Guardian'||cls==='Foe'){const b=cls==='Foe'?['#3a2a4a','#7a5a8a']:['#e8eef8','#ffffff'];s(fx,-22,2,14,b[0]);s(fx,-22,1,14,b[1]);s(fx-2,-9,6,2,'#e8c050');s(fx,-7,2,3,'#7a4a28');
-  if(cls==='Guardian'&&!side){s(-14,-14,6,9,'#2e5a96');s(-14,-14,6,1,'#e8c050');s(-14,-6,6,1,'#e8c050');s(-12,-12,2,5,'#e8c050');}}
- if(cls==='Scout'){s(fx,-20,2,14,'#8a5a2a');s(fx+2,-18,1,10,'#eeeeee');s(fx-1,-21,3,2,'#6a4018');s(fx-1,-7,3,2,'#6a4018');s(-4,-21,3,10,'#6a4a2a');s(-4,-23,1,2,'#e8e0c0');s(-2,-23,1,2,'#e8e0c0');}
- if(cls==='Mage'){s(fx,-27,2,26,'#8a5a2a');s(fx-1,-32,4,4,'#a8e8ff');s(fx,-31,2,2,'#ffffff');}
-}
-const heroRow=()=>state.heroClass==='Mage'?20:state.heroClass==='Scout'?1:0;
-function actor(x,fy,row,face,k,g){drawSpriteK(row,face,0,x,fy,k);if(g)drawGear(x,fy,k,face,g);}
-function bars(W,H){px(0,0,W,H*.07,'#000');px(0,H*.93,W,H*.07,'#000');}
+function drawGear(x,fy,k,face,cls){const T={Guardian:[['d',104],['d',101]],Scout:[['t',118]],Mage:[['d',130]],Foe:[['d',107]]}[cls];if(!T)return;const side=face>1,m=face===2?-1:1;
+const put=(w,ox,oy)=>{ctx.save();ctx.translate(Math.round(x+m*ox*k),0);ctx.scale(m,1);kTile(w[0],w[1],-8*k,fy-oy*k,k);ctx.restore();};put(T[0],side?6:9,14);if(T[1]&&!side)put(T[1],-9,11);}
+const heroRow=()=>({Guardian:5,Scout:7,Mage:0})[state.heroClass]??5;
+function actor(x,fy,row,face,k,g,step){drawSpriteK(row,face,step||0,x,fy,k);if(g)drawGear(x,fy,k,face,g);}
+function bars(W,H){px(0,0,W,H*.07,'#000');px(0,H*.93,W,H*.07,'#000');if(cinematic&&cinematic.flash>0){ctx.fillStyle='rgba(255,255,255,'+cinematic.flash+')';ctx.fillRect(0,0,W,H);cinematic.flash=Math.max(0,cinematic.flash-.035);}}
 function sceneTitle(t,W,y){ctx.font='13px "Press Start 2P",monospace';ctx.textAlign='center';ctx.fillStyle='#000';ctx.fillText(t,W/2+2,y+2);ctx.fillStyle='#f8f8f8';ctx.fillText(t,W/2,y);}
-function drawDreamScene(W,H){const k=Math.max(3,Math.round(H/190)),a=cinematic.actors,cls=state.heroClass;
-px(0,0,W,H,'#2b2140');px(0,0,W,H*.42,'#4b3562');
-for(let i=0;i<9;i++){const x=W*(i+.5)/9;px(x-16,H*.08,32,H*.15,i%2?'#c8502c':'#e8b84c');px(x-16,H*.23,32,6,i%2?'#8a3418':'#b8902c');px(x-3,H*.08-10,6,10,'#d8d0c0');}
-for(let r=0;r<2;r++){const by=H*.31+r*H*.055;px(0,by+10,W,8,'#6a4a38');for(let x=(r%2)*28;x<W;x+=56)drawSpriteK([5,7,10,12,9,14,16][((x/56|0)+r)%7],0,0,x+20,by+10,2);}
-px(0,H*.44,W,H*.56,'#dcbc7c');for(let y=H*.44;y<H;y+=32)for(let x=0;x<W;x+=32){const r=rand(x/32,y/32);if(r>.68)px(x+8+r*10,y+9,4,2,'#c09858');if(r<.12)px(x+14,y+20,3,3,'#e8d4a0');}
-px(0,H*.44,W,8,'#7a5a38');ctx.strokeStyle='#b88850';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(W/2,H*.76,W*.32,H*.13,0,0,6.3);ctx.stroke();
-[[a.MARA,14,0,null],[a.THOMAS,8,0,null],[a.ROWAN,2,0,null],[a.HERO,heroRow(),3,cls],[a.FOE,20,2,'Foe']].sort((p,q)=>p[0].y-q[0].y).forEach(([p,row,face,g])=>actor(p.x,p.y,row,face,g==='Foe'?k+1:k,g));
-const v=ctx.createRadialGradient(W/2,H*.6,H*.2,W/2,H*.6,Math.max(W,H)*.7);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(10,0,30,.55)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
-sceneTitle('HARVEST FESTIVAL CHAMPIONSHIP',W,H*.045+H*.07);bars(W,H);}
-function drawSchoolScene(W,H){const k=Math.max(3,Math.round(H/190)),a=cinematic.actors;
-roomShell(W,H,{wall:'#cfe0cf',trim:'#496848'},0,0,1,1);
-px(W*.28,H*.06,W*.44,H*.16,'#4a3020');px(W*.29,H*.075,W*.42,H*.13,'#2e5a4a');px(W*.3,H*.2,W*.4,5,'#e8e0c8');ctx.fillStyle='#e8f0e0';ctx.font='10px "Press Start 2P",monospace';ctx.textAlign='center';ctx.fillText('WELCOME TO HEARTHVALE',W/2,H*.15);
-for(const x of [.08,.82]){px(W*x,H*.07,W*.1,H*.15,'#5a4030');px(W*x+6,H*.07+6,W*.1-12,H*.15-12,'#9fd8f0');}
-actor(W/2,H*.34,22,0,k);px(W*.42,H*.3,W*.16,H*.05,'#7a4e30');px(W*.42,H*.3,W*.16,5,'#b88858');
-for(let r=0;r<2;r++)for(let c=0;c<4;c++){const x=W*(.14+c*.2),y=H*(.46+r*.13);px(x,y,W*.12,H*.05,'#a87848');px(x,y,W*.12,5,'#d8a868');}
-for(const p of [a.HERO,a.ROWAN]){actor(p.x,p.y,p===a.HERO?heroRow():2,0,k);px(p.x-8*k,p.y-4*k,16*k,5*k,'#a87848');px(p.x-8*k,p.y-4*k,16*k,4,'#d8a868');}
-sceneTitle('HEARTHVALE SCHOOL',W,H*.115+H*.0);bars(W,H);}
-function drawWakeScene(W,H){const k=Math.max(3,Math.round(H/190)),pose=cinematic.wakePose||'lying',hr=heroRow();
-roomShell(W,H,{wall:'#e6d4b0',trim:'#714832'},0,0,1,1);
-px(W*.08,H*.07,W*.16,H*.17,'#5a4030');px(W*.09,H*.085,W*.14,H*.14,'#9fd8f0');px(W*.155,H*.085,6,H*.14,'#5a4030');px(W*.09,H*.145,W*.14,6,'#5a4030');
-px(W*.7,H*.12,W*.2,H*.1,'#8a5a3a');px(W*.71,H*.13,W*.18,H*.03,'#c89868');
-px(W*.3,H*.6,W*.4,H*.26,'#a8483c');px(W*.32,H*.62,W*.36,H*.22,'#c8685a');px(W*.34,H*.64,W*.32,H*.18,'#a8483c');
-const u=k*3,x0=W/2-11*u,y0=H*.2;
-px(x0-u/2,y0-u,23*u,2*u,'#5a3a28');px(x0,y0,22*u,30*u,'#7a4e30');px(x0+u,y0+2*u,20*u,27*u,'#f2e8d0');px(x0+4*u,y0+3*u,14*u,5*u,'#fffaf0');
-ctx.imageSmoothingEnabled=false;
-if(pose==='lying')ctx.drawImage(CHARS,0,hr*24+2,16,10,Math.round(W/2-8*k),Math.round(y0+3.5*u),16*k,10*k);
-else if(pose==='sitting')actor(W/2,y0+18*u,hr,0,k);
-const bt=pose==='lying'?13:pose==='sitting'?19:11;px(x0+u,y0+bt*u,20*u,(29-bt)*u,'#4f8f98');px(x0+u,y0+bt*u,20*u,u,'#8fc8c0');px(x0+u,y0+(bt+4)*u,20*u,u/2,'#3a7078');
-if(pose==='standing')actor(x0+25*u,y0+30*u,hr,0,k);
-actor(W*.26,H*.86,14,3,k);actor(W*.74,H*.86,8,2,k);
-ctx.fillStyle='rgba(255,236,170,.14)';ctx.beginPath();ctx.moveTo(W*.09,H*.24);ctx.lineTo(W*.23,H*.24);ctx.lineTo(W*.55,H*.9);ctx.lineTo(W*.25,H*.9);ctx.fill();
+function kPlank(x,y,u,i){if(KN.naturalWidth)ctx.drawImage(KN,200+(23+i%3)*17,0,16,16,Math.round(x),Math.round(y),u,u);}
+function winFrame(x,y,w,h){px(x-6,y-6,w+12,h+12,'#4a3020');px(x,y,w,h,'#9fd8f0');px(x,y,w,h*.35,'#c8ecf8');px(x+w/2-3,y,6,h,'#4a3020');px(x,y+h/2-3,w,6,'#4a3020');px(x-8,y+h+6,w+16,6,'#7a5a3a');}
+function drawDreamScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/160)),u=16*s,k=Math.max(3,Math.round(H/170));
+const sky=ctx.createLinearGradient(0,0,0,H*.4);sky.addColorStop(0,'#2a1f3d');sky.addColorStop(1,'#7a5a88');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+for(let i=0;i<W/u+1;i++)kTile('b',[34,52,70,88][i%4],i*u,H*.09,s);
+for(let r=0;r<3;r++){const y=H*.2+r*u*.8;for(let x=0;x<W;x+=u)kPlank(x,y,u,Math.floor(x/u)+r);px(0,y+u*.8,W,4,'#4a2e1e');for(let x=u/2;x<W;x+=u*1.1){const row=10+((Math.floor(x/u)*7+r*13)%40);drawSpriteK(row,0,0,x,y+u*.8,Math.max(2,s-1));}}
+px(0,H*.5,W,H*.5,'#d9b57a');for(let y=H*.5;y<H;y+=u)for(let x=0;x<W;x+=u){const q=rand(x/u+3,y/u+1);kTile('t',q<.2?39:q<.3?40:q<.4?41:25,x,y,s);}
+for(let x=0;x<W;x+=u)kTile('t',x===0?80:81,x,H*.5-u*.4,s);
+ctx.strokeStyle='rgba(120,80,40,.55)';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(W/2,H*.76,W*.3,H*.13,0,0,6.3);ctx.stroke();
+[[a.MARA,28,0,null],[a.THOMAS,17,0,null],[a.ROWAN,1,0,null],[a.HERO,heroRow(),3,state.heroClass],[a.FOE,36,2,'Foe']].sort((p,q)=>p[0].y-q[0].y).forEach(([p,row,face,g])=>actor(p.x,p.y,row,face,g==='Foe'?k+1:k,g,p.walk?1:0));
+const v=ctx.createRadialGradient(W/2,H*.6,H*.2,W/2,H*.6,Math.max(W,H)*.7);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(10,0,30,.5)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+sceneTitle('HARVEST FESTIVAL CHAMPIONSHIP',W,H*.115);bars(W,H);}
+function drawWakeScene(W,H){const a=cinematic.actors,pose=cinematic.wakePose||'lying',s=Math.max(3,Math.round(H/150)),u=16*s,k=Math.max(3,Math.round(H/170)),hr=heroRow();
+roomShell(W,H,{wall:'#e6d4b0',trim:'#714832'},0,0,1,1);winFrame(W*.12,H*.12,W*.14,H*.16);winFrame(W*.74,H*.12,W*.14,H*.16);
+kBlock(16,8,3,2,W/2-1.5*u,H*.62,s);kBlock(23,17,1,1,W*.9-u/2,H*.2,s);kBlock(16,0,1,1,W*.08,H*.5,s);kBlock(17,0,1,1,W*.9,H*.5,s);
+const bx=W/2-u,by=H*.3;kBlock(8,0,2,2,bx,by,s);
+if(pose==='lying'){ctx.imageSmoothingEnabled=false;ctx.drawImage(CHARS,0,hr*16,16,9,Math.round(W/2-u/2),Math.round(by+u*.25),u,9*s);kBlock(8,1,2,1,bx,by+u,s);}
+else if(pose==='sitting')actor(W/2,by+u*1.7,hr,0,s);else actor(W/2+u*1.7,by+u*2.3,hr,0,s);
+[[a.MARA,28],[a.THOMAS,17]].forEach(([p,r])=>p&&actor(p.x,p.y,r,p.x<W/2?3:2,k,null,p.walk?1:0));
+const g=ctx.createLinearGradient(W*.1,0,W*.5,H);g.addColorStop(0,'rgba(255,236,170,.22)');g.addColorStop(1,'rgba(255,236,170,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 sceneTitle('HEARTHVALE — MORNING',W,H*.115);bars(W,H);}
+function drawSchoolScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/170)),u=16*s,k=Math.max(3,Math.round(H/170));
+roomShell(W,H,{wall:'#cfe0cf',trim:'#496848'},0,0,1,1);winFrame(W*.07,H*.12,W*.1,H*.15);winFrame(W*.83,H*.12,W*.1,H*.15);
+px(W*.28,H*.1,W*.44,H*.17,'#4a3020');px(W*.29,H*.115,W*.42,H*.14,'#2e5a4a');px(W*.3,H*.255,W*.4,5,'#e8e0c8');ctx.fillStyle='#e8f0e0';ctx.font='10px "Press Start 2P",monospace';ctx.textAlign='center';ctx.fillText('WELCOME TO HEARTHVALE',W/2,H*.2);
+kBlock(23,17,1,1,W*.2,H*.2,s);kBlock(23,17,1,1,W*.78,H*.2,s);
+actor(W/2,H*.4,10,0,k);kBlock(0,0,3,2,W/2-1.5*u,H*.3,s);
+for(let r=0;r<2;r++)for(let c=0;c<4;c++){const x=W*(.2+c*.2)-u/2,y=H*(.5+r*.14);kBlock(4,2,1,2,x,y,s);}
+for(const p of [a.HERO,a.ROWAN]){if(!p)continue;actor(p.x,p.y,p===a.HERO?heroRow():1,0,k);kBlock(4,2,1,2,p.x-u/2,p.y-1.4*u,s);}
+sceneTitle('HEARTHVALE SCHOOL',W,H*.115);bars(W,H);}
 let stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
 const BR={cottage:[0,0,97,92],inn:[101,0,96,106],store:[201,0,88,106],workshop:[293,0,66,81],tree:[530,0,58,76],pine:[592,0,54,72]},HOUSES=['cottage','inn','store','workshop'];
-const CHARS=new Image();CHARS.src='/img/last-harvest/characters.png';
-const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=5';
-const TRI=new Image();TRI.src='/img/last-harvest/trainers.png?v=4';
-const NPC_MON={'PUMPKIN SENTINEL':110};
+const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=6';
+const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=6';
+const NPC_MON={'PUMPKIN SENTINEL':9};
+const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=6';
+const GENS=['Meadow','Orchard','Marsh','Cavern','Frostfall','Emberwood','Tempest','Crypt','Clockwork','Eclipse'],ARCH=['Slime','Bat','Beetle','Hound','Sprout','Wisp','Golem','Serpent','Crow'],BOSS=['Pumpkin Sentinel','Orchard Tyrant','Marsh Matriarch','Cavern Colossus','Frostfall Wyrm','Emberwood Behemoth','Tempest Roc','Crypt Lich King','Clockwork Titan','Eclipse Devourer'];
+/* monsters.png: 10 generations (rows) x 10 (9 monsters + 1 boss). index = gen*10+slot. Higher generations are stronger. */
+function monInfo(i){const g=(i/10)|0,a=i%10,boss=a===9;return{name:(boss?BOSS[g]:GENS[g]+' '+ARCH[a]).toUpperCase(),hp:Math.round((16+g*10+(boss?0:a))*(boss?2.4:1)),atk:Math.round((4+g*2)*(boss?1.5:1)),reward:Math.round((10+g*12)*(boss?4:1)),boss};}
+function wildEncounter(){const g=Math.min(9,Math.floor(((state.level||1)-1)/2)),gg=Math.max(0,g-(Math.random()<.3?1:0)),i=gg*10+Math.floor(Math.random()*9),m=monInfo(i);return{id:'wild',wild:true,name:m.name,mi:i,hp:m.hp,atk:m.atk,reward:m.reward,win:[]};}
+function drawMon(i,x,fy,k){if(!MON.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;ctx.drawImage(MON,(i%10)*16,((i/10)|0)*16,16,16,Math.round(x-8*k),Math.round(fy-16*k),16*k,16*k);}
 const KS={t:[0,0,12],f:[0,176,12],d:[0,352,12],b:[200,310,18]};
 function kTile(sh,i,x,y,s=2){if(!KN.naturalWidth)return;const [ox,oy,n]=KS[sh];ctx.imageSmoothingEnabled=false;ctx.drawImage(KN,ox+(i%n)*16,oy+((i/n)|0)*16,16,16,Math.round(x),Math.round(y),16*s,16*s);}
-const WILD=[{name:'SCARECROW SCOUT',mon:['b',106],hp:18,atk:5,reward:12},{name:'HOLLOW SENTRY',mon:['b',124],hp:22,atk:5,reward:15},{name:'MASKED RAIDER',mon:['b',142],hp:20,atk:6,reward:14},{name:'RUSTY WAGON',mon:['b',98],hp:26,atk:6,reward:18},{name:'SKY KITE',mon:['b',118],hp:16,atk:7,reward:14}];
 const inGrass=P=>{const x=Math.floor(P.x/TILE),y=Math.floor(P.y/TILE);return x>=4&&x<9&&y>=19&&y<22;};
 function kBlock(c,r,w,h,x,y,s){if(!KN.naturalWidth)return;ctx.imageSmoothingEnabled=false;for(let j=0;j<h;j++)for(let i=0;i<w;i++)ctx.drawImage(KN,200+(c+i)*17,(r+j)*17,16,16,Math.round(x+i*16*s),Math.round(y+j*16*s),16*s,16*s);}
 const pathSet=new Set();[[0,11,48,4],[15,0,4,36],[19,14,10,2]].forEach(([x,y,w,h])=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)pathSet.add(i+','+j);});
@@ -197,10 +188,10 @@ function pkUI(){let el=$b('pk-ui');if(el)return el;el=document.createElement('di
 function pkPanel(){const e=battle.e;$b('pk-fn').textContent=e.name;$b('pk-fh').style.width=(e.hp/e.max*100)+'%';$b('pk-mn').textContent=(state.name||'HERO').toUpperCase()+'  Lv'+state.level;$b('pk-mh').textContent=state.hp+' / '+state.maxHp+'  MP '+state.mp;$b('pk-mhb').style.width=(state.hp/state.maxHp*100)+'%';$b('pk-mmb').style.width=(state.mp/state.maxMp*100)+'%';}
 async function pkSay(t){$b('pk-t').textContent=t;await sleep(750);}
 function startBattle(g){state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
-battle={g,e:{name:g.name,hp:g.hp,max:g.hp,atk:g.atk,img:g.img?TRN.indexOf(g.img):-1,mon:g.mon},guard:false,busy:true,fx:{foe:0,me:0}};pkUI().hidden=false;pkPanel();pkSay(g.wild?'A wild '+g.name+' appeared!':g.mon?g.name+' blocks your path!':g.name+' wants to battle!').then(()=>{$b('pk-t').textContent='What will you do?';battle.busy=false;});}
+battle={g,e:{name:g.name,hp:g.hp,max:g.hp,atk:g.atk,row:g.row,mi:g.mi,boss:g.boss},guard:false,busy:true,fx:{foe:0,me:0}};pkUI().hidden=false;pkPanel();pkSay(g.wild?'A wild '+g.name+' appeared!':g.mi!==undefined?g.name+' blocks your path!':g.name+' wants to battle!').then(()=>{$b('pk-t').textContent='What will you do?';battle.busy=false;});}
 function pkEnd(lost){battle=null;pkUI().hidden=true;if(lost){state.hp=Math.ceil(state.maxHp*.6);scene='outside';state.x=20*TILE+16;state.y=15*TILE+24;}save();updateHud();}
 async function pkAct(a){if(!battle||battle.busy)return;battle.busy=true;const e=battle.e,cls=state.heroClass;
-if(a==='run'){if(battle.g.mon){await pkSay('You escaped!');pkEnd();return;}await pkSay("You can't run from a trainer battle!");$b('pk-t').textContent='What will you do?';battle.busy=false;return;}
+if(a==='run'){if(battle.g.mi!==undefined){await pkSay('You escaped!');pkEnd();return;}await pkSay("You can't run from a trainer battle!");$b('pk-t').textContent='What will you do?';battle.busy=false;return;}
 if(a==='guard')await pkSay('You brace yourself.');
 else if(a==='item'){if(!state.potions){await pkSay('No potions left!');$b('pk-t').textContent='What will you do?';battle.busy=false;return;}state.potions--;state.hp=Math.min(state.maxHp,state.hp+28);pkPanel();await pkSay('A potion restores 28 HP!');}
 else{let d,m;if(a==='skill'){if(state.mp<5){await pkSay('Not enough MP!');$b('pk-t').textContent='What will you do?';battle.busy=false;return;}state.mp-=5;d=(cls==='Mage'?25:cls==='Scout'?22:18)+state.level*2;m={Mage:'Harvest Arcana bursts with magic!',Scout:'Quickstep lands a flurry of strikes!',Guardian:'Shieldbreaker smashes down!'}[cls];}else{d=8+state.level*2+(cls==='Guardian'?3:0)+Math.floor(Math.random()*4);m='You attack!';}
@@ -215,15 +206,15 @@ const ts=Math.max(3,Math.round(H/200)),tu=16*ts;for(let y=Math.floor(H*.34/tu)*t
 const plat=(x,y,rx,ry)=>{ctx.fillStyle='#8a6a3a';ctx.beginPath();ctx.ellipse(x,y+6,rx,ry,0,0,7);ctx.fill();ctx.fillStyle='#d8b878';ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,7);ctx.fill();};
 plat(W*.72,H*.46,W*.17,H*.045);plat(W*.27,H*.8,W*.22,H*.055);
 const fs=b.fx.foe>0?(b.fx.foe--,(Math.random()-.5)*14):0,ms=b.fx.me>0?(b.fx.me--,(Math.random()-.5)*14):0,e=b.e;
-if(!(b.fx.foe>0&&b.fx.foe%4<2)){if(e.img>=0){const k=Math.max(3,Math.floor(H*.36/64));ctx.drawImage(TRI,(e.img%8)*64,((e.img/8)|0)*64,64,64,Math.round(W*.72-32*k+fs),Math.round(H*.46+8-64*k+Math.sin(t*3)*3),64*k,64*k);}else{const k=Math.max(8,Math.floor(H*.3/16));kTile(...(Array.isArray(e.mon)?e.mon:['d',e.mon]),W*.72-8*k+fs,H*.46+8-16*k+Math.sin(t*3)*3,k);}}
-const k2=Math.max(6,Math.floor(H*.36/24)),px0=W*.27+ms,fy=H*.8+10;drawSpriteK(heroRow(),1,0,px0,fy,k2);drawGear(px0,fy,k2,1,state.heroClass);
+if(!(b.fx.foe>0&&b.fx.foe%4<2)){const bob=Math.sin(t*3)*3;if(e.mi!==undefined){const k=Math.max(e.boss?11:8,Math.floor(H*(e.boss?.42:.32)/16));drawMon(e.mi,W*.72+fs,H*.46+8+bob,k);}else{const k=Math.max(8,Math.floor(H*.32/16));drawSpriteK(e.row,0,0,W*.72+fs,H*.46+8+bob,k);}}
+const k2=Math.max(6,Math.floor(H*.36/16)),px0=W*.27+ms,fy=H*.8+10;drawSpriteK(heroRow(),1,0,px0,fy,k2);drawGear(px0,fy,k2,1,state.heroClass);
 if(b.pop&&b.pop.t>0){b.pop.t--;const s3=3,str=String(b.pop.n),bx=(b.pop.foe?W*.72:W*.27)-str.length*16*s3/2,by=(b.pop.foe?H*.2:H*.5)-(45-b.pop.t)*.7;for(let i=0;i<str.length;i++)kTile('b',180+Number(str[i]),bx+i*16*s3,by,s3);}}
 
-const NPC_ROW={'ELDER MAPLE':22,'ROWAN':2,'MILLIE':12,'GUS':7,'PIPER':5,'MARA THE NEIGHBOR':14,'JUNIPER':16,'INNKEEPER BRAM':8,'NELL THE TRAVELER':6,'SHOPKEEPER TILLY':13,'FINN':10,'OLD CRAFTSMAN ORIN':9,'WREN THE APPRENTICE':19,'GATEKEEPER BRAWN':18,'GATEKEEPER WINONA':13};
+const NPC_ROW={'ELDER MAPLE':19,'ROWAN':1,'MILLIE':8,'GUS':12,'PIPER':4,'MARA THE NEIGHBOR':28,'JUNIPER':14,'INNKEEPER BRAM':13,'NELL THE TRAVELER':38,'SHOPKEEPER TILLY':24,'FINN':21,'OLD CRAFTSMAN ORIN':29,'WREN THE APPRENTICE':31,'GATEKEEPER BRAWN':6,'GATEKEEPER WINONA':23};
 /* characters.png: one row per character, 12 frames: down, up, left, right x (idle, step, step) */
-function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(Math.round(x-5*k),Math.round(fy-k),10*k,3*k);ctx.imageSmoothingEnabled=false;ctx.drawImage(CHARS,(face*3+step)*16,row*24,16,24,Math.round(x-8*k),Math.round(fy-24*k),16*k,24*k);}
+function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;const m=face===2?-1:1;ctx.save();ctx.translate(Math.round(x),0);ctx.scale(m,1);ctx.drawImage(CHARS,face===1?16:0,row*16,16,16,-8*k,Math.round(fy-16*k-(step===1?k:0)),16*k,16*k);ctx.restore();}
 function drawSprite(row,face,step,x,y){drawSpriteK(row,face,step,x,y+8,2);}
-function drawPerson(x,y,shirt,hat,name=''){if(NPC_MON[name]!==undefined){kTile('d',NPC_MON[name],x-24,y-40,3);return;}const row=NPC_ROW[name]??[2,5,7,9,10][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
+function drawPerson(x,y,shirt,hat,name=''){if(NPC_MON[name]!==undefined){drawMon(NPC_MON[name],x,y+8,3);return;}const row=NPC_ROW[name]??[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
 const roomFurniture=[
 [[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
 [[.10,.29,.16,.07],[.31,.29,.16,.07],[.52,.29,.16,.07],[.73,.29,.16,.07],[.08,.48,.25,.09],[.68,.48,.24,.09]],
@@ -262,6 +253,8 @@ if(interiorId===0){RUG(16,8,3,2,.5,.68);PA(18,0,.3);PA(19,12,.72);F(14,14,2,2,.5
 else if(interiorId===1){RUG(16,10,3,2,.5,.68);for(const x of [.18,.39,.6,.81])WL(23,17,1,1,x);F(0,0,3,2,.205,.58);F(0,0,3,2,.80,.58);F(2,2,1,1,.33,.62);F(3,2,1,1,.67,.62);F(17,0,1,1,.08,.46);PA(20,12,.5);}
 else if(interiorId===2){RUG(16,8,3,2,.5,.78);for(const x of [.17,.33,.67,.83])F(5,12,2,2,x,.52);F(0,12,3,2,.5,.67);PA(19,12,.5);F(16,0,1,1,.08,.5);}
 else{for(const x of [.16,.3,.44,.58,.72,.86])WL(23,17,1,1,x);F(14,14,2,2,.5,.43);for(const x of [.3,.5,.7])F(0,0,3,2,x,.62);kTile('d',74,W*.5-u/2,H*.45-u*.5,s);kTile('d',89,W*.82-u/2,H*.5,s);F(16,0,1,1,.08,.5);}
+const win=fx=>winFrame(W*fx-u,H*R[1]+.25*u,2*u,1.5*u);if(interiorId!==2)[.2,.8].forEach(win);else win(.5);
+const vg=ctx.createRadialGradient(W/2,H*.55,H*.25,W/2,H*.55,Math.max(W,H)*.65);vg.addColorStop(0,'rgba(255,220,150,0)');vg.addColorStop(1,'rgba(40,20,10,.38)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
 for(let y=H*.9;y<H;y+=26){px(0,y,W,23,palettes.floor);px(0,y+22,W,4,palettes.trim);}
 px(W*.045,H*.2,7,H*.7,palettes.trim);px(W*.948,H*.2,7,H*.7,palettes.trim);
 px(W*.42,H*.12,W*.16,5,palettes.accent);
@@ -274,7 +267,7 @@ if(target){const i=nlist.indexOf(target),spot=roomNPCSpots[interiorId][i];drawWo
 else if(insidePlayer.y>H*.79)drawWorldPrompt(W*.5,H*.84,'E · EXIT');
 drawPlayer(insidePlayer.x,insidePlayer.y);
 }function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
-function drawPlayer(x,y){const row=state.heroClass==='Mage'?20:state.heroClass==='Scout'?1:0;drawSprite(row,facing,walking?1+alt:0,x,y);drawGear(x,y+8,2,facing,state.heroClass);}
+function drawPlayer(x,y){drawSprite(heroRow(),facing,walking?1+alt:0,x,y);drawGear(x,y+8,2,facing,state.heroClass);}
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
@@ -313,28 +306,31 @@ document.body.classList.add('lh-cinematic');
 state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';
 state.x=20*TILE;state.y=15*TILE;state.coins=100;state.stage=0;state.seenIntro=false;
 $('lh-create').hidden=true;updateHud();
-cinematic={phase:'dream',camera:{x:0,y:0},actors:{HERO:{x:innerWidth*.28,y:innerHeight*.68},FOE:{x:innerWidth*.7,y:innerHeight*.68},MARA:{x:innerWidth*.18,y:innerHeight*.48},THOMAS:{x:innerWidth*.82,y:innerHeight*.48},ROWAN:{x:innerWidth*.5,y:innerHeight*.4}}};
+const W=innerWidth,H=innerHeight;
+cinematic={phase:'dream',camera:{x:0,y:0},flash:0,actors:{HERO:{x:W*.2,y:H*.78},FOE:{x:W*.86,y:H*.74},MARA:{x:W*.1,y:H*.58},THOMAS:{x:W*.9,y:H*.58},ROWAN:{x:W*.32,y:H*.58}}};
 const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
-const moveActor=(name,to,duration=900)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();function step(now){if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;if(p<1)requestAnimationFrame(step);else resolve();}requestAnimationFrame(step);});
+const moveActor=(name,to,duration=900)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.walk=true;function step(now){if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.walk=Math.floor(now/140)%2===0;if(p<1)requestAnimationFrame(step);else{a.walk=false;resolve();}}requestAnimationFrame(step);});
 (async()=>{
-await say([['DREAM','The Harvest Festival arena roars with excitement. Golden banners wave as the crowd chants your name!']]);
-await say([['CROWD',state.name+'! '+state.name+'! You can do it!'],['ROWAN','Show them what the future champion of Hearthvale can do!']]);
-await moveActor('HERO',{x:innerWidth*.48,y:innerHeight*.68},900);
-await say([['ANNOUNCER','The challenger enters the arena! The final match begins now!'],['CHALLENGER','You really think you can beat me?']]);
-await moveActor('HERO',{x:innerWidth*.57,y:innerHeight*.68},650);
-await say([['ROWAN','You dodge the challenger’s move and land one final heroic strike!']]);
-await moveActor('FOE',{x:innerWidth*.77,y:innerHeight*.72},600);
-await say([['ANNOUNCER','THE CHAMPION WINS!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest champion in all of Hearthvale!']]);
-cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={HERO:{x:innerWidth*.60,y:innerHeight*.65},MARA:{x:innerWidth*.32,y:innerHeight*.62},THOMAS:{x:innerWidth*.82,y:innerHeight*.62}};
+await say([['DREAM','The Harvest Festival arena roars to life. Banners snap in the wind, and the whole crowd is on its feet!']]);
+await say([['CROWD',state.name+'! '+state.name+'! '+state.name+'!'],['ROWAN','Go on! Show them what the future champion of Hearthvale can do!']]);
+await moveActor('HERO',{x:W*.42,y:H*.78},1000);
+await moveActor('FOE',{x:W*.68,y:H*.76},900);
+await say([['ANNOUNCER','The final match of the Harvest Festival begins now!'],['CHALLENGER','You really think you can beat me?']]);
+await moveActor('HERO',{x:W*.6,y:H*.77},420);cinematic.flash=1;
+await moveActor('FOE',{x:W*.86,y:H*.74},500);
+await say([['ANNOUNCER','A STRIKE LIKE LIGHTNING! THE CHAMPION WINS!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest champion Hearthvale has ever seen!']]);
+cinematic.flash=1;cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={MARA:{x:-W*.1,y:H*.84},THOMAS:{x:W*1.1,y:H*.84}};
+await moveActor('MARA',{x:W*.3,y:H*.84},900);
 await say([['MARA','Wake up, sleepyhead… You were dreaming about the championship again.']]);
-cinematic.wakePose='sitting';
+cinematic.wakePose='sitting';moveActor('THOMAS',{x:W*.7,y:H*.84},900);
 await say([['MARA','Good morning! Rowan is waiting outside. You are both old enough to attend Hearthvale School today.'],['THOMAS','The instructor will help you choose the path that suits you. We will see you after lessons.']]);
-await say([['ROWAN','Ready? Let’s head to school together.']]);
-cinematic.phase='school';cinematic.actors={HERO:{x:innerWidth*.43,y:innerHeight*.68},ROWAN:{x:innerWidth*.57,y:innerHeight*.68}};
+cinematic.wakePose='standing';
+await say([['ROWAN','(from outside) Ready? Let’s walk to school together!']]);
+cinematic.flash=1;cinematic.phase='school';cinematic.actors={HERO:{x:W*.4,y:H*.72},ROWAN:{x:W*.6,y:H*.72}};
 await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],['INSTRUCTOR','Welcome to Hearthvale School. Every adventurer chooses one path: Guardian, Scout, or Mage. Your choice will shape how you face the world.']]);
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
-cinematic.phase='outside';cinematic.camera={x:20*TILE,y:15*TILE};cinematic.actors={HERO:{x:20*TILE,y:15*TILE},ROWAN:{x:22*TILE,y:14*TILE}};
+cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:22*TILE+16,y:14*TILE+24}};
 await say([['ROWAN','That was exciting! Come on, let’s head home.'],['ROWAN','The house is quiet… Your parents must have already left for the Everfeast preparations. We just missed them.']]);
 await say([['ROWAN','Wait… the front door is open. Where are Mara and Thomas?'],['ROWAN','They were supposed to be back by now. Something is wrong.']]);
 cinematic=null;document.body.classList.remove('lh-cinematic');state.seenIntro=true;questStep=0;updateQuest();save();
@@ -344,7 +340,7 @@ cinematic=null;document.body.classList.remove('lh-cinematic');state.seenIntro=tr
 function updateQuest(){const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:chapters[Math.min(state.stage,9)].place.toUpperCase();updateQuest();}
 function move(dt){walking=false;const ins=scene==='inside',P=ins?insidePlayer:state;
-if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(!ins&&++stepCount%4===0)save();if(!ins&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){const w=WILD[Math.floor(Math.random()*WILD.length)];startBattle({id:'wild',wild:true,name:w.name,mon:w.mon,hp:w.hp,atk:w.atk,reward:w.reward,win:[]});}}
+if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(!ins&&++stepCount%4===0)save();if(!ins&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){startBattle(wildEncounter());}}
 if(battle||dialogue||cinematic||transitioning||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;
 if(!ins){P.x=Math.floor(P.x/TILE)*TILE+16;P.y=Math.floor(P.y/TILE)*TILE+24;}
 let dx=joystick.x,dy=joystick.y;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;
@@ -353,7 +349,7 @@ const f=Math.abs(dx)>=Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);
 if(f!==facing){facing=f;turnWait=.09;return;}
 if(turnWait>0){turnWait-=dt;return;}
 const nx=P.x+[0,0,-1,1][f]*TILE,ny=P.y+[1,-1,0,0][f]*TILE;
-const hit=ins?(roomBlocked(nx,ny)||roomNPCSpots[interiorId].some(s=>Math.hypot(nx-innerWidth*s.x,ny-innerHeight*s.y)<28)):(blocked(nx,ny)||npcs.some(n=>Math.floor(n.x/TILE)===Math.floor(nx/TILE)&&Math.floor(n.y/TILE)===Math.floor(ny/TILE)));
+const hit=ins?(roomBlocked(nx,ny)||roomNPCs[interiorId].some(s=>Math.abs(nx-innerWidth*s.x)<TILE*1.1&&Math.abs(ny-innerHeight*s.y)<TILE*1.0)):(blocked(nx,ny)||npcs.some(n=>Math.floor(n.x/TILE)===Math.floor(nx/TILE)&&Math.floor(n.y/TILE)===Math.floor(ny/TILE)));
 if(hit)return;stepper={fx:P.x,fy:P.y,tx:nx,ty:ny,t:0};walking=true;}
 function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);drawWorld();if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
