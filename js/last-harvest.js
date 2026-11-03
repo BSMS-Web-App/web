@@ -28,8 +28,9 @@ const save=()=>localStorage.setItem(SAVE,JSON.stringify(state));
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
-const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4}];
-function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(tileAt(tx,ty))return true;for(const b of solids)if(tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h)return true;for(const t of trees)if(Math.hypot(x-(t.x*TILE+16),y-(t.y*TILE+18))<20)return true;return false;}
+const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4},{x:21,y:24,w:5,h:4}];
+function gateBlocked(tx,ty){return GUARDS.some(g=>!state.beaten[g.id]&&tx>=g.gate.x&&tx<g.gate.x+g.gate.w&&ty>=g.gate.y&&ty<g.gate.y+g.gate.h);}
+function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(gateBlocked(tx,ty))return true;if(tileAt(tx,ty))return true;for(const b of solids)if(tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h)return true;for(const t of trees)if(Math.hypot(x-(t.x*TILE+16),y-(t.y*TILE+18))<20)return true;return false;}
 const trees=[];for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++){const edge=x<4||y<3||x>MAP_W-5||y>MAP_H-5;const inBuilding=solids.some(b=>x>=b.x-1&&x<b.x+b.w+1&&y>=b.y-1&&y<b.y+b.h+1);const onRoad=(y>=11&&y<15)||(x>=15&&x<19);if(edge&&!inBuilding&&!onRoad&&rand(x,y)>.18)trees.push({x,y});}
 const npcs=[{x:16*TILE,y:12*TILE,name:'ELDER MAPLE',color:'#b8c7a1',lines:['The village square feels colder today. Your parents were last seen near the fountain.','The Everfeast is older than Hearthvale. Find the truth, not just the missing keepers.']},{x:22*TILE,y:13*TILE,name:'ROWAN',color:'#bb6542',lines:['I will come with you. We have been friends forever—trust me.','The woods are full of strange creatures. Keep your guard up.']},{x:14*TILE,y:16*TILE,name:'MILLIE',color:'#d9a0a5',lines:['I run the village flower stall. The golden leaves have been falling the wrong way today.','Your mother used to buy marigolds every Harvest Eve.']},{x:25*TILE,y:16*TILE,name:'GUS',color:'#668db4',lines:['I keep the village well clean. Last night, I heard footsteps by the north road.','Someone dropped a torn piece of a royal-looking banner near the fountain.']},{x:29*TILE,y:12*TILE,name:'PIPER',color:'#d1ad53',lines:['I saw Rowan speaking to a cloaked stranger. Maybe it was nothing…','Please be careful out there, okay?']}];
 const roomNPCs=[
@@ -38,6 +39,14 @@ const roomNPCs=[
 [{x:.34,y:.56,name:'SHOPKEEPER TILLY',color:'#b95c49',lines:['Welcome to Tilly’s General Store! I sell supplies for the road.','Your parents bought a healing tonic here yesterday. They seemed worried.']},{x:.68,y:.48,name:'FINN',color:'#5d8b63',lines:['I help stock the shelves. Someone took all the lantern oil last night.','I found a strange black feather by the back door.']}],
 [{x:.34,y:.56,name:'OLD CRAFTSMAN ORIN',color:'#7885a7',lines:['Your parents asked me to keep this old map safe.','The symbol on it matches the seal beneath the village fountain.']},{x:.68,y:.48,name:'WREN THE APPRENTICE',color:'#bd8c53',lines:['I am learning to repair tools. The workshop has been busy lately.','Orin knows more about the Everfeast than he lets on.']}]
 ];
+const TRN=["AGATHA", "ARCHIE", "BILL", "BLAINE", "BRAWLY", "BRENDAN", "BRUNO", "DR FUJI", "DRAKE", "FLANNERY", "GIOVANNI", "GLACIA", "JUAN", "KOGA", "LANCE", "LORELEI", "MAXIE", "MAY", "NORMAN", "OAK", "PHOEBE", "ROXANNE", "SABRINA", "SIDNEY", "STEVEN 2", "STEVEN", "SURGE", "TATE & LIZA", "WALLACE", "WALLY", "WATSON", "WINONA"];
+const GUARDS=[
+{id:'north',name:'GATEKEEPER BRAWN',tx:16,ty:5,gate:{x:15,y:5,w:4,h:1},img:'BRAWLY',hp:34,atk:6,reward:60,lines:['Halt! The north road is closed until the harvest bell rings.','If you want to pass, prove you can protect Hearthvale!'],win:['Hmph... you fight like a true keeper. The north road is open.']},
+{id:'east',name:'GATEKEEPER WINONA',tx:40,ty:12,gate:{x:40,y:11,w:1,h:4},img:'WINONA',hp:40,atk:7,reward:75,lines:['The east road is closed. Too many strangers lately.','Show me your strength and I will let you through!'],win:['Impressive! Go on — the east road is yours.']},
+{id:'south',name:'PUMPKIN SENTINEL',tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},mon:110,hp:48,atk:8,reward:100,lines:['*The old Pumpkin Sentinel rattles awake and bars the south road.*'],win:['The Sentinel crumbles into harvest dust. The south road is clear.']}
+];
+state.beaten=state.beaten||{};
+GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
 npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
 
@@ -63,16 +72,14 @@ const tileAtlas=(()=>{const a=document.createElement('canvas');a.width=192;a.hei
 const fl=c=>()=>{[[6,8],[20,18],[10,25]].forEach(([x,y])=>{g.fillStyle=c;g.fillRect(x,y,4,4);g.fillStyle='#f8e870';g.fillRect(x+1,y+1,2,2);});};
 const T=(i,o,fn)=>{g.save();g.translate(i*32,0);g.fillStyle='#68b848';g.fillRect(0,0,32,32);g.fillStyle='#58a038';for(let y=0;y<32;y+=8)for(let x=((y/8+o)%2)*8;x<32;x+=16){g.fillRect(x+2,y+2,4,2);g.fillRect(x+4,y+4,2,2);}if(fn)fn();g.restore();};
 T(0,0);T(1,1);T(2,0);T(3,1);T(4,0,fl('#f8f8f8'));T(5,1,fl('#e85048'));return a;})();
-function drawTree(x,y){if(!BLD.complete||!BLD.naturalWidth)return;const r=BR[rand(x+3,y+9)>.5?'tree':'pine'];ctx.imageSmoothingEnabled=false;ctx.drawImage(BLD,r[0],r[1],r[2],r[3],Math.round(x*TILE+16-r[2]/2),Math.round(y*TILE+36-r[3]),r[2],r[3]);}
-function drawBuilding(b,n){if(!BLD.complete||!BLD.naturalWidth)return;const r=BR[n];ctx.imageSmoothingEnabled=false;ctx.drawImage(BLD,r[0],r[1],r[2],r[3],Math.round(b.x*TILE+b.w*TILE/2-r[2]),Math.round((b.y+b.h)*TILE-r[3]*2),r[2]*2,r[3]*2);}
-function drawFlower(x,y,color='#e6b95d'){const X=x*TILE,Y=y*TILE;px(X+14,Y+18,3,9,'#39794b');px(X+9,Y+23,12,3,'#39794b');px(X+10,Y+11,5,5,color);px(X+17,Y+11,5,5,color);px(X+10,Y+17,5,5,color);px(X+17,Y+17,5,5,color);px(X+14,Y+14,4,4,'#f7e6a0');}
-function drawBush(x,y){const X=x*TILE,Y=y*TILE;px(X+3,Y+14,26,13,'#24583c');px(X+1,Y+8,14,16,'#347e4b');px(X+15,Y+6,16,18,'#286b43');px(X+7,Y+4,12,13,'#4ca45a');px(X+8,Y+8,5,4,'#8acb68');px(X+21,Y+11,4,4,'#75bd5d');}
+function drawFlower(x,y){kTile('t',2,x*TILE,y*TILE);}
+function drawBush(x,y){kTile('t',5,x*TILE,y*TILE);}
 function drawLamp(x,y){const X=x*TILE,Y=y*TILE;px(X+14,Y+9,4,23,'#574638');px(X+9,Y+6,14,3,'#574638');px(X+10,Y-1,12,12,'#5a4637');px(X+12,Y+1,8,8,'#f3d88b');px(X+13,Y+2,6,6,'#fff1b4');}
 function drawBench(x,y){const X=x*TILE,Y=y*TILE;px(X+4,Y+12,24,7,'#68452e');px(X+5,Y+10,22,4,'#b87942');px(X+7,Y+19,3,8,'#4c392b');px(X+22,Y+19,3,8,'#4c392b');}
 function drawPumpkin(x,y){const X=x*TILE,Y=y*TILE;px(X+8,Y+13,17,13,'#b95f32');px(X+5,Y+16,23,8,'#d77b37');px(X+12,Y+9,9,5,'#e69a43');px(X+15,Y+6,4,5,'#477447');px(X+11,Y+17,2,4,'#713e2c');px(X+20,Y+17,2,4,'#713e2c');}
 function drawRock(x,y){const X=x*TILE,Y=y*TILE;px(X+7,Y+13,18,12,'#64747a');px(X+11,Y+8,11,8,'#87969a');px(X+12,Y+10,5,3,'#bac2b6');px(X+8,Y+22,16,3,'#4b5b60');}
 function drawSign(x,y,label){const X=x*TILE,Y=y*TILE;px(X+14,Y+12,4,18,'#68452e');px(X+3,Y+4,26,12,'#68452e');px(X+5,Y+6,22,8,'#e1c17c');ctx.fillStyle='#62452e';ctx.font='bold 6px ui-monospace';ctx.textAlign='center';ctx.fillText(label,X+16,Y+12);}
-function drawFence(x,y,len=3){for(let i=0;i<len;i++){const X=(x+i)*TILE,Y=y*TILE;px(X+5,Y+10,4,21,'#68452e');px(X+21,Y+10,4,21,'#68452e');px(X+3,Y+12,24,5,'#b77a43');px(X+3,Y+22,24,4,'#95613a');}}
+function drawFence(x,y,len=3){for(let i=0;i<len;i++)kTile('t',i===0?80:i===len-1?82:81,(x+i)*TILE,y*TILE);}
 function drawHouse(b,roof='#a85c32'){
 const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
 px(x-5,y+12,w+10,h-12,'#35485a');px(x,y+12,w,h-14,'#d7d9c8');px(x+5,y+18,w-10,h-25,'#9aaeb0');
@@ -83,14 +90,13 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
-const tileRoll=rand(x+41,y+17);const tileIndex=tileRoll<.43?0:tileRoll<.62?1:tileRoll<.77?2:tileRoll<.88?3:tileRoll<.96?4:5;ctx.drawImage(tileAtlas,tileIndex*32,0,32,32,x*TILE,y*TILE,TILE,TILE);}
+const tileRoll=rand(x+41,y+17);const tileIndex=tileRoll<.43?0:tileRoll<.62?1:tileRoll<.77?2:tileRoll<.88?3:tileRoll<.96?4:5;kTile('t',[0,0,0,1,1,2][tileIndex],x*TILE,y*TILE);}
 /* Broad stone paths with alternating diamond-like paving and dark grout */
-function path(x,y,w,h){px(x,y,w,h,'#d8b878');for(let yy=y;yy<y+h;yy+=TILE)for(let xx=x;xx<x+w;xx+=TILE){const r=rand(xx/TILE+7,yy/TILE+3);px(xx+4+r*14,yy+6+r*10,4,2,'#c09858');px(xx+20-r*10,yy+20-r*8,3,3,'#e8d098');px(xx+12,yy+14+r*6,2,2,'#b88850');}}
-path(0,11*TILE,MAP_W*TILE,4*TILE);path(15*TILE,0,4*TILE,MAP_H*TILE);path(19*TILE,14*TILE,10*TILE,2*TILE);
+drawPaths(camX,camY,W,H);
 // Background trees render before buildings so trunks/canopies cannot cover roofs or doors.
 for(const t of trees)drawTree(t.x,t.y);
 HOUSES.forEach((n,i)=>drawBuilding(solids[i],n));
@@ -100,10 +106,11 @@ const props=[
 ['bush',11,8],['flower',15,8],['bush',27,8],['flower',39,8],['lamp',5,17],['bush',11,18],['flower',28,18],['lamp',33,18],['pumpkin',13,20],['rock',37,20],['bench',9,16],['bench',39,16],['bush',12,23],['flower',15,23],['bush',29,23],['flower',34,24],['lamp',10,27],['lamp',37,27],['rock',14,29],['pumpkin',32,29]
 ];
 for(const [kind,x,y] of props){if(!clearPropTile(x,y))continue;({bush:drawBush,flower:drawFlower,lamp:drawLamp,bench:drawBench,pumpkin:drawPumpkin,rock:drawRock})[kind](x,y);}
-drawFence(3,22,3);drawFence(41,22,3);
+drawFence(3,22,3);drawFence(41,22,3);drawFarm();
 /* fountain, sign and village details */
 px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,'#b5d1c9');px(18*TILE+12,12*TILE+8,42,25,'#5cabb4');px(18*TILE+20,12*TILE-7,26,10,'#e8e6cf');px(18*TILE+29,12*TILE-3,8,5,'#7dc9cf');
-px(27*TILE,10*TILE,5,30,C.wood);px(27*TILE-15,10*TILE,38,14,C.gold);px(27*TILE-10,10*TILE+4,26,3,C.wood);
+kTile('t',83,27*TILE-16,10*TILE);
+drawGates();
 for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55',n.name);}
 if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;drawPerson(a.x,a.y,'#d5b64e','#e8bd58');}
 drawPlayer(state.x,state.y);
@@ -169,11 +176,54 @@ let stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=fals
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
 const BR={cottage:[0,0,97,92],inn:[101,0,96,106],store:[201,0,88,106],workshop:[293,0,66,81],tree:[530,0,58,76],pine:[592,0,54,72]},HOUSES=['cottage','inn','store','workshop'];
 const CHARS=new Image();CHARS.src='/img/last-harvest/characters.png';
-const NPC_ROW={'ELDER MAPLE':22,'ROWAN':2,'MILLIE':12,'GUS':7,'PIPER':5,'MARA THE NEIGHBOR':14,'JUNIPER':16,'INNKEEPER BRAM':8,'NELL THE TRAVELER':6,'SHOPKEEPER TILLY':13,'FINN':10,'OLD CRAFTSMAN ORIN':9,'WREN THE APPRENTICE':19};
+const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=5';
+const TRI=new Image();TRI.src='/img/last-harvest/trainers.png?v=4';
+const NPC_MON={'PUMPKIN SENTINEL':110};
+const KS={t:[0,0,12],f:[0,176,12],d:[0,352,12],b:[200,310,18]};
+function kTile(sh,i,x,y,s=2){if(!KN.naturalWidth)return;const [ox,oy,n]=KS[sh];ctx.imageSmoothingEnabled=false;ctx.drawImage(KN,ox+(i%n)*16,oy+((i/n)|0)*16,16,16,Math.round(x),Math.round(y),16*s,16*s);}
+const WILD=[{name:'SCARECROW SCOUT',mon:['b',106],hp:18,atk:5,reward:12},{name:'HOLLOW SENTRY',mon:['b',124],hp:22,atk:5,reward:15},{name:'MASKED RAIDER',mon:['b',142],hp:20,atk:6,reward:14},{name:'RUSTY WAGON',mon:['b',98],hp:26,atk:6,reward:18},{name:'SKY KITE',mon:['b',118],hp:16,atk:7,reward:14}];
+const inGrass=P=>{const x=Math.floor(P.x/TILE),y=Math.floor(P.y/TILE);return x>=4&&x<9&&y>=19&&y<22;};
+function kBlock(c,r,w,h,x,y,s){if(!KN.naturalWidth)return;ctx.imageSmoothingEnabled=false;for(let j=0;j<h;j++)for(let i=0;i<w;i++)ctx.drawImage(KN,200+(c+i)*17,(r+j)*17,16,16,Math.round(x+i*16*s),Math.round(y+j*16*s),16*s,16*s);}
+const pathSet=new Set();[[0,11,48,4],[15,0,4,36],[19,14,10,2]].forEach(([x,y,w,h])=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)pathSet.add(i+','+j);});
+function drawPaths(camX,camY,W,H){const P=(i,j)=>i<0||j<0||i>=MAP_W||j>=MAP_H||pathSet.has(i+','+j);for(let j=Math.max(0,Math.floor(camY/TILE));j<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);j++)for(let i=Math.max(0,Math.floor(camX/TILE));i<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);i++){if(!P(i,j))continue;const t=!P(i,j-1),b=!P(i,j+1),l=!P(i-1,j),r=!P(i+1,j);let n=25;if(t&&l)n=12;else if(t&&r)n=14;else if(b&&l)n=36;else if(b&&r)n=38;else if(t)n=13;else if(b)n=37;else if(l)n=24;else if(r)n=26;else{const q=rand(i+5,j+2);n=q<.18?39:q<.3?40:q<.4?41:25;}kTile('t',n,i*TILE,j*TILE);}}
+function drawTree(x,y){const o=rand(x+3,y+9);if(o<.3){kTile('t',o<.15?27:28,x*TILE,y*TILE);return;}const a=o<.65?[3,15]:[4,16];kTile('t',a[0],x*TILE,(y-1)*TILE);kTile('t',a[1],x*TILE,y*TILE);}
+const HSTY={cottage:{rt:[52,53,54],rm:[64,65,66],w:[72,73,75],win:84,door:85},inn:{rt:[52,53,54],rm:[64,65,66],w:[76,77,79],win:88,door:89},store:{rt:[48,49,50],rm:[60,61,62],w:[72,73,75],win:84,door:86},workshop:{rt:[48,49,50],rm:[60,61,62],w:[76,77,79],win:88,door:90}};
+function drawBuilding(b,n){const S=HSTY[n];for(let r=0;r<b.h;r++)for(let c=0;c<b.w;c++){const e=c===0?0:c===b.w-1?2:1;let t;if(r<b.h-2)t=(r===0?S.rt:S.rm)[e];else if(r===b.h-2)t=(e===1&&c%2===1)?S.win:S.w[e];else t=c===(b.w>>1)?S.door:S.w[e];kTile('t',t,(b.x+c)*TILE,(b.y+r)*TILE);}}
+function drawFarm(){for(let r=0;r<3;r++)for(let c=0;c<5;c++){const x=(28+c)*TILE,y=(25+r)*TILE;kTile('f',[48,49,49,49,51][c],x,y);kTile('f',[6,20,32,44,54][(c+r)%5],x,y);}for(let c=0;c<5;c++){const f=c===0?80:c===4?82:81;kTile('t',f,(28+c)*TILE,24*TILE);kTile('t',f,(28+c)*TILE,28*TILE);}kTile('f',120,36*TILE,26*TILE);kTile('f',122,31*TILE,30*TILE);kTile('f',96,34*TILE,24*TILE);kTile('f',85,35*TILE,25*TILE);for(let j=19;j<22;j++)for(let i=4;i<9;i++)kTile('f',65,i*TILE,j*TILE);[[18,19,19,19,20],[36,37,37,37,38],[36,37,37,37,38],[54,55,55,55,56]].forEach((row,j)=>row.forEach((t,i)=>kTile('b',t,(21+i)*TILE,(24+j)*TILE)));}
+function drawGates(){for(const g of GUARDS){if(state.beaten[g.id])continue;const h=g.gate.w>=g.gate.h;for(let j=0;j<g.gate.h;j++)for(let i=0;i<g.gate.w;i++)kTile('t',h?81:59,(g.gate.x+i)*TILE,(g.gate.y+j)*TILE);(h?[[g.gate.x-1,g.gate.y],[g.gate.x+g.gate.w,g.gate.y]]:[[g.gate.x,g.gate.y-1],[g.gate.x,g.gate.y+g.gate.h]]).forEach(([a,c])=>kTile('b',88,a*TILE,c*TILE));}}
+/* ===== Pokemon-style battles (guards, trainers, bosses) ===== */
+let battle=null;const $b=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function pkUI(){let el=$b('pk-ui');if(el)return el;el=document.createElement('div');el.id='pk-ui';el.hidden=true;el.innerHTML='<div class="pk-box pk-foe"><b id="pk-fn"></b><i><u id="pk-fh"></u></i></div><div class="pk-box pk-me"><b id="pk-mn"></b><small id="pk-mh"></small><i><u id="pk-mhb"></u></i><i class="mp"><u id="pk-mmb"></u></i></div><div class="pk-bottom"><p id="pk-t"></p><div class="pk-menu"><button data-a="attack">FIGHT</button><button data-a="skill">SKILL</button><button data-a="guard">GUARD</button><button data-a="item">POTION</button><button data-a="run">RUN</button></div></div>';document.body.appendChild(el);el.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)pkAct(b.dataset.a);});return el;}
+function pkPanel(){const e=battle.e;$b('pk-fn').textContent=e.name;$b('pk-fh').style.width=(e.hp/e.max*100)+'%';$b('pk-mn').textContent=(state.name||'HERO').toUpperCase()+'  Lv'+state.level;$b('pk-mh').textContent=state.hp+' / '+state.maxHp+'  MP '+state.mp;$b('pk-mhb').style.width=(state.hp/state.maxHp*100)+'%';$b('pk-mmb').style.width=(state.mp/state.maxMp*100)+'%';}
+async function pkSay(t){$b('pk-t').textContent=t;await sleep(750);}
+function startBattle(g){state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
+battle={g,e:{name:g.name,hp:g.hp,max:g.hp,atk:g.atk,img:g.img?TRN.indexOf(g.img):-1,mon:g.mon},guard:false,busy:true,fx:{foe:0,me:0}};pkUI().hidden=false;pkPanel();pkSay(g.wild?'A wild '+g.name+' appeared!':g.mon?g.name+' blocks your path!':g.name+' wants to battle!').then(()=>{$b('pk-t').textContent='What will you do?';battle.busy=false;});}
+function pkEnd(lost){battle=null;pkUI().hidden=true;if(lost){state.hp=Math.ceil(state.maxHp*.6);scene='outside';state.x=20*TILE+16;state.y=15*TILE+24;}save();updateHud();}
+async function pkAct(a){if(!battle||battle.busy)return;battle.busy=true;const e=battle.e,cls=state.heroClass;
+if(a==='run'){if(battle.g.mon){await pkSay('You escaped!');pkEnd();return;}await pkSay("You can't run from a trainer battle!");$b('pk-t').textContent='What will you do?';battle.busy=false;return;}
+if(a==='guard')await pkSay('You brace yourself.');
+else if(a==='item'){if(!state.potions){await pkSay('No potions left!');$b('pk-t').textContent='What will you do?';battle.busy=false;return;}state.potions--;state.hp=Math.min(state.maxHp,state.hp+28);pkPanel();await pkSay('A potion restores 28 HP!');}
+else{let d,m;if(a==='skill'){if(state.mp<5){await pkSay('Not enough MP!');$b('pk-t').textContent='What will you do?';battle.busy=false;return;}state.mp-=5;d=(cls==='Mage'?25:cls==='Scout'?22:18)+state.level*2;m={Mage:'Harvest Arcana bursts with magic!',Scout:'Quickstep lands a flurry of strikes!',Guardian:'Shieldbreaker smashes down!'}[cls];}else{d=8+state.level*2+(cls==='Guardian'?3:0)+Math.floor(Math.random()*4);m='You attack!';}
+await pkSay(m);e.hp=Math.max(0,e.hp-d);battle.fx.foe=22;battle.pop={n:d,foe:true,t:45};pkPanel();await pkSay('It deals '+d+' damage!');if(!e.hp){await pkWin();return;}}
+let dmg=Math.max(2,e.atk-Math.floor(state.level/2)+Math.floor(Math.random()*3));if(battle.guard||a==='guard')dmg=Math.ceil(dmg*.35);
+await pkSay(e.name+' attacks!');state.hp=Math.max(0,state.hp-dmg);battle.fx.me=22;battle.pop={n:dmg,foe:false,t:45};pkPanel();await pkSay('You take '+dmg+' damage.');
+if(!state.hp){await pkSay('You blacked out...');pkEnd(true);return;}
+$b('pk-t').textContent='What will you do?';save();updateHud();battle.busy=false;}
+async function pkWin(){const g=battle.g;state.coins+=g.reward;state.xp+=40;let up=false;if(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=6;state.maxMp+=2;state.hp=state.maxHp;up=true;}state.mp=Math.min(state.maxMp,state.mp+5);if(!g.wild)state.beaten[g.id]=true;const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);await pkSay(g.name+' was defeated!');pkEnd();setDialogue([...g.win.map(t=>[g.name,t]),['REWARD','You earned '+g.reward+' coins'+(up?' and reached level '+state.level+'!':'.')]]);}
+function drawBattleScene(W,H){ctx.imageSmoothingEnabled=false;const t=performance.now()/1000,b=battle;const sky=ctx.createLinearGradient(0,0,0,H*.45);sky.addColorStop(0,'#78b8f8');sky.addColorStop(1,'#d8f0f8');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+const ts=Math.max(3,Math.round(H/200)),tu=16*ts;for(let y=Math.floor(H*.34/tu)*tu,r=0;y<H;y+=tu,r++)for(let x=0,c=0;x<W;x+=tu,c++)kTile('t',[0,1,0,2][Math.floor(rand(c+9,r+4)*4)%4],x,y,ts);
+const plat=(x,y,rx,ry)=>{ctx.fillStyle='#8a6a3a';ctx.beginPath();ctx.ellipse(x,y+6,rx,ry,0,0,7);ctx.fill();ctx.fillStyle='#d8b878';ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,7);ctx.fill();};
+plat(W*.72,H*.46,W*.17,H*.045);plat(W*.27,H*.8,W*.22,H*.055);
+const fs=b.fx.foe>0?(b.fx.foe--,(Math.random()-.5)*14):0,ms=b.fx.me>0?(b.fx.me--,(Math.random()-.5)*14):0,e=b.e;
+if(!(b.fx.foe>0&&b.fx.foe%4<2)){if(e.img>=0){const k=Math.max(3,Math.floor(H*.36/64));ctx.drawImage(TRI,(e.img%8)*64,((e.img/8)|0)*64,64,64,Math.round(W*.72-32*k+fs),Math.round(H*.46+8-64*k+Math.sin(t*3)*3),64*k,64*k);}else{const k=Math.max(8,Math.floor(H*.3/16));kTile(...(Array.isArray(e.mon)?e.mon:['d',e.mon]),W*.72-8*k+fs,H*.46+8-16*k+Math.sin(t*3)*3,k);}}
+const k2=Math.max(6,Math.floor(H*.36/24)),px0=W*.27+ms,fy=H*.8+10;drawSpriteK(heroRow(),1,0,px0,fy,k2);drawGear(px0,fy,k2,1,state.heroClass);
+if(b.pop&&b.pop.t>0){b.pop.t--;const s3=3,str=String(b.pop.n),bx=(b.pop.foe?W*.72:W*.27)-str.length*16*s3/2,by=(b.pop.foe?H*.2:H*.5)-(45-b.pop.t)*.7;for(let i=0;i<str.length;i++)kTile('b',180+Number(str[i]),bx+i*16*s3,by,s3);}}
+
+const NPC_ROW={'ELDER MAPLE':22,'ROWAN':2,'MILLIE':12,'GUS':7,'PIPER':5,'MARA THE NEIGHBOR':14,'JUNIPER':16,'INNKEEPER BRAM':8,'NELL THE TRAVELER':6,'SHOPKEEPER TILLY':13,'FINN':10,'OLD CRAFTSMAN ORIN':9,'WREN THE APPRENTICE':19,'GATEKEEPER BRAWN':18,'GATEKEEPER WINONA':13};
 /* characters.png: one row per character, 12 frames: down, up, left, right x (idle, step, step) */
 function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(Math.round(x-5*k),Math.round(fy-k),10*k,3*k);ctx.imageSmoothingEnabled=false;ctx.drawImage(CHARS,(face*3+step)*16,row*24,16,24,Math.round(x-8*k),Math.round(fy-24*k),16*k,24*k);}
 function drawSprite(row,face,step,x,y){drawSpriteK(row,face,step,x,y+8,2);}
-function drawPerson(x,y,shirt,hat,name=''){const row=NPC_ROW[name]??[2,5,7,9,10][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
+function drawPerson(x,y,shirt,hat,name=''){if(NPC_MON[name]!==undefined){kTile('d',NPC_MON[name],x-24,y-40,3);return;}const row=NPC_ROW[name]??[2,5,7,9,10][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
 const roomFurniture=[
 [[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
 [[.10,.29,.16,.07],[.31,.29,.16,.07],[.52,.29,.16,.07],[.73,.29,.16,.07],[.08,.48,.25,.09],[.68,.48,.24,.09]],
@@ -191,9 +241,10 @@ const nx=x/innerWidth,ny=y/innerHeight;
 if(nx<.09||nx>.91||ny<.28||ny>.89)return true;
 return roomFurniture[interiorId].some(([rx,ry,rw,rh])=>nx>rx-.012&&nx<rx+rw+.012&&ny>ry-.02&&ny<ry+rh+.025);
 }
-function roomShell(W,H,pal,fx,fy,fw,fh){const x=W*fx,y=H*fy,w=W*fw,h=H*fh,wallH=Math.min(h*.26,120);
-for(let r=0,yy=y+wallH;yy<y+h;r++,yy+=24){px(x,yy,w,24,r%2?'#c99a6a':'#d4a674');px(x,yy+22,w,2,'#a97a52');for(let xx=x+(r%2)*48;xx<x+w;xx+=96)px(xx,yy,2,22,'#a97a52');}
-px(x,y,w,wallH,pal.wall);for(let xx=x;xx<x+w;xx+=32)px(xx,y,2,wallH,'rgba(0,0,0,.06)');px(x,y+wallH-10,w,10,pal.trim);px(x,y+wallH-12,w,2,'rgba(255,255,255,.3)');}
+function roomShell(W,H,pal,fx,fy,fw,fh){const s=Math.max(2,Math.round(H/300)),u=16*s,x=W*fx,y=H*fy,w=W*fw,h=H*fh;if(!KN.naturalWidth){px(x,y,w,h,pal.floor);return;}ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.imageSmoothingEnabled=false;
+for(let r=0,yy=y+2*u;yy<y+h;r++,yy+=u)for(let c=0,xx=x;xx<x+w;c++,xx+=u)ctx.drawImage(KN,200+(23+(c+r)%3)*17,0,16,16,Math.round(xx),Math.round(yy),u,u);
+for(let c=0,xx=x;xx<x+w;c++,xx+=u)for(let r=0;r<2;r++)ctx.drawImage(KN,(73%12)*16,((73/12)|0)*16,16,16,Math.round(xx),Math.round(y+r*u),u,u);
+px(x,y+2*u-6,w,6,pal.trim);ctx.restore();}
 function drawInterior(W,H){
 ctx.clearRect(0,0,W,H);
 const palettes=[
@@ -203,28 +254,14 @@ const palettes=[
 {wall:'#aeb7ad',floor:'#8b6749',trim:'#493c34',accent:'#6c7d86',title:'ORIN’S WORKSHOP'}
 ][interiorId];
 px(0,0,W,H,palettes.trim);
-if(interiorId===0){
-roomShell(W,H,palettes,.05,.19,.9,.7);
-px(W*.05,H*.19,W*.9,H*.07,'#8b5b42');
-for(let i=0;i<5;i++)px(W*(.08+i*.17),H*.27,W*.14,4,'#d0b48c');
-px(W*.42,H*.23,W*.16,H*.18,'#714b38');px(W*.445,H*.25,W*.11,H*.14,'#a64e3e');px(W*.47,H*.29,W*.06,H*.09,'#f1a45c');
-px(W*.11,H*.38,W*.12,H*.12,'#79513a');px(W*.13,H*.4,W*.08,H*.08,'#d0a36d');
-}else if(interiorId===1){
-px(0,0,W,H*.23,'#4d382f');roomShell(W,H,palettes,.08,.22,.84,.67);
-for(let i=0;i<4;i++){px(W*(.1+i*.21),H*.29,W*.16,H*.035,'#9b714c');px(W*(.12+i*.21),H*.33,W*.12,H*.02,'#d5b780');}
-px(W*.08,H*.48,W*.25,H*.09,'#70462f');px(W*.1,H*.5,W*.21,H*.05,'#c18a49');
-px(W*.68,H*.48,W*.24,H*.09,'#70462f');px(W*.7,H*.5,W*.20,H*.05,'#c18a49');
-}else if(interiorId===2){
-roomShell(W,H,palettes,.04,.18,.92,.72);
-px(W*.08,H*.26,W*.84,H*.035,'#a56e43');
-for(const x of [.11,.32,.57,.78]){px(W*x,H*.34,W*.1,H*.19,'#70462f');for(let j=0;j<3;j++)px(W*(x+.012),H*(.37+j*.05),W*.076,H*.018,['#c96f4e','#7d9b69','#e0b85f'][j]);}
-px(W*.38,H*.59,W*.24,H*.08,'#a64f3f');px(W*.4,H*.61,W*.2,H*.04,'#d8aa66');
-}else{
-roomShell(W,H,palettes,.05,.2,.9,.69);
-for(let i=0;i<6;i++){px(W*(.1+i*.14),H*.26,W*.12,H*.018,'#765139');px(W*(.11+i*.14),H*.29,W*.1,H*.045,'#8e6849');}
-px(W*.22,H*.51,W*.56,H*.11,'#594638');px(W*.25,H*.53,W*.5,H*.06,'#b87945');
-px(W*.43,H*.43,W*.14,H*.08,'#5a5550');px(W*.46,H*.39,W*.08,H*.06,'#a6a8a0');
-}
+const s=Math.max(2,Math.round(H/300)),u=16*s,R=[[.05,.19,.9,.7],[.08,.22,.84,.67],[.04,.18,.92,.72],[.05,.2,.9,.69]][interiorId];
+if(interiorId===1)px(0,0,W,H*.23,'#4d382f');
+roomShell(W,H,palettes,R[0],R[1],R[2],R[3]);
+const F=(c,r,w,h,fx,fy)=>kBlock(c,r,w,h,W*fx-w*u/2,H*fy-h*u,s),WL=(c,r,w,h,fx)=>kBlock(c,r,w,h,W*fx-w*u/2,H*R[1]+2*u-h*u,s),PA=(c,r,fx)=>kBlock(c,r,1,1,W*fx-u/2,H*R[1]+.35*u,s),RUG=(c,r,w,h,fx,fy)=>kBlock(c,r,w,h,W*fx-w*u/2,H*fy-h*u/2,s);
+if(interiorId===0){RUG(16,8,3,2,.5,.68);PA(18,0,.3);PA(19,12,.72);F(14,14,2,2,.5,.41);F(3,0,2,2,.17,.52);F(8,0,2,2,.84,.64);F(16,0,1,1,.08,.46);F(2,2,1,1,.27,.5);}
+else if(interiorId===1){RUG(16,10,3,2,.5,.68);for(const x of [.18,.39,.6,.81])WL(23,17,1,1,x);F(0,0,3,2,.205,.58);F(0,0,3,2,.80,.58);F(2,2,1,1,.33,.62);F(3,2,1,1,.67,.62);F(17,0,1,1,.08,.46);PA(20,12,.5);}
+else if(interiorId===2){RUG(16,8,3,2,.5,.78);for(const x of [.17,.33,.67,.83])F(5,12,2,2,x,.52);F(0,12,3,2,.5,.67);PA(19,12,.5);F(16,0,1,1,.08,.5);}
+else{for(const x of [.16,.3,.44,.58,.72,.86])WL(23,17,1,1,x);F(14,14,2,2,.5,.43);for(const x of [.3,.5,.7])F(0,0,3,2,x,.62);kTile('d',74,W*.5-u/2,H*.45-u*.5,s);kTile('d',89,W*.82-u/2,H*.5,s);F(16,0,1,1,.08,.5);}
 for(let y=H*.9;y<H;y+=26){px(0,y,W,23,palettes.floor);px(0,y+22,W,4,palettes.trim);}
 px(W*.045,H*.2,7,H*.7,palettes.trim);px(W*.948,H*.2,7,H*.7,palettes.trim);
 px(W*.42,H*.12,W*.16,5,palettes.accent);
@@ -260,9 +297,10 @@ function finishType(){clearInterval(typer);typing=false;$('lh-dialogue-text').te
 function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer={x:innerWidth/2,y:innerHeight*.76};updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
-function interact(){if(transitioning)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<Math.max(84,W*.095)&&d<dist){target=n;dist=d;}}if(target){setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>H*.78){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(transitioning||battle)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<Math.max(84,W*.095)&&d<dist){target=n;dist=d;}}if(target){setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>H*.78){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<64&&d<dist){found=n;dist=d;}}
 if(found){
+if(found.trainer&&!state.beaten[found.trainer.id]){setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
 if(found.name==='ELDER MAPLE'&&questStep===0){questStep=1;setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
 else if(found.name==='ROWAN'&&questStep===1){questStep=2;setDialogue([[found.name,'I will check the fountain. You should search the buildings.'],['QUEST UPDATED','Enter a building and look for clues.']]);}
 else setDialogue(found.lines.map(t=>[found.name,t]));
@@ -306,8 +344,8 @@ cinematic=null;document.body.classList.remove('lh-cinematic');state.seenIntro=tr
 function updateQuest(){const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:chapters[Math.min(state.stage,9)].place.toUpperCase();updateQuest();}
 function move(dt){walking=false;const ins=scene==='inside',P=ins?insidePlayer:state;
-if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(!ins&&++stepCount%4===0)save();}
-if(dialogue||cinematic||transitioning||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;
+if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(!ins&&++stepCount%4===0)save();if(!ins&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){const w=WILD[Math.floor(Math.random()*WILD.length)];startBattle({id:'wild',wild:true,name:w.name,mon:w.mon,hp:w.hp,atk:w.atk,reward:w.reward,win:[]});}}
+if(battle||dialogue||cinematic||transitioning||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;
 if(!ins){P.x=Math.floor(P.x/TILE)*TILE+16;P.y=Math.floor(P.y/TILE)*TILE+24;}
 let dx=joystick.x,dy=joystick.y;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;
 if(Math.abs(dx)<.35&&Math.abs(dy)<.35){turnWait=0;return;}
