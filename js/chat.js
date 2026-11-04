@@ -2358,7 +2358,7 @@ const ComposerManager = {
             let displayUrl = null;
 
             if (attachment) {
-                UI.showToast('Uploading directly to your Mac…', 'info');
+                UI.showToast('Uploading attachment…', 'info');
                 const uploaded = await MediaManager.upload(attachment, c._id, c._type, State.attachmentMimeType);
                 messageContent = uploaded.content;
                 messageType = uploaded.contentType;
