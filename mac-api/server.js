@@ -526,7 +526,7 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
 
   const now = Math.floor(Date.now() / 1000);
   const expiry = Number(expires);
-  if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 1860) {
+  if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 21660) {
     return sendError(res, 403, 'Media URL expired or has an invalid expiration.');
   }
 
@@ -726,6 +726,7 @@ app.get('/v1/chat/sync', requireApiKey, async (req, res) => {
               config.theme.background,
               '/chat/conversations/' + type + '/' + cid + '/config/theme/background'
             );
+            config.theme.backgroundMedia = migratedBackground;
             config.theme.background = migratedBackground ? signedPublicMediaUrl(migratedBackground.mediaId) : null;
           } catch (error) {
             console.error('[BSMS Web Mac API] Legacy group wallpaper migration failed:', error.message);
@@ -733,6 +734,7 @@ app.get('/v1/chat/sync', requireApiKey, async (req, res) => {
           }
         } else if (config.theme.background && typeof config.theme.background === 'object' &&
             config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(config.theme.background.mediaId || '')) {
+          config.theme.backgroundMedia = config.theme.background;
           config.theme.background = signedPublicMediaUrl(config.theme.background.mediaId);
         }
       }
@@ -765,7 +767,7 @@ function signedPublicMediaUrl(mediaId) {
   // Keep URLs stable during each 30-minute window so 5-second chat polling
   // does not continually replace image/audio/video elements.
   const now = Math.floor(Date.now() / 1000);
-  const expires = Math.floor(now / 1800) * 1800 + 1800;
+  const expires = Math.floor(now / 21600) * 21600 + 21600;
   const signature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
   return PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
     + '?expires=' + expires + '&signature=' + signature;
