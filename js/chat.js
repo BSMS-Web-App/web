@@ -2206,7 +2206,7 @@ const MediaManager = {
         let contentType = 'file';
         if (mimeType.startsWith('image/') && mimeType !== 'image/heic') contentType = 'image';
         else if (mimeType.startsWith('audio/')) contentType = 'audio';
-        else if (mimeType.startsWith('video/')) contentType = 'video';
+        else if (mimeType.startsWith('video/') && mimeType !== 'video/x-matroska') contentType = 'video';
 
         return {
             content: { type: 'media', mediaId: ticket.mediaId, mimeType },
