@@ -701,7 +701,10 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
 });
 
 function signedPublicMediaUrl(mediaId) {
-  const expires = Math.floor(Date.now() / 1000) + 1800;
+  // Keep URLs stable during each 30-minute window so 5-second chat polling
+  // does not continually replace image/audio/video elements.
+  const now = Math.floor(Date.now() / 1000);
+  const expires = Math.floor(now / 1800) * 1800 + 1800;
   const signature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
   return PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
     + '?expires=' + expires + '&signature=' + signature;
