@@ -1680,7 +1680,7 @@ const ChatManager = {
                     style="display:flex; align-items:center; gap:10px; max-width:320px; margin-top:4px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,0.18); color:var(--fg); text-decoration:none;">
                     <svg class="ic" style="width:22px;height:22px;flex-shrink:0;"><use href="#ico-file"></use></svg>
                     <span style="min-width:0; overflow-wrap:anywhere;">${fileName}</span>
-                    <svg class="ic" style="width:18px;height:18px;flex-shrink:0;"><use href="#ico-download"></use></svg>
+                    <span style="font-size:0.82rem; color:var(--fg2); flex-shrink:0;">Download</span>
                 </a>`;
             } else if (['audio', 'image', 'video', 'file'].includes(m.contentType)) {
                 content += `<div class="sys-msg" style="margin:0;">This attachment is unavailable.</div>`;
