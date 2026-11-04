@@ -708,12 +708,12 @@ function signedPublicMediaUrl(mediaId) {
 }
 
 async function migrateLegacyChatMedia(type, cid, messageId, message) {
-  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\\s]+)$/.exec(message.content || '');
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/.exec(message.content || '');
   if (!match) return { ...message, content: null, hasContent: true };
   const mimeType = match[1].toLowerCase();
   const extension = MEDIA_UPLOAD_TYPES[mimeType];
   if (!extension) return { ...message, content: null, hasContent: true, attachmentMimeType: mimeType };
-  const buffer = Buffer.from(match[2].replace(/\\s/g, ''), 'base64');
+  const buffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
   if (!buffer.length || buffer.length > MAX_MEDIA_BYTES) {
     return { ...message, content: null, hasContent: true, attachmentMimeType: mimeType };
   }
