@@ -2374,7 +2374,6 @@ const ComposerManager = {
             inp.innerText = '';
             const replyContext = State.replyContext;
             this.cancelReply();
-            this.clearAttachment();
             document.getElementById('charCounter').innerText = '0/100';
             document.getElementById('charCounter').className = '';
             localStorage.removeItem('draft_' + c._id);
@@ -2405,6 +2404,7 @@ const ComposerManager = {
                 }
             }
             if (messageType === 'audio') AudioManager.bindPlayer(realId);
+            this.clearAttachment();
         } catch (error) {
             UI.showToast(error.message || 'Failed to send message.', 'error');
             if (pendingTempId) {
