@@ -504,7 +504,10 @@ async function serveMediaFile(req, res, mediaId, cacheControl, downloadName = ''
       const contentLength = stats.size === 0 ? 0 : end - start + 1;
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', String(contentLength));
-      if (!/^(image|audio|video)\//.test(mimeType)) {
+      const inlineMedia = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(mimeType) ||
+        ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/aac', 'audio/flac',
+          'video/mp4', 'video/quicktime', 'video/webm'].includes(mimeType);
+      if (!inlineMedia) {
         const safeName = safeMediaFilename(downloadName) || ('attachment' + extension);
         const asciiName = Array.from(safeName).map((character) => {
           const code = character.charCodeAt(0);
