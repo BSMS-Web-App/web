@@ -7,7 +7,7 @@
 import { db } from './db.js';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
-import { mediaUrl } from './media-url.js';
+import { mediaUrl } from '../lib/media-url.js';
 
 // Verify session belongs to an owner or admin
 async function verifyStaff(sessionId) {
