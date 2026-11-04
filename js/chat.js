@@ -2181,6 +2181,9 @@ const AuthManager = {
 };
 
 const MediaManager = {
+    isDisplayableImage: function(file) {
+        return ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(String(file?.type || '').toLowerCase());
+    },
     upload: async function(file, cid, channelType, mimeOverride = '') {
         const mimeType = String(mimeOverride || file.type || 'application/octet-stream').toLowerCase();
         const sessionId = (localStorage.getItem('session_id') || '').trim();
@@ -2756,7 +2759,7 @@ const GroupManager = {
         const fileInput = document.getElementById('ngIcon');
         const file = fileInput.files[0];
         const requireApproval = document.getElementById('ngRequireApproval').checked;
-        if (file && (file.size < 1 || file.size > 25 * 1024 * 1024 || !String(file.type || '').startsWith('image/'))) {
+        if (file && (file.size < 1 || file.size > 25 * 1024 * 1024 || !MediaManager.isDisplayableImage(file))) {
             UI.showToast('Choose a supported image smaller than 25 MB.', 'error');
             return;
         }
