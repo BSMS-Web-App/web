@@ -87,6 +87,14 @@ const mediaUploadLimiter = rateLimit({
   message: { success: false, error: 'Too many uploads. Please try again shortly.' }
 });
 
+const mediaTicketLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 12,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many upload authorizations. Please try again shortly.' }
+});
+
 const allowedMediaOrigins = new Set([
   'https://bsms-web.vercel.app',
   'https://bsms-web-dev1.vercel.app',
@@ -262,7 +270,7 @@ function mediaTicketCors(req, res, next) {
 }
 
 app.options('/v1/media-upload-ticket', mediaTicketCors, (_req, res) => res.status(204).end());
-app.post('/v1/media-upload-ticket', mediaTicketCors, mediaUploadLimiter, (req, res) => {
+app.post('/v1/media-upload-ticket', mediaTicketCors, mediaTicketLimiter, (req, res) => {
   const sessionId = String(req.get('x-session-id') || '');
   if (!sessionId || sessionId.length > 300) return sendError(res, 401, 'Your session is invalid. Please sign in again.');
 
