@@ -35,6 +35,7 @@ const State = {
     attachmentData: null,
     attachmentName: null,
     attachmentPreviewUrl: null,
+    attachmentMimeType: null,
 
     hiddenDms: [],
     conversationCache: {},
@@ -2268,7 +2269,8 @@ const ComposerManager = {
 
         this.clearAttachment();
         State.attachmentData = f;
-        State.attachmentName = String(f.name || 'Attachment').replace(/[\\\\/\\u0000-\\u001f\\u007f]/g, '_').slice(0, 180);
+        State.attachmentMimeType = mimeType;
+        State.attachmentName = String(f.name || 'Attachment').replace(/[\\/\\x00-\\x1F\\x7F]/g, '_').slice(0, 180);
         const thumb = document.getElementById('attThmb');
         document.getElementById('attName').innerText = State.attachmentName;
         if (mimeType.startsWith('image/') && mimeType !== 'image/heic') {
@@ -2285,6 +2287,7 @@ const ComposerManager = {
         if (State.attachmentPreviewUrl) URL.revokeObjectURL(State.attachmentPreviewUrl);
         State.attachmentPreviewUrl = null;
         State.attachmentData = null;
+        State.attachmentMimeType = null;
         State.attachmentName = null;
         const input = document.getElementById('fileUploadInput');
         if (input) input.value = '';
@@ -2332,6 +2335,7 @@ const ComposerManager = {
         }
 
         btn.disabled = true;
+        let pendingTempId = null;
         try {
             let messageContent = txt;
             let messageType = 'text';
@@ -2341,7 +2345,7 @@ const ComposerManager = {
 
             if (attachment) {
                 UI.showToast('Uploading directly to your Mac…', 'info');
-                const uploaded = await MediaManager.upload(attachment, c._id, c._type);
+                const uploaded = await MediaManager.upload(attachment, c._id, c._type, State.attachmentMimeType);
                 messageContent = uploaded.content;
                 messageType = uploaded.contentType;
                 attachmentName = State.attachmentName || 'Attachment';
@@ -2350,6 +2354,7 @@ const ComposerManager = {
             }
 
             const tempId = 'temp-' + Date.now();
+            pendingTempId = tempId;
             const tempMsg = {
                 senderUid: State.user.uid,
                 timestamp: Date.now(),
@@ -2403,10 +2408,10 @@ const ComposerManager = {
             if (messageType === 'audio') AudioManager.bindPlayer(realId);
         } catch (error) {
             UI.showToast(error.message || 'Failed to send message.', 'error');
-            const temp = document.querySelector('.msg-row.sending');
-            if (temp) temp.remove();
-            for (const [id, message] of Object.entries(c.messages || {})) {
-                if (id.startsWith('temp-') && message.senderUid === State.user.uid) delete c.messages[id];
+            if (pendingTempId) {
+                const temp = document.getElementById(`msg-${pendingTempId}`);
+                if (temp) temp.remove();
+                delete c.messages[pendingTempId];
             }
             if (c._type === 'dms') {
                 State.isCooldown = false;
