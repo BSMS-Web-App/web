@@ -1276,53 +1276,22 @@ const ChatManager = {
     },
 
     loadAttachment: async function(msgId) {
-        const c = State.channels[State.activeChannelId];
-        if (!c || !c.messages || !c.messages[msgId]) return;
-        const m = c.messages[msgId];
-        const preview = document.getElementById(`att-preview-${msgId}`);
-        const header = document.getElementById(`att-header-${msgId}`);
-        if (!preview) return;
-
-        const btn = header?.querySelector('button');
-        if (btn) { btn.disabled = true; btn.innerText = "Loading..."; }
-
-        try {
-            if (!m.content) {
-                const res = await ApiClient.call('getAttachment', {
-                    cid: State.activeChannelId,
-                    type: State.activeType,
-                    msgId
-                });
-                if (res && res.content) {
-                    m.content = res.content;
-                    m.attachmentMimeType = res.attachmentMimeType || m.attachmentMimeType || null;
-                    m.attachmentName = res.attachmentName || m.attachmentName || null;
-                }
-            }
-
-            const isImageAttachment = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) ||
-                (typeof m.content === 'string' && m.content.startsWith('data:image')) ||
-                m.contentType === 'image';
-
-            if (typeof m.content === 'string' && isImageAttachment) {
-                preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" onclick="ImageViewer.open(this.src)" title="Click to view fullscreen" style="max-width:100%; border-radius:10px; display:block; cursor:pointer;">`;
-                const image = preview.querySelector('img');
-                if (image) image.addEventListener('error', () => {
-                    m.content = null;
-                    preview.innerHTML = '<div style="font-size:0.85rem;color:#ef4444;">Image could not be loaded. Check the connection and try again.</div>';
-                    if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.innerText = 'Retry'; }
-                }, { once: true });
-            } else {
-                preview.innerHTML = `<div style="font-size:0.85rem; color:var(--fg2); word-break:break-all;">Attachment loaded. <a href="${Utils.escapeHTML(m.content)}" download="${Utils.escapeHTML(m.attachmentName || 'download')}" style="color:var(--accent); text-decoration:underline;">Download File</a></div>`;
-            }
-
-            preview.style.display = 'block';
-            requestAnimationFrame(() => { preview.style.opacity = '1'; });
-            if (btn) btn.style.display = 'none';
-        } catch(e) {
-            UI.showToast("Failed to load attachment.", 'error');
-            if (btn) { btn.disabled = false; btn.innerText = "Load"; }
+        const channel = State.channels[State.activeChannelId];
+        const message = channel?.messages?.[msgId];
+        if (!message?.content) {
+            UI.showToast('This attachment is unavailable. Reload the conversation and try again.', 'error');
+            return;
         }
+        const preview = document.getElementById(`att-preview-${msgId}`);
+        if (!preview) return;
+        const source = Utils.escapeHTML(message.content);
+        if (message.attachmentMimeType?.startsWith('image/')) {
+            preview.innerHTML = `<img src="${source}" alt="Attachment" onclick="ImageViewer.open(this.src)" style="max-width:100%;border-radius:10px;display:block;cursor:pointer;">`;
+        } else {
+            preview.innerHTML = `<a href="${source}" download="${Utils.escapeHTML(message.attachmentName || 'attachment')}" rel="noopener noreferrer">Download attachment</a>`;
+        }
+        preview.style.display = 'block';
+        requestAnimationFrame(() => { preview.style.opacity = '1'; });
     },
 
     updateHeader: function() {
@@ -1336,12 +1305,19 @@ const ChatManager = {
             mv.style.setProperty('--chat-fg', c.config.theme.text || 'var(--fg)');
             mv.style.setProperty('--chat-accent', c.config.theme.accent || 'var(--accent)');
             if(c.config.theme.background) {
-                if(c.config.theme.background.startsWith('data:') || c.config.theme.background.startsWith('/api/media?')) {
-                    mv.style.setProperty('--chat-wp', `url(${Utils.escapeHTML(c.config.theme.background)})`);
-                    mv.style.setProperty('--chat-wp-dim', '0.55'); mv.style.setProperty('--chat-bg', 'transparent');
+                const background = String(c.config.theme.background);
+                const isImage = background.startsWith('data:image/') ||
+                    background.startsWith('/api/media?') ||
+                    background.startsWith('https://media.bsms-web.com/');
+                if (isImage) {
+                    const cssUrl = background.replace(/["\\\\]/g, '');
+                    mv.style.setProperty('--chat-wp', `url("${cssUrl}")`);
+                    mv.style.setProperty('--chat-wp-dim', '0.55');
+                    mv.style.setProperty('--chat-bg', 'transparent');
                 } else {
-                    mv.style.setProperty('--chat-bg', c.config.theme.background);
-                    mv.style.removeProperty('--chat-wp'); mv.style.removeProperty('--chat-wp-dim');
+                    mv.style.setProperty('--chat-bg', background);
+                    mv.style.removeProperty('--chat-wp');
+                    mv.style.removeProperty('--chat-wp-dim');
                 }
             }
         } else {
