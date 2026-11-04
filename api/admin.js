@@ -8,6 +8,7 @@ import { db } from './db.js';
 import crypto from 'crypto';
 import { hashPassword } from './passwords.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
+import { mediaUrl } from '../lib/media-url.js';
 
 // Verify session belongs to an owner, admin or moderator
 async function verifyStaff(sessionId) {
@@ -160,7 +161,7 @@ export default async function handler(req, res) {
                 const accounts = accountsSnap.val() || {};
                 for (const account of Object.values(accounts)) {
                     if (account.avatar && typeof account.avatar === 'object' && account.avatar.type === 'media' && /^[a-f0-9]{64}$/.test(account.avatar.mediaId || '')) {
-                        account.avatar = `/api/media?id=${encodeURIComponent(account.avatar.mediaId)}`;
+                        account.avatar = mediaUrl(account.avatar);
                     }
                 }
                 return res.status(200).json({

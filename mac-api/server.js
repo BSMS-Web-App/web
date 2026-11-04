@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import 'dotenv/config';
+import { createReadStream } from 'node:fs';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import fs from 'node:fs/promises';
@@ -29,6 +30,47 @@ if (API_KEY.length < 32) {
 
 const app = express();
 app.disable('x-powered-by');
+// cloudflared is the single trusted reverse proxy in front of this loopback-only service.
+app.set('trust proxy', 1);
+
+const PUBLIC_MEDIA_ORIGIN = (process.env.BSMS_WEB_PUBLIC_MEDIA_URL || 'https://media.bsms-web.com').replace(/\/+$/, '');
+const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
+const MEDIA_UPLOAD_TYPES = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/avif': '.avif',
+  'image/heic': '.heic',
+  'audio/webm': '.webm',
+  'audio/mpeg': '.mp3',
+  'audio/mp4': '.m4a',
+  'audio/ogg': '.ogg',
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'application/pdf': '.pdf',
+  'text/plain': '.txt',
+  'text/csv': '.csv',
+  'application/rtf': '.rtf',
+  'application/json': '.json',
+  'application/msword': '.doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.ms-excel': '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.ms-powerpoint': '.ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+  'application/zip': '.zip',
+  'application/x-7z-compressed': '.7z',
+  'application/x-rar-compressed': '.rar',
+  'application/gzip': '.gz',
+  'application/x-tar': '.tar',
+  'audio/wav': '.wav',
+  'audio/aac': '.aac',
+  'audio/flac': '.flac',
+  'video/webm': '.vwebm',
+  'video/x-matroska': '.mkv',
+  'application/octet-stream': '.bin'
+};
 
 const mediaReadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -37,8 +79,122 @@ const mediaReadLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Too many media requests. Please try again shortly.' }
 });
+const mediaUploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 12,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many uploads. Please try again shortly.' }
+});
+
+const mediaTicketLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 12,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many upload authorizations. Please try again shortly.' }
+});
+
+const allowedMediaOrigins = new Set([
+  'https://bsms-web.vercel.app',
+  'https://bsms-web-dev1.vercel.app',
+  'https://bsms-web-dev2.vercel.app',
+  'https://bsms-web-dev3.vercel.app',
+  'https://bsms-web-dev4.vercel.app',
+  'https://bsms-web-beta.vercel.app',
+  'https://bsms-web-development.vercel.app',
+  'https://bsmsweb.vercel.app',
+  'http://localhost:3000'
+]);
+
+function mediaUploadCors(req, res, next) {
+  const origin = req.get('origin') || '';
+  if (origin && !allowedMediaOrigins.has(origin)) return sendError(res, 403, 'Origin is not allowed.');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  return next();
+}
 
 app.use('/v1/media', mediaReadLimiter);
+app.use('/v1/media-public', mediaReadLimiter);
+// Authenticate every API endpoint before parsing request bodies. Media uploads
+// use a short-lived, one-use HMAC capability instead of exposing the API key.
+app.use('/v1', (req, res, next) => {
+  const publicRead = req.path === '/media-public' || req.path.startsWith('/media-public/');
+  const signedUpload = req.path.startsWith('/media-upload/') && (req.method === 'PUT' || req.method === 'OPTIONS');
+  const sessionMediaTicket = req.path === '/media-upload-ticket' && (req.method === 'POST' || req.method === 'OPTIONS');
+  if (publicRead || signedUpload || sessionMediaTicket) return next();
+  return requireApiKey(req, res, next);
+});
+
+app.options('/v1/media-upload/:mediaId', mediaUploadCors, (_req, res) => res.status(204).end());
+app.put(
+  '/v1/media-upload/:mediaId',
+  mediaUploadCors,
+  mediaUploadLimiter,
+  express.raw({ type: () => true, limit: '25mb' }),
+  async (req, res) => {
+    const mediaId = String(req.params.mediaId || '');
+    const expires = String(req.query.expires || '');
+    const uid = String(req.query.uid || '');
+    const cid = String(req.query.cid || '');
+    const channelType = String(req.query.channelType || '');
+    const mimeType = String(req.query.mime || '').toLowerCase();
+    const size = Number(req.query.size);
+    const signature = String(req.query.signature || '');
+
+    if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) ||
+        !uid || uid.length > 256 || !cid || cid.length > 256 ||
+        !['dms', 'gcs', 'profile'].includes(channelType) ||
+        (channelType === 'profile' && cid !== 'profile') ||
+        (channelType !== 'profile' && cid === 'profile') ||
+        !Object.prototype.hasOwnProperty.call(MEDIA_UPLOAD_TYPES, mimeType) ||
+        !Number.isSafeInteger(size) || size < 1 || size > MAX_MEDIA_BYTES ||
+        !/^[a-f0-9]{64}$/.test(signature)) {
+      return sendError(res, 400, 'Invalid upload authorization.');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const expiry = Number(expires);
+    if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 660) {
+      return sendError(res, 403, 'Upload authorization expired.');
+    }
+
+    const signedPayload = [mediaId, expires, uid, channelType, cid, mimeType, String(size)].join('.');
+    const expected = Buffer.from(crypto.createHmac('sha256', API_KEY).update(signedPayload).digest('hex'), 'hex');
+    const supplied = Buffer.from(signature, 'hex');
+    if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
+      return sendError(res, 403, 'Invalid upload signature.');
+    }
+
+    const requestMime = String(req.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (requestMime !== mimeType || !Buffer.isBuffer(req.body) || req.body.length !== size) {
+      return sendError(res, 400, 'Upload content does not match its authorization.');
+    }
+
+    const filePath = path.join(MEDIA_DIR, mediaId + MEDIA_UPLOAD_TYPES[mimeType]);
+    try {
+      await fs.mkdir(MEDIA_DIR, { recursive: true });
+      await fs.writeFile(filePath, req.body, { flag: 'wx', mode: 0o600 });
+      const uploadNow = Math.floor(Date.now() / 1000);
+      const expiresAt = Math.floor(uploadNow / 21600) * 21600 + 21600;
+      const readSignature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expiresAt).digest('hex');
+      const url = PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
+        + '?expires=' + expiresAt + '&signature=' + readSignature;
+      return res.status(201).json({ success: true, mediaId, url });
+    } catch (error) {
+      if (error.code === 'EEXIST') return sendError(res, 409, 'This upload has already been used.');
+      console.error('[BSMS Web Mac API] Media upload failed:', error.message);
+      return sendError(res, 500, 'Media upload failed.');
+    }
+  }
+);
+
 app.use(express.json({ limit: MAX_BODY_BYTES, strict: true }));
 
 let database = {};
@@ -99,6 +255,99 @@ function rebuildSessionIndex() {
     }
   }
 }
+
+function mediaTicketCors(req, res, next) {
+  const origin = req.get('origin') || '';
+  if (origin && !allowedMediaOrigins.has(origin)) return sendError(res, 403, 'Origin is not allowed.');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  return next();
+}
+
+app.options('/v1/media-upload-ticket', mediaTicketCors, (_req, res) => res.status(204).end());
+app.post('/v1/media-upload-ticket', mediaTicketCors, mediaTicketLimiter, (req, res) => {
+  const sessionId = String(req.get('x-session-id') || '');
+  if (!sessionId || sessionId.length > 300) return sendError(res, 401, 'Your session is invalid. Please sign in again.');
+
+  let uid = sessionIndex.get(sessionId) || null;
+  let account = uid ? database.accounts?.[uid] : null;
+  const validSession = (candidate) => Boolean(
+    candidate &&
+    candidate.account_status !== 'banned' &&
+    candidate.account_status !== 'deleted' &&
+    (
+      (candidate.sessions && Object.prototype.hasOwnProperty.call(candidate.sessions, sessionId)) ||
+      candidate.creator_session_id === sessionId
+    )
+  );
+
+  if (!validSession(account)) {
+    uid = null;
+    account = null;
+    for (const [candidateUid, candidateAccount] of Object.entries(database.accounts || {})) {
+      if (!validSession(candidateAccount)) continue;
+      uid = candidateUid;
+      account = candidateAccount;
+      sessionIndex.set(sessionId, candidateUid);
+      break;
+    }
+  }
+  if (!validSession(account)) return sendError(res, 401, 'Your session is invalid. Please sign in again.');
+
+  // Keep this in sync with api/legal-policy.js so uploads respect the same policy gate.
+  if (account.legalAcceptance?.terms?.version !== '1.0.1' ||
+      account.legalAcceptance?.privacy?.version !== '1.0.2') {
+    return res.status(428).json({
+      error: 'Please review and accept the current Terms of Service and Privacy Policy before uploading media.',
+      code: 'LEGAL_ACCEPTANCE_REQUIRED'
+    });
+  }
+
+  const body = req.body || {};
+  const channelType = String(body.type || '');
+  const cid = String(body.cid || '');
+  const mimeType = String(body.mimeType || '').toLowerCase();
+  const size = Number(body.size);
+  const isProfile = channelType === 'profile';
+
+  if (isProfile) {
+    const avatarTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    if (cid !== 'profile' || !avatarTypes.has(mimeType) ||
+        !Number.isSafeInteger(size) || size < 1 || size > 5 * 1024 * 1024) {
+      return sendError(res, 400, 'Choose a supported profile image no larger than 5 MB.');
+    }
+  } else {
+    if (!cid || cid.length > 256 || !['dms', 'gcs'].includes(channelType)) {
+      return sendError(res, 400, 'Missing or invalid channel data.');
+    }
+    if (!Object.prototype.hasOwnProperty.call(MEDIA_UPLOAD_TYPES, mimeType) ||
+        !Number.isSafeInteger(size) || size < 1 || size > MAX_MEDIA_BYTES) {
+      return sendError(res, 400, 'This file type or size is not supported.');
+    }
+    const channel = database.chat?.conversations?.[channelType]?.[cid];
+    if (!channel?.members?.[uid]) return sendError(res, 403, 'Not a member of this conversation.');
+  }
+
+  const mediaId = crypto.randomBytes(32).toString('hex');
+  const expires = String(Math.floor(Date.now() / 1000) + 600);
+  const signedPayload = [mediaId, expires, uid, channelType, cid, mimeType, String(size)].join('.');
+  const signature = crypto.createHmac('sha256', API_KEY).update(signedPayload).digest('hex');
+  const query = new URLSearchParams({
+    expires, uid, cid, channelType, mime: mimeType, size: String(size), signature
+  });
+
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).json({
+    mediaId,
+    mimeType,
+    uploadUrl: PUBLIC_MEDIA_ORIGIN + '/v1/media-upload/' + mediaId + '?' + query.toString()
+  });
+});
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -282,37 +531,209 @@ const MEDIA_TYPES = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.mov': 'video/quicktime',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.heic': 'image/heic',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+  '.mp4': 'video/mp4',
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain',
+  '.csv': 'text/csv',
+  '.rtf': 'application/rtf',
+  '.json': 'application/json',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.zip': 'application/zip',
+  '.7z': 'application/x-7z-compressed',
+  '.rar': 'application/x-rar-compressed',
+  '.gz': 'application/gzip',
+  '.tar': 'application/x-tar',
+  '.wav': 'audio/wav',
+  '.aac': 'audio/aac',
+  '.flac': 'audio/flac',
+  '.vwebm': 'video/webm',
+  '.mkv': 'video/x-matroska',
+  '.bin': 'application/octet-stream'
 };
 
-app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
-  const mediaId = String(req.params.mediaId || '');
-  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+function parseSingleByteRange(header, size) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header);
+  if (!match || size <= 0 || (!match[1] && !match[2])) return null;
 
+  let start;
+  let end;
+  if (!match[1]) {
+    const suffixLength = Number(match[2]);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) return null;
+    start = Math.max(0, size - suffixLength);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || start > end) return null;
+    end = Math.min(end, size - 1);
+  }
+  return { start, end };
+}
+
+async function serveMediaFile(req, res, mediaId, cacheControl, downloadName = '') {
   try {
     for (const [extension, mimeType] of Object.entries(MEDIA_TYPES)) {
       const filePath = path.join(MEDIA_DIR, mediaId + extension);
+      let stats;
       try {
-        const contents = await fs.readFile(filePath);
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Length', String(contents.length));
-        res.setHeader('Cache-Control', 'private, max-age=3600');
-        return res.status(200).send(contents);
+        stats = await fs.stat(filePath);
       } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
+        if (error.code === 'ENOENT') continue;
+        throw error;
       }
+      if (!stats.isFile()) continue;
+
+      const rangeHeader = req.get('range');
+      const range = rangeHeader ? parseSingleByteRange(rangeHeader, stats.size) : null;
+      if (rangeHeader && !range) {
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Range', 'bytes */' + stats.size);
+        res.setHeader('Content-Length', '0');
+        return res.status(416).end();
+      }
+
+      const start = range ? range.start : 0;
+      const end = range ? range.end : Math.max(0, stats.size - 1);
+      const contentLength = stats.size === 0 ? 0 : end - start + 1;
+      const etag = '"' + mediaId + '"';
+      const ifNoneMatch = req.get('if-none-match');
+      if (!rangeHeader && ifNoneMatch && ifNoneMatch.split(',').some((tag) => tag.trim() === etag || tag.trim() === '*')) {
+        res.setHeader('Cache-Control', cacheControl);
+        res.setHeader('ETag', etag);
+        res.setHeader('Last-Modified', stats.mtime.toUTCString());
+        return res.status(304).end();
+      }
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', String(contentLength));
+      const inlineMedia = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(mimeType) ||
+        ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/aac', 'audio/flac',
+          'video/mp4', 'video/quicktime', 'video/webm'].includes(mimeType);
+      if (!inlineMedia) {
+        const safeName = safeMediaFilename(downloadName) || ('attachment' + extension);
+        const asciiName = Array.from(safeName).map((character) => {
+          const code = character.charCodeAt(0);
+          return code >= 32 && code <= 126 ? character : '_';
+        }).join('');
+        res.setHeader('Content-Disposition', 'attachment; filename="' + asciiName + '"');
+      } else {
+        res.setHeader('Content-Disposition', 'inline');
+      }
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', cacheControl);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('ETag', etag);
+      res.setHeader('Last-Modified', stats.mtime.toUTCString());
+      if (range) res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + stats.size);
+
+      if (req.method === 'HEAD' || contentLength === 0) {
+        return res.status(range ? 206 : 200).end();
+      }
+
+      const stream = createReadStream(filePath, range ? { start, end } : undefined);
+      stream.on('error', (error) => {
+        console.error('[BSMS Web Mac API] Media stream failed:', error.message);
+        if (!res.headersSent) sendError(res, 500, 'Media read failed.');
+        else res.destroy(error);
+      });
+      res.on('close', () => {
+        if (!res.writableEnded) stream.destroy();
+      });
+      res.status(range ? 206 : 200);
+      return stream.pipe(res);
     }
     return sendError(res, 404, 'Media file not found.');
   } catch (error) {
     console.error('[BSMS Web Mac API] Media read failed:', error.message);
     return sendError(res, 500, 'Media read failed.');
   }
+}
+
+app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+  return serveMediaFile(req, res, mediaId, 'private, max-age=3600');
+});
+app.head('/v1/media/:mediaId', requireApiKey, async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+  return serveMediaFile(req, res, mediaId, 'private, max-age=3600');
 });
 
+// Public browser media route. Access is granted only by an expiring HMAC URL
+// signed by the Vercel server with the shared server-side API key.
+app.get('/v1/media-public/:mediaId', async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  const expires = String(req.query.expires || '');
+  const signature = String(req.query.signature || '');
+  const requestedName = String(req.query.name || '');
+  const safeName = safeMediaFilename(requestedName);
+  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) ||
+      !/^[a-f0-9]{64}$/.test(signature) || requestedName.length > 180 || safeName !== requestedName) {
+    return sendError(res, 400, 'Invalid signed media URL.');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = Number(expires);
+  if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 21660) {
+    return sendError(res, 403, 'Media URL expired or has an invalid expiration.');
+  }
+
+  const signedPayload = safeName ? mediaId + '.' + expires + '.' + safeName : mediaId + '.' + expires;
+  const expectedSignature = crypto.createHmac('sha256', API_KEY).update(signedPayload).digest('hex');
+  const expected = Buffer.from(expectedSignature, 'hex');
+  const supplied = Buffer.from(signature, 'hex');
+  if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
+    return sendError(res, 403, 'Invalid media signature.');
+  }
+
+  // Media IDs are immutable: replacing an avatar or attachment creates a new ID.
+  // Keep the browser cache fresh only until shortly before this signed URL expires.
+  const cacheSeconds = Math.max(0, expiry - now - 60);
+  return serveMediaFile(req, res, mediaId, 'private, max-age=' + cacheSeconds + ', immutable', safeName);
+});
 app.get('/health', requireApiKey, (_req, res) => {
   res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
 });
 
+
+async function migrateLegacyDataUrl(dataUrl, storagePath) {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/i.exec(String(dataUrl || ''));
+  if (!match) return null;
+  const mimeType = match[1].toLowerCase();
+  const extension = MEDIA_UPLOAD_TYPES[mimeType];
+  if (!extension) return null;
+  const buffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
+  if (!buffer.length || buffer.length > MAX_MEDIA_BYTES) return null;
+
+  const mediaId = crypto.randomBytes(32).toString('hex');
+  const filePath = path.join(MEDIA_DIR, mediaId + extension);
+  await fs.mkdir(MEDIA_DIR, { recursive: true });
+  await fs.writeFile(filePath, buffer, { flag: 'wx', mode: 0o600 });
+  const media = { type: 'media', mediaId, mimeType };
+
+  await enqueueMutation(async () => {
+    const current = readAt(database, parsePath(storagePath));
+    if (typeof current === 'string' && current.startsWith('data:')) {
+      await commitMutation({ op: 'set', path: storagePath, value: media });
+    } else {
+      await fs.rm(filePath, { force: true });
+    }
+  });
+  const stored = readAt(database, parsePath(storagePath));
+  return stored && typeof stored === 'object' && stored.type === 'media' ? stored : null;
+}
 
 function publicAccount(uid, account) {
   const avatar = account?.account_status === 'banned' ? null : account?.avatar;
@@ -320,7 +741,7 @@ function publicAccount(uid, account) {
     username: account?.username || uid,
     displayName: account?.displayName || account?.username || uid,
     avatar: avatar && typeof avatar === 'object' && avatar.type === 'media' && /^[a-f0-9]{64}$/.test(avatar.mediaId || '')
-      ? '/api/media?id=' + encodeURIComponent(avatar.mediaId) : (avatar || ''),
+      ? signedPublicMediaUrl(avatar.mediaId) : (typeof avatar === 'string' && avatar.startsWith('data:') ? '' : (avatar || '')),
     account_status: account?.account_status || 'active',
     ban_expires: account?.ban_expires || null,
     role: account?.role || null,
@@ -389,7 +810,7 @@ app.get('/v1/auth/session', requireApiKey, (req, res) => {
   });
 });
 
-app.get('/v1/chat/sync', requireApiKey, (req, res) => {
+app.get('/v1/chat/sync', requireApiKey, async (req, res) => {
   const uid = String(req.query.uid || '');
   if (!uid || uid.length > 256) return sendError(res, 400, 'Invalid user ID.');
   const allAccounts = database.accounts || {};
@@ -405,7 +826,18 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
   }
   const accounts = {};
   for (const [accountId, account] of Object.entries(allAccounts)) {
-    if (account?.account_status !== 'deleted') accounts[accountId] = publicAccount(accountId, account);
+    if (account?.account_status === 'deleted') continue;
+    let accountForSync = account;
+    if (typeof account?.avatar === 'string' && account.avatar.startsWith('data:')) {
+      try {
+        const migratedAvatar = await migrateLegacyDataUrl(account.avatar, '/accounts/' + accountId + '/avatar');
+        accountForSync = { ...account, avatar: migratedAvatar };
+      } catch (error) {
+        console.error('[BSMS Web Mac API] Legacy account avatar migration failed:', error.message);
+        accountForSync = { ...account, avatar: null };
+      }
+    }
+    accounts[accountId] = publicAccount(accountId, accountForSync);
   }
   const channels = {};
   for (const type of ['dms', 'gcs']) {
@@ -438,11 +870,36 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         readReceipts: last.readReceipts || {}
       } : null;
       const config = { ...(channel.config || {}) };
-      if (config.theme?.background && typeof config.theme.background === 'object' && config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(config.theme.background.mediaId || '')) {
-        config.theme = { ...config.theme, background: '/api/media?id=' + encodeURIComponent(config.theme.background.mediaId) };
+      if (typeof config.icon === 'string' && config.icon.startsWith('data:')) {
+        try {
+          const migratedIcon = await migrateLegacyDataUrl(config.icon, '/chat/conversations/' + type + '/' + cid + '/config/icon');
+          config.icon = migratedIcon ? signedPublicMediaUrl(migratedIcon.mediaId) : null;
+        } catch (error) {
+          console.error('[BSMS Web Mac API] Legacy group icon migration failed:', error.message);
+          config.icon = null;
+        }
+      } else if (config.icon && typeof config.icon === 'object' && config.icon.type === 'media' && /^[a-f0-9]{64}$/.test(config.icon.mediaId || '')) {
+        config.icon = signedPublicMediaUrl(config.icon.mediaId);
       }
-      if (config.icon && typeof config.icon === 'object' && config.icon.type === 'media' && /^[a-f0-9]{64}$/.test(config.icon.mediaId || '')) {
-        config.icon = '/api/media?id=' + encodeURIComponent(config.icon.mediaId);
+      if (config.theme && typeof config.theme === 'object') {
+        config.theme = { ...config.theme };
+        if (typeof config.theme.background === 'string' && config.theme.background.startsWith('data:')) {
+          try {
+            const migratedBackground = await migrateLegacyDataUrl(
+              config.theme.background,
+              '/chat/conversations/' + type + '/' + cid + '/config/theme/background'
+            );
+            config.theme.backgroundMedia = migratedBackground;
+            config.theme.background = migratedBackground ? signedPublicMediaUrl(migratedBackground.mediaId) : null;
+          } catch (error) {
+            console.error('[BSMS Web Mac API] Legacy group wallpaper migration failed:', error.message);
+            config.theme.background = null;
+          }
+        } else if (config.theme.background && typeof config.theme.background === 'object' &&
+            config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(config.theme.background.mediaId || '')) {
+          config.theme.backgroundMedia = config.theme.background;
+          config.theme.background = signedPublicMediaUrl(config.theme.background.mediaId);
+        }
       }
       const channelData = {
         name: channel.name || '',
@@ -451,8 +908,14 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         config,
         members,
         messageCount: indexedKeys.length,
-        lastMessage: lastMessage && (lastMessage.contentType === 'file' || lastMessage.contentType === 'image')
-          ? { ...lastMessage, content: null, hasContent: true, attachmentMimeType: null, attachmentName: 'Attachment' }
+        lastMessage: lastMessage && ['file', 'image', 'audio', 'video'].includes(lastMessage.contentType)
+          ? {
+              ...lastMessage,
+              content: null,
+              hasContent: true,
+              attachmentMimeType: lastMessage.content && typeof lastMessage.content === 'object' ? (lastMessage.content.mimeType || null) : null,
+              attachmentName: lastMessage.attachmentName || (lastMessage.contentType === 'audio' ? 'Voice message' : 'Attachment')
+            }
           : lastMessage,
         lastMessageId: lastId
       };
@@ -463,7 +926,66 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
   return res.status(200).json({ users, accounts, channels });
 });
 
-app.get('/v1/chat/messages', requireApiKey, (req, res) => {
+function safeMediaFilename(value) {
+  return Array.from(String(value || '')).filter((character) => {
+    const code = character.charCodeAt(0);
+    return code >= 32 && code !== 127 && character !== '/' &&
+      character !== String.fromCharCode(92) && character !== '"';
+  }).join('').slice(0, 180);
+}
+
+function signedPublicMediaUrl(mediaId, filename = '') {
+  // Keep URLs stable during each six-hour window so chat polling does not
+  // continually replace image/audio/video elements.
+  const now = Math.floor(Date.now() / 1000);
+  const expires = Math.floor(now / 21600) * 21600 + 21600;
+  const safeName = safeMediaFilename(filename);
+  const payload = safeName ? mediaId + '.' + expires + '.' + safeName : mediaId + '.' + expires;
+  const signature = crypto.createHmac('sha256', API_KEY).update(payload).digest('hex');
+  const query = new URLSearchParams({ expires: String(expires), signature });
+  if (safeName) query.set('name', safeName);
+  return PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId + '?' + query.toString();
+}
+
+async function migrateLegacyChatMedia(type, cid, messageId, message) {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/.exec(message.content || '');
+  if (!match) return { ...message, content: null, hasContent: true };
+  const mimeType = match[1].toLowerCase();
+  const extension = MEDIA_UPLOAD_TYPES[mimeType];
+  if (!extension) return { ...message, content: null, hasContent: true, attachmentMimeType: mimeType };
+  const buffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
+  if (!buffer.length || buffer.length > MAX_MEDIA_BYTES) {
+    return { ...message, content: null, hasContent: true, attachmentMimeType: mimeType };
+  }
+
+  const mediaId = crypto.randomBytes(32).toString('hex');
+  const filePath = path.join(MEDIA_DIR, mediaId + extension);
+  await fs.mkdir(MEDIA_DIR, { recursive: true });
+  await fs.writeFile(filePath, buffer, { flag: 'wx', mode: 0o600 });
+  const migrated = {
+    ...message,
+    content: { type: 'media', mediaId, mimeType },
+    attachmentMimeType: mimeType,
+    attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment')
+  };
+
+  await enqueueMutation(async () => {
+    const current = database.chat?.conversations?.[type]?.[cid]?.messages?.[messageId];
+    if (typeof current?.content === 'string' && current.content.startsWith('data:')) {
+      await commitMutation({
+        op: 'set',
+        path: '/chat/conversations/' + type + '/' + cid + '/messages/' + messageId,
+        value: migrated
+      });
+    } else {
+      await fs.rm(filePath, { force: true });
+    }
+  });
+
+  return database.chat?.conversations?.[type]?.[cid]?.messages?.[messageId] || migrated;
+}
+
+app.get('/v1/chat/messages', requireApiKey, async (req, res) => {
   const uid = String(req.query.uid || '');
   const cid = String(req.query.cid || '');
   const type = String(req.query.type || '');
@@ -505,15 +1027,71 @@ app.get('/v1/chat/messages', requireApiKey, (req, res) => {
   const messages = {};
   const neededUids = new Set(Object.keys(channel.members || {}));
   for (const id of selectedKeys) {
-    const message = allMsgs[id];
+    let message = allMsgs[id];
     if (!message) continue;
     if (message.senderUid) neededUids.add(message.senderUid);
-    if (message.contentType === 'file' || message.contentType === 'image') {
-      messages[id] = { ...message, content: null, hasContent: true, attachmentName: 'Attachment', attachmentMimeType: null, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+
+    if (message.contentType === 'invite' && message.content && typeof message.content === 'object') {
+      const groupIcon = message.content.groupIcon;
+      if (typeof groupIcon === 'string' && groupIcon.startsWith('data:')) {
+        try {
+          const migratedIcon = await migrateLegacyDataUrl(
+            groupIcon,
+            '/chat/conversations/' + type + '/' + cid + '/messages/' + id + '/content/groupIcon'
+          );
+          message = {
+            ...message,
+            content: {
+              ...message.content,
+              groupIcon: migratedIcon ? signedPublicMediaUrl(migratedIcon.mediaId) : null
+            }
+          };
+        } catch (error) {
+          console.error('[BSMS Web Mac API] Legacy invite icon migration failed:', error.message);
+          message = { ...message, content: { ...message.content, groupIcon: null } };
+        }
+      } else if (groupIcon && typeof groupIcon === 'object' &&
+          groupIcon.type === 'media' && /^[a-f0-9]{64}$/.test(groupIcon.mediaId || '')) {
+        message = {
+          ...message,
+          content: { ...message.content, groupIcon: signedPublicMediaUrl(groupIcon.mediaId) }
+        };
+      }
+    }
+
+    if (typeof message.content === 'string' && message.content.startsWith('data:') &&
+        ['file', 'image', 'audio', 'video'].includes(message.contentType)) {
+      try {
+        message = await migrateLegacyChatMedia(type, cid, id, message);
+      } catch (error) {
+        console.error('[BSMS Web Mac API] Legacy chat media migration failed:', error.message);
+        message = { ...message, content: null, hasContent: true };
+      }
+    }
+
+    const media = message.content && typeof message.content === 'object' &&
+      message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
+    if (media) {
+      messages[id] = {
+        ...message,
+        content: signedPublicMediaUrl(message.content.mediaId, message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment')),
+        attachmentMimeType: message.content.mimeType || message.attachmentMimeType || null,
+        attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment'),
+        senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
+      };
+    } else if (['file', 'image', 'audio', 'video'].includes(message.contentType) && message.hasContent) {
+      messages[id] = {
+        ...message,
+        content: null,
+        attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment'),
+        senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
+      };
     } else {
-      const media = message.content && typeof message.content === 'object' && message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
-      const content = media ? '/api/media?id=' + encodeURIComponent(message.content.mediaId) : message.content;
-      messages[id] = { ...message, content, attachmentMimeType: media ? (message.content.mimeType || null) : (typeof message.content === 'string' && message.content.startsWith('data:') ? message.content.slice(5).split(/[;,]/)[0] : null), senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+      messages[id] = {
+        ...message,
+        attachmentMimeType: message.attachmentMimeType || null,
+        senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
+      };
     }
   }
   const accounts = {};

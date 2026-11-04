@@ -4,14 +4,27 @@ This service is intended to run on the always-on Mac mini. Vercel API routes wil
 
 ## Current API
 
-All endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`.
+Most service endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`. The browser must never receive that key.
+
+### Browser-direct media endpoints
+
+These endpoints are intentionally accessible through the public media hostname and do not require the service API key:
+
+- `OPTIONS /v1/media-upload-ticket` and `POST /v1/media-upload-ticket` — browser sends its `X-Session-ID` plus upload metadata. The Mac validates the session, legal-policy acceptance, profile-image limits or chat-channel membership, then returns a short-lived signed upload URL. CORS is restricted to the configured BSMS Web origins.
+- `OPTIONS /v1/media-upload/:mediaId` and `PUT /v1/media-upload/:mediaId` — browser uploads the raw file directly to the Mac using the one-use signed capability. The file bytes do not pass through Vercel.
+- `GET /v1/media-public/:mediaId` and `HEAD /v1/media-public/:mediaId` — serves media directly from the Mac after validating its expiring HMAC URL.
+
+### Internal service endpoints
+
+These endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`:
 
 - `GET /health` — authenticated service health.
 - `GET /v1/db?path=/accounts/example` — read a slash-delimited database path; response is `{"value": ...}`.
 - `PUT /v1/db` — set a path; JSON body `{"path":"/path","value":{}}`. A null value deletes the path.
-- `PATCH /v1/db` — update relative child paths; JSON body `{"path":"/path","updates":{"child":value}}`.
+- `PATCH /v1/db` — update relative child paths; JSON body `{"path":"/path","updates":{"child":value}`.
 - `POST /v1/db/compare-and-set` — atomic compare-and-set used to implement transaction retries; JSON body `{"path":"/path","expected":oldValue,"value":newValue}`.
 - `DELETE /v1/db?path=/path` — delete a path; deleting the database root is forbidden.
+- `GET /v1/media/:mediaId` and `HEAD /v1/media/:mediaId` — authenticated internal media lookup.
 
 ## Persistence model
 

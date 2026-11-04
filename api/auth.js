@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { hashPassword, verifyPassword, needsPasswordRehash } from './passwords.js';
 import { moderateContent } from './moderation.js';
 import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
+import { mediaUrl } from '../lib/media-url.js';
 
 async function rejectFlaggedContent(res, value, label) {
     const result = await moderateContent(value);
@@ -19,12 +20,6 @@ async function rejectFlaggedContent(res, value, label) {
     });
 }
 
-function mediaUrl(value) {
-    if (value && typeof value === 'object' && value.type === 'media' && /^[a-f0-9]{64}$/.test(value.mediaId || '')) {
-        return `/api/media?id=${encodeURIComponent(value.mediaId)}`;
-    }
-    return value;
-}
 
 // Session validator
 async function getUserBySession(sessionId) {
