@@ -33,6 +33,27 @@ app.disable('x-powered-by');
 // cloudflared is the single trusted reverse proxy in front of this loopback-only service.
 app.set('trust proxy', 1);
 
+const PUBLIC_MEDIA_ORIGIN = (process.env.BSMS_WEB_PUBLIC_MEDIA_URL || 'https://media.bsms-web.com').replace(/\\/+$/, '');
+const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
+const MEDIA_UPLOAD_TYPES = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/avif': '.avif',
+  'image/heic': '.heic',
+  'audio/webm': '.webm',
+  'audio/mpeg': '.mp3',
+  'audio/mp4': '.m4a',
+  'audio/ogg': '.ogg',
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'application/pdf': '.pdf',
+  'text/plain': '.txt',
+  'application/zip': '.zip',
+  'application/octet-stream': '.bin'
+};
+
 const mediaReadLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 60,
@@ -40,15 +61,110 @@ const mediaReadLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Too many media requests. Please try again shortly.' }
 });
+const mediaUploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 12,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many uploads. Please try again shortly.' }
+});
+
+const allowedMediaOrigins = new Set([
+  'https://bsms-web.vercel.app',
+  'https://bsms-web-dev1.vercel.app',
+  'https://bsms-web-dev2.vercel.app',
+  'https://bsms-web-dev3.vercel.app',
+  'https://bsms-web-dev4.vercel.app',
+  'https://bsms-web-beta.vercel.app',
+  'https://bsms-web-development.vercel.app',
+  'https://bsmsweb.vercel.app',
+  'http://localhost:3000'
+]);
+
+function mediaUploadCors(req, res, next) {
+  const origin = req.get('origin') || '';
+  if (origin && !allowedMediaOrigins.has(origin)) return sendError(res, 403, 'Origin is not allowed.');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  return next();
+}
 
 app.use('/v1/media', mediaReadLimiter);
 app.use('/v1/media-public', mediaReadLimiter);
-// Authenticate every API endpoint before parsing request bodies. Only the
-// signed public-media route is intentionally accessible without a bearer key.
+// Authenticate every API endpoint before parsing request bodies. Media uploads
+// use a short-lived, one-use HMAC capability instead of exposing the API key.
 app.use('/v1', (req, res, next) => {
-  if (req.path === '/media-public' || req.path.startsWith('/media-public/')) return next();
+  const publicRead = req.path === '/media-public' || req.path.startsWith('/media-public/');
+  const signedUpload = req.path.startsWith('/media-upload/') && (req.method === 'PUT' || req.method === 'OPTIONS');
+  if (publicRead || signedUpload) return next();
   return requireApiKey(req, res, next);
 });
+
+app.options('/v1/media-upload/:mediaId', mediaUploadCors, (_req, res) => res.status(204).end());
+app.put(
+  '/v1/media-upload/:mediaId',
+  mediaUploadCors,
+  mediaUploadLimiter,
+  express.raw({ type: () => true, limit: '25mb' }),
+  async (req, res) => {
+    const mediaId = String(req.params.mediaId || '');
+    const expires = String(req.query.expires || '');
+    const uid = String(req.query.uid || '');
+    const cid = String(req.query.cid || '');
+    const channelType = String(req.query.channelType || '');
+    const mimeType = String(req.query.mime || '').toLowerCase();
+    const size = Number(req.query.size);
+    const signature = String(req.query.signature || '');
+
+    if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\\d{10}$/.test(expires) ||
+        !uid || uid.length > 256 || !cid || cid.length > 256 ||
+        !['dms', 'gcs'].includes(channelType) ||
+        !Object.prototype.hasOwnProperty.call(MEDIA_UPLOAD_TYPES, mimeType) ||
+        !Number.isSafeInteger(size) || size < 1 || size > MAX_MEDIA_BYTES ||
+        !/^[a-f0-9]{64}$/.test(signature)) {
+      return sendError(res, 400, 'Invalid upload authorization.');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const expiry = Number(expires);
+    if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 660) {
+      return sendError(res, 403, 'Upload authorization expired.');
+    }
+
+    const signedPayload = [mediaId, expires, uid, channelType, cid, mimeType, String(size)].join('.');
+    const expected = Buffer.from(crypto.createHmac('sha256', API_KEY).update(signedPayload).digest('hex'), 'hex');
+    const supplied = Buffer.from(signature, 'hex');
+    if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
+      return sendError(res, 403, 'Invalid upload signature.');
+    }
+
+    const requestMime = String(req.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (requestMime !== mimeType || !Buffer.isBuffer(req.body) || req.body.length !== size) {
+      return sendError(res, 400, 'Upload content does not match its authorization.');
+    }
+
+    const filePath = path.join(MEDIA_DIR, mediaId + MEDIA_UPLOAD_TYPES[mimeType]);
+    try {
+      await fs.mkdir(MEDIA_DIR, { recursive: true });
+      await fs.writeFile(filePath, req.body, { flag: 'wx', mode: 0o600 });
+      const expiresAt = Math.floor(Date.now() / 1000) + 1800;
+      const readSignature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expiresAt).digest('hex');
+      const url = PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
+        + '?expires=' + expiresAt + '&signature=' + readSignature;
+      return res.status(201).json({ success: true, mediaId, url });
+    } catch (error) {
+      if (error.code === 'EEXIST') return sendError(res, 409, 'This upload has already been used.');
+      console.error('[BSMS Web Mac API] Media upload failed:', error.message);
+      return sendError(res, 500, 'Media upload failed.');
+    }
+  }
+);
+
 app.use(express.json({ limit: MAX_BODY_BYTES, strict: true }));
 
 let database = {};
@@ -292,7 +408,17 @@ const MEDIA_TYPES = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.mov': 'video/quicktime',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.heic': 'image/heic',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+  '.mp4': 'video/mp4',
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain',
+  '.zip': 'application/zip',
+  '.bin': 'application/octet-stream'
 };
 
 function parseSingleByteRange(header, size) {
@@ -342,6 +468,11 @@ async function serveMediaFile(req, res, mediaId, cacheControl) {
       const contentLength = stats.size === 0 ? 0 : end - start + 1;
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', String(contentLength));
+      if (!/^(image|audio|video)\\//.test(mimeType)) {
+        res.setHeader('Content-Disposition', 'attachment; filename="attachment' + extension + '"');
+      } else {
+        res.setHeader('Content-Disposition', 'inline');
+      }
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', cacheControl);
       res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -373,6 +504,11 @@ async function serveMediaFile(req, res, mediaId, cacheControl) {
 }
 
 app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+  return serveMediaFile(req, res, mediaId, 'private, max-age=3600');
+});
+app.head('/v1/media/:mediaId', requireApiKey, async (req, res) => {
   const mediaId = String(req.params.mediaId || '');
   if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
   return serveMediaFile(req, res, mediaId, 'private, max-age=3600');
