@@ -505,7 +505,11 @@ const UI = {
             document.getElementById('gsThemeFg').value = c.config?.theme?.text || '#ffffff';
             document.getElementById('gsThemeAccent').value = c.config?.theme?.accent || '#BB001E';
             const bgVal = c.config?.theme?.background;
-            const isImage = bgVal && bgVal.startsWith('data:');
+            const isImage = bgVal && (
+                bgVal.startsWith('data:image/') ||
+                bgVal.startsWith('/api/media?') ||
+                bgVal.startsWith('https://media.bsms-web.com/')
+            );
             GroupManager.setThemeMode(isImage ? 'image' : 'color');
             document.getElementById('gsThemeBgColor').value = (bgVal && !isImage) ? bgVal : '#000000';
 
