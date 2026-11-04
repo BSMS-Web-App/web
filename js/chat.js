@@ -2183,13 +2183,27 @@ const AuthManager = {
 const MediaManager = {
     upload: async function(file, cid, channelType, mimeOverride = '') {
         const mimeType = String(mimeOverride || file.type || 'application/octet-stream').toLowerCase();
-        const ticket = await ApiClient.call('createMediaUpload', {
-            cid,
-            type: channelType,
-            mimeType,
-            size: file.size
+        const sessionId = (localStorage.getItem('session_id') || '').trim();
+        const ticketResponse = await fetch('https://media.bsms-web.com/v1/media-upload-ticket', {
+            method: 'POST',
+            mode: 'cors',
+            cache: 'no-store',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-ID': sessionId
+            },
+            body: JSON.stringify({ cid, type: channelType, mimeType, size: file.size })
         });
-        if (!ticket?.uploadUrl || !ticket.mediaId) throw new Error('Could not authorize this upload.');
+        const ticket = await ticketResponse.json().catch(() => ({}));
+        if (!ticketResponse.ok || !ticket?.uploadUrl || !ticket.mediaId) {
+            if (ticketResponse.status === 401) {
+                PollingManager.stop();
+                localStorage.removeItem('session_id');
+                localStorage.removeItem('bsms_auth_session');
+                AuthManager.reject();
+            }
+            throw new Error(ticket.error || 'Could not authorize this upload.');
+        }
 
         const response = await fetch(ticket.uploadUrl, {
             method: 'PUT',
