@@ -546,12 +546,12 @@ app.get('/health', requireApiKey, (_req, res) => {
 
 
 async function migrateLegacyDataUrl(dataUrl, storagePath) {
-  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\\s]+)$/i.exec(String(dataUrl || ''));
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/i.exec(String(dataUrl || ''));
   if (!match) return null;
   const mimeType = match[1].toLowerCase();
   const extension = MEDIA_UPLOAD_TYPES[mimeType];
   if (!extension) return null;
-  const buffer = Buffer.from(match[2].replace(/\\s/g, ''), 'base64');
+  const buffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
   if (!buffer.length || buffer.length > MAX_MEDIA_BYTES) return null;
 
   const mediaId = crypto.randomBytes(32).toString('hex');
