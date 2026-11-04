@@ -8,7 +8,7 @@ import { db } from './db.js';
 import crypto from 'crypto';
 import { hashPassword } from './passwords.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
-import { mediaUrl } from './media-url.js';
+import { mediaUrl } from '../lib/media-url.js';
 
 // Verify session belongs to an owner, admin or moderator
 async function verifyStaff(sessionId) {
