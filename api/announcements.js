@@ -7,6 +7,7 @@
 import { db } from './db.js';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
+import { mediaUrl } from './media-url.js';
 
 // Verify session belongs to an owner or admin
 async function verifyStaff(sessionId) {
@@ -47,9 +48,7 @@ export default async function handler(req, res) {
             const announcements = Object.entries(data).map(([id, item]) => ({
                 id,
                 ...item,
-                authorAvatar: item.authorAvatar && typeof item.authorAvatar === 'object' && item.authorAvatar.type === 'media'
-                    ? `/api/media?id=${encodeURIComponent(item.authorAvatar.mediaId)}`
-                    : item.authorAvatar
+                authorAvatar: mediaUrl(item.authorAvatar)
             })).sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
 
             const recent = announcements.length > 0 ? announcements[0] : null;
@@ -126,9 +125,7 @@ export default async function handler(req, res) {
             await newRef.set(announcement);
             const responseAnnouncement = {
                 ...announcement,
-                authorAvatar: announcement.authorAvatar && typeof announcement.authorAvatar === 'object' && announcement.authorAvatar.type === 'media'
-                    ? `/api/media?id=${encodeURIComponent(announcement.authorAvatar.mediaId)}`
-                    : announcement.authorAvatar
+                authorAvatar: mediaUrl(announcement.authorAvatar)
             };
             return res.status(200).json({ success: true, announcement: responseAnnouncement });
         }
