@@ -510,10 +510,7 @@ async function serveMediaFile(req, res, mediaId, cacheControl, downloadName = ''
           const code = character.charCodeAt(0);
           return code >= 32 && code <= 126 ? character : '_';
         }).join('');
-        const encodedName = encodeURIComponent(safeName).replace(/['()*]/g, (character) =>
-          '%' + character.charCodeAt(0).toString(16).toUpperCase()
-        );
-        res.setHeader('Content-Disposition', 'attachment; filename="' + asciiName + '"; filename*=UTF-8\'\'' + encodedName);
+        res.setHeader('Content-Disposition', 'attachment; filename="' + asciiName + '"');
       } else {
         res.setHeader('Content-Disposition', 'inline');
       }
@@ -566,7 +563,7 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
   const signature = String(req.query.signature || '');
   const requestedName = String(req.query.name || '');
   const safeName = safeMediaFilename(requestedName);
-  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\\d{10}$/.test(expires) ||
+  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) ||
       !/^[a-f0-9]{64}$/.test(signature) || requestedName.length > 180 || safeName !== requestedName) {
     return sendError(res, 400, 'Invalid signed media URL.');
   }
