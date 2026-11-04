@@ -2232,15 +2232,30 @@ const ComposerManager = {
             jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
             webp: 'image/webp', avif: 'image/avif', heic: 'image/heic',
             webm: 'audio/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', ogg: 'audio/ogg',
-            mp4: 'video/mp4', mov: 'video/quicktime',
-            pdf: 'application/pdf', txt: 'text/plain', zip: 'application/zip'
+            mp4: 'video/mp4', mov: 'video/quicktime', vwebm: 'video/webm', mkv: 'video/x-matroska',
+            pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', rtf: 'application/rtf',
+            json: 'application/json', doc: 'application/msword',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            xls: 'application/vnd.ms-excel',
+            xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ppt: 'application/vnd.ms-powerpoint',
+            pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            zip: 'application/zip', '7z': 'application/x-7z-compressed',
+            rar: 'application/x-rar-compressed', gz: 'application/gzip', tar: 'application/x-tar',
+            wav: 'audio/wav', aac: 'audio/aac', flac: 'audio/flac'
         };
         const mimeType = String(f.type || extensionTypes[extension] || 'application/octet-stream').toLowerCase();
         const allowedTypes = new Set([
             'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic',
             'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg',
-            'video/mp4', 'video/quicktime',
-            'application/pdf', 'text/plain', 'application/zip', 'application/octet-stream'
+            'video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska',
+            'application/pdf', 'text/plain', 'text/csv', 'application/rtf', 'application/json',
+            'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/zip', 'application/x-7z-compressed', 'application/x-rar-compressed',
+            'application/gzip', 'application/x-tar', 'audio/wav', 'audio/aac', 'audio/flac',
+            'application/octet-stream'
         ]);
         if (!allowedTypes.has(mimeType)) {
             UI.showToast('This file type is not supported.', 'error');
