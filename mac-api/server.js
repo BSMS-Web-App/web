@@ -43,6 +43,12 @@ const mediaReadLimiter = rateLimit({
 
 app.use('/v1/media', mediaReadLimiter);
 app.use('/v1/media-public', mediaReadLimiter);
+// Authenticate every API endpoint before parsing request bodies. Only the
+// signed public-media route is intentionally accessible without a bearer key.
+app.use('/v1', (req, res, next) => {
+  if (req.path === '/media-public' || req.path.startsWith('/media-public/')) return next();
+  return requireApiKey(req, res, next);
+});
 app.use(express.json({ limit: MAX_BODY_BYTES, strict: true }));
 
 let database = {};
