@@ -1020,6 +1020,34 @@ app.get('/v1/chat/messages', requireApiKey, async (req, res) => {
     if (!message) continue;
     if (message.senderUid) neededUids.add(message.senderUid);
 
+    if (message.contentType === 'invite' && message.content && typeof message.content === 'object') {
+      const groupIcon = message.content.groupIcon;
+      if (typeof groupIcon === 'string' && groupIcon.startsWith('data:')) {
+        try {
+          const migratedIcon = await migrateLegacyDataUrl(
+            groupIcon,
+            '/chat/conversations/' + type + '/' + cid + '/messages/' + id + '/content/groupIcon'
+          );
+          message = {
+            ...message,
+            content: {
+              ...message.content,
+              groupIcon: migratedIcon ? signedPublicMediaUrl(migratedIcon.mediaId) : null
+            }
+          };
+        } catch (error) {
+          console.error('[BSMS Web Mac API] Legacy invite icon migration failed:', error.message);
+          message = { ...message, content: { ...message.content, groupIcon: null } };
+        }
+      } else if (groupIcon && typeof groupIcon === 'object' &&
+          groupIcon.type === 'media' && /^[a-f0-9]{64}$/.test(groupIcon.mediaId || '')) {
+        message = {
+          ...message,
+          content: { ...message.content, groupIcon: signedPublicMediaUrl(groupIcon.mediaId) }
+        };
+      }
+    }
+
     if (typeof message.content === 'string' && message.content.startsWith('data:') &&
         ['file', 'image', 'audio', 'video'].includes(message.contentType)) {
       try {
