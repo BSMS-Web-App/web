@@ -150,7 +150,7 @@ export default async function handler(req, res) {
                     if (contentType === 'image' && !mimeType.startsWith('image/')) return res.status(400).json({ error: 'Image message has an invalid media type.' });
                     if (contentType === 'audio' && !mimeType.startsWith('audio/')) return res.status(400).json({ error: 'Audio message has an invalid media type.' });
                     if (contentType === 'video' && !mimeType.startsWith('video/')) return res.status(400).json({ error: 'Video message has an invalid media type.' });
-                    await requestMacApi('HEAD', '/v1/media/' + content.mediaId);
+                    // The browser uploaded the file directly to the Mac API before sending this media reference.
                 } else if (contentType !== 'text' && contentType !== 'poll' && contentType !== 'invite') {
                     return res.status(400).json({ error: 'Unsupported message type.' });
                 }
