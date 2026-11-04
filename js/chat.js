@@ -2729,30 +2729,59 @@ const ContextMenu = {
 const GroupManager = {
     create: async function() {
         const name = document.getElementById('ngName').value.trim();
-        const jc = document.getElementById('ngCustomCode').value.trim();
-        if (!name) { UI.showToast("Group name is required.", 'error'); return; }
-        const btn = document.getElementById('btnCreateGroup'); btn.disabled = true;
+        const joinCode = document.getElementById('ngCustomCode').value.trim();
+        if (!name) {
+            UI.showToast('Group name is required.', 'error');
+            return;
+        }
 
-        const file = document.getElementById('ngIcon').files[0];
-        const reqApp = document.getElementById('ngRequireApproval').checked;
+        const button = document.getElementById('btnCreateGroup');
+        const fileInput = document.getElementById('ngIcon');
+        const file = fileInput.files[0];
+        const requireApproval = document.getElementById('ngRequireApproval').checked;
+        if (file && (file.size < 1 || file.size > 25 * 1024 * 1024 || !String(file.type || '').startsWith('image/'))) {
+            UI.showToast('Choose a supported image smaller than 25 MB.', 'error');
+            return;
+        }
 
-        const finalize = async (iconBase64) => {
-            try {
-                const res = await ApiClient.call('createGroup', { name, joinCode: jc, requireApproval: reqApp, icon: iconBase64 });
-                UI.closeModal('newGroupModal');
-                document.getElementById('ngName').value = ""; document.getElementById('ngIcon').value = ""; document.getElementById('ngCustomCode').value = "";
-                document.getElementById('gcCodeDisplay').innerText = res.joinCode || jc; 
-                UI.openModal('groupCreatedModal');
-                await PollingManager.syncGlobal(); ChatManager.open(res.cid);
-            } catch (e) { UI.showToast(e.message || "Failed to create group.", 'error'); }
-            finally { btn.disabled = false; }
-        };
+        button.disabled = true;
+        try {
+            const result = await ApiClient.call('createGroup', {
+                name,
+                joinCode,
+                requireApproval,
+                icon: null
+            });
 
-        if (file) {
-            if(file.size > 25*1024*1024) { UI.showToast("File exceeds 25MB.", 'error'); btn.disabled=false; return; }
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onloadend = () => finalize(reader.result);
-        } else finalize(null);
+            let iconError = null;
+            if (file) {
+                try {
+                    const uploaded = await MediaManager.upload(file, result.cid, 'gcs');
+                    if (uploaded.contentType !== 'image') throw new Error('This image format cannot be used as a group picture.');
+                    await ApiClient.call('groupAction', {
+                        gAction: 'updateIcon',
+                        cid: result.cid,
+                        value: uploaded.content
+                    });
+                } catch (error) {
+                    iconError = error.message || 'The group picture could not be uploaded.';
+                }
+            }
+
+            UI.closeModal('newGroupModal');
+            document.getElementById('ngName').value = '';
+            fileInput.value = '';
+            document.getElementById('ngCustomCode').value = '';
+            document.getElementById('gcCodeDisplay').innerText = result.joinCode || joinCode;
+            UI.openModal('groupCreatedModal');
+            await PollingManager.syncGlobal();
+            ChatManager.open(result.cid);
+            if (iconError) UI.showToast('Group created, but its picture failed: ' + iconError, 'error');
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to create group.', 'error');
+        } finally {
+            button.disabled = false;
+        }
     },
 
     joinWithCode: async function() {
