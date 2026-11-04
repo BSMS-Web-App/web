@@ -2473,7 +2473,9 @@ const AudioManager = {
         if (!State.activeChannelId) return;
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             this.chunks = [];
-            this.recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            const recorderMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+                .find(type => typeof MediaRecorder.isTypeSupported !== 'function' || MediaRecorder.isTypeSupported(type));
+            this.recorder = new MediaRecorder(stream, recorderMime ? { mimeType: recorderMime } : undefined);
 
             UI.hide('msgInput'); UI.hide('btnMic'); UI.hide('btnSend'); UI.hide('btnPoll');
             UI.show('recUI');
@@ -2497,7 +2499,8 @@ const AudioManager = {
                 this.recorder.stream.getTracks().forEach(t => t.stop());
                 clearInterval(this.timer);
 
-                const blob = new Blob(this.chunks, { type: 'audio/webm' });
+                const recordedMime = String(this.recorder?.mimeType || this.chunks.find(chunk => chunk.type)?.type || 'audio/webm').split(';')[0].toLowerCase();
+                const blob = new Blob(this.chunks, { type: recordedMime });
                 this.chunks = [];
 
                 if (blob.size > 0) {
@@ -2535,8 +2538,13 @@ const AudioManager = {
             const response = await fetch(audio.src);
             if (!response.ok) throw new Error('Could not prepare the voice message.');
             const blob = await response.blob();
-            const file = new File([blob], 'voice-message.webm', { type: 'audio/webm' });
-            const uploaded = await MediaManager.upload(file, channel._id, channel._type, 'audio/webm');
+            const mimeType = String(blob.type || 'audio/webm').split(';')[0].toLowerCase();
+            const extension = {
+                'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/ogg': 'ogg',
+                'audio/mpeg': 'mp3', 'audio/wav': 'wav'
+            }[mimeType] || 'webm';
+            const file = new File([blob], 'voice-message.' + extension, { type: mimeType });
+            const uploaded = await MediaManager.upload(file, channel._id, channel._type, mimeType);
             await ApiClient.call('sendMessage', {
                 cid: channel._id,
                 type: channel._type,
