@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 
 const API_URL = (process.env.BSMS_WEB_API_URL || '').replace(/\/+$/, '');
 const API_KEY = process.env.BSMS_WEB_API_KEY || '';
-const PUBLIC_MEDIA_URL = (process.env.BSMS_WEB_MEDIA_PUBLIC_URL || '').replace(/\/+$/, '');
+const PUBLIC_MEDIA_URL = 'https://media.bsms-web.com';
 
 function signMedia(mediaId, expires) {
     return crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
