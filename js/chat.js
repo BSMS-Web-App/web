@@ -34,6 +34,7 @@ const State = {
     replyContext: null,
     attachmentData: null,
     attachmentName: null,
+    attachmentPreviewUrl: null,
 
     hiddenDms: [],
     conversationCache: {},
@@ -1274,8 +1275,6 @@ const ChatManager = {
     },
 
     loadAttachment: async function(msgId) {
-        UI.showToast("File and image attachments are disabled in chat.", "error");
-        return;
         const c = State.channels[State.activeChannelId];
         if (!c || !c.messages || !c.messages[msgId]) return;
         const m = c.messages[msgId];
@@ -1649,22 +1648,41 @@ const ChatManager = {
                 }
             }
 
-            if (m.contentType === 'audio') {
+            if (m.contentType === 'audio' && m.content) {
                 content += `
                 <div class="audio-player">
                     <button class="ap-btn" id="ap-btn-${Utils.safeKey(msgId)}"><svg class="ic"><use href="#ico-play"></use></svg></button>
                     <div class="ap-track"><div class="ap-progress" id="ap-prog-${Utils.safeKey(msgId)}"></div></div>
                     <div class="ap-time" id="ap-time-${Utils.safeKey(msgId)}">0:00</div>
-                    <audio id="ap-src-${Utils.safeKey(msgId)}" src="${Utils.escapeHTML(m.content)}"></audio>
+                    <audio id="ap-src-${Utils.safeKey(msgId)}" src="${Utils.escapeHTML(m.content)}" preload="metadata"></audio>
                 </div>`;
-            } else if (m.contentType === 'file' || m.contentType === 'image') {
+            } else if (m.contentType === 'image' && m.content) {
+                const imageName = Utils.escapeHTML(m.attachmentName || 'Image');
                 content += `
-                <div class="attachment-item" id="att-wrap-${Utils.safeKey(msgId)}" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:4px; max-width:320px;">
-                    <div style="display:flex; align-items:center; gap:8px; color:var(--fg2); font-size:0.9rem;">
-                        <svg class="ic" style="width:18px; height:18px; flex-shrink:0;"><use href="#ico-file"></use></svg>
-                        <span>File and image attachments are disabled. This attachment is unavailable.</span>
-                    </div>
+                <div class="attachment-item" style="margin-top:4px; max-width:360px;">
+                    <img src="${Utils.escapeHTML(m.content)}" alt="${imageName}" loading="lazy"
+                        onclick="ImageViewer.open(this.src)"
+                        style="display:block; max-width:100%; max-height:360px; border-radius:12px; object-fit:contain; cursor:zoom-in;">
+                    <div style="padding:7px 2px 0; color:var(--fg2); font-size:0.82rem; overflow-wrap:anywhere;">${imageName}</div>
                 </div>`;
+            } else if (m.contentType === 'video' && m.content) {
+                content += `
+                <div class="attachment-item" style="margin-top:4px; max-width:360px;">
+                    <video src="${Utils.escapeHTML(m.content)}" controls playsinline preload="metadata"
+                        style="display:block; width:100%; max-height:360px; border-radius:12px; background:#000;"></video>
+                    <div style="padding:7px 2px 0; color:var(--fg2); font-size:0.82rem; overflow-wrap:anywhere;">${Utils.escapeHTML(m.attachmentName || 'Video')}</div>
+                </div>`;
+            } else if (m.contentType === 'file' && m.content) {
+                const fileName = Utils.escapeHTML(m.attachmentName || 'Download attachment');
+                content += `
+                <a class="attachment-item" href="${Utils.escapeHTML(m.content)}" download="${fileName}" rel="noopener noreferrer"
+                    style="display:flex; align-items:center; gap:10px; max-width:320px; margin-top:4px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,0.18); color:var(--fg); text-decoration:none;">
+                    <svg class="ic" style="width:22px;height:22px;flex-shrink:0;"><use href="#ico-file"></use></svg>
+                    <span style="min-width:0; overflow-wrap:anywhere;">${fileName}</span>
+                    <svg class="ic" style="width:18px;height:18px;flex-shrink:0;"><use href="#ico-download"></use></svg>
+                </a>`;
+            } else if (['audio', 'image', 'video', 'file'].includes(m.contentType)) {
+                content += `<div class="sys-msg" style="margin:0;">This attachment is unavailable.</div>`;
             } else if (m.contentType === 'invite') {
                 let inv = m.content;
                 if (typeof inv === 'string') {
@@ -2181,131 +2199,223 @@ const AuthManager = {
     }
 };
 
+const MediaManager = {
+    upload: async function(file, cid, channelType, mimeOverride = '') {
+        const mimeType = String(mimeOverride || file.type || 'application/octet-stream').toLowerCase();
+        const ticket = await ApiClient.call('createMediaUpload', {
+            cid,
+            type: channelType,
+            mimeType,
+            size: file.size
+        });
+        if (!ticket?.uploadUrl || !ticket.mediaId) throw new Error('Could not authorize this upload.');
+
+        const response = await fetch(ticket.uploadUrl, {
+            method: 'PUT',
+            mode: 'cors',
+            cache: 'no-store',
+            headers: { 'Content-Type': mimeType },
+            body: file
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success || !result.url) {
+            throw new Error(result.error || 'Upload failed. Please try again.');
+        }
+
+        let contentType = 'file';
+        if (mimeType.startsWith('image/') && mimeType !== 'image/heic') contentType = 'image';
+        else if (mimeType.startsWith('audio/')) contentType = 'audio';
+        else if (mimeType.startsWith('video/')) contentType = 'video';
+
+        return {
+            content: { type: 'media', mediaId: ticket.mediaId, mimeType },
+            url: result.url,
+            mimeType,
+            contentType
+        };
+    }
+};
+
 const ComposerManager = {
     attachFile: function(e) {
+        const f = e?.target?.files?.[0];
         if (e?.target) e.target.value = '';
-        State.attachmentData = null;
-        State.attachmentName = null;
-        UI.hide('attachmentPreview');
-        UI.showToast("Sending files and images in chat is disabled.", "error");
-        return;
-        const f = e.target.files[0];
-        if(!f) return;
-        if(f.size > 25*1024*1024) { UI.showToast("File exceeds 25MB maximum limit.", 'error'); return; }
+        if (!f) return;
+        if (f.size < 1 || f.size > 25 * 1024 * 1024) {
+            UI.showToast('Files must be between 1 byte and 25 MB.', 'error');
+            return;
+        }
 
-        const r = new FileReader();
-        r.onload = () => {
-            State.attachmentData = r.result;
-            State.attachmentName = f.name;
-            UI.show('attachmentPreview');
-            document.getElementById('attName').innerText = f.name;
-            if(f.type.startsWith('image/')) {
-                document.getElementById('attThmb').style.backgroundImage = `url(${State.attachmentData})`;
-                document.getElementById('attThmb').innerHTML = '';
-            } else {
-                document.getElementById('attThmb').style.backgroundImage = 'none';
-                document.getElementById('attThmb').innerHTML = `<svg class="ic" style="width:100%;height:100%;fill:#fff;"><use href="#ico-file"></use></svg>`;
-            }
+        const extension = String(f.name.split('.').pop() || '').toLowerCase();
+        const extensionTypes = {
+            jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+            webp: 'image/webp', avif: 'image/avif', heic: 'image/heic',
+            webm: 'audio/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', ogg: 'audio/ogg',
+            mp4: 'video/mp4', mov: 'video/quicktime',
+            pdf: 'application/pdf', txt: 'text/plain', zip: 'application/zip'
         };
-        r.readAsDataURL(f);
+        const mimeType = String(f.type || extensionTypes[extension] || 'application/octet-stream').toLowerCase();
+        const allowedTypes = new Set([
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic',
+            'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg',
+            'video/mp4', 'video/quicktime',
+            'application/pdf', 'text/plain', 'application/zip', 'application/octet-stream'
+        ]);
+        if (!allowedTypes.has(mimeType)) {
+            UI.showToast('This file type is not supported.', 'error');
+            return;
+        }
+
+        this.clearAttachment();
+        State.attachmentData = f;
+        State.attachmentName = String(f.name || 'Attachment').replace(/[\\\\/\\u0000-\\u001f\\u007f]/g, '_').slice(0, 180);
+        const thumb = document.getElementById('attThmb');
+        document.getElementById('attName').innerText = State.attachmentName;
+        if (mimeType.startsWith('image/') && mimeType !== 'image/heic') {
+            State.attachmentPreviewUrl = URL.createObjectURL(f);
+            thumb.style.backgroundImage = `url("${State.attachmentPreviewUrl}")`;
+            thumb.innerHTML = '';
+        } else {
+            thumb.style.backgroundImage = 'none';
+            thumb.innerHTML = `<svg class="ic" style="width:100%;height:100%;fill:#fff;"><use href="#ico-file"></use></svg>`;
+        }
+        UI.show('attachmentPreview');
     },
     clearAttachment: function() {
-        State.attachmentData = null; State.attachmentName = null;
-        document.getElementById('fileUploadInput').value = '';
+        if (State.attachmentPreviewUrl) URL.revokeObjectURL(State.attachmentPreviewUrl);
+        State.attachmentPreviewUrl = null;
+        State.attachmentData = null;
+        State.attachmentName = null;
+        const input = document.getElementById('fileUploadInput');
+        if (input) input.value = '';
         UI.hide('attachmentPreview');
     },
 
     send: async function() {
         if (!State.activeChannelId) return;
         const c = State.channels[State.activeChannelId];
+        if (!c) return;
 
-        if (c._type === 'dms' && State.isCooldown) { UI.showToast("Please wait before sending another message.", 'error'); return; }
-
-        const inp = document.getElementById('msgInput');
-        const txt = inp.innerText.trim().substring(0,100);
-        if (State.attachmentData) {
-            UI.showToast("Sending files and images in chat is disabled.", "error");
-            this.clearAttachment();
+        if (c._type === 'dms' && State.isCooldown) {
+            UI.showToast('Please wait before sending another message.', 'error');
             return;
         }
-        if (!txt) return;
+
+        const inp = document.getElementById('msgInput');
+        const txt = inp.innerText.trim().substring(0, 100);
+        const attachment = State.attachmentData;
+        if (!attachment && !txt) return;
 
         const btn = document.getElementById('btnSend');
-
         if (State.editContext) {
             try {
                 btn.disabled = true;
                 await ApiClient.call('action', { action: 'edit', cid: c._id, type: c._type, msgId: State.editContext, content: txt });
                 this.cancelEdit();
                 PollingManager.syncMessages();
-            } catch(e) { UI.showToast(e.message || "Failed to edit message.", 'error'); }
-            finally { btn.disabled = false; inp.focus(); }
+            } catch (e) {
+                UI.showToast(e.message || 'Failed to edit message.', 'error');
+            } finally {
+                btn.disabled = false;
+                inp.focus();
+            }
             return;
         }
 
-        if(c._type === 'dms') {
-            State.isCooldown = true; btn.classList.add('greyed');
-            setTimeout(() => { State.isCooldown = false; btn.classList.remove('greyed'); }, 5000);
+        if (c._type === 'dms') {
+            State.isCooldown = true;
+            btn.classList.add('greyed');
+            setTimeout(() => {
+                State.isCooldown = false;
+                btn.classList.remove('greyed');
+            }, 5000);
         }
-
-        const tempId = 'temp-' + Date.now();
-        const tempMsg = {
-            senderUid: State.user.uid,
-            timestamp: Date.now(),
-            content: State.attachmentData || txt,
-            contentType: State.attachmentData ? 'file' : 'text',
-            attachmentName: State.attachmentName,
-            status: { temp: true, repliedTo: State.replyContext || false }
-        };
-
-        c.messages[tempId] = tempMsg;
-        ChatManager.renderMessageNode(tempId, tempMsg);
-        document.getElementById(`stat-${tempId}`).innerText = "Sending...";
-        ScrollManager.scrollToBottom(true);
-        AudioFX.send();
-        
-        inp.innerText = "";
-        const rplCtx = State.replyContext;
-        this.cancelReply();
-        this.clearAttachment();
-        document.getElementById('charCounter').innerText = "0/100";
-        document.getElementById('charCounter').className = "";
-        localStorage.removeItem('draft_' + c._id);
-        ApiClient.call('typing', { cid: c._id, type: c._type, isTyping: false });
 
         btn.disabled = true;
         try {
-            const res = await ApiClient.call('sendMessage', {
-                cid: c._id, type: c._type,
-                content: tempMsg.content,
-                contentType: tempMsg.contentType,
-                attachmentName: tempMsg.attachmentName,
-                repliedTo: rplCtx
+            let messageContent = txt;
+            let messageType = 'text';
+            let attachmentName = null;
+            let attachmentMimeType = null;
+            let displayUrl = null;
+
+            if (attachment) {
+                UI.showToast('Uploading directly to your Mac…', 'info');
+                const uploaded = await MediaManager.upload(attachment, c._id, c._type);
+                messageContent = uploaded.content;
+                messageType = uploaded.contentType;
+                attachmentName = State.attachmentName || 'Attachment';
+                attachmentMimeType = uploaded.mimeType;
+                displayUrl = uploaded.url;
+            }
+
+            const tempId = 'temp-' + Date.now();
+            const tempMsg = {
+                senderUid: State.user.uid,
+                timestamp: Date.now(),
+                content: displayUrl || messageContent,
+                contentType: messageType,
+                attachmentName,
+                attachmentMimeType,
+                status: { temp: true, repliedTo: State.replyContext || false }
+            };
+
+            c.messages[tempId] = tempMsg;
+            ChatManager.renderMessageNode(tempId, tempMsg);
+            const statusEl = document.getElementById(`stat-${tempId}`);
+            if (statusEl) statusEl.innerText = 'Sending...';
+            ScrollManager.scrollToBottom(true);
+            AudioFX.send();
+
+            inp.innerText = '';
+            const replyContext = State.replyContext;
+            this.cancelReply();
+            this.clearAttachment();
+            document.getElementById('charCounter').innerText = '0/100';
+            document.getElementById('charCounter').className = '';
+            localStorage.removeItem('draft_' + c._id);
+            ApiClient.call('typing', { cid: c._id, type: c._type, isTyping: false });
+
+            const response = await ApiClient.call('sendMessage', {
+                cid: c._id,
+                type: c._type,
+                content: messageContent,
+                contentType: messageType,
+                attachmentName,
+                repliedTo: replyContext
             });
-            
-            const realId = res.messageId;
+
+            const realId = response.messageId;
             delete tempMsg.status.temp;
             c.messages[realId] = tempMsg;
             delete c.messages[tempId];
 
-            const el = document.getElementById(`msg-${tempId}`);
-            if (el) {
-                el.id = `msg-${realId}`;
-                el.classList.remove('sending');
-                const statEl = document.getElementById(`stat-${tempId}`);
-                if (statEl) {
-                    statEl.id = `stat-${realId}`;
-                    statEl.innerText = "Sent";
+            const element = document.getElementById(`msg-${tempId}`);
+            if (element) {
+                element.id = `msg-${realId}`;
+                element.classList.remove('sending');
+                const sentStatus = document.getElementById(`stat-${tempId}`);
+                if (sentStatus) {
+                    sentStatus.id = `stat-${realId}`;
+                    sentStatus.innerText = 'Sent';
                 }
             }
-        } catch(e) { 
-            UI.showToast(e.message || "Failed to send message.", 'error'); 
-            const el = document.getElementById(`msg-${tempId}`);
-            if(el) el.remove();
-            delete c.messages[tempId];
-            if(c._type === 'dms') { State.isCooldown = false; btn.classList.remove('greyed'); }
+            if (messageType === 'audio') AudioManager.bindPlayer(realId);
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to send message.', 'error');
+            const temp = document.querySelector('.msg-row.sending');
+            if (temp) temp.remove();
+            for (const [id, message] of Object.entries(c.messages || {})) {
+                if (id.startsWith('temp-') && message.senderUid === State.user.uid) delete c.messages[id];
+            }
+            if (c._type === 'dms') {
+                State.isCooldown = false;
+                btn.classList.remove('greyed');
+            }
+        } finally {
+            btn.disabled = false;
+            inp.focus();
         }
-        btn.disabled = false; inp.focus();
     },
 
     addPollOption: function() {
@@ -2413,22 +2523,31 @@ const AudioManager = {
         else { a.pause(); btn.innerHTML = `<svg class="ic"><use href="#ico-play"></use></svg>`; }
     },
 
-    sendPreview: function() {
-        const a = document.getElementById('prev-audio');
-        fetch(a.src).then(r => r.blob()).then(blob => {
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = async () => {
-                const c = State.channels[State.activeChannelId];
-                try {
-                    await ApiClient.call('sendMessage', {
-                        cid: c._id, type: c._type, contentType: 'audio', content: reader.result, repliedTo: State.replyContext || false
-                    });
-                    AudioFX.send(); this.cancelRecording(); ComposerManager.cancelReply();
-                    PollingManager.syncMessages();
-                } catch(e) { UI.showToast(e.message || "Failed to send voice message.", 'error'); }
-            };
-        });
+    sendPreview: async function() {
+        const audio = document.getElementById('prev-audio');
+        const channel = State.channels[State.activeChannelId];
+        if (!audio || !channel) return;
+        try {
+            const response = await fetch(audio.src);
+            if (!response.ok) throw new Error('Could not prepare the voice message.');
+            const blob = await response.blob();
+            const file = new File([blob], 'voice-message.webm', { type: 'audio/webm' });
+            const uploaded = await MediaManager.upload(file, channel._id, channel._type, 'audio/webm');
+            await ApiClient.call('sendMessage', {
+                cid: channel._id,
+                type: channel._type,
+                contentType: 'audio',
+                content: uploaded.content,
+                attachmentName: 'Voice message',
+                repliedTo: State.replyContext || false
+            });
+            AudioFX.send();
+            this.cancelRecording();
+            ComposerManager.cancelReply();
+            PollingManager.syncMessages();
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to send voice message.', 'error');
+        }
     },
 
     cancelRecording: function() {
