@@ -119,7 +119,8 @@ app.use('/v1/media-public', mediaReadLimiter);
 app.use('/v1', (req, res, next) => {
   const publicRead = req.path === '/media-public' || req.path.startsWith('/media-public/');
   const signedUpload = req.path.startsWith('/media-upload/') && (req.method === 'PUT' || req.method === 'OPTIONS');
-  if (publicRead || signedUpload) return next();
+  const sessionMediaTicket = req.path === '/media-upload-ticket' && (req.method === 'POST' || req.method === 'OPTIONS');
+  if (publicRead || signedUpload || sessionMediaTicket) return next();
   return requireApiKey(req, res, next);
 });
 
@@ -246,6 +247,99 @@ function rebuildSessionIndex() {
     }
   }
 }
+
+function mediaTicketCors(req, res, next) {
+  const origin = req.get('origin') || '';
+  if (origin && !allowedMediaOrigins.has(origin)) return sendError(res, 403, 'Origin is not allowed.');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  return next();
+}
+
+app.options('/v1/media-upload-ticket', mediaTicketCors, (_req, res) => res.status(204).end());
+app.post('/v1/media-upload-ticket', mediaTicketCors, mediaUploadLimiter, (req, res) => {
+  const sessionId = String(req.get('x-session-id') || '');
+  if (!sessionId || sessionId.length > 300) return sendError(res, 401, 'Your session is invalid. Please sign in again.');
+
+  let uid = sessionIndex.get(sessionId) || null;
+  let account = uid ? database.accounts?.[uid] : null;
+  const validSession = (candidate) => Boolean(
+    candidate &&
+    candidate.account_status !== 'banned' &&
+    candidate.account_status !== 'deleted' &&
+    (
+      (candidate.sessions && Object.prototype.hasOwnProperty.call(candidate.sessions, sessionId)) ||
+      candidate.creator_session_id === sessionId
+    )
+  );
+
+  if (!validSession(account)) {
+    uid = null;
+    account = null;
+    for (const [candidateUid, candidateAccount] of Object.entries(database.accounts || {})) {
+      if (!validSession(candidateAccount)) continue;
+      uid = candidateUid;
+      account = candidateAccount;
+      sessionIndex.set(sessionId, candidateUid);
+      break;
+    }
+  }
+  if (!validSession(account)) return sendError(res, 401, 'Your session is invalid. Please sign in again.');
+
+  // Keep this in sync with api/legal-policy.js so uploads respect the same policy gate.
+  if (account.legalAcceptance?.terms?.version !== '1.0.1' ||
+      account.legalAcceptance?.privacy?.version !== '1.0.2') {
+    return res.status(428).json({
+      error: 'Please review and accept the current Terms of Service and Privacy Policy before uploading media.',
+      code: 'LEGAL_ACCEPTANCE_REQUIRED'
+    });
+  }
+
+  const body = req.body || {};
+  const channelType = String(body.type || '');
+  const cid = String(body.cid || '');
+  const mimeType = String(body.mimeType || '').toLowerCase();
+  const size = Number(body.size);
+  const isProfile = channelType === 'profile';
+
+  if (isProfile) {
+    const avatarTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    if (cid !== 'profile' || !avatarTypes.has(mimeType) ||
+        !Number.isSafeInteger(size) || size < 1 || size > 5 * 1024 * 1024) {
+      return sendError(res, 400, 'Choose a supported profile image no larger than 5 MB.');
+    }
+  } else {
+    if (!cid || cid.length > 256 || !['dms', 'gcs'].includes(channelType)) {
+      return sendError(res, 400, 'Missing or invalid channel data.');
+    }
+    if (!Object.prototype.hasOwnProperty.call(MEDIA_UPLOAD_TYPES, mimeType) ||
+        !Number.isSafeInteger(size) || size < 1 || size > MAX_MEDIA_BYTES) {
+      return sendError(res, 400, 'This file type or size is not supported.');
+    }
+    const channel = database.chat?.conversations?.[channelType]?.[cid];
+    if (!channel?.members?.[uid]) return sendError(res, 403, 'Not a member of this conversation.');
+  }
+
+  const mediaId = crypto.randomBytes(32).toString('hex');
+  const expires = String(Math.floor(Date.now() / 1000) + 600);
+  const signedPayload = [mediaId, expires, uid, channelType, cid, mimeType, String(size)].join('.');
+  const signature = crypto.createHmac('sha256', API_KEY).update(signedPayload).digest('hex');
+  const query = new URLSearchParams({
+    expires, uid, cid, channelType, mime: mimeType, size: String(size), signature
+  });
+
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).json({
+    mediaId,
+    mimeType,
+    uploadUrl: PUBLIC_MEDIA_ORIGIN + '/v1/media-upload/' + mediaId + '?' + query.toString()
+  });
+});
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
