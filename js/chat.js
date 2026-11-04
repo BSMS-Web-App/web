@@ -3060,7 +3060,7 @@ const GroupManager = {
                 await apply(uploaded.content);
             } else if (mode === 'image') {
                 const channel = State.channels[State.activeChannelId];
-                await apply(channel.config?.theme?.background || null);
+                await apply(channel.config?.theme?.backgroundMedia || null);
             } else {
                 await apply(backgroundColor);
             }
