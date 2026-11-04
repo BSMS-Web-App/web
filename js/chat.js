@@ -2270,7 +2270,11 @@ const ComposerManager = {
         this.clearAttachment();
         State.attachmentData = f;
         State.attachmentMimeType = mimeType;
-        State.attachmentName = String(f.name || 'Attachment').replace(/[\\/\\x00-\\x1F\\x7F]/g, '_').slice(0, 180);
+        const rawName = String(f.name || 'Attachment').split('/').pop().split(String.fromCharCode(92)).pop();
+        State.attachmentName = Array.from(rawName).filter(character => {
+            const code = character.charCodeAt(0);
+            return code >= 32 && code !== 127;
+        }).join('').slice(0, 180) || 'Attachment';
         const thumb = document.getElementById('attThmb');
         document.getElementById('attName').innerText = State.attachmentName;
         if (mimeType.startsWith('image/') && mimeType !== 'image/heic') {
