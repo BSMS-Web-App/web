@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { hashPassword, verifyPassword, needsPasswordRehash } from './passwords.js';
 import { moderateContent } from './moderation.js';
 import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
-import { mediaUrl } from './media-url.js';
+import { mediaUrl } from '../lib/media-url.js';
 
 async function rejectFlaggedContent(res, value, label) {
     const result = await moderateContent(value);
