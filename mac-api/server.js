@@ -309,6 +309,45 @@ app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
   }
 });
 
+// Public browser media route. Access is granted only by an expiring HMAC URL
+// signed by the Vercel server with the shared server-side API key.
+app.get('/v1/media-public/:mediaId', async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  const expires = String(req.query.expires || '');
+  const signature = String(req.query.signature || '');
+  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) || !/^[a-f0-9]{64}$/.test(signature)) {
+    return sendError(res, 400, 'Invalid signed media URL.');
+  }
+  if (Number(expires) < Math.floor(Date.now() / 1000)) return sendError(res, 403, 'Media URL expired.');
+
+  const expectedSignature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
+  const expected = Buffer.from(expectedSignature, 'hex');
+  const supplied = Buffer.from(signature, 'hex');
+  if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
+    return sendError(res, 403, 'Invalid media signature.');
+  }
+
+  try {
+    for (const [extension, mimeType] of Object.entries(MEDIA_TYPES)) {
+      const filePath = path.join(MEDIA_DIR, mediaId + extension);
+      try {
+        const contents = await fs.readFile(filePath);
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Length', String(contents.length));
+        res.setHeader('Cache-Control', 'private, max-age=600');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        return res.status(200).send(contents);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    }
+    return sendError(res, 404, 'Media file not found.');
+  } catch (error) {
+    console.error('[BSMS Web Mac API] Signed media read failed:', error.message);
+    return sendError(res, 500, 'Media read failed.');
+  }
+});
+
 app.get('/health', requireApiKey, (_req, res) => {
   res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
 });
