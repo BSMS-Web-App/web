@@ -172,7 +172,8 @@ app.put(
     try {
       await fs.mkdir(MEDIA_DIR, { recursive: true });
       await fs.writeFile(filePath, req.body, { flag: 'wx', mode: 0o600 });
-      const expiresAt = Math.floor(Date.now() / 1000) + 1800;
+      const uploadNow = Math.floor(Date.now() / 1000);
+      const expiresAt = Math.floor(uploadNow / 21600) * 21600 + 21600;
       const readSignature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expiresAt).digest('hex');
       const url = PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
         + '?expires=' + expiresAt + '&signature=' + readSignature;
