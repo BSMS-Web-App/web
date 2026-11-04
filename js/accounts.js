@@ -26,6 +26,8 @@ let authSession = null;
 let currentAccountData = null;
 let authMode = 'login'; 
 let pendingAvatarBase64 = null;
+let pendingAvatarPreviewUrl = null;
+let pendingAvatarChanged = false;
 let deleteInterval = null;
 let deleteTimer = 10;
 
@@ -360,6 +362,8 @@ function loadDashboard() {
     document.getElementById('profilePhone').value = currentAccountData.phone || "";
     document.getElementById('toggleShowInUsers').checked = (currentAccountData.showInUsersList !== false);
     pendingAvatarBase64 = currentAccountData.avatar || null;
+    pendingAvatarPreviewUrl = typeof currentAccountData.avatar === 'string' ? currentAccountData.avatar : null;
+    pendingAvatarChanged = false;
     
     const colorInput = document.getElementById('profileChatColor');
     const hexInput = document.getElementById('profileChatColorHex');
@@ -405,8 +409,9 @@ function updateBioPreview() {
 function renderAvatarPreview() {
     const container = document.getElementById('avatarPreviewContainer');
     const removeBtn = document.getElementById('removeAvatarBtn');
-    if (pendingAvatarBase64) {
-        container.innerHTML = `<img src="${pendingAvatarBase64}" onerror="this.onerror=null;const p=this.parentElement;this.remove();p.textContent=(document.getElementById('profileDisplayName').value||authSession.username||'?').charAt(0).toUpperCase();p.style.border='3px solid var(--red)'">`;
+    const avatarSource = pendingAvatarPreviewUrl || (typeof pendingAvatarBase64 === 'string' ? pendingAvatarBase64 : '');
+    if (avatarSource) {
+        container.innerHTML = `<img src="${avatarSource}" onerror="this.onerror=null;const p=this.parentElement;this.remove();p.textContent=(document.getElementById('profileDisplayName').value||authSession.username||'?').charAt(0).toUpperCase();p.style.border='3px solid var(--red)'">`;
         container.style.border = "none";
         if (removeBtn) removeBtn.style.display = 'inline-block';
     } else {
@@ -424,6 +429,8 @@ async function confirmRemoveAvatar() {
             body: JSON.stringify({ action: 'removeAvatar' })
         });
         pendingAvatarBase64 = null;
+        pendingAvatarPreviewUrl = null;
+        pendingAvatarChanged = false;
         currentAccountData.avatar = "";
         authSession.pfp = null;
         localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
@@ -438,29 +445,61 @@ async function confirmRemoveAvatar() {
 }
 
 function handleAvatarUpload(e) {
-    const file = e.target.files[0];
+    const file = e?.target?.files?.[0];
+    if (e?.target) e.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) return showAlert("Please select a valid image.");
+    if (!String(file.type || '').startsWith('image/')) return showAlert('Please select a valid image.');
+    if (file.size > 10 * 1024 * 1024) return showAlert('Choose an image smaller than 10 MB.');
 
     const reader = new FileReader();
     reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
+        const image = new Image();
+        image.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            
-            const scale = Math.max(256 / img.width, 256 / img.height);
-            const x = (256 / 2) - (img.width / 2) * scale;
-            const y = (256 / 2) - (img.height / 2) * scale;
-            
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-            
-            pendingAvatarBase64 = canvas.toDataURL('image/jpeg', 0.85);
-            renderAvatarPreview();
+            canvas.width = 256;
+            canvas.height = 256;
+            const context = canvas.getContext('2d');
+            if (!context) return showAlert('Could not prepare this image.');
+
+            const scale = Math.max(256 / image.width, 256 / image.height);
+            const x = (256 / 2) - (image.width / 2) * scale;
+            const y = (256 / 2) - (image.height / 2) * scale;
+            context.drawImage(image, x, y, image.width * scale, image.height * scale);
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) return showAlert('Could not prepare this image.');
+                try {
+                    const ticket = await apiFetch('/api/media-upload', {
+                        method: 'POST',
+                        body: JSON.stringify({ mimeType: 'image/jpeg', size: blob.size })
+                    });
+                    if (!ticket?.uploadUrl || !ticket.mediaId) throw new Error('Could not authorize the avatar upload.');
+
+                    const response = await fetch(ticket.uploadUrl, {
+                        method: 'PUT',
+                        mode: 'cors',
+                        cache: 'no-store',
+                        headers: { 'Content-Type': 'image/jpeg' },
+                        body: blob
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || !result.success || !result.url) {
+                        throw new Error(result.error || 'Avatar upload failed.');
+                    }
+
+                    pendingAvatarBase64 = { type: 'media', mediaId: ticket.mediaId, mimeType: 'image/jpeg' };
+                    pendingAvatarPreviewUrl = result.url;
+                    pendingAvatarChanged = true;
+                    renderAvatarPreview();
+                } catch (error) {
+                    showAlert(error.message || 'Failed to upload profile picture.');
+                }
+            }, 'image/jpeg', 0.85);
         };
-        img.src = event.target.result;
+        image.onerror = () => showAlert('This image could not be opened.');
+        image.src = event.target.result;
     };
+    reader.onerror = () => showAlert('This image could not be read.');
     reader.readAsDataURL(file);
 }
 
@@ -480,21 +519,27 @@ async function saveProfile() {
             bio: document.getElementById('profileBio').value.trim(),
             email: document.getElementById('profileEmail').value.trim(),
             phone: document.getElementById('profilePhone').value.trim(),
-            avatar: pendingAvatarBase64 || "",
             chatColor: validColor,
             nameColor: validColor,
             showInUsersList: document.getElementById('toggleShowInUsers').checked
         };
         
+        const avatarChanged = pendingAvatarChanged;
+        if (avatarChanged) updateObj.avatar = pendingAvatarBase64 || '';
         await apiFetch(`/api/auth`, {
             method: 'POST',
             body: JSON.stringify(updateObj)
         });
-        
+
         Object.assign(currentAccountData, updateObj);
-        
+        if (avatarChanged) {
+            currentAccountData.avatar = pendingAvatarPreviewUrl || '';
+            pendingAvatarBase64 = currentAccountData.avatar || null;
+            pendingAvatarChanged = false;
+        }
+
         authSession.displayName = updateObj.displayName;
-        authSession.pfp = updateObj.avatar;
+        if (avatarChanged) authSession.pfp = pendingAvatarPreviewUrl || null;
         authSession.chatColor = updateObj.chatColor;
         authSession.nameColor = updateObj.nameColor;
         localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
@@ -505,7 +550,10 @@ async function saveProfile() {
             chatSess.displayName = updateObj.displayName;
             chatSess.nameColor = updateObj.nameColor;
             chatSess.chatColor = updateObj.chatColor;
-            if (updateObj.avatar) chatSess.avatar = updateObj.avatar;
+            if (avatarChanged) {
+                if (pendingAvatarPreviewUrl) chatSess.avatar = pendingAvatarPreviewUrl;
+                else delete chatSess.avatar;
+            }
             localStorage.setItem('bsms_auth_session', JSON.stringify(chatSess));
         } catch(e) {}
         
