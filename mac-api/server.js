@@ -682,8 +682,14 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         config,
         members,
         messageCount: indexedKeys.length,
-        lastMessage: lastMessage && (lastMessage.contentType === 'file' || lastMessage.contentType === 'image')
-          ? { ...lastMessage, content: null, hasContent: true, attachmentMimeType: null, attachmentName: 'Attachment' }
+        lastMessage: lastMessage && ['file', 'image', 'audio', 'video'].includes(lastMessage.contentType)
+          ? {
+              ...lastMessage,
+              content: null,
+              hasContent: true,
+              attachmentMimeType: lastMessage.content && typeof lastMessage.content === 'object' ? (lastMessage.content.mimeType || null) : null,
+              attachmentName: lastMessage.attachmentName || (lastMessage.contentType === 'audio' ? 'Voice message' : 'Attachment')
+            }
           : lastMessage,
         lastMessageId: lastId
       };
@@ -694,7 +700,52 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
   return res.status(200).json({ users, accounts, channels });
 });
 
-app.get('/v1/chat/messages', requireApiKey, (req, res) => {
+function signedPublicMediaUrl(mediaId) {
+  const expires = Math.floor(Date.now() / 1000) + 1800;
+  const signature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
+  return PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
+    + '?expires=' + expires + '&signature=' + signature;
+}
+
+async function migrateLegacyChatMedia(type, cid, messageId, message) {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\\s]+)$/.exec(message.content || '');
+  if (!match) return { ...message, content: null, hasContent: true };
+  const mimeType = match[1].toLowerCase();
+  const extension = MEDIA_UPLOAD_TYPES[mimeType];
+  if (!extension) return { ...message, content: null, hasContent: true, attachmentMimeType: mimeType };
+  const buffer = Buffer.from(match[2].replace(/\\s/g, ''), 'base64');
+  if (!buffer.length || buffer.length > MAX_MEDIA_BYTES) {
+    return { ...message, content: null, hasContent: true, attachmentMimeType: mimeType };
+  }
+
+  const mediaId = crypto.randomBytes(32).toString('hex');
+  const filePath = path.join(MEDIA_DIR, mediaId + extension);
+  await fs.mkdir(MEDIA_DIR, { recursive: true });
+  await fs.writeFile(filePath, buffer, { flag: 'wx', mode: 0o600 });
+  const migrated = {
+    ...message,
+    content: { type: 'media', mediaId, mimeType },
+    attachmentMimeType: mimeType,
+    attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment')
+  };
+
+  await enqueueMutation(async () => {
+    const current = database.chat?.conversations?.[type]?.[cid]?.messages?.[messageId];
+    if (typeof current?.content === 'string' && current.content.startsWith('data:')) {
+      await commitMutation({
+        op: 'set',
+        path: '/chat/conversations/' + type + '/' + cid + '/messages/' + messageId,
+        value: migrated
+      });
+    } else {
+      await fs.rm(filePath, { force: true });
+    }
+  });
+
+  return database.chat?.conversations?.[type]?.[cid]?.messages?.[messageId] || migrated;
+}
+
+app.get('/v1/chat/messages', requireApiKey, async (req, res) => {
   const uid = String(req.query.uid || '');
   const cid = String(req.query.cid || '');
   const type = String(req.query.type || '');
@@ -736,15 +787,43 @@ app.get('/v1/chat/messages', requireApiKey, (req, res) => {
   const messages = {};
   const neededUids = new Set(Object.keys(channel.members || {}));
   for (const id of selectedKeys) {
-    const message = allMsgs[id];
+    let message = allMsgs[id];
     if (!message) continue;
     if (message.senderUid) neededUids.add(message.senderUid);
-    if (message.contentType === 'file' || message.contentType === 'image') {
-      messages[id] = { ...message, content: null, hasContent: true, attachmentName: 'Attachment', attachmentMimeType: null, senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+
+    if (typeof message.content === 'string' && message.content.startsWith('data:') &&
+        ['file', 'image', 'audio', 'video'].includes(message.contentType)) {
+      try {
+        message = await migrateLegacyChatMedia(type, cid, id, message);
+      } catch (error) {
+        console.error('[BSMS Web Mac API] Legacy chat media migration failed:', error.message);
+        message = { ...message, content: null, hasContent: true };
+      }
+    }
+
+    const media = message.content && typeof message.content === 'object' &&
+      message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
+    if (media) {
+      messages[id] = {
+        ...message,
+        content: signedPublicMediaUrl(message.content.mediaId),
+        attachmentMimeType: message.content.mimeType || message.attachmentMimeType || null,
+        attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment'),
+        senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
+      };
+    } else if (['file', 'image', 'audio', 'video'].includes(message.contentType) && message.hasContent) {
+      messages[id] = {
+        ...message,
+        content: null,
+        attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment'),
+        senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
+      };
     } else {
-      const media = message.content && typeof message.content === 'object' && message.content.type === 'media' && /^[a-f0-9]{64}$/.test(message.content.mediaId || '');
-      const content = media ? '/api/media?id=' + encodeURIComponent(message.content.mediaId) : message.content;
-      messages[id] = { ...message, content, attachmentMimeType: media ? (message.content.mimeType || null) : (typeof message.content === 'string' && message.content.startsWith('data:') ? message.content.slice(5).split(/[;,]/)[0] : null), senderBanned: allAccounts[message.senderUid]?.account_status === 'banned' };
+      messages[id] = {
+        ...message,
+        attachmentMimeType: message.attachmentMimeType || null,
+        senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
+      };
     }
   }
   const accounts = {};
