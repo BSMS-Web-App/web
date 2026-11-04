@@ -607,6 +607,14 @@ async function serveMediaFile(req, res, mediaId, cacheControl, downloadName = ''
       const start = range ? range.start : 0;
       const end = range ? range.end : Math.max(0, stats.size - 1);
       const contentLength = stats.size === 0 ? 0 : end - start + 1;
+      const etag = '"' + mediaId + '"';
+      const ifNoneMatch = req.get('if-none-match');
+      if (!rangeHeader && ifNoneMatch && ifNoneMatch.split(',').some((tag) => tag.trim() === etag || tag.trim() === '*')) {
+        res.setHeader('Cache-Control', cacheControl);
+        res.setHeader('ETag', etag);
+        res.setHeader('Last-Modified', stats.mtime.toUTCString());
+        return res.status(304).end();
+      }
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', String(contentLength));
       const inlineMedia = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(mimeType) ||
@@ -625,7 +633,7 @@ async function serveMediaFile(req, res, mediaId, cacheControl, downloadName = ''
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', cacheControl);
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('ETag', '"' + mediaId + '"');
+      res.setHeader('ETag', etag);
       res.setHeader('Last-Modified', stats.mtime.toUTCString());
       if (range) res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + stats.size);
 
@@ -690,7 +698,10 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
     return sendError(res, 403, 'Invalid media signature.');
   }
 
-  return serveMediaFile(req, res, mediaId, 'private, max-age=600', safeName);
+  // Media IDs are immutable: replacing an avatar or attachment creates a new ID.
+  // Keep the browser cache fresh only until shortly before this signed URL expires.
+  const cacheSeconds = Math.max(0, expiry - now - 60);
+  return serveMediaFile(req, res, mediaId, 'private, max-age=' + cacheSeconds + ', immutable', safeName);
 });
 app.get('/health', requireApiKey, (_req, res) => {
   res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
