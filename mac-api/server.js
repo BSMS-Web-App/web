@@ -290,7 +290,7 @@ const MEDIA_TYPES = {
 };
 
 function parseSingleByteRange(header, size) {
-  const match = /^bytes=(\\d*)-(\\d*)$/.exec(header);
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header);
   if (!match || size <= 0 || (!match[1] && !match[2])) return null;
 
   let start;
@@ -378,7 +378,7 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
   const mediaId = String(req.params.mediaId || '');
   const expires = String(req.query.expires || '');
   const signature = String(req.query.signature || '');
-  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\\d{10}$/.test(expires) || !/^[a-f0-9]{64}$/.test(signature)) {
+  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) || !/^[a-f0-9]{64}$/.test(signature)) {
     return sendError(res, 400, 'Invalid signed media URL.');
   }
 
