@@ -434,6 +434,11 @@ async function confirmRemoveAvatar() {
         currentAccountData.avatar = "";
         authSession.pfp = null;
         localStorage.setItem(SESSION_KEY, JSON.stringify(authSession));
+        try {
+            const chatSession = JSON.parse(localStorage.getItem('bsms_auth_session') || '{}');
+            delete chatSession.avatar;
+            localStorage.setItem('bsms_auth_session', JSON.stringify(chatSession));
+        } catch (error) {}
         const fileInp = document.getElementById('avatarUpload');
         if (fileInp) fileInp.value = '';
         renderAvatarPreview();
