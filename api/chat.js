@@ -9,6 +9,15 @@ import crypto from 'crypto';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
+const MEDIA_UPLOAD_ORIGIN = 'https://media.bsms-web.com';
+const MEDIA_UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
+const MEDIA_UPLOAD_TYPES = new Set([
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic',
+    'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg',
+    'video/mp4', 'video/quicktime',
+    'application/pdf', 'text/plain', 'application/zip', 'application/octet-stream'
+]);
+
 async function rejectFlaggedContent(res, value, label = 'Content') {
     const result = await moderateContent(value);
     if (!result.flagged) return null;
@@ -116,29 +125,64 @@ export default async function handler(req, res) {
                 });
                 if (beforeId) query.set('beforeId', String(beforeId));
                 const result = await requestMacApi('GET', '/v1/chat/messages?' + query.toString());
-                if (result?.messages && typeof result.messages === 'object') {
-                    for (const message of Object.values(result.messages)) {
-                        if (message && (message.contentType === 'file' || message.contentType === 'image')) {
-                            message.content = null;
-                            message.hasContent = true;
-                            message.attachmentMimeType = null;
-                            message.attachmentName = 'Attachment';
-                        }
-                    }
-                }
                 return res.status(200).json(result);
+            }
+
+            case 'createMediaUpload': {
+                const { cid, type, mimeType, size } = payload;
+                if (!cid || String(cid).length > 256 || !['dms', 'gcs'].includes(type)) {
+                    return res.status(400).json({ error: 'Missing or invalid channel data.' });
+                }
+                if (!MEDIA_UPLOAD_TYPES.has(String(mimeType || '').toLowerCase()) ||
+                    !Number.isSafeInteger(size) || size < 1 || size > MEDIA_UPLOAD_MAX_BYTES) {
+                    return res.status(400).json({ error: 'This file type or size is not supported.' });
+                }
+
+                const channelSnap = await db.ref('/chat/conversations/' + type + '/' + cid).once('value');
+                const channel = channelSnap.val();
+                if (!channel?.members?.[uid]) return res.status(403).json({ error: 'Not a member of this conversation.' });
+
+                const apiKey = process.env.BSMS_WEB_API_KEY || '';
+                if (apiKey.length < 32) return res.status(503).json({ error: 'Media uploads are not configured.' });
+
+                const mediaId = crypto.randomBytes(32).toString('hex');
+                const expires = String(Math.floor(Date.now() / 1000) + 600);
+                const normalizedMime = String(mimeType).toLowerCase();
+                const signedPayload = [mediaId, expires, uid, type, cid, normalizedMime, String(size)].join('.');
+                const signature = crypto.createHmac('sha256', apiKey).update(signedPayload).digest('hex');
+                const query = new URLSearchParams({
+                    expires, uid, cid: String(cid), channelType: type,
+                    mime: normalizedMime, size: String(size), signature
+                });
+                return res.status(200).json({
+                    mediaId,
+                    mimeType: normalizedMime,
+                    uploadUrl: MEDIA_UPLOAD_ORIGIN + '/v1/media-upload/' + mediaId + '?' + query.toString()
+                });
             }
 
             case 'sendMessage': {
                 const { cid, type, content, contentType = 'text', attachmentName, repliedTo } = payload;
                 if (!cid || !type || !content) return res.status(400).json({ error: "Missing payload data" });
-                if (contentType === 'file' || contentType === 'image') {
-                    return res.status(403).json({ error: 'Sending files and images in chat is disabled.' });
-                }
+                if (!['dms', 'gcs'].includes(type)) return res.status(400).json({ error: 'Invalid conversation type.' });
 
                 const chSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
                 const channel = chSnap.val();
                 if (!channel || !channel.members || !channel.members[uid]) return res.status(403).json({ error: "Not a member." });
+
+                const mediaContent = content && typeof content === 'object' && !Array.isArray(content) &&
+                    content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '') &&
+                    MEDIA_UPLOAD_TYPES.has(String(content.mimeType || '').toLowerCase());
+                if (['file', 'image', 'audio', 'video'].includes(contentType)) {
+                    if (!mediaContent) return res.status(400).json({ error: 'A valid uploaded media file is required.' });
+                    const mimeType = String(content.mimeType).toLowerCase();
+                    if (contentType === 'image' && !mimeType.startsWith('image/')) return res.status(400).json({ error: 'Image message has an invalid media type.' });
+                    if (contentType === 'audio' && !mimeType.startsWith('audio/')) return res.status(400).json({ error: 'Audio message has an invalid media type.' });
+                    if (contentType === 'video' && !mimeType.startsWith('video/')) return res.status(400).json({ error: 'Video message has an invalid media type.' });
+                    await requestMacApi('HEAD', '/v1/media/' + content.mediaId);
+                } else if (contentType !== 'text' && contentType !== 'poll' && contentType !== 'invite') {
+                    return res.status(400).json({ error: 'Unsupported message type.' });
+                }
 
                 if (contentType === 'text') {
                     const validTextRegex = /^[\x20-\x7E\p{Emoji}\s]*$/u;
