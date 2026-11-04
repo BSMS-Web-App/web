@@ -9,8 +9,6 @@ import crypto from 'crypto';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
-const MEDIA_UPLOAD_ORIGIN = 'https://media.bsms-web.com';
-const MEDIA_UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
 const MEDIA_UPLOAD_TYPES = new Set([
     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic',
     'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg',
@@ -132,39 +130,6 @@ export default async function handler(req, res) {
                 if (beforeId) query.set('beforeId', String(beforeId));
                 const result = await requestMacApi('GET', '/v1/chat/messages?' + query.toString());
                 return res.status(200).json(result);
-            }
-
-            case 'createMediaUpload': {
-                const { cid, type, mimeType, size } = payload;
-                if (!cid || String(cid).length > 256 || !['dms', 'gcs'].includes(type)) {
-                    return res.status(400).json({ error: 'Missing or invalid channel data.' });
-                }
-                if (!MEDIA_UPLOAD_TYPES.has(String(mimeType || '').toLowerCase()) ||
-                    !Number.isSafeInteger(size) || size < 1 || size > MEDIA_UPLOAD_MAX_BYTES) {
-                    return res.status(400).json({ error: 'This file type or size is not supported.' });
-                }
-
-                const channelSnap = await db.ref('/chat/conversations/' + type + '/' + cid).once('value');
-                const channel = channelSnap.val();
-                if (!channel?.members?.[uid]) return res.status(403).json({ error: 'Not a member of this conversation.' });
-
-                const apiKey = process.env.BSMS_WEB_API_KEY || '';
-                if (apiKey.length < 32) return res.status(503).json({ error: 'Media uploads are not configured.' });
-
-                const mediaId = crypto.randomBytes(32).toString('hex');
-                const expires = String(Math.floor(Date.now() / 1000) + 600);
-                const normalizedMime = String(mimeType).toLowerCase();
-                const signedPayload = [mediaId, expires, uid, type, cid, normalizedMime, String(size)].join('.');
-                const signature = crypto.createHmac('sha256', apiKey).update(signedPayload).digest('hex');
-                const query = new URLSearchParams({
-                    expires, uid, cid: String(cid), channelType: type,
-                    mime: normalizedMime, size: String(size), signature
-                });
-                return res.status(200).json({
-                    mediaId,
-                    mimeType: normalizedMime,
-                    uploadUrl: MEDIA_UPLOAD_ORIGIN + '/v1/media-upload/' + mediaId + '?' + query.toString()
-                });
             }
 
             case 'sendMessage': {
