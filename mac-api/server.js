@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import 'dotenv/config';
+import { createReadStream } from 'node:fs';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import fs from 'node:fs/promises';
@@ -29,6 +30,8 @@ if (API_KEY.length < 32) {
 
 const app = express();
 app.disable('x-powered-by');
+// cloudflared is the single trusted reverse proxy in front of this loopback-only service.
+app.set('trust proxy', 1);
 
 const mediaReadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -39,6 +42,7 @@ const mediaReadLimiter = rateLimit({
 });
 
 app.use('/v1/media', mediaReadLimiter);
+app.use('/v1/media-public', mediaReadLimiter);
 app.use(express.json({ limit: MAX_BODY_BYTES, strict: true }));
 
 let database = {};
@@ -285,28 +289,87 @@ const MEDIA_TYPES = {
   '.webp': 'image/webp'
 };
 
-app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
-  const mediaId = String(req.params.mediaId || '');
-  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+function parseSingleByteRange(header, size) {
+  const match = /^bytes=(\\d*)-(\\d*)$/.exec(header);
+  if (!match || size <= 0 || (!match[1] && !match[2])) return null;
 
+  let start;
+  let end;
+  if (!match[1]) {
+    const suffixLength = Number(match[2]);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) return null;
+    start = Math.max(0, size - suffixLength);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || start > end) return null;
+    end = Math.min(end, size - 1);
+  }
+  return { start, end };
+}
+
+async function serveMediaFile(req, res, mediaId, cacheControl) {
   try {
     for (const [extension, mimeType] of Object.entries(MEDIA_TYPES)) {
       const filePath = path.join(MEDIA_DIR, mediaId + extension);
+      let stats;
       try {
-        const contents = await fs.readFile(filePath);
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Length', String(contents.length));
-        res.setHeader('Cache-Control', 'private, max-age=3600');
-        return res.status(200).send(contents);
+        stats = await fs.stat(filePath);
       } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
+        if (error.code === 'ENOENT') continue;
+        throw error;
       }
+      if (!stats.isFile()) continue;
+
+      const rangeHeader = req.get('range');
+      const range = rangeHeader ? parseSingleByteRange(rangeHeader, stats.size) : null;
+      if (rangeHeader && !range) {
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Range', 'bytes */' + stats.size);
+        res.setHeader('Content-Length', '0');
+        return res.status(416).end();
+      }
+
+      const start = range ? range.start : 0;
+      const end = range ? range.end : Math.max(0, stats.size - 1);
+      const contentLength = stats.size === 0 ? 0 : end - start + 1;
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', String(contentLength));
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', cacheControl);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('ETag', '"' + mediaId + '"');
+      res.setHeader('Last-Modified', stats.mtime.toUTCString());
+      if (range) res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + stats.size);
+
+      if (req.method === 'HEAD' || contentLength === 0) {
+        return res.status(range ? 206 : 200).end();
+      }
+
+      const stream = createReadStream(filePath, range ? { start, end } : undefined);
+      stream.on('error', (error) => {
+        console.error('[BSMS Web Mac API] Media stream failed:', error.message);
+        if (!res.headersSent) sendError(res, 500, 'Media read failed.');
+        else res.destroy(error);
+      });
+      res.on('close', () => {
+        if (!res.writableEnded) stream.destroy();
+      });
+      res.status(range ? 206 : 200);
+      return stream.pipe(res);
     }
     return sendError(res, 404, 'Media file not found.');
   } catch (error) {
     console.error('[BSMS Web Mac API] Media read failed:', error.message);
     return sendError(res, 500, 'Media read failed.');
   }
+}
+
+app.get('/v1/media/:mediaId', requireApiKey, async (req, res) => {
+  const mediaId = String(req.params.mediaId || '');
+  if (!/^[a-f0-9]{64}$/.test(mediaId)) return sendError(res, 400, 'Invalid media ID.');
+  return serveMediaFile(req, res, mediaId, 'private, max-age=3600');
 });
 
 // Public browser media route. Access is granted only by an expiring HMAC URL
@@ -315,10 +378,15 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
   const mediaId = String(req.params.mediaId || '');
   const expires = String(req.query.expires || '');
   const signature = String(req.query.signature || '');
-  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) || !/^[a-f0-9]{64}$/.test(signature)) {
+  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\\d{10}$/.test(expires) || !/^[a-f0-9]{64}$/.test(signature)) {
     return sendError(res, 400, 'Invalid signed media URL.');
   }
-  if (Number(expires) < Math.floor(Date.now() / 1000)) return sendError(res, 403, 'Media URL expired.');
+
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = Number(expires);
+  if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > now + 1860) {
+    return sendError(res, 403, 'Media URL expired or has an invalid expiration.');
+  }
 
   const expectedSignature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
   const expected = Buffer.from(expectedSignature, 'hex');
@@ -327,25 +395,7 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
     return sendError(res, 403, 'Invalid media signature.');
   }
 
-  try {
-    for (const [extension, mimeType] of Object.entries(MEDIA_TYPES)) {
-      const filePath = path.join(MEDIA_DIR, mediaId + extension);
-      try {
-        const contents = await fs.readFile(filePath);
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Length', String(contents.length));
-        res.setHeader('Cache-Control', 'private, max-age=600');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        return res.status(200).send(contents);
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-      }
-    }
-    return sendError(res, 404, 'Media file not found.');
-  } catch (error) {
-    console.error('[BSMS Web Mac API] Signed media read failed:', error.message);
-    return sendError(res, 500, 'Media read failed.');
-  }
+  return serveMediaFile(req, res, mediaId, 'private, max-age=600');
 });
 
 app.get('/health', requireApiKey, (_req, res) => {
