@@ -545,13 +545,40 @@ app.get('/health', requireApiKey, (_req, res) => {
 });
 
 
+async function migrateLegacyDataUrl(dataUrl, storagePath) {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\\s]+)$/i.exec(String(dataUrl || ''));
+  if (!match) return null;
+  const mimeType = match[1].toLowerCase();
+  const extension = MEDIA_UPLOAD_TYPES[mimeType];
+  if (!extension) return null;
+  const buffer = Buffer.from(match[2].replace(/\\s/g, ''), 'base64');
+  if (!buffer.length || buffer.length > MAX_MEDIA_BYTES) return null;
+
+  const mediaId = crypto.randomBytes(32).toString('hex');
+  const filePath = path.join(MEDIA_DIR, mediaId + extension);
+  await fs.mkdir(MEDIA_DIR, { recursive: true });
+  await fs.writeFile(filePath, buffer, { flag: 'wx', mode: 0o600 });
+  const media = { type: 'media', mediaId, mimeType };
+
+  await enqueueMutation(async () => {
+    const current = readAt(database, parsePath(storagePath));
+    if (typeof current === 'string' && current.startsWith('data:')) {
+      await commitMutation({ op: 'set', path: storagePath, value: media });
+    } else {
+      await fs.rm(filePath, { force: true });
+    }
+  });
+  const stored = readAt(database, parsePath(storagePath));
+  return stored && typeof stored === 'object' && stored.type === 'media' ? stored : null;
+}
+
 function publicAccount(uid, account) {
   const avatar = account?.account_status === 'banned' ? null : account?.avatar;
   return {
     username: account?.username || uid,
     displayName: account?.displayName || account?.username || uid,
     avatar: avatar && typeof avatar === 'object' && avatar.type === 'media' && /^[a-f0-9]{64}$/.test(avatar.mediaId || '')
-      ? '/api/media?id=' + encodeURIComponent(avatar.mediaId) : (avatar || ''),
+      ? signedPublicMediaUrl(avatar.mediaId) : (typeof avatar === 'string' && avatar.startsWith('data:') ? '' : (avatar || '')),
     account_status: account?.account_status || 'active',
     ban_expires: account?.ban_expires || null,
     role: account?.role || null,
@@ -620,7 +647,7 @@ app.get('/v1/auth/session', requireApiKey, (req, res) => {
   });
 });
 
-app.get('/v1/chat/sync', requireApiKey, (req, res) => {
+app.get('/v1/chat/sync', requireApiKey, async (req, res) => {
   const uid = String(req.query.uid || '');
   if (!uid || uid.length > 256) return sendError(res, 400, 'Invalid user ID.');
   const allAccounts = database.accounts || {};
@@ -636,7 +663,18 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
   }
   const accounts = {};
   for (const [accountId, account] of Object.entries(allAccounts)) {
-    if (account?.account_status !== 'deleted') accounts[accountId] = publicAccount(accountId, account);
+    if (account?.account_status === 'deleted') continue;
+    let accountForSync = account;
+    if (typeof account?.avatar === 'string' && account.avatar.startsWith('data:')) {
+      try {
+        const migratedAvatar = await migrateLegacyDataUrl(account.avatar, '/accounts/' + accountId + '/avatar');
+        accountForSync = { ...account, avatar: migratedAvatar };
+      } catch (error) {
+        console.error('[BSMS Web Mac API] Legacy account avatar migration failed:', error.message);
+        accountForSync = { ...account, avatar: null };
+      }
+    }
+    accounts[accountId] = publicAccount(accountId, accountForSync);
   }
   const channels = {};
   for (const type of ['dms', 'gcs']) {
@@ -669,11 +707,34 @@ app.get('/v1/chat/sync', requireApiKey, (req, res) => {
         readReceipts: last.readReceipts || {}
       } : null;
       const config = { ...(channel.config || {}) };
-      if (config.theme?.background && typeof config.theme.background === 'object' && config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(config.theme.background.mediaId || '')) {
-        config.theme = { ...config.theme, background: '/api/media?id=' + encodeURIComponent(config.theme.background.mediaId) };
+      if (typeof config.icon === 'string' && config.icon.startsWith('data:')) {
+        try {
+          const migratedIcon = await migrateLegacyDataUrl(config.icon, '/chat/conversations/' + type + '/' + cid + '/config/icon');
+          config.icon = migratedIcon ? signedPublicMediaUrl(migratedIcon.mediaId) : null;
+        } catch (error) {
+          console.error('[BSMS Web Mac API] Legacy group icon migration failed:', error.message);
+          config.icon = null;
+        }
+      } else if (config.icon && typeof config.icon === 'object' && config.icon.type === 'media' && /^[a-f0-9]{64}$/.test(config.icon.mediaId || '')) {
+        config.icon = signedPublicMediaUrl(config.icon.mediaId);
       }
-      if (config.icon && typeof config.icon === 'object' && config.icon.type === 'media' && /^[a-f0-9]{64}$/.test(config.icon.mediaId || '')) {
-        config.icon = '/api/media?id=' + encodeURIComponent(config.icon.mediaId);
+      if (config.theme && typeof config.theme === 'object') {
+        config.theme = { ...config.theme };
+        if (typeof config.theme.background === 'string' && config.theme.background.startsWith('data:')) {
+          try {
+            const migratedBackground = await migrateLegacyDataUrl(
+              config.theme.background,
+              '/chat/conversations/' + type + '/' + cid + '/config/theme/background'
+            );
+            config.theme.background = migratedBackground ? signedPublicMediaUrl(migratedBackground.mediaId) : null;
+          } catch (error) {
+            console.error('[BSMS Web Mac API] Legacy group wallpaper migration failed:', error.message);
+            config.theme.background = null;
+          }
+        } else if (config.theme.background && typeof config.theme.background === 'object' &&
+            config.theme.background.type === 'media' && /^[a-f0-9]{64}$/.test(config.theme.background.mediaId || '')) {
+          config.theme.background = signedPublicMediaUrl(config.theme.background.mediaId);
+        }
       }
       const channelData = {
         name: channel.name || '',
