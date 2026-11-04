@@ -469,11 +469,21 @@ function handleAvatarUpload(e) {
             canvas.toBlob(async (blob) => {
                 if (!blob) return showAlert('Could not prepare this image.');
                 try {
-                    const ticket = await apiFetch('/api/media-upload', {
+                    const sessionId = localStorage.getItem('session_id') || '';
+                    const ticketResponse = await fetch('https://media.bsms-web.com/v1/media-upload-ticket', {
                         method: 'POST',
-                        body: JSON.stringify({ mimeType: 'image/jpeg', size: blob.size })
+                        mode: 'cors',
+                        cache: 'no-store',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Session-ID': sessionId
+                        },
+                        body: JSON.stringify({ type: 'profile', cid: 'profile', mimeType: 'image/jpeg', size: blob.size })
                     });
-                    if (!ticket?.uploadUrl || !ticket.mediaId) throw new Error('Could not authorize the avatar upload.');
+                    const ticket = await ticketResponse.json().catch(() => ({}));
+                    if (!ticketResponse.ok || !ticket?.uploadUrl || !ticket.mediaId) {
+                        throw new Error(ticket.error || 'Could not authorize the avatar upload.');
+                    }
 
                     const response = await fetch(ticket.uploadUrl, {
                         method: 'PUT',
