@@ -141,7 +141,9 @@ app.put(
 
     if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) ||
         !uid || uid.length > 256 || !cid || cid.length > 256 ||
-        !['dms', 'gcs'].includes(channelType) ||
+        !['dms', 'gcs', 'profile'].includes(channelType) ||
+        (channelType === 'profile' && cid !== 'profile') ||
+        (channelType !== 'profile' && cid === 'profile') ||
         !Object.prototype.hasOwnProperty.call(MEDIA_UPLOAD_TYPES, mimeType) ||
         !Number.isSafeInteger(size) || size < 1 || size > MAX_MEDIA_BYTES ||
         !/^[a-f0-9]{64}$/.test(signature)) {
