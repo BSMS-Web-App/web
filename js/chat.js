@@ -1230,7 +1230,7 @@ const ChatManager = {
             const freshCache = State.conversationCache[cid];
             const cacheIsFresh = freshCache && Date.now() - (freshCache.updatedAt || 0) < 60000;
             State.activeMessageLoad = cacheIsFresh ? Promise.resolve(true) : PollingManager.syncMessages();
-            State.msgInterval = setInterval(PollingManager.syncMessages, cacheIsFresh ? 5000 : 2500);
+            State.msgInterval = setInterval(PollingManager.syncMessages, 5000);
         } catch (e) {
             console.error("[BSMS Web] Failed to open chat:", e);
             UI.showToast("Failed to open chat due to a data error.", 'error');
