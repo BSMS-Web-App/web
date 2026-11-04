@@ -14,8 +14,14 @@ const MEDIA_UPLOAD_MAX_BYTES = 25 * 1024 * 1024;
 const MEDIA_UPLOAD_TYPES = new Set([
     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic',
     'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg',
-    'video/mp4', 'video/quicktime',
-    'application/pdf', 'text/plain', 'application/zip', 'application/octet-stream'
+    'video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska',
+    'application/pdf', 'text/plain', 'text/csv', 'application/rtf', 'application/json',
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip', 'application/x-7z-compressed', 'application/x-rar-compressed',
+    'application/gzip', 'application/x-tar', 'audio/wav', 'audio/aac', 'audio/flac',
+    'application/octet-stream'
 ]);
 
 async function rejectFlaggedContent(res, value, label = 'Content') {
