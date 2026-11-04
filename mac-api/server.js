@@ -477,7 +477,7 @@ function parseSingleByteRange(header, size) {
   return { start, end };
 }
 
-async function serveMediaFile(req, res, mediaId, cacheControl) {
+async function serveMediaFile(req, res, mediaId, cacheControl, downloadName = '') {
   try {
     for (const [extension, mimeType] of Object.entries(MEDIA_TYPES)) {
       const filePath = path.join(MEDIA_DIR, mediaId + extension);
@@ -505,7 +505,15 @@ async function serveMediaFile(req, res, mediaId, cacheControl) {
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', String(contentLength));
       if (!/^(image|audio|video)\//.test(mimeType)) {
-        res.setHeader('Content-Disposition', 'attachment; filename="attachment' + extension + '"');
+        const safeName = safeMediaFilename(downloadName) || ('attachment' + extension);
+        const asciiName = Array.from(safeName).map((character) => {
+          const code = character.charCodeAt(0);
+          return code >= 32 && code <= 126 ? character : '_';
+        }).join('');
+        const encodedName = encodeURIComponent(safeName).replace(/['()*]/g, (character) =>
+          '%' + character.charCodeAt(0).toString(16).toUpperCase()
+        );
+        res.setHeader('Content-Disposition', 'attachment; filename="' + asciiName + '"; filename*=UTF-8\'\'' + encodedName);
       } else {
         res.setHeader('Content-Disposition', 'inline');
       }
@@ -556,7 +564,10 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
   const mediaId = String(req.params.mediaId || '');
   const expires = String(req.query.expires || '');
   const signature = String(req.query.signature || '');
-  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) || !/^[a-f0-9]{64}$/.test(signature)) {
+  const requestedName = String(req.query.name || '');
+  const safeName = safeMediaFilename(requestedName);
+  if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\\d{10}$/.test(expires) ||
+      !/^[a-f0-9]{64}$/.test(signature) || requestedName.length > 180 || safeName !== requestedName) {
     return sendError(res, 400, 'Invalid signed media URL.');
   }
 
@@ -566,16 +577,16 @@ app.get('/v1/media-public/:mediaId', async (req, res) => {
     return sendError(res, 403, 'Media URL expired or has an invalid expiration.');
   }
 
-  const expectedSignature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
+  const signedPayload = safeName ? mediaId + '.' + expires + '.' + safeName : mediaId + '.' + expires;
+  const expectedSignature = crypto.createHmac('sha256', API_KEY).update(signedPayload).digest('hex');
   const expected = Buffer.from(expectedSignature, 'hex');
   const supplied = Buffer.from(signature, 'hex');
   if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
     return sendError(res, 403, 'Invalid media signature.');
   }
 
-  return serveMediaFile(req, res, mediaId, 'private, max-age=600');
+  return serveMediaFile(req, res, mediaId, 'private, max-age=600', safeName);
 });
-
 app.get('/health', requireApiKey, (_req, res) => {
   res.status(200).json({ ok: true, service: 'bsms-web-mac-api' });
 });
@@ -799,14 +810,25 @@ app.get('/v1/chat/sync', requireApiKey, async (req, res) => {
   return res.status(200).json({ users, accounts, channels });
 });
 
-function signedPublicMediaUrl(mediaId) {
-  // Keep URLs stable during each 30-minute window so 5-second chat polling
-  // does not continually replace image/audio/video elements.
+function safeMediaFilename(value) {
+  return Array.from(String(value || '')).filter((character) => {
+    const code = character.charCodeAt(0);
+    return code >= 32 && code !== 127 && character !== '/' &&
+      character !== String.fromCharCode(92) && character !== '"';
+  }).join('').slice(0, 180);
+}
+
+function signedPublicMediaUrl(mediaId, filename = '') {
+  // Keep URLs stable during each six-hour window so chat polling does not
+  // continually replace image/audio/video elements.
   const now = Math.floor(Date.now() / 1000);
   const expires = Math.floor(now / 21600) * 21600 + 21600;
-  const signature = crypto.createHmac('sha256', API_KEY).update(mediaId + '.' + expires).digest('hex');
-  return PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId
-    + '?expires=' + expires + '&signature=' + signature;
+  const safeName = safeMediaFilename(filename);
+  const payload = safeName ? mediaId + '.' + expires + '.' + safeName : mediaId + '.' + expires;
+  const signature = crypto.createHmac('sha256', API_KEY).update(payload).digest('hex');
+  const query = new URLSearchParams({ expires: String(expires), signature });
+  if (safeName) query.set('name', safeName);
+  return PUBLIC_MEDIA_ORIGIN + '/v1/media-public/' + mediaId + '?' + query.toString();
 }
 
 async function migrateLegacyChatMedia(type, cid, messageId, message) {
@@ -908,7 +930,7 @@ app.get('/v1/chat/messages', requireApiKey, async (req, res) => {
     if (media) {
       messages[id] = {
         ...message,
-        content: signedPublicMediaUrl(message.content.mediaId),
+        content: signedPublicMediaUrl(message.content.mediaId, message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment')),
         attachmentMimeType: message.content.mimeType || message.attachmentMimeType || null,
         attachmentName: message.attachmentName || (message.contentType === 'audio' ? 'Voice message' : 'Attachment'),
         senderBanned: allAccounts[message.senderUid]?.account_status === 'banned'
