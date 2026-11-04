@@ -503,28 +503,7 @@ export default async function handler(req, res) {
             }
 
             case 'getAttachment': {
-                const { cid, type, msgId } = payload;
-                if (!cid || !type || !msgId) return res.status(400).json({ error: "Missing parameters." });
-                const channelSnap = await db.ref(`/chat/conversations/${type}/${cid}`).once('value');
-                const channel = channelSnap.val();
-                if (!channel || !channel.members || !channel.members[uid]) {
-                    return res.status(403).json({ error: "Not a member of this conversation." });
-                }
-                const msgSnap = await db.ref(`/chat/conversations/${type}/${cid}/messages/${msgId}`).once('value');
-                const msg = msgSnap.val();
-                if (!msg) return res.status(404).json({ error: "Message not found" });
-                if (msg.contentType === 'file' || msg.contentType === 'image') {
-                    return res.status(403).json({ error: 'File and image attachments are disabled in chat.' });
-                }
-                let content = msg.content;
-                let attachmentMimeType = null;
-                if (content && typeof content === 'object' && content.type === 'media' && /^[a-f0-9]{64}$/.test(content.mediaId || '')) {
-                    attachmentMimeType = content.mimeType || null;
-                    content = `/api/media?id=${encodeURIComponent(content.mediaId)}`;
-                } else if (typeof content === 'string' && content.startsWith('data:')) {
-                    attachmentMimeType = content.slice(5).split(/[;,]/)[0] || null;
-                }
-                return res.status(200).json({ content, attachmentName: msg.attachmentName, attachmentMimeType });
+                return res.status(410).json({ error: 'Legacy attachment loading is no longer supported. Reload the conversation to load media directly.' });
             }
 
             case 'hideDM': {
