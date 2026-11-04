@@ -507,7 +507,6 @@ const UI = {
             const bgVal = c.config?.theme?.background;
             const isImage = bgVal && (
                 bgVal.startsWith('data:image/') ||
-                bgVal.startsWith('/api/media?') ||
                 bgVal.startsWith('https://media.bsms-web.com/')
             );
             GroupManager.setThemeMode(isImage ? 'image' : 'color');
@@ -1311,7 +1310,6 @@ const ChatManager = {
             if(c.config.theme.background) {
                 const background = String(c.config.theme.background);
                 const isImage = background.startsWith('data:image/') ||
-                    background.startsWith('/api/media?') ||
                     background.startsWith('https://media.bsms-web.com/');
                 if (isImage) {
                     const cssUrl = background.replace(/["\\\\]/g, '');
