@@ -229,7 +229,13 @@ export default async function handler(req, res) {
                     status: { unsent: false, deletedByMod: false, pinned: false, repliedTo: repliedTo || false }
                 };
                 if (senderColor) msgObj.senderColor = senderColor;
-                if (attachmentName) msgObj.attachmentName = attachmentName;
+                if (typeof attachmentName === 'string' && attachmentName.trim()) {
+                    const safeName = Array.from(attachmentName.trim()).filter(character => {
+                        const code = character.charCodeAt(0);
+                        return code >= 32 && code !== 127 && character !== '/' && character !== String.fromCharCode(92);
+                    }).join('').slice(0, 180);
+                    if (safeName) msgObj.attachmentName = safeName;
+                }
 
                 await db.ref(`/chat/conversations/${type}/${cid}/messages/${newId}`).set(msgObj);
                 await db.ref(`/chat/users/${uid}/lastMessageTimestamp`).set(now);
