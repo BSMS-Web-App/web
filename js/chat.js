@@ -2984,17 +2984,25 @@ const GroupManager = {
         }
     },
 
-    updateIcon: function(e) {
+    updateIcon: async function(e) {
         if (!State.activeChannelId || State.currentRole !== 'owner') return;
-        const file = e.target.files[0]; if(!file) return;
-        if(file.size > 25*1024*1024) { UI.showToast("File exceeds 25MB.", 'error'); return; }
-        const r = new FileReader(); r.readAsDataURL(file);
-        r.onloadend = async () => {
-            try {
-                await ApiClient.call('groupAction', { gAction: 'updateIcon', cid: State.activeChannelId, value: r.result });
-                UI.showToast("Group picture updated", 'success'); await PollingManager.syncGlobal(); UI.openSettings();
-            } catch(err) { UI.showToast(err.message || "Failed to upload image.", 'error'); }
-        };
+        const file = e?.target?.files?.[0];
+        if (e?.target) e.target.value = '';
+        if (!file) return;
+        if (file.size < 1 || file.size > 25 * 1024 * 1024 || !String(file.type || '').startsWith('image/')) {
+            UI.showToast('Choose a supported image smaller than 25 MB.', 'error');
+            return;
+        }
+        try {
+            const uploaded = await MediaManager.upload(file, State.activeChannelId, 'gcs');
+            if (uploaded.contentType !== 'image') throw new Error('This image format cannot be used as a group picture.');
+            await ApiClient.call('groupAction', { gAction: 'updateIcon', cid: State.activeChannelId, value: uploaded.content });
+            UI.showToast('Group picture updated', 'success');
+            await PollingManager.syncGlobal();
+            UI.openSettings();
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to upload image.', 'error');
+        }
     },
 
     regenerateCode: async function() {
@@ -3024,25 +3032,41 @@ const GroupManager = {
         document.getElementById('gsIconWrap').dataset.themeMode = mode;
     },
 
-    saveTheme: function() {
+    saveTheme: async function() {
         if (!State.activeChannelId || State.currentRole !== 'owner') return;
-        const fg = document.getElementById('gsThemeFg').value; const ac = document.getElementById('gsThemeAccent').value;
-        const bgC = document.getElementById('gsThemeBgColor').value; const file = document.getElementById('gsThemeWpFile').files[0];
+        const fg = document.getElementById('gsThemeFg').value;
+        const accent = document.getElementById('gsThemeAccent').value;
+        const backgroundColor = document.getElementById('gsThemeBgColor').value;
+        const file = document.getElementById('gsThemeWpFile').files[0];
         const mode = document.getElementById('gsIconWrap').dataset.themeMode || 'color';
 
-        const apply = async (bg) => {
-            try {
-                await ApiClient.call('groupAction', { gAction: 'saveTheme', cid: State.activeChannelId, value: { text: fg, accent: ac, background: bg } });
-                UI.showToast("Theme saved.", 'success'); PollingManager.syncGlobal();
-            } catch(e) { UI.showToast(e.message || "Failed to apply theme.", 'error'); }
+        const apply = async (background) => {
+            await ApiClient.call('groupAction', {
+                gAction: 'saveTheme',
+                cid: State.activeChannelId,
+                value: { text: fg, accent, background }
+            });
+            UI.showToast('Theme saved.', 'success');
+            await PollingManager.syncGlobal();
         };
-        if(mode === 'image' && file) {
-            if(file.size > 25*1024*1024) { UI.showToast("File exceeds 25MB limit.", 'error'); return; }
-            const r = new FileReader(); r.onload = () => apply(r.result); r.readAsDataURL(file);
-        } else if(mode === 'image') {
-            const c = State.channels[State.activeChannelId];
-            apply(c.config?.theme?.background && c.config.theme.background.startsWith('data:') ? c.config.theme.background : null);
-        } else apply(bgC);
+
+        try {
+            if (mode === 'image' && file) {
+                if (file.size < 1 || file.size > 25 * 1024 * 1024 || !String(file.type || '').startsWith('image/')) {
+                    throw new Error('Choose a supported image smaller than 25 MB.');
+                }
+                const uploaded = await MediaManager.upload(file, State.activeChannelId, 'gcs');
+                if (uploaded.contentType !== 'image') throw new Error('This image format cannot be used as a group wallpaper.');
+                await apply(uploaded.content);
+            } else if (mode === 'image') {
+                const channel = State.channels[State.activeChannelId];
+                await apply(channel.config?.theme?.background || null);
+            } else {
+                await apply(backgroundColor);
+            }
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to apply theme.', 'error');
+        }
     },
 
     renderRequests: function() {
