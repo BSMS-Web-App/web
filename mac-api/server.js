@@ -33,7 +33,7 @@ app.disable('x-powered-by');
 // cloudflared is the single trusted reverse proxy in front of this loopback-only service.
 app.set('trust proxy', 1);
 
-const PUBLIC_MEDIA_ORIGIN = (process.env.BSMS_WEB_PUBLIC_MEDIA_URL || 'https://media.bsms-web.com').replace(/\\/+$/, '');
+const PUBLIC_MEDIA_ORIGIN = (process.env.BSMS_WEB_PUBLIC_MEDIA_URL || 'https://media.bsms-web.com').replace(/\/+$/, '');
 const MAX_MEDIA_BYTES = 25 * 1024 * 1024;
 const MEDIA_UPLOAD_TYPES = {
   'image/jpeg': '.jpg',
@@ -121,7 +121,7 @@ app.put(
     const size = Number(req.query.size);
     const signature = String(req.query.signature || '');
 
-    if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\\d{10}$/.test(expires) ||
+    if (!/^[a-f0-9]{64}$/.test(mediaId) || !/^\d{10}$/.test(expires) ||
         !uid || uid.length > 256 || !cid || cid.length > 256 ||
         !['dms', 'gcs'].includes(channelType) ||
         !Object.prototype.hasOwnProperty.call(MEDIA_UPLOAD_TYPES, mimeType) ||
@@ -468,7 +468,7 @@ async function serveMediaFile(req, res, mediaId, cacheControl) {
       const contentLength = stats.size === 0 ? 0 : end - start + 1;
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', String(contentLength));
-      if (!/^(image|audio|video)\\//.test(mimeType)) {
+      if (!/^(image|audio|video)\//.test(mimeType)) {
         res.setHeader('Content-Disposition', 'attachment; filename="attachment' + extension + '"');
       } else {
         res.setHeader('Content-Disposition', 'inline');
