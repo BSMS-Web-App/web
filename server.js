@@ -129,7 +129,7 @@ app.get('/', (req, res) => {
     }
 
     // Keep the main website as the default for the apex domain and unknown hosts.
-    return res.sendFile(path.join(__dirname, 'index.html'));
+    return res.sendFile(path.join(__dirname, 'home.html'));
 });
 app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
@@ -147,7 +147,7 @@ app.get('/events', (req, res) => res.sendFile(path.join(__dirname, 'events.html'
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
 app.get('/verity', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
 app.get('/metadata.json', (req, res) => res.sendFile(path.join(__dirname, 'metadata.json')));
-app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'home.html')));
 app.get('/accounts.html', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
 app.get('/chat.html', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown.html', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
