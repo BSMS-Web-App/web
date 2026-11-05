@@ -108,7 +108,29 @@ app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.joi
 app.use(pageFileLimiter);
 
 // Clean URLs
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+const subdomainPages = {
+    'terms.bsms-web.com': 'terms.html',
+    'privacy.bsms-web.com': 'privacy.html',
+    'support.bsms-web.com': 'support.html',
+    'countdown.bsms-web.com': 'countdown.html',
+    'g.bsms-web.com': 'g.html',
+    'admin.bsms-web.com': 'admin/index.html',
+    'users.bsms-web.com': 'users.html',
+    'account.bsms-web.com': 'accounts.html',
+    'chat.bsms-web.com': 'chat.html'
+};
+
+app.get('/', (req, res) => {
+    const hostname = String(req.hostname || '').toLowerCase();
+    const page = subdomainPages[hostname];
+
+    if (page) {
+        return res.sendFile(path.join(__dirname, page));
+    }
+
+    // Keep the main website as the default for the apex domain and unknown hosts.
+    return res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
