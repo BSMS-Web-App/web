@@ -34,6 +34,8 @@ const State = {
     replyContext: null,
     attachmentData: null,
     attachmentName: null,
+    attachmentPreviewUrl: null,
+    attachmentMimeType: null,
 
     hiddenDms: [],
     conversationCache: {},
@@ -85,6 +87,8 @@ window.addEventListener('keydown', (e) => {
 });
 
 const Utils = {
+    safeKey: (value) => { const key = String(value ?? ''); return /^[A-Za-z0-9_-]{1,128}$/.test(key) ? key : ''; },
+    jsArg: (value) => Utils.escapeHTML(JSON.stringify(String(value)).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')),
     escapeHTML: (str) => {
         if(typeof str !== 'string') return '';
         return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
@@ -161,34 +165,37 @@ const Utils = {
     nameColor: (uid) => {
         if (!uid || uid === BOT_UID) return null;
         const acc = State.accountsCache[uid];
-        if (acc && (acc.nameColor || acc.chatColor)) return acc.nameColor || acc.chatColor;
-        if (State.user && (State.user.uid === uid || State.user.username === uid)) {
-            if (State.user.nameColor || State.user.chatColor) return State.user.nameColor || State.user.chatColor;
-            try {
-                const s = JSON.parse(localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session') || '{}');
-                if (s.nameColor || s.chatColor) return s.nameColor || s.chatColor;
-            } catch(e) {}
+        let candidate = acc && (acc.nameColor || acc.chatColor);
+        if (!candidate && State.user && (State.user.uid === uid || State.user.username === uid)) {
+            candidate = State.user.nameColor || State.user.chatColor;
+            if (!candidate) {
+                try {
+                    const session = JSON.parse(localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session') || '{}');
+                    candidate = session.nameColor || session.chatColor;
+                } catch(e) {}
+            }
         }
-        return '#ef4444';
+        const color = String(candidate || '#ef4444').trim();
+        return /^#[0-9a-f]{3,8}$/i.test(color) || /^[a-z]{1,20}$/i.test(color) ? color : '#ef4444';
     },
     getBadgesHTML: (uid) => {
         if (uid === BOT_UID) return `<span class="bot-badge">Official</span>`;
         const acc = State.accountsCache[uid];
         if (!acc) return '';
         let html = '';
-        const safeName = Utils.escapeHTML(acc.displayName || acc.username || uid);
+        const safeName = Utils.escapeHTML(JSON.stringify(String(acc.displayName || acc.username || uid)).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026'));
         if (acc.verified) {
-            html += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal('${safeName}')"><use href="#ico-verified"></use></svg>`;
+            html += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal(${safeName})"><use href="#ico-verified"></use></svg>`;
         }
         if (acc.role === 'owner') {
-            html += `<span class="owner-badge" title="Platform Owner" onclick="event.stopPropagation(); UI.showOwnerModal('${safeName}')">Owner</span>`;
+            html += `<span class="owner-badge" title="Platform Owner" onclick="event.stopPropagation(); UI.showOwnerModal(${safeName})">Owner</span>`;
         } else if (acc.role === 'admin') {
-            html += `<span class="admin-badge" title="Administrator" onclick="event.stopPropagation(); UI.showAdminModal('${safeName}')">Admin</span>`;
+            html += `<span class="admin-badge" title="Administrator" onclick="event.stopPropagation(); UI.showAdminModal(${safeName})">Admin</span>`;
         } else if (acc.role === 'mod') {
-            html += `<span class="mod-badge" title="Community Moderator" onclick="event.stopPropagation(); UI.showModModal('${safeName}')">Mod</span>`;
+            html += `<span class="mod-badge" title="Community Moderator" onclick="event.stopPropagation(); UI.showModModal(${safeName})">Mod</span>`;
         }
         if (acc.isDeveloper) {
-            html += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal('${safeName}')"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
+            html += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal(${safeName})"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
         }
         return html;
     }
@@ -498,7 +505,10 @@ const UI = {
             document.getElementById('gsThemeFg').value = c.config?.theme?.text || '#ffffff';
             document.getElementById('gsThemeAccent').value = c.config?.theme?.accent || '#BB001E';
             const bgVal = c.config?.theme?.background;
-            const isImage = bgVal && bgVal.startsWith('data:');
+            const isImage = bgVal && (
+                bgVal.startsWith('data:image/') ||
+                bgVal.startsWith('https://media.bsms-web.com/')
+            );
             GroupManager.setThemeMode(isImage ? 'image' : 'color');
             document.getElementById('gsThemeBgColor').value = (bgVal && !isImage) ? bgVal : '#000000';
 
@@ -665,8 +675,8 @@ const SearchManager = {
                     let html = '';
                     matches.slice(0,10).forEach(u => {
                         const sColor = Utils.nameColor(u.uid);
-                        const sColorStyle = sColor ? `style="color:${sColor}; font-weight:bold;"` : '';
-                        html += `<div class="member-item" style="cursor:pointer;" onclick="GroupManager.sendInvite('${u.uid}')">
+                        const sColorStyle = sColor ? `style="color:${Utils.escapeHTML(sColor)}; font-weight:bold;"` : '';
+                        html += `<div class="member-item" style="cursor:pointer;" onclick="GroupManager.sendInvite('${Utils.safeKey(u.uid)}')">
                             <div class="member-info"><div style="font-weight:bold;color:var(--fg); display:flex; align-items:center;"><span ${sColorStyle}>${Utils.escapeHTML(u.displayName)}</span> ${Utils.getBadgesHTML(u.uid)}</div></div>
                             <button class="btn" style="width:auto;padding:4px 10px;font-size:0.9rem;">Invite</button>
                         </div>`;
@@ -688,9 +698,9 @@ const SearchManager = {
                 const dot = u.online ? `<div class="status-dot online"></div>` : `<div class="status-dot"></div>`;
                 const avHtml = u.avatar ? `<img src="${Utils.escapeHTML(u.avatar)}">` : u.displayName.charAt(0).toUpperCase();
                 const uColor = Utils.nameColor(u.uid);
-                const uColorStyle = uColor ? `style="color:${uColor}; font-weight:bold;"` : '';
+                const uColorStyle = uColor ? `style="color:${Utils.escapeHTML(uColor)}; font-weight:bold;"` : '';
                 html += `
-                <div class="search-item" onclick="SearchManager.startDM('${u.uid}')">
+                <div class="search-item" onclick="SearchManager.startDM('${Utils.safeKey(u.uid)}')">
                     <div class="c-av" style="width:40px; height:40px; font-size:1.2rem;">
                         <div class="c-av-inner">${avHtml}</div>
                         ${dot}
@@ -753,7 +763,7 @@ const SidebarManager = {
                 else if (lastM.contentType === 'audio') previewText = "Voice message";
                 else if (lastM.contentType === 'file' || lastM.contentType === 'image') previewText = "Attachment";
                 else if (lastM.contentType === 'poll') previewText = "Poll";
-                else previewText = Utils.escapeHTML(lastM.content || '');
+                else previewText = String(lastM.content || '');
                 unread = lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true);
             }
             arr.push({ id, c, sortTime, preview: previewText, unread });
@@ -796,19 +806,20 @@ const SidebarManager = {
             const dot = (c._type === 'dms' && !isOfficial) ? `<div class="status-dot ${isOnline ? 'online' : ''}"></div>` : '';
             const badge = item.unread ? `<div class="unread-badge"></div>` : '';
             const offCls = isOfficial ? 'official' : '';
-            const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${targetUid}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
+            const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${Utils.safeKey(targetUid)}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
 
-            const nameColor = (targetUid && Utils.nameColor(targetUid)) ? `style="color:${Utils.nameColor(targetUid)}; font-weight:bold;"` : '';
+            const nameColorValue = targetUid ? Utils.nameColor(targetUid) : null;
+            const nameColor = nameColorValue ? `style="color:${Utils.escapeHTML(nameColorValue)}; font-weight:bold;"` : '';
 
             html += `
-            <div class="chat-row ${activeCls} ${unreadCls}" data-cid="${Utils.escapeHTML(id)}" onclick="ChatManager.open('${id}')">
+            <div class="chat-row ${activeCls} ${unreadCls}" data-cid="${Utils.escapeHTML(id)}" onclick="ChatManager.open('${Utils.safeKey(id)}')">
                 <div ${pfpAttr}>
                     <div class="c-av-inner">${avHtml}</div>
                     ${dot}
                 </div>
                 <div class="c-info">
                     <div class="c-name" ${nameColor}>${Utils.escapeHTML(title)} ${targetUid ? Utils.getBadgesHTML(targetUid) : ''}</div>
-                    <div class="c-prev">${item.preview}</div>
+                    <div class="c-prev">${Utils.escapeHTML(String(item.preview || ''))}</div>
                 </div>
                 ${badge}
             </div>`;
@@ -1224,7 +1235,7 @@ const ChatManager = {
             const freshCache = State.conversationCache[cid];
             const cacheIsFresh = freshCache && Date.now() - (freshCache.updatedAt || 0) < 60000;
             State.activeMessageLoad = cacheIsFresh ? Promise.resolve(true) : PollingManager.syncMessages();
-            State.msgInterval = setInterval(PollingManager.syncMessages, cacheIsFresh ? 5000 : 2500);
+            State.msgInterval = setInterval(PollingManager.syncMessages, 5000);
         } catch (e) {
             console.error("[BSMS Web] Failed to open chat:", e);
             UI.showToast("Failed to open chat due to a data error.", 'error');
@@ -1268,55 +1279,22 @@ const ChatManager = {
     },
 
     loadAttachment: async function(msgId) {
-        UI.showToast("File and image attachments are disabled in chat.", "error");
-        return;
-        const c = State.channels[State.activeChannelId];
-        if (!c || !c.messages || !c.messages[msgId]) return;
-        const m = c.messages[msgId];
-        const preview = document.getElementById(`att-preview-${msgId}`);
-        const header = document.getElementById(`att-header-${msgId}`);
-        if (!preview) return;
-
-        const btn = header?.querySelector('button');
-        if (btn) { btn.disabled = true; btn.innerText = "Loading..."; }
-
-        try {
-            if (!m.content) {
-                const res = await ApiClient.call('getAttachment', {
-                    cid: State.activeChannelId,
-                    type: State.activeType,
-                    msgId
-                });
-                if (res && res.content) {
-                    m.content = res.content;
-                    m.attachmentMimeType = res.attachmentMimeType || m.attachmentMimeType || null;
-                    m.attachmentName = res.attachmentName || m.attachmentName || null;
-                }
-            }
-
-            const isImageAttachment = Boolean(m.attachmentMimeType && m.attachmentMimeType.startsWith('image/')) ||
-                (typeof m.content === 'string' && m.content.startsWith('data:image')) ||
-                m.contentType === 'image';
-
-            if (typeof m.content === 'string' && isImageAttachment) {
-                preview.innerHTML = `<img src="${Utils.escapeHTML(m.content)}" onclick="ImageViewer.open(this.src)" title="Click to view fullscreen" style="max-width:100%; border-radius:10px; display:block; cursor:pointer;">`;
-                const image = preview.querySelector('img');
-                if (image) image.addEventListener('error', () => {
-                    m.content = null;
-                    preview.innerHTML = '<div style="font-size:0.85rem;color:#ef4444;">Image could not be loaded. Check the connection and try again.</div>';
-                    if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.innerText = 'Retry'; }
-                }, { once: true });
-            } else {
-                preview.innerHTML = `<div style="font-size:0.85rem; color:var(--fg2); word-break:break-all;">Attachment loaded. <a href="${Utils.escapeHTML(m.content)}" download="${Utils.escapeHTML(m.attachmentName || 'download')}" style="color:var(--accent); text-decoration:underline;">Download File</a></div>`;
-            }
-
-            preview.style.display = 'block';
-            requestAnimationFrame(() => { preview.style.opacity = '1'; });
-            if (btn) btn.style.display = 'none';
-        } catch(e) {
-            UI.showToast("Failed to load attachment.", 'error');
-            if (btn) { btn.disabled = false; btn.innerText = "Load"; }
+        const channel = State.channels[State.activeChannelId];
+        const message = channel?.messages?.[msgId];
+        if (!message?.content) {
+            UI.showToast('This attachment is unavailable. Reload the conversation and try again.', 'error');
+            return;
         }
+        const preview = document.getElementById(`att-preview-${msgId}`);
+        if (!preview) return;
+        const source = Utils.escapeHTML(message.content);
+        if (message.attachmentMimeType?.startsWith('image/')) {
+            preview.innerHTML = `<img src="${source}" alt="Attachment" onclick="ImageViewer.open(this.src)" style="max-width:100%;border-radius:10px;display:block;cursor:pointer;">`;
+        } else {
+            preview.innerHTML = `<a href="${source}" download="${Utils.escapeHTML(message.attachmentName || 'attachment')}" rel="noopener noreferrer">Download attachment</a>`;
+        }
+        preview.style.display = 'block';
+        requestAnimationFrame(() => { preview.style.opacity = '1'; });
     },
 
     updateHeader: function() {
@@ -1330,12 +1308,18 @@ const ChatManager = {
             mv.style.setProperty('--chat-fg', c.config.theme.text || 'var(--fg)');
             mv.style.setProperty('--chat-accent', c.config.theme.accent || 'var(--accent)');
             if(c.config.theme.background) {
-                if(c.config.theme.background.startsWith('data:') || c.config.theme.background.startsWith('/api/media?')) {
-                    mv.style.setProperty('--chat-wp', `url(${Utils.escapeHTML(c.config.theme.background)})`);
-                    mv.style.setProperty('--chat-wp-dim', '0.55'); mv.style.setProperty('--chat-bg', 'transparent');
+                const background = String(c.config.theme.background);
+                const isImage = background.startsWith('data:image/') ||
+                    background.startsWith('https://media.bsms-web.com/');
+                if (isImage) {
+                    const cssUrl = background.replace(/["\\\\]/g, '');
+                    mv.style.setProperty('--chat-wp', `url("${cssUrl}")`);
+                    mv.style.setProperty('--chat-wp-dim', '0.55');
+                    mv.style.setProperty('--chat-bg', 'transparent');
                 } else {
-                    mv.style.setProperty('--chat-bg', c.config.theme.background);
-                    mv.style.removeProperty('--chat-wp'); mv.style.removeProperty('--chat-wp-dim');
+                    mv.style.setProperty('--chat-bg', background);
+                    mv.style.removeProperty('--chat-wp');
+                    mv.style.removeProperty('--chat-wp-dim');
                 }
             }
         } else {
@@ -1366,7 +1350,7 @@ const ChatManager = {
             } else {
                 const acc = State.accountsCache[otherUid] || { displayName: otherUid };
                 const nColor = Utils.nameColor(otherUid);
-                const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+                const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
                 nEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(acc.displayName || otherUid)}</span> ${Utils.getBadgesHTML(otherUid)}`;
                 
                 if (acc.account_status === 'banned') {
@@ -1593,7 +1577,7 @@ const ChatManager = {
                 const sAcc = State.accountsCache[m.senderUid] || {};
                 const sDisp = Utils.displayName(m.senderUid, c);
                 const sAvHtml = sAcc.avatar ? `<img src="${Utils.escapeHTML(sAcc.avatar)}">` : sDisp.charAt(0).toUpperCase();
-                pfpElement = `<div class="msg-pfp-trigger user-pfp-trigger" data-uid="${m.senderUid}" title="Click or hover to view profile" style="margin-bottom:4px;">
+                pfpElement = `<div class="msg-pfp-trigger user-pfp-trigger" data-uid="${Utils.safeKey(m.senderUid)}" title="Click or hover to view profile" style="margin-bottom:4px;">
                     <div class="c-av" style="width:34px;height:34px;font-size:0.95rem;">
                         <div class="c-av-inner">${sAvHtml}</div>
                     </div>
@@ -1601,17 +1585,17 @@ const ChatManager = {
             }
         }
 
-        let html = `<div class="msg-row ${cls}" id="msg-${msgId}">`;
+        let html = `<div class="msg-row ${cls}" id="msg-${Utils.safeKey(msgId)}">`;
         if (!isMine) html += `<div class="msg-theirs-container">${pfpElement}<div class="msg-theirs-body" style="flex:1; overflow:hidden;">`;
 
         if (!isSysBot) {
             const disp = Utils.displayName(m.senderUid, c);
             const nColor = Utils.nameColor(m.senderUid) || m.senderColor;
-            const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+            const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
             if (!isMine) {
-                html += `<div class="msg-author user-pfp-trigger" data-uid="${m.senderUid}" ${colorStyle} title="Click or hover to view profile" onclick="SearchManager.startDM('${m.senderUid}')">${Utils.escapeHTML(disp)}</div>`;
+                html += `<div class="msg-author user-pfp-trigger" data-uid="${Utils.safeKey(m.senderUid)}" ${colorStyle} title="Click or hover to view profile" onclick="SearchManager.startDM('${Utils.safeKey(m.senderUid)}')">${Utils.escapeHTML(disp)}</div>`;
             } else {
-                html += `<div class="msg-author my-msg-author" data-uid="${m.senderUid}" style="align-self:flex-end; text-align:right; margin:0 12px 4px; ${nColor ? `color:${nColor}; font-weight:bold;` : ''}" title="You">${Utils.escapeHTML(disp)}</div>`;
+                html += `<div class="msg-author my-msg-author" data-uid="${Utils.safeKey(m.senderUid)}" style="align-self:flex-end; text-align:right; margin:0 12px 4px; ${nColor ? `color:${nColor}; font-weight:bold;` : ''}" title="You">${Utils.escapeHTML(disp)}</div>`;
             }
         }
         if (isSysBot) html += `<div class="msg-author">BSMS Web</div>`;
@@ -1634,41 +1618,61 @@ const ChatManager = {
                 if(repMsg) {
                     const repDisp = Utils.displayName(repMsg.senderUid, c);
                     const repColor = Utils.nameColor(repMsg.senderUid) || repMsg.senderColor;
-                    const repColorStyle = repColor ? `style="color:${repColor}; font-weight:bold;"` : '';
+                    const repColorStyle = repColor ? `style="color:${Utils.escapeHTML(repColor)}; font-weight:bold;"` : '';
                     let repSnippet = repMsg.status?.unsent ? "Unsent message" : (repMsg.status?.deletedByMod ? "Deleted message" : (repMsg.contentType === 'text' ? repMsg.content : (repMsg.contentType === 'poll' ? repMsg.content.pollQuestion : (repMsg.contentType === 'audio' ? 'Voice message' : 'Attachment'))));
-                    content += `<div class="quote-box" onclick="ScrollManager.scrollToMessage('${m.status.repliedTo}')">
+                    content += `<div class="quote-box" onclick="ScrollManager.scrollToMessage('${Utils.safeKey(m.status.repliedTo)}')">
                         <strong ${repColorStyle}>${Utils.escapeHTML(repDisp)}</strong>
                         ${Utils.escapeHTML(repSnippet)}
                     </div>`;
                 }
             }
 
-            if (m.contentType === 'audio') {
+            if (m.contentType === 'audio' && m.content) {
                 content += `
                 <div class="audio-player">
-                    <button class="ap-btn" id="ap-btn-${msgId}"><svg class="ic"><use href="#ico-play"></use></svg></button>
-                    <div class="ap-track"><div class="ap-progress" id="ap-prog-${msgId}"></div></div>
-                    <div class="ap-time" id="ap-time-${msgId}">0:00</div>
-                    <audio id="ap-src-${msgId}" src="${Utils.escapeHTML(m.content)}"></audio>
+                    <button class="ap-btn" id="ap-btn-${Utils.safeKey(msgId)}"><svg class="ic"><use href="#ico-play"></use></svg></button>
+                    <div class="ap-track"><div class="ap-progress" id="ap-prog-${Utils.safeKey(msgId)}"></div></div>
+                    <div class="ap-time" id="ap-time-${Utils.safeKey(msgId)}">0:00</div>
+                    <audio id="ap-src-${Utils.safeKey(msgId)}" src="${Utils.escapeHTML(m.content)}" preload="metadata"></audio>
                 </div>`;
-            } else if (m.contentType === 'file' || m.contentType === 'image') {
+            } else if (m.contentType === 'image' && m.content) {
+                const imageName = Utils.escapeHTML(m.attachmentName || 'Image');
                 content += `
-                <div class="attachment-item" id="att-wrap-${msgId}" style="background:rgba(0,0,0,0.18); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-top:4px; max-width:320px;">
-                    <div style="display:flex; align-items:center; gap:8px; color:var(--fg2); font-size:0.9rem;">
-                        <svg class="ic" style="width:18px; height:18px; flex-shrink:0;"><use href="#ico-file"></use></svg>
-                        <span>File and image attachments are disabled. This attachment is unavailable.</span>
-                    </div>
+                <div class="attachment-item" style="margin-top:4px; max-width:360px;">
+                    <img src="${Utils.escapeHTML(m.content)}" alt="${imageName}" loading="lazy"
+                        onclick="ImageViewer.open(this.src)"
+                        style="display:block; max-width:100%; max-height:360px; border-radius:12px; object-fit:contain; cursor:zoom-in;">
+                    <div style="padding:7px 2px 0; color:var(--fg2); font-size:0.82rem; overflow-wrap:anywhere;">${imageName}</div>
                 </div>`;
+            } else if (m.contentType === 'video' && m.content) {
+                content += `
+                <div class="attachment-item" style="margin-top:4px; max-width:360px;">
+                    <video src="${Utils.escapeHTML(m.content)}" controls playsinline preload="metadata"
+                        style="display:block; width:100%; max-height:360px; border-radius:12px; background:#000;"></video>
+                    <div style="padding:7px 2px 0; color:var(--fg2); font-size:0.82rem; overflow-wrap:anywhere;">${Utils.escapeHTML(m.attachmentName || 'Video')}</div>
+                </div>`;
+            } else if (m.contentType === 'file' && m.content) {
+                const fileName = Utils.escapeHTML(m.attachmentName || 'Download attachment');
+                content += `
+                <a class="attachment-item" href="${Utils.escapeHTML(m.content)}" download="${fileName}" rel="noopener noreferrer"
+                    style="display:flex; align-items:center; gap:10px; max-width:320px; margin-top:4px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,0.18); color:var(--fg); text-decoration:none;">
+                    <svg class="ic" style="width:22px;height:22px;flex-shrink:0;"><use href="#ico-file"></use></svg>
+                    <span style="min-width:0; overflow-wrap:anywhere;">${fileName}</span>
+                    <span style="font-size:0.82rem; color:var(--fg2); flex-shrink:0;">Download</span>
+                </a>`;
+            } else if (['audio', 'image', 'video', 'file'].includes(m.contentType)) {
+                content += `<div class="sys-msg" style="margin:0;">This attachment is unavailable.</div>`;
             } else if (m.contentType === 'invite') {
                 let inv = m.content;
                 if (typeof inv === 'string') {
                     try { inv = JSON.parse(inv); } catch(e) { inv = { groupName: m.content }; }
                 }
-                const gCid = inv.groupCid || '';
-                const gName = inv.groupName || 'Group Chat';
-                const gCode = inv.joinCode || '';
+                const gCid = Utils.safeKey(inv.groupCid);
+                const gName = typeof inv.groupName === 'string' ? inv.groupName.slice(0, 100) : 'Group Chat';
+                const gCode = Utils.safeKey(inv.joinCode);
                 const isMember = Boolean(State.channels[gCid]);
-                const count = isMember ? Object.keys(State.channels[gCid].members).length : (inv.memberCount || 1);
+                const requestedCount = Number(inv.memberCount);
+                const count = isMember ? Object.keys(State.channels[gCid].members || {}).length : (Number.isFinite(requestedCount) ? Math.max(1, Math.min(100000, Math.trunc(requestedCount))) : 1);
                 const avHtml = inv.groupIcon ? `<img src="${Utils.escapeHTML(inv.groupIcon)}">` : gName.charAt(0).toUpperCase();
 
                 content += `
@@ -1681,9 +1685,9 @@ const ChatManager = {
                         </div>
                     </div>
                     ${isMember ? `
-                        <button class="btn sec invite-card-btn" onclick="ChatManager.open('${gCid}')">Open Group</button>
+                        <button class="btn sec invite-card-btn" onclick="ChatManager.open('${Utils.safeKey(gCid)}')">Open Group</button>
                     ` : `
-                        <button class="btn invite-card-btn" onclick="GroupManager.joinByInviteCard('${Utils.escapeHTML(gCode)}', '${gCid}')">Join Group</button>
+                        <button class="btn invite-card-btn" onclick="GroupManager.joinByInviteCard('${Utils.safeKey(gCode)}', '${Utils.safeKey(gCid)}')">Join Group</button>
                     `}
                 </div>`;
             } else if (m.contentType === 'poll') {
@@ -1702,7 +1706,7 @@ const ChatManager = {
                     }
                     const pct = totalVotes > 0 ? Math.round((optVotes / totalVotes) * 100) : 0;
                     content += `
-                    <div class="poll-opt" style="border-color:${iVoted ? 'var(--chat-accent, var(--accent))' : 'transparent'};" onclick="ComposerManager.vote('${msgId}', '${optKey}')">
+                    <div class="poll-opt" style="border-color:${iVoted ? 'var(--chat-accent, var(--accent))' : 'transparent'};" onclick="ComposerManager.vote('${Utils.safeKey(msgId)}', '${Utils.safeKey(optKey)}')">
                         <div class="bar" style="width:${pct}%;"></div>
                         <div class="content"><span>${Utils.escapeHTML(m.content.pollOptions[optKey])}</span><span>${pct}%</span></div>
                     </div>`;
@@ -1712,7 +1716,7 @@ const ChatManager = {
                 const textWithLinks = Utils.linkifyText(m.content);
                 content += `<div class="msg-text">${textWithLinks}</div>`;
                 if (urls.length > 0) {
-                    content += `<div class="link-preview-container" id="lp-${msgId}" data-url="${Utils.escapeHTML(urls[0])}"></div>`;
+                    content += `<div class="link-preview-container" id="lp-${Utils.safeKey(msgId)}" data-url="${Utils.escapeHTML(urls[0])}"></div>`;
                 }
             }
 
@@ -1721,7 +1725,7 @@ const ChatManager = {
 
             html += `<div class="msg-bubble-wrap">
                 <div class="msg-bubble">${content}<div class="msg-meta">${editStr}${timeStr}</div></div>`;
-            if (!isSysBot) html += `<div class="msg-ctx-trigger" onclick="ContextMenu.open(event, '${msgId}')"><svg class="ic"><use href="#ico-dots"></use></svg></div>`;
+            if (!isSysBot) html += `<div class="msg-ctx-trigger" onclick="ContextMenu.open(event, '${Utils.safeKey(msgId)}')"><svg class="ic"><use href="#ico-dots"></use></svg></div>`;
 
             if(m.reactions) {
                 let rxCounts = {}; let selfReactions = {};
@@ -1733,7 +1737,7 @@ const ChatManager = {
                 html += `<div class="rx-rack">`;
                 for(let e in rxCounts) {
                     let rcls = selfReactions[e] ? 'rx-badge self' : 'rx-badge';
-                    html += `<div class="${rcls}" onclick="ContextMenu.react('${e}', '${msgId}')">${e} <span class="rx-count">${rxCounts[e]>1?rxCounts[e]:''}</span></div>`;
+                    html += `<div class="${rcls}" onclick="ContextMenu.react(${Utils.jsArg(e)}, '${Utils.safeKey(msgId)}')" >${Utils.escapeHTML(String(e))} <span class="rx-count">${rxCounts[e]>1?rxCounts[e]:''}</span></div>`;
                 }
                 html += `</div>`;
             }
@@ -1741,7 +1745,7 @@ const ChatManager = {
             html += `</div>`;
         }
 
-        if (isMine) html += `<div class="msg-status" id="stat-${msgId}"></div>`;
+        if (isMine) html += `<div class="msg-status" id="stat-${Utils.safeKey(msgId)}"></div>`;
         if (!isMine) html += `</div></div>`;
         html += `</div>`;
         return html;
@@ -1935,7 +1939,7 @@ const ProfileHoverManager = {
         const uEl = document.getElementById('phpUsername');
 
         const nColor = Utils.nameColor(uid);
-        const colorStyle = nColor ? `style="color:${nColor}; font-weight:bold;"` : '';
+        const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
         if (avEl) avEl.innerHTML = avHtml;
         if (nameEl) nameEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(dName)}</span> ${Utils.getBadgesHTML(uid)}`;
         if (uEl) uEl.textContent = `@${uName}`;
@@ -2174,131 +2178,263 @@ const AuthManager = {
     }
 };
 
+const MediaManager = {
+    isDisplayableImage: function(file) {
+        return ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(String(file?.type || '').toLowerCase());
+    },
+    upload: async function(file, cid, channelType, mimeOverride = '') {
+        const mimeType = String(mimeOverride || file.type || 'application/octet-stream').toLowerCase();
+        const sessionId = (localStorage.getItem('session_id') || '').trim();
+        const ticketResponse = await fetch('https://media.bsms-web.com/v1/media-upload-ticket', {
+            method: 'POST',
+            mode: 'cors',
+            cache: 'no-store',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-ID': sessionId
+            },
+            body: JSON.stringify({ cid, type: channelType, mimeType, size: file.size })
+        });
+        const ticket = await ticketResponse.json().catch(() => ({}));
+        if (!ticketResponse.ok || !ticket?.uploadUrl || !ticket.mediaId) {
+            if (ticketResponse.status === 401) {
+                PollingManager.stop();
+                localStorage.removeItem('session_id');
+                localStorage.removeItem('bsms_auth_session');
+                AuthManager.reject();
+            }
+            throw new Error(ticket.error || 'Could not authorize this upload.');
+        }
+
+        const response = await fetch(ticket.uploadUrl, {
+            method: 'PUT',
+            mode: 'cors',
+            cache: 'no-store',
+            headers: { 'Content-Type': mimeType },
+            body: file
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success || !result.url) {
+            throw new Error(result.error || 'Upload failed. Please try again.');
+        }
+
+        let contentType = 'file';
+        if (mimeType.startsWith('image/') && mimeType !== 'image/heic') contentType = 'image';
+        else if (mimeType.startsWith('audio/')) contentType = 'audio';
+        else if (mimeType.startsWith('video/') && mimeType !== 'video/x-matroska') contentType = 'video';
+
+        return {
+            content: { type: 'media', mediaId: ticket.mediaId, mimeType },
+            url: result.url,
+            mimeType,
+            contentType
+        };
+    }
+};
+
 const ComposerManager = {
     attachFile: function(e) {
+        const f = e?.target?.files?.[0];
         if (e?.target) e.target.value = '';
-        State.attachmentData = null;
-        State.attachmentName = null;
-        UI.hide('attachmentPreview');
-        UI.showToast("Sending files and images in chat is disabled.", "error");
-        return;
-        const f = e.target.files[0];
-        if(!f) return;
-        if(f.size > 25*1024*1024) { UI.showToast("File exceeds 25MB maximum limit.", 'error'); return; }
+        if (!f) return;
+        if (f.size < 1 || f.size > 25 * 1024 * 1024) {
+            UI.showToast('Files must be between 1 byte and 25 MB.', 'error');
+            return;
+        }
 
-        const r = new FileReader();
-        r.onload = () => {
-            State.attachmentData = r.result;
-            State.attachmentName = f.name;
-            UI.show('attachmentPreview');
-            document.getElementById('attName').innerText = f.name;
-            if(f.type.startsWith('image/')) {
-                document.getElementById('attThmb').style.backgroundImage = `url(${State.attachmentData})`;
-                document.getElementById('attThmb').innerHTML = '';
-            } else {
-                document.getElementById('attThmb').style.backgroundImage = 'none';
-                document.getElementById('attThmb').innerHTML = `<svg class="ic" style="width:100%;height:100%;fill:#fff;"><use href="#ico-file"></use></svg>`;
-            }
+        const extension = String(f.name.split('.').pop() || '').toLowerCase();
+        const extensionTypes = {
+            jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+            webp: 'image/webp', avif: 'image/avif', heic: 'image/heic',
+            webm: 'audio/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', ogg: 'audio/ogg',
+            mp4: 'video/mp4', mov: 'video/quicktime', vwebm: 'video/webm', mkv: 'video/x-matroska',
+            pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', rtf: 'application/rtf',
+            json: 'application/json', doc: 'application/msword',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            xls: 'application/vnd.ms-excel',
+            xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ppt: 'application/vnd.ms-powerpoint',
+            pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            zip: 'application/zip', '7z': 'application/x-7z-compressed',
+            rar: 'application/x-rar-compressed', gz: 'application/gzip', tar: 'application/x-tar',
+            wav: 'audio/wav', aac: 'audio/aac', flac: 'audio/flac'
         };
-        r.readAsDataURL(f);
+        const mimeType = String(f.type || extensionTypes[extension] || 'application/octet-stream').toLowerCase();
+        const allowedTypes = new Set([
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic',
+            'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg',
+            'video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska',
+            'application/pdf', 'text/plain', 'text/csv', 'application/rtf', 'application/json',
+            'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/zip', 'application/x-7z-compressed', 'application/x-rar-compressed',
+            'application/gzip', 'application/x-tar', 'audio/wav', 'audio/aac', 'audio/flac',
+            'application/octet-stream'
+        ]);
+        if (!allowedTypes.has(mimeType)) {
+            UI.showToast('This file type is not supported.', 'error');
+            return;
+        }
+
+        this.clearAttachment();
+        State.attachmentData = f;
+        State.attachmentMimeType = mimeType;
+        const rawName = String(f.name || 'Attachment').split('/').pop().split(String.fromCharCode(92)).pop();
+        State.attachmentName = Array.from(rawName).filter(character => {
+            const code = character.charCodeAt(0);
+            return code >= 32 && code !== 127;
+        }).join('').slice(0, 180) || 'Attachment';
+        const thumb = document.getElementById('attThmb');
+        document.getElementById('attName').innerText = State.attachmentName;
+        if (mimeType.startsWith('image/') && mimeType !== 'image/heic') {
+            State.attachmentPreviewUrl = URL.createObjectURL(f);
+            thumb.style.backgroundImage = `url("${State.attachmentPreviewUrl}")`;
+            thumb.innerHTML = '';
+        } else {
+            thumb.style.backgroundImage = 'none';
+            thumb.innerHTML = `<svg class="ic" style="width:100%;height:100%;fill:#fff;"><use href="#ico-file"></use></svg>`;
+        }
+        UI.show('attachmentPreview');
     },
     clearAttachment: function() {
-        State.attachmentData = null; State.attachmentName = null;
-        document.getElementById('fileUploadInput').value = '';
+        if (State.attachmentPreviewUrl) URL.revokeObjectURL(State.attachmentPreviewUrl);
+        State.attachmentPreviewUrl = null;
+        State.attachmentData = null;
+        State.attachmentMimeType = null;
+        State.attachmentName = null;
+        const input = document.getElementById('fileUploadInput');
+        if (input) input.value = '';
         UI.hide('attachmentPreview');
     },
 
     send: async function() {
         if (!State.activeChannelId) return;
         const c = State.channels[State.activeChannelId];
+        if (!c) return;
 
-        if (c._type === 'dms' && State.isCooldown) { UI.showToast("Please wait before sending another message.", 'error'); return; }
-
-        const inp = document.getElementById('msgInput');
-        const txt = inp.innerText.trim().substring(0,100);
-        if (State.attachmentData) {
-            UI.showToast("Sending files and images in chat is disabled.", "error");
-            this.clearAttachment();
+        if (c._type === 'dms' && State.isCooldown) {
+            UI.showToast('Please wait before sending another message.', 'error');
             return;
         }
-        if (!txt) return;
+
+        const inp = document.getElementById('msgInput');
+        const txt = inp.innerText.trim().substring(0, 100);
+        const attachment = State.attachmentData;
+        if (!attachment && !txt) return;
 
         const btn = document.getElementById('btnSend');
-
         if (State.editContext) {
             try {
                 btn.disabled = true;
                 await ApiClient.call('action', { action: 'edit', cid: c._id, type: c._type, msgId: State.editContext, content: txt });
                 this.cancelEdit();
                 PollingManager.syncMessages();
-            } catch(e) { UI.showToast(e.message || "Failed to edit message.", 'error'); }
-            finally { btn.disabled = false; inp.focus(); }
+            } catch (e) {
+                UI.showToast(e.message || 'Failed to edit message.', 'error');
+            } finally {
+                btn.disabled = false;
+                inp.focus();
+            }
             return;
         }
 
-        if(c._type === 'dms') {
-            State.isCooldown = true; btn.classList.add('greyed');
-            setTimeout(() => { State.isCooldown = false; btn.classList.remove('greyed'); }, 5000);
+        if (c._type === 'dms') {
+            State.isCooldown = true;
+            btn.classList.add('greyed');
+            setTimeout(() => {
+                State.isCooldown = false;
+                btn.classList.remove('greyed');
+            }, 5000);
         }
 
-        const tempId = 'temp-' + Date.now();
-        const tempMsg = {
-            senderUid: State.user.uid,
-            timestamp: Date.now(),
-            content: State.attachmentData || txt,
-            contentType: State.attachmentData ? 'file' : 'text',
-            attachmentName: State.attachmentName,
-            status: { temp: true, repliedTo: State.replyContext || false }
-        };
-
-        c.messages[tempId] = tempMsg;
-        ChatManager.renderMessageNode(tempId, tempMsg);
-        document.getElementById(`stat-${tempId}`).innerText = "Sending...";
-        ScrollManager.scrollToBottom(true);
-        AudioFX.send();
-        
-        inp.innerText = "";
-        const rplCtx = State.replyContext;
-        this.cancelReply();
-        this.clearAttachment();
-        document.getElementById('charCounter').innerText = "0/100";
-        document.getElementById('charCounter').className = "";
-        localStorage.removeItem('draft_' + c._id);
-        ApiClient.call('typing', { cid: c._id, type: c._type, isTyping: false });
-
         btn.disabled = true;
+        let pendingTempId = null;
         try {
-            const res = await ApiClient.call('sendMessage', {
-                cid: c._id, type: c._type,
-                content: tempMsg.content,
-                contentType: tempMsg.contentType,
-                attachmentName: tempMsg.attachmentName,
-                repliedTo: rplCtx
+            let messageContent = txt;
+            let messageType = 'text';
+            let attachmentName = null;
+            let attachmentMimeType = null;
+            let displayUrl = null;
+
+            if (attachment) {
+                UI.showToast('Uploading attachment…', 'info');
+                const uploaded = await MediaManager.upload(attachment, c._id, c._type, State.attachmentMimeType);
+                messageContent = uploaded.content;
+                messageType = uploaded.contentType;
+                attachmentName = State.attachmentName || 'Attachment';
+                attachmentMimeType = uploaded.mimeType;
+                displayUrl = uploaded.url;
+            }
+
+            const tempId = 'temp-' + Date.now();
+            pendingTempId = tempId;
+            const tempMsg = {
+                senderUid: State.user.uid,
+                timestamp: Date.now(),
+                content: displayUrl || messageContent,
+                contentType: messageType,
+                attachmentName,
+                attachmentMimeType,
+                status: { temp: true, repliedTo: State.replyContext || false }
+            };
+
+            c.messages[tempId] = tempMsg;
+            ChatManager.renderMessageNode(tempId, tempMsg);
+            const statusEl = document.getElementById(`stat-${tempId}`);
+            if (statusEl) statusEl.innerText = 'Sending...';
+            ScrollManager.scrollToBottom(true);
+            AudioFX.send();
+
+            inp.innerText = '';
+            const replyContext = State.replyContext;
+            this.cancelReply();
+            document.getElementById('charCounter').innerText = '0/100';
+            document.getElementById('charCounter').className = '';
+            localStorage.removeItem('draft_' + c._id);
+            ApiClient.call('typing', { cid: c._id, type: c._type, isTyping: false });
+
+            const response = await ApiClient.call('sendMessage', {
+                cid: c._id,
+                type: c._type,
+                content: messageContent,
+                contentType: messageType,
+                attachmentName,
+                repliedTo: replyContext
             });
-            
-            const realId = res.messageId;
+
+            const realId = response.messageId;
             delete tempMsg.status.temp;
             c.messages[realId] = tempMsg;
             delete c.messages[tempId];
 
-            const el = document.getElementById(`msg-${tempId}`);
-            if (el) {
-                el.id = `msg-${realId}`;
-                el.classList.remove('sending');
-                const statEl = document.getElementById(`stat-${tempId}`);
-                if (statEl) {
-                    statEl.id = `stat-${realId}`;
-                    statEl.innerText = "Sent";
+            const element = document.getElementById(`msg-${tempId}`);
+            if (element) {
+                element.id = `msg-${realId}`;
+                element.classList.remove('sending');
+                const sentStatus = document.getElementById(`stat-${tempId}`);
+                if (sentStatus) {
+                    sentStatus.id = `stat-${realId}`;
+                    sentStatus.innerText = 'Sent';
                 }
             }
-        } catch(e) { 
-            UI.showToast(e.message || "Failed to send message.", 'error'); 
-            const el = document.getElementById(`msg-${tempId}`);
-            if(el) el.remove();
-            delete c.messages[tempId];
-            if(c._type === 'dms') { State.isCooldown = false; btn.classList.remove('greyed'); }
+            if (messageType === 'audio') AudioManager.bindPlayer(realId);
+            this.clearAttachment();
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to send message.', 'error');
+            if (pendingTempId) {
+                const temp = document.getElementById(`msg-${pendingTempId}`);
+                if (temp) temp.remove();
+                delete c.messages[pendingTempId];
+            }
+            if (c._type === 'dms') {
+                State.isCooldown = false;
+                btn.classList.remove('greyed');
+            }
+        } finally {
+            btn.disabled = false;
+            inp.focus();
         }
-        btn.disabled = false; inp.focus();
     },
 
     addPollOption: function() {
@@ -2352,7 +2488,9 @@ const AudioManager = {
         if (!State.activeChannelId) return;
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             this.chunks = [];
-            this.recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            const recorderMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+                .find(type => typeof MediaRecorder.isTypeSupported !== 'function' || MediaRecorder.isTypeSupported(type));
+            this.recorder = new MediaRecorder(stream, recorderMime ? { mimeType: recorderMime } : undefined);
 
             UI.hide('msgInput'); UI.hide('btnMic'); UI.hide('btnSend'); UI.hide('btnPoll');
             UI.show('recUI');
@@ -2376,7 +2514,8 @@ const AudioManager = {
                 this.recorder.stream.getTracks().forEach(t => t.stop());
                 clearInterval(this.timer);
 
-                const blob = new Blob(this.chunks, { type: 'audio/webm' });
+                const recordedMime = String(this.recorder?.mimeType || this.chunks.find(chunk => chunk.type)?.type || 'audio/webm').split(';')[0].toLowerCase();
+                const blob = new Blob(this.chunks, { type: recordedMime });
                 this.chunks = [];
 
                 if (blob.size > 0) {
@@ -2406,22 +2545,36 @@ const AudioManager = {
         else { a.pause(); btn.innerHTML = `<svg class="ic"><use href="#ico-play"></use></svg>`; }
     },
 
-    sendPreview: function() {
-        const a = document.getElementById('prev-audio');
-        fetch(a.src).then(r => r.blob()).then(blob => {
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = async () => {
-                const c = State.channels[State.activeChannelId];
-                try {
-                    await ApiClient.call('sendMessage', {
-                        cid: c._id, type: c._type, contentType: 'audio', content: reader.result, repliedTo: State.replyContext || false
-                    });
-                    AudioFX.send(); this.cancelRecording(); ComposerManager.cancelReply();
-                    PollingManager.syncMessages();
-                } catch(e) { UI.showToast(e.message || "Failed to send voice message.", 'error'); }
-            };
-        });
+    sendPreview: async function() {
+        const audio = document.getElementById('prev-audio');
+        const channel = State.channels[State.activeChannelId];
+        if (!audio || !channel) return;
+        try {
+            const response = await fetch(audio.src);
+            if (!response.ok) throw new Error('Could not prepare the voice message.');
+            const blob = await response.blob();
+            const mimeType = String(blob.type || 'audio/webm').split(';')[0].toLowerCase();
+            const extension = {
+                'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/ogg': 'ogg',
+                'audio/mpeg': 'mp3', 'audio/wav': 'wav'
+            }[mimeType] || 'webm';
+            const file = new File([blob], 'voice-message.' + extension, { type: mimeType });
+            const uploaded = await MediaManager.upload(file, channel._id, channel._type, mimeType);
+            await ApiClient.call('sendMessage', {
+                cid: channel._id,
+                type: channel._type,
+                contentType: 'audio',
+                content: uploaded.content,
+                attachmentName: 'Voice message',
+                repliedTo: State.replyContext || false
+            });
+            AudioFX.send();
+            this.cancelRecording();
+            ComposerManager.cancelReply();
+            PollingManager.syncMessages();
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to send voice message.', 'error');
+        }
     },
 
     cancelRecording: function() {
@@ -2594,30 +2747,59 @@ const ContextMenu = {
 const GroupManager = {
     create: async function() {
         const name = document.getElementById('ngName').value.trim();
-        const jc = document.getElementById('ngCustomCode').value.trim();
-        if (!name) { UI.showToast("Group name is required.", 'error'); return; }
-        const btn = document.getElementById('btnCreateGroup'); btn.disabled = true;
+        const joinCode = document.getElementById('ngCustomCode').value.trim();
+        if (!name) {
+            UI.showToast('Group name is required.', 'error');
+            return;
+        }
 
-        const file = document.getElementById('ngIcon').files[0];
-        const reqApp = document.getElementById('ngRequireApproval').checked;
+        const button = document.getElementById('btnCreateGroup');
+        const fileInput = document.getElementById('ngIcon');
+        const file = fileInput.files[0];
+        const requireApproval = document.getElementById('ngRequireApproval').checked;
+        if (file && (file.size < 1 || file.size > 25 * 1024 * 1024 || !MediaManager.isDisplayableImage(file))) {
+            UI.showToast('Choose a supported image smaller than 25 MB.', 'error');
+            return;
+        }
 
-        const finalize = async (iconBase64) => {
-            try {
-                const res = await ApiClient.call('createGroup', { name, joinCode: jc, requireApproval: reqApp, icon: iconBase64 });
-                UI.closeModal('newGroupModal');
-                document.getElementById('ngName').value = ""; document.getElementById('ngIcon').value = ""; document.getElementById('ngCustomCode').value = "";
-                document.getElementById('gcCodeDisplay').innerText = res.joinCode || jc; 
-                UI.openModal('groupCreatedModal');
-                await PollingManager.syncGlobal(); ChatManager.open(res.cid);
-            } catch (e) { UI.showToast(e.message || "Failed to create group.", 'error'); }
-            finally { btn.disabled = false; }
-        };
+        button.disabled = true;
+        try {
+            const result = await ApiClient.call('createGroup', {
+                name,
+                joinCode,
+                requireApproval,
+                icon: null
+            });
 
-        if (file) {
-            if(file.size > 25*1024*1024) { UI.showToast("File exceeds 25MB.", 'error'); btn.disabled=false; return; }
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onloadend = () => finalize(reader.result);
-        } else finalize(null);
+            let iconError = null;
+            if (file) {
+                try {
+                    const uploaded = await MediaManager.upload(file, result.cid, 'gcs');
+                    if (uploaded.contentType !== 'image') throw new Error('This image format cannot be used as a group picture.');
+                    await ApiClient.call('groupAction', {
+                        gAction: 'updateIcon',
+                        cid: result.cid,
+                        value: uploaded.content
+                    });
+                } catch (error) {
+                    iconError = error.message || 'The group picture could not be uploaded.';
+                }
+            }
+
+            UI.closeModal('newGroupModal');
+            document.getElementById('ngName').value = '';
+            fileInput.value = '';
+            document.getElementById('ngCustomCode').value = '';
+            document.getElementById('gcCodeDisplay').innerText = result.joinCode || joinCode;
+            UI.openModal('groupCreatedModal');
+            await PollingManager.syncGlobal();
+            ChatManager.open(result.cid);
+            if (iconError) UI.showToast('Group created, but its picture failed: ' + iconError, 'error');
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to create group.', 'error');
+        } finally {
+            button.disabled = false;
+        }
     },
 
     joinWithCode: async function() {
@@ -2746,7 +2928,7 @@ const GroupManager = {
             if (c && c.joinRequests) {
                 delete c.joinRequests[targetUid];
             }
-            const itemEl = document.getElementById(`req-item-${targetUid}`);
+            const itemEl = document.getElementById(`req-item-${Utils.safeKey(targetUid)}`);
             if (itemEl) itemEl.remove();
 
             const remaining = c && c.joinRequests ? Object.keys(c.joinRequests).length : 0;
@@ -2777,7 +2959,7 @@ const GroupManager = {
         for (let mId in c.members) {
             let u = State.accountsCache[mId] || { displayName: mId };
             if (u.account_status === 'banned') continue;
-            let role = c.members[mId].role || 'member';
+            let role = ['member', 'moderator', 'owner'].includes(c.members[mId].role) ? c.members[mId].role : 'member';
             let nick = c.members[mId].nickname;
             let uName = Utils.username(mId);
             let disp = nick ? `${nick} (@${uName})` : `${u.displayName || uName} (@${uName})`;
@@ -2786,23 +2968,23 @@ const GroupManager = {
             if (State.currentRole === 'owner' && mId !== State.user.uid) {
                 act = `
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <select onchange="GroupManager.setRole('${mId}', this.value)" style="background:var(--input-bg); border:1px solid var(--border); padding:4px; border-radius:8px; font-size:0.9rem;">
+                    <select onchange="GroupManager.setRole('${Utils.safeKey(mId)}', this.value)" style="background:var(--input-bg); border:1px solid var(--border); padding:4px; border-radius:8px; font-size:0.9rem;">
                         <option value="member" ${role==='member'?'selected':''}>Member</option>
                         <option value="moderator" ${role==='moderator'?'selected':''}>Moderator</option>
                         <option value="transfer">Transfer Owner</option>
                     </select>
-                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${mId}')">Kick</button>
+                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${Utils.safeKey(mId)}')">Kick</button>
                 </div>`;
             } else if (State.currentRole === 'moderator' && role === 'member') {
                 act = `
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span class="role-badge">${role}</span>
-                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${mId}')">Kick</button>
+                    <button class="btn warn" style="width:auto; padding:4px 8px; font-size:0.9rem;" onclick="GroupManager.kick('${Utils.safeKey(mId)}')">Kick</button>
                 </div>`;
             } else { act = `<span class="role-badge">${role}</span>`; }
 
             let mColor = Utils.nameColor(mId);
-            let mColorStyle = mColor ? `style="color:${mColor}; font-weight:bold;"` : '';
+            let mColorStyle = mColor ? `style="color:${Utils.escapeHTML(mColor)}; font-weight:bold;"` : '';
 
             html += `
             <div class="member-item">
@@ -2849,17 +3031,25 @@ const GroupManager = {
         }
     },
 
-    updateIcon: function(e) {
+    updateIcon: async function(e) {
         if (!State.activeChannelId || State.currentRole !== 'owner') return;
-        const file = e.target.files[0]; if(!file) return;
-        if(file.size > 25*1024*1024) { UI.showToast("File exceeds 25MB.", 'error'); return; }
-        const r = new FileReader(); r.readAsDataURL(file);
-        r.onloadend = async () => {
-            try {
-                await ApiClient.call('groupAction', { gAction: 'updateIcon', cid: State.activeChannelId, value: r.result });
-                UI.showToast("Group picture updated", 'success'); await PollingManager.syncGlobal(); UI.openSettings();
-            } catch(err) { UI.showToast(err.message || "Failed to upload image.", 'error'); }
-        };
+        const file = e?.target?.files?.[0];
+        if (e?.target) e.target.value = '';
+        if (!file) return;
+        if (file.size < 1 || file.size > 25 * 1024 * 1024 || !String(file.type || '').startsWith('image/')) {
+            UI.showToast('Choose a supported image smaller than 25 MB.', 'error');
+            return;
+        }
+        try {
+            const uploaded = await MediaManager.upload(file, State.activeChannelId, 'gcs');
+            if (uploaded.contentType !== 'image') throw new Error('This image format cannot be used as a group picture.');
+            await ApiClient.call('groupAction', { gAction: 'updateIcon', cid: State.activeChannelId, value: uploaded.content });
+            UI.showToast('Group picture updated', 'success');
+            await PollingManager.syncGlobal();
+            UI.openSettings();
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to upload image.', 'error');
+        }
     },
 
     regenerateCode: async function() {
@@ -2889,25 +3079,41 @@ const GroupManager = {
         document.getElementById('gsIconWrap').dataset.themeMode = mode;
     },
 
-    saveTheme: function() {
+    saveTheme: async function() {
         if (!State.activeChannelId || State.currentRole !== 'owner') return;
-        const fg = document.getElementById('gsThemeFg').value; const ac = document.getElementById('gsThemeAccent').value;
-        const bgC = document.getElementById('gsThemeBgColor').value; const file = document.getElementById('gsThemeWpFile').files[0];
+        const fg = document.getElementById('gsThemeFg').value;
+        const accent = document.getElementById('gsThemeAccent').value;
+        const backgroundColor = document.getElementById('gsThemeBgColor').value;
+        const file = document.getElementById('gsThemeWpFile').files[0];
         const mode = document.getElementById('gsIconWrap').dataset.themeMode || 'color';
 
-        const apply = async (bg) => {
-            try {
-                await ApiClient.call('groupAction', { gAction: 'saveTheme', cid: State.activeChannelId, value: { text: fg, accent: ac, background: bg } });
-                UI.showToast("Theme saved.", 'success'); PollingManager.syncGlobal();
-            } catch(e) { UI.showToast(e.message || "Failed to apply theme.", 'error'); }
+        const apply = async (background) => {
+            await ApiClient.call('groupAction', {
+                gAction: 'saveTheme',
+                cid: State.activeChannelId,
+                value: { text: fg, accent, background }
+            });
+            UI.showToast('Theme saved.', 'success');
+            await PollingManager.syncGlobal();
         };
-        if(mode === 'image' && file) {
-            if(file.size > 25*1024*1024) { UI.showToast("File exceeds 25MB limit.", 'error'); return; }
-            const r = new FileReader(); r.onload = () => apply(r.result); r.readAsDataURL(file);
-        } else if(mode === 'image') {
-            const c = State.channels[State.activeChannelId];
-            apply(c.config?.theme?.background && c.config.theme.background.startsWith('data:') ? c.config.theme.background : null);
-        } else apply(bgC);
+
+        try {
+            if (mode === 'image' && file) {
+                if (file.size < 1 || file.size > 25 * 1024 * 1024 || !String(file.type || '').startsWith('image/')) {
+                    throw new Error('Choose a supported image smaller than 25 MB.');
+                }
+                const uploaded = await MediaManager.upload(file, State.activeChannelId, 'gcs');
+                if (uploaded.contentType !== 'image') throw new Error('This image format cannot be used as a group wallpaper.');
+                await apply(uploaded.content);
+            } else if (mode === 'image') {
+                const channel = State.channels[State.activeChannelId];
+                await apply(channel.config?.theme?.backgroundMedia || null);
+            } else {
+                await apply(backgroundColor);
+            }
+        } catch (error) {
+            UI.showToast(error.message || 'Failed to apply theme.', 'error');
+        }
     },
 
     renderRequests: function() {
