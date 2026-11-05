@@ -6,6 +6,26 @@
       "has": [
         {
           "type": "host",
+          "value": "bsms-web.com"
+        }
+      ],
+      "destination": "/home"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.bsms-web.com"
+        }
+      ],
+      "destination": "/home"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
           "value": "terms.bsms-web.com"
         }
       ],
