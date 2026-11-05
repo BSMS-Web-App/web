@@ -1,33 +1,8 @@
 {
-  "name": "BSMS Web",
-  "slug": "bsms-web",
-  "description": "The unified digital ecosystem for Boiling Springs Middle School. Connect with classmates, track your schedule, and manage your account in one seamless suite.",
-  "repository": "https://github.com/BSMS-Web-App/web",
-  "homepage": "https://bsms-web.com",
-  "license": "MIT",
-  "author": "Jellyfish Jelly",
-  "platform": "web",
-  "status": "active",
-  "technology": {
-    "frontend": [
-      "HTML",
-      "CSS",
-      "JavaScript"
-    ],
-    "backend": [
-      "Node.js",
-      "Express"
-    ],
-    "database": "Mac-hosted JSON database API",
-    "hosting": "Vercel"
-  },
-  "features": [
-    "Student accounts",
-    "Chat and messaging",
-    "Countdowns",
-    "Games",
-    "Bug reports",
-    "Privacy information",
-    "Administrative tools"
+  "name": "BSMS Web - Chess Arena & Gaming Hub",
+  "description": "The central digital hub featuring real-time Chess against AI, friend invites and spectator mode, Elo ranking system, global leaderboards, and custom gamemodes including 100 Pawns, Sudden Death Blitz, and Alien Chess.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }
