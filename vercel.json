@@ -1,5 +1,97 @@
 {
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "terms.bsms-web.com"
+        }
+      ],
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "privacy.bsms-web.com"
+        }
+      ],
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "support.bsms-web.com"
+        }
+      ],
+      "destination": "/support.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "countdown.bsms-web.com"
+        }
+      ],
+      "destination": "/countdown.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "g.bsms-web.com"
+        }
+      ],
+      "destination": "/g.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.bsms-web.com"
+        }
+      ],
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "users.bsms-web.com"
+        }
+      ],
+      "destination": "/users.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "account.bsms-web.com"
+        }
+      ],
+      "destination": "/accounts.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "chat.bsms-web.com"
+        }
+      ],
+      "destination": "/chat.html"
+    }
+  ],
   "redirects": [
     {
       "source": "/account",
