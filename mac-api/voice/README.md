@@ -42,13 +42,15 @@ For a network that blocks 5349, a later network design may place TURN/TLS on 443
 
 ## BSMS Web environment variables
 
-Set these in the Vercel project for the deployment that serves the voice API, and in the local Express `.env` when running the app locally:
+Set these in the root `.env` used by the Mac-hosted BSMS Web application API (`server.js`, normally port 4903). The existing `/js/api-origin.js` routes `/api/voice` requests through `https://dev-api.bsms-web.com`, so these values do not belong in Vercel environment settings.
 
 - `LIVEKIT_URL=wss://voice.bsms-web.com`
 - `LIVEKIT_API_KEY` — the same key configured in this LiveKit service.
 - `LIVEKIT_API_SECRET` — the matching secret configured in this LiveKit service.
 
-The API secret must only exist on the server. It is never sent to the browser. The browser receives a short-lived, room-scoped participant token after the API verifies the user's session and conversation membership.
+The API secret must only exist on the Mac application server and in the private LiveKit `.env` file. It is never sent to the browser. The browser receives a short-lived, room-scoped participant token after the Mac API verifies the user's session and conversation membership.
+
+The Docker Compose `.env` in this directory configures LiveKit itself. The root application `.env` must contain the same `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` values, plus `LIVEKIT_URL`, so the API can issue tokens.
 
 ## Important notes
 
