@@ -6,6 +6,7 @@
  * Authenticated voice-call orchestration and LiveKit token issuance.
  */
 
+import crypto from 'node:crypto';
 import { AccessToken } from 'livekit-server-sdk';
 import { db, requestMacApi } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
@@ -98,7 +99,7 @@ export default async function handler(req, res) {
             const incoming = [];
             for (const callId of Object.keys(invitationMap).slice(0, 10)) {
                 const call = await getCall(callId);
-                if (!call || call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
+                if (!call || !['ringing', 'active'].includes(call.status) || Number(call.ringExpiresAt || 0) < Date.now()) {
                     await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
                     continue;
                 }
@@ -199,7 +200,7 @@ export default async function handler(req, res) {
 
         if (action === 'accept') {
             const invitation = await db.ref('/voice/invitations/' + uid + '/' + callId).once('value');
-            if (!invitation.val() || call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
+            if (!invitation.val() || !['ringing', 'active'].includes(call.status) || Number(call.ringExpiresAt || 0) < Date.now()) {
                 return response(res, 410, { error: 'This call invitation has expired.' });
             }
             const currentCalls = await db.ref('/voice/userCalls/' + uid).once('value');
