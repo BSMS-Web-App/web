@@ -14,6 +14,6 @@
     "express-rate-limit": "^8.1.0",
     "ipaddr.js": "^2.2.0",
     "dotenv": "^16.6.1",
-    "livekit-server-sdk": "^2.15.0"
+    "livekit-server-sdk": "^2.19.2"
   }
 }
