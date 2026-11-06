@@ -203,8 +203,14 @@
             if (!disconnecting) handleUnexpectedDisconnect();
         });
 
-        await room.connect(auth.url, auth.token, { autoSubscribe: true });
-        await room.localParticipant.setMicrophoneEnabled(true);
+        try {
+            await room.connect(auth.url, auth.token, { autoSubscribe: true });
+            await room.localParticipant.setMicrophoneEnabled(true);
+        } catch (error) {
+            await disconnectRoom();
+            currentCallId = null;
+            throw error;
+        }
         muted = false;
         if (el('voiceMuteButton')) el('voiceMuteButton').innerHTML = '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
         if (el('voiceEndButton')) el('voiceEndButton').hidden = false;
@@ -222,16 +228,18 @@
         if (!conversation) return showError('Open a conversation before starting a voice call.');
         if (!configured) return showError('Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.');
         const button = el('voiceStartButton');
+        let startedCallId = null;
         if (button) { button.disabled = true; button.textContent = 'Starting…'; }
         showError('');
         try {
             const result = await api('start', conversation);
+            startedCallId = result.callId;
             currentCallId = result.callId;
             currentCall = { callId: result.callId, createdBy: context().user?.uid, conversationName: result.conversationName || conversation.name, createdAt: result.createdAt };
             await connectCall(result.callId);
         } catch (error) {
-            if (currentCallId) {
-                try { await api('end', { callId: currentCallId }); } catch {}
+            if (startedCallId) {
+                try { await api('end', { callId: startedCallId }); } catch {}
             }
             currentCallId = null;
             currentCall = null;
@@ -258,6 +266,7 @@
             incomingCall = null;
             await connectCall(call.callId);
         } catch (error) {
+            try { await api('leave', { callId: call.callId }); } catch {}
             currentCallId = null;
             currentCall = null;
             incomingCall = null;
