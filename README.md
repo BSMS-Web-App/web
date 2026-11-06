@@ -22,7 +22,7 @@
 
 **BSMS Web** is a full-stack web application that brings communication, account management, gaming, and other interactive features together in one platform.
 
-The dev2 deployment uses Vercel for static frontend hosting. Its browser sends application API requests directly to an Express API running on the always-on Mac mini through Cloudflare Tunnel. That application API connects over loopback to the production JSON database API. Dev2 therefore uses production database records and production media; it is not an isolated data environment.
+The production website is available at [bsms-web.com](https://bsms-web.com). Its frontend is deployed through Vercel, while application services use Node.js and Express. Persistent application data is stored by the Mac-hosted JSON database API and accessed through authenticated server-to-server requests over Cloudflare Tunnel. Media is served from the Mac-hosted media service.
 
 ## Features
 
@@ -34,8 +34,6 @@ The dev2 deployment uses Vercel for static frontend hosting. Its browser sends a
 - **Community Reporting** — Tools for submitting bug reports and feedback.
 - **Privacy Information** — A dedicated page explaining privacy-related information.
 - **Responsive Interface** — A web experience designed for desktop and mobile browsers.
-
-*Feature availability may vary between production, development, and preview deployments.*
 
 ## Documentation
 
@@ -53,42 +51,39 @@ The dev2 deployment uses Vercel for static frontend hosting. Its browser sends a
 | Technology | Purpose |
 | --- | --- |
 | HTML, CSS, JavaScript | Frontend and user interface |
-| Node.js | JavaScript runtime for the backend |
+| Node.js | JavaScript runtime |
 | Express | Application API and routing |
 | Mac-hosted JSON database API | Persistent application data, snapshots, and journaled writes |
-| Cloudflare Tunnel | Public HTTPS connectivity to the Mac-hosted application and media APIs |
+| Cloudflare Tunnel | Secure connectivity to Mac-hosted application services |
+| Cloudflare | Public DNS and tunnel connectivity |
+| Vercel | Frontend hosting and deployment |
 | Glin Profanity | Profanity detection and moderation |
-| Vercel | Static frontend hosting and deployment |
 
-## Hosting and API Architecture
+## Production Architecture
 
-- Vercel serves the static website. The dev2 deployment does not use Vercel Functions as its application API or database layer.
-- The dev2 browser configuration is in `js/api-origin.js`. It sends `/api/*`, `/games/saves`, and `/raw/*` requests to `https://dev-api.bsms-web.com`.
-- The dev2 Express application API runs on the Mac mini at `127.0.0.1:4903`, exposed through Cloudflare Tunnel as `dev-api.bsms-web.com`.
-- The dev2 application API connects to the production database API at `http://127.0.0.1:4901` using the production API key stored only in the dev2 server's local `.env`. Never put this key in frontend code, a public environment variable, or the repository.
-- Dev2 media requests use `https://media.bsms-web.com`, the production media hostname. Dev2 uploads therefore use production media storage.
-- The production database API and media service run on the Mac at port `4901`. Their public hostnames are `api.bsms-web.com` and `media.bsms-web.com`, respectively.
-- A separate dev2 database/media service remains configured on port `4902` and hostname `dev-media.bsms-web.com`. It is an isolated local service, not the active database or media destination for the current dev2 website.
-- Keep the database API bound to loopback. Cloudflare Tunnel should expose only the intended application and media endpoints, not the private database port.
-- Changes made through dev2 can affect production accounts, records, and media immediately. Treat dev2 database writes and uploads as production operations.
-- The root `.env.example` documents the dev2 application API environment. `mac-api/.env.example` documents the optional isolated dev2 database/media service. Never commit real `.env` files, API keys, database exports, or user data.
+- **Website:** Vercel deploys and serves the production frontend at `https://bsms-web.com`.
+- **Application API:** Node.js and Express handle application API routes. The browser API origin is configured in `js/api-origin.js`; production deployments must use the production application API hostname.
+- **Database API:** The Mac mini hosts the persistent JSON database API on `127.0.0.1:4901`. Its public API hostname is `https://api.bsms-web.com`, routed through Cloudflare Tunnel.
+- **Media:** The Mac mini stores uploaded media. Public media is served through `https://media.bsms-web.com`; browser uploads use the signed upload-ticket flow.
+- **Persistence:** Database changes are stored in a JSON snapshot and write-ahead journal. Media files are stored separately on persistent local storage.
+- **Secrets:** Database API credentials belong only in server-side environment variables. Never put API keys in browser JavaScript, public Vercel variables, documentation, or committed files.
+- **Availability:** The Mac-hosted database and media services must remain online for features that depend on them. Maintain verified backups of the database snapshot, journal, and media directory.
+
+The database API is bound to loopback and is reached through the configured tunnel. Do not expose its local port directly to the public internet.
 
 ## Domains and Routes
 
-BSMS Web chat is a page on the main website, not a separate chat subdomain.
-
-- Main website: `https://bsms-web.com`
+- Production website: `https://bsms-web.com`
 - Chat page: `https://bsms-web.com/chat`
-- Chat path aliases: `/c` and `/rooms` redirect to `/chat`.
-- Dev2 website: `https://bsms-web-dev2.vercel.app`
-- Dev2 application API: `https://dev-api.bsms-web.com`
-- Production media: `https://media.bsms-web.com`
+- Chat aliases: `/c` and `/rooms` redirect to `/chat`.
+- Database API: `https://api.bsms-web.com`
+- Media: `https://media.bsms-web.com`
 
-The repository's application routing uses URL paths. A path such as `/chat` is not a subdomain such as `chat.bsms-web.com`. DNS and hosting-dashboard domain assignments are managed outside this repository.
+Chat is a route on the main website, not a separate `chat.bsms-web.com` subdomain. The repository's redirects and application routes use URL paths. DNS records and domain assignments are managed in the hosting and DNS provider dashboards.
 
-## Contributing
+## Development and Contributions
 
-Contributions, bug reports, and suggestions are welcome.
+Development branches and preview deployments are used to test changes before they are merged into the production branch. A preview deployment may use separate frontend or application API hostnames, but those are development infrastructure and are not production website addresses.
 
 Before contributing:
 
@@ -96,15 +91,13 @@ Before contributing:
 2. Explain the proposed change and its purpose.
 3. Keep changes focused and avoid unrelated modifications.
 4. Test affected functionality before submitting a pull request.
-5. Never include credentials, private user information, or other secrets in a contribution.
+5. Never include credentials, private user information, database exports, or other secrets.
 
 For security vulnerabilities, follow the instructions in [SECURITY.md](SECURITY.md) instead of opening a public issue.
 
 ## Security
 
-Security matters because BSMS Web handles accounts, conversations, and other user-related data.
-
-If you discover a potential vulnerability, **report it privately** using the process described in [SECURITY.md](SECURITY.md). Do not publish sensitive vulnerability details, private keys, or active credentials in public issues or pull requests.
+BSMS Web handles accounts, conversations, and other user-related data. Keep credentials server-side, restrict access to internal APIs, and report potential vulnerabilities privately using the process described in [SECURITY.md](SECURITY.md).
 
 ## License
 
