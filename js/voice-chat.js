@@ -207,7 +207,7 @@
         await room.localParticipant.setMicrophoneEnabled(true);
         muted = false;
         if (el('voiceMuteButton')) el('voiceMuteButton').innerHTML = '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
-        if (el('voiceEndButton')) el('voiceEndButton').hidden = context().user?.uid !== currentCall?.createdBy;
+        if (el('voiceEndButton')) el('voiceEndButton').hidden = false;
         if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = currentCall?.conversationName || 'Voice call';
         setConversationName(currentCall?.conversationName || 'Voice call');
         showPanel('voiceActivePanel');
