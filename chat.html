@@ -206,6 +206,12 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <button class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.accept()">Join call</button>
             </div>
         </div>
+        <div id="voiceRejoinPanel" class="voice-panel" hidden>
+            <div class="voice-incoming-indicator"><span></span> Active call</div>
+            <h3>You're still in a call</h3>
+            <p>Rejoin the audio room when you're ready. Your microphone will only be enabled after you choose to rejoin.</p>
+            <button class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.rejoin()">Rejoin voice call</button>
+        </div>
         <div id="voiceActivePanel" class="voice-panel" hidden>
             <div class="voice-live-indicator"><span></span> Connected</div>
             <h3 id="voiceActiveTitle">Voice call</h3>
