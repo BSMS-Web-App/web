@@ -203,6 +203,8 @@
         if (opening || host || document.visibilityState === 'hidden') return;
         opening = true;
         try {
+            if (window.BSMSLegalUpdates?.check) await window.BSMSLegalUpdates.check();
+            if (document.getElementById('bsms-legal-updates-host')) return;
             const response = await fetch(CHANGELOG_URL, { cache: 'no-store' });
             if (!response.ok) throw new Error('The changelog could not be loaded.');
             const latest = parseReleases(await response.text())[0];
