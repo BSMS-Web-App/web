@@ -23,6 +23,7 @@ import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
 import legalHandler from './api/legal.js';
 import mediaHandler from './api/media.js';
+import voiceHandler from './api/voice.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,6 +134,7 @@ app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 app.use('/api/legal', (req, res) => legalHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
+app.use('/api/voice', (req, res) => voiceHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
