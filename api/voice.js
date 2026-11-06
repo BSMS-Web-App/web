@@ -65,7 +65,7 @@ async function expireCall(callId, call) {
     const participants = Object.keys(call.participants || {});
     const invited = Object.keys(call.invited || {});
     try {
-        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
         if (livekitUrl && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET && call.roomName) {
             const roomService = new RoomServiceClient(livekitUrl, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
             await roomService.deleteRoom(call.roomName);
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
     try {
         if (action === 'config') {
-            const livekitUrl = String(process.env.LIVEKIT_URL || '').trim();
+            const livekitUrl = String(process.env.LIVEKIT_URL || '').trim().replace(/\/+$/, '');
             const configured = Boolean(
                 livekitUrl.startsWith('wss://') &&
                 process.env.LIVEKIT_API_KEY &&
@@ -150,7 +150,7 @@ export default async function handler(req, res) {
                         createdBy: call.createdBy,
                         conversationName: call.conversationName || 'Chat',
                         participants: Object.keys(call.participants || {}),
-                    createdAt: call.createdAt
+                        createdAt: call.createdAt
                     };
                     break;
                 }
@@ -182,9 +182,13 @@ export default async function handler(req, res) {
             const callId = crypto.randomUUID().replace(/-/g, '');
             const now = Date.now();
             const callerName = account.displayName || account.username || uid;
-            const conversationName = type === 'gcs'
-                ? (conversation.name || 'Group chat')
-                : (callerName + ' and ' + (conversation.members[memberIds.find(id => id !== uid)]?.username || 'Direct message'));
+            let conversationName = conversation.name || 'Group chat';
+            if (type === 'dms') {
+                const otherUid = memberIds.find(id => id !== uid);
+                const otherAccountSnapshot = await db.ref('/accounts/' + otherUid).once('value');
+                const otherAccount = otherAccountSnapshot.val() || {};
+                conversationName = callerName + ' and ' + (otherAccount.displayName || otherAccount.username || 'Direct message');
+            }
             const invited = {};
             for (const memberId of memberIds) if (memberId !== uid) invited[memberId] = true;
 
