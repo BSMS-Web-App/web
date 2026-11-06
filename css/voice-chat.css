@@ -80,3 +80,5 @@
     .voice-action-row { gap: 8px; }
     .voice-action-row .btn { min-width: 0; flex: 1; }
 }
+
+.voice-call-duration { margin: 2px 0 4px !important; color: var(--fg) !important; font-size: 1.45rem !important; font-variant-numeric: tabular-nums; font-weight: 750; letter-spacing: .04em; }
