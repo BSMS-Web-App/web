@@ -18,12 +18,24 @@ export const chessOnlineState = {
 const CLIENT_TTL_MS = 30000;
 const ROOM_TTL_MS = 3600000;
 
+let wsSender = null;
+export function registerWsSender(fn) {
+    wsSender = fn;
+}
+
 export function pushClientEvent(clientId, event) {
     if (!clientId) return;
     const list = chessOnlineState.events.get(clientId) || [];
     list.push({ ...event, eventId: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}` });
     if (list.length > 50) list.splice(0, list.length - 50);
     chessOnlineState.events.set(clientId, list);
+    if (wsSender) {
+        try {
+            wsSender(clientId, event);
+        } catch {
+            // ignore dispatch error
+        }
+    }
 }
 
 export function drainClientEvents(clientId) {
@@ -163,9 +175,24 @@ export function getPublicLobbySnapshot(clientId) {
     const activeRoom = client?.roomId ? chessOnlineState.rooms.get(client.roomId) || null : null;
     const events = clientId ? drainClientEvents(clientId) : [];
 
+    const members = users.map((u) => ({
+        memberId: u.memberId || u.clientId,
+        username: u.username || 'BSMS_Member',
+        avatar: u.avatar || '/img/pfp.png',
+        elo: typeof u.elo === 'number' ? u.elo : 0,
+        wins: u.wins || 0,
+        draws: u.draws || 0,
+        losses: u.losses || 0,
+        streak: u.streak || 0,
+        online: true,
+        status: u.status || 'online',
+        lastSeen: u.lastSeen || Date.now()
+    }));
+
     return {
         ok: true,
         users,
+        members,
         liveMatches,
         room: activeRoom,
         events
