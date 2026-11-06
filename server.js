@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import 'dotenv/config';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import path from 'path';
@@ -20,6 +21,8 @@ import announcementsHandler from './api/announcements.js';
 import versionHandler from './api/version.js';
 import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
+import legalHandler from './api/legal.js';
+import mediaHandler from './api/media.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +30,38 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+
+// The application API runs behind Cloudflare Tunnel on the Mac mini.
+// Browser origins are explicitly allowlisted; no wildcard CORS is used.
+const allowedOrigins = new Set(
+    (process.env.APP_ALLOWED_ORIGINS || 'https://bsms-web-dev2.vercel.app,http://localhost:3000')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+);
+
+function apiCors(req, res, next) {
+    const origin = req.get('Origin');
+
+    if (origin && !allowedOrigins.has(origin)) {
+        return res.status(403).json({ error: 'Origin is not allowed.' });
+    }
+
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID, X-Device-ID, X-UID, Authorization');
+    res.setHeader('Access-Control-Max-Age', '600');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    return next();
+}
 
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -61,6 +96,10 @@ const pageFileLimiter = rateLimit({
     message: { error: 'Too many page requests. Please try again shortly.' }
 });
 
+// Apply CORS before body parsing and rate limiting so browser preflight requests terminate cleanly.
+app.use('/api', apiCors);
+app.use('/games/saves', apiCors);
+
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -91,6 +130,8 @@ app.use('/api/announcements', (req, res) => announcementsHandler(req, res));
 app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
+app.use('/api/legal', (req, res) => legalHandler(req, res));
+app.use('/api/media', (req, res) => mediaHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
@@ -151,8 +192,8 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
-const PORT = parseInt(process.env.APP_PORT || '3000', 10);
-const HOST = '0.0.0.0';
+const PORT = parseInt(process.env.APP_PORT || '4903', 10);
+const HOST = process.env.APP_HOST || '127.0.0.1';
 
 app.listen(PORT, HOST, () => {
     console.log(`[BSMS Web] Server listening on http://${HOST}:${PORT}`);
