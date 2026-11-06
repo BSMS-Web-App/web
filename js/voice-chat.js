@@ -22,6 +22,7 @@
     let polling = false;
     let pollTimer = null;
     let disconnecting = false;
+    let durationTimer = null;
 
     const el = (id) => document.getElementById(id);
 
@@ -151,6 +152,23 @@
         }
     }
 
+    function startDurationClock(startedAt) {
+        if (durationTimer) window.clearInterval(durationTimer);
+        const render = () => {
+            const elapsed = Math.max(0, Math.floor((Date.now() - Number(startedAt || Date.now())) / 1000));
+            const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const seconds = String(elapsed % 60).padStart(2, '0');
+            if (el('voiceCallDuration')) el('voiceCallDuration').textContent = minutes + ':' + seconds;
+        };
+        render();
+        durationTimer = window.setInterval(render, 1000);
+    }
+
+    function stopDurationClock() {
+        if (durationTimer) window.clearInterval(durationTimer);
+        durationTimer = null;
+    }
+
     function attachAudio(track) {
         if (!track || !livekit || track.kind !== livekit.Track.Kind.Audio) return;
         const audio = track.attach();
@@ -195,6 +213,7 @@
         showPanel('voiceActivePanel');
         showError('');
         updateParticipants();
+        startDurationClock(currentCall?.createdAt);
         el('voiceChatModal')?.classList.add('show');
     }
 
@@ -208,7 +227,7 @@
         try {
             const result = await api('start', conversation);
             currentCallId = result.callId;
-            currentCall = { callId: result.callId, createdBy: context().user?.uid, conversationName: result.conversationName || conversation.name };
+            currentCall = { callId: result.callId, createdBy: context().user?.uid, conversationName: result.conversationName || conversation.name, createdAt: result.createdAt };
             await connectCall(result.callId);
         } catch (error) {
             if (currentCallId) {
@@ -233,7 +252,8 @@
             currentCall = {
                 callId: call.callId,
                 createdBy: call.callerUid,
-                conversationName: call.conversationName
+                conversationName: call.conversationName,
+                createdAt: call.createdAt
             };
             incomingCall = null;
             await connectCall(call.callId);
@@ -284,6 +304,7 @@
 
     async function leave() {
         const callId = currentCallId;
+        stopDurationClock();
         await disconnectRoom();
         if (callId) {
             try { await api('leave', { callId }); } catch {}
@@ -299,6 +320,7 @@
         const callId = currentCallId;
         if (!callId) return;
         try { await api('end', { callId }); } catch (error) { showError(error.message); return; }
+        stopDurationClock();
         await disconnectRoom();
         currentCallId = null;
         currentCall = null;
@@ -308,6 +330,7 @@
 
     async function handleUnexpectedDisconnect() {
         const callId = currentCallId;
+        stopDurationClock();
         await disconnectRoom();
         currentCallId = null;
         currentCall = null;
@@ -328,7 +351,8 @@
                 currentCall = {
                     callId: result.activeCall.callId,
                     createdBy: result.activeCall.createdBy,
-                    conversationName: result.activeCall.conversationName
+                    conversationName: result.activeCall.conversationName,
+                    createdAt: result.activeCall.createdAt
                 };
                 await connectCall(currentCallId);
             } else if (!currentCallId && result.incoming?.length && !incomingCall) {
