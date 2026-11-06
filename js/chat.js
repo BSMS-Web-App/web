@@ -471,7 +471,8 @@ const UI = {
     },
 
     showVoiceChatModal: () => {
-        UI.openModal('voiceChatModal');
+        if (window.VoiceChatManager) window.VoiceChatManager.open();
+        else UI.openModal('voiceChatModal');
     },
 
     openSettings: () => {
@@ -3362,6 +3363,14 @@ const NameColorManager = {
             }
         }
     }
+};
+
+window.BSMSChatContext = {
+    get user() { return State.user; },
+    get channels() { return State.channels; },
+    get activeChannelId() { return State.activeChannelId; },
+    get activeType() { return State.activeType; },
+    get accountsCache() { return State.accountsCache; }
 };
 
 window.onload = () => AuthManager.init();
