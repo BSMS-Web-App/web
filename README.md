@@ -22,7 +22,7 @@
 
 **BSMS Web** is a full-stack web application that brings communication, account management, gaming, and other interactive features together in one platform.
 
-The project combines an HTML, CSS, and JavaScript frontend with a Node.js backend. The website is hosted on Vercel, while persistent application data is handled by a JSON database API running on an always-on Mac and reached by Vercel server-side routes through Cloudflare Tunnel.
+The project combines an HTML, CSS, and JavaScript frontend with a Node.js backend. Vercel serves the static website, while the application API and persistent JSON database run on an always-on Mac mini. Browser API requests travel directly to the Mac through Cloudflare Tunnel rather than passing through Vercel Functions.
 
 ## Features
 
@@ -58,18 +58,19 @@ Use the following resources to learn more about BSMS Web, its history, and how t
 | Node.js | JavaScript runtime for the backend |
 | Express | HTTP server and application routing |
 | Mac-hosted JSON database API | Persistent application data, snapshots, and journaled writes |
-| Cloudflare Tunnel | Private connectivity between Vercel API routes and the Mac database API |
+| Cloudflare Tunnel | Direct browser-to-Mac application API and media connectivity |
 | Glin Profanity | Profanity detection and moderation |
 | Vercel | Hosting and deployment |
 
-## Database Architecture
+## Hosting and API Architecture
 
-- The frontend remains hosted on Vercel.
-- Vercel API routes connect server-to-server to the Mac database API using `BSMS_WEB_API_URL` and `BSMS_WEB_API_KEY`. These variables must remain server-side and must never be exposed to browser code.
-- The Mac API listens on `127.0.0.1:4901` by default. Cloudflare Tunnel provides the connection from Vercel without binding the database service to a public interface.
-- The Mac API persists data in a JSON snapshot and write-ahead journal, with media stored separately. Keep the Mac online and maintain backups.
-- The root `.env.example` documents the Vercel/Express server settings. `mac-api/.env.example` documents the Mac API settings. Never commit real `.env` files, API keys, or database exports.
-- Production must have its own correctly configured environment variables before any production deployment is switched to the Mac database.
+- Vercel is configured to build and serve only the static HTML, CSS, JavaScript, and image assets. The deployment does not build Vercel Functions.
+- The browser rewrites `/api/*`, `/games/saves`, and `/raw/*` requests to the branch-specific Mac application API hostname using `js/api-origin.js`.
+- The Express application API runs on the Mac mini and uses the existing handlers in `api/`. It connects to the private Mac database API through `BSMS_WEB_API_URL` and `BSMS_WEB_API_KEY`.
+- The database API listens on loopback only. Cloudflare Tunnel exposes the application API and signed media endpoints without exposing the database API key to browser code.
+- Keep development and production database files, media directories, API keys, and service ports separate. Keep the Mac online and maintain tested backups.
+- The root `.env.example` documents the dev2 application API settings. `mac-api/.env.example` documents database-service settings. Never commit real `.env` files, API keys, or database exports.
+- The dev2 browser API hostname is `https://app-api-dev2.bsms-web.com`; its media hostname is `https://media-dev2.bsms-web.com`. Production remains unchanged until a separate production migration is approved.
 
 ## Contributing
 
