@@ -217,6 +217,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             <h3 id="voiceActiveTitle">Voice call</h3>
             <p id="voiceCallDuration" class="voice-call-duration">00:00</p>
             <p id="voiceCallStatusText">Connecting audio…</p>
+            <button id="voiceEnableAudioButton" class="btn sec" type="button" onclick="VoiceChatManager.enableAudio()" hidden>Tap to enable audio</button>
             <div id="voiceParticipants" class="voice-participants" aria-live="polite"></div>
             <div class="voice-action-row voice-call-controls">
                 <button id="voiceMuteButton" class="btn sec" type="button" onclick="VoiceChatManager.toggleMute()"><svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span></button>
