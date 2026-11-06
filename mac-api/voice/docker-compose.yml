@@ -3,7 +3,6 @@ services:
     image: livekit/livekit-server:latest
     container_name: bsms-web-livekit
     restart: unless-stopped
-    command: ["--config", "/etc/livekit/livekit.yaml"]
     environment:
       LIVEKIT_CONFIG: |
         port: 7880
