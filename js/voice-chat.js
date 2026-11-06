@@ -202,6 +202,9 @@
         room.on(sdk.RoomEvent.ParticipantConnected, updateParticipants);
         room.on(sdk.RoomEvent.ParticipantDisconnected, updateParticipants);
         room.on(sdk.RoomEvent.ActiveSpeakersChanged, updateParticipants);
+        room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
+            if (el('voiceEnableAudioButton')) el('voiceEnableAudioButton').hidden = Boolean(room?.canPlaybackAudio);
+        });
         room.on(sdk.RoomEvent.Disconnected, () => {
             if (!disconnecting) handleUnexpectedDisconnect();
         });
@@ -222,6 +225,7 @@
         showPanel('voiceActivePanel');
         showError('');
         updateParticipants();
+        if (el('voiceEnableAudioButton')) el('voiceEnableAudioButton').hidden = Boolean(room?.canPlaybackAudio);
         startDurationClock(currentCall?.createdAt);
         el('voiceChatModal')?.classList.add('show');
     }
@@ -308,6 +312,16 @@
         showPanel('voiceSetupPanel');
         showError('');
         close();
+    }
+
+    async function enableAudio() {
+        if (!room) return;
+        try {
+            await room.startAudio();
+            if (el('voiceEnableAudioButton')) el('voiceEnableAudioButton').hidden = true;
+        } catch (error) {
+            showError(error.message || 'Audio playback could not be started.');
+        }
     }
 
     async function toggleMute() {
@@ -426,6 +440,7 @@
         rejoin,
         decline,
         toggleMute,
+        enableAudio,
         leave,
         endForEveryone
     };
