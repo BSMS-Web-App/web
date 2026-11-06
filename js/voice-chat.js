@@ -18,6 +18,7 @@
     let currentCallId = null;
     let currentCall = null;
     let incomingCall = null;
+    let pendingRejoinCall = null;
     let muted = false;
     let polling = false;
     let pollTimer = null;
@@ -27,7 +28,7 @@
     const el = (id) => document.getElementById(id);
 
     function showPanel(name) {
-        ['voiceSetupPanel', 'voiceIncomingPanel', 'voiceActivePanel'].forEach(id => {
+        ['voiceSetupPanel', 'voiceIncomingPanel', 'voiceRejoinPanel', 'voiceActivePanel'].forEach(id => {
             const node = el(id);
             if (node) node.hidden = id !== name;
         });
@@ -87,6 +88,8 @@
             showError('Open a direct message or group conversation before starting a call.');
         } else if (currentCallId) {
             showPanel('voiceActivePanel');
+        } else if (pendingRejoinCall) {
+            showPanel('voiceRejoinPanel');
         } else if (incomingCall) {
             showIncoming(incomingCall);
         } else {
@@ -250,6 +253,28 @@
         }
     }
 
+    async function rejoin() {
+        if (!pendingRejoinCall) return;
+        const call = pendingRejoinCall;
+        currentCall = {
+            callId: call.callId,
+            createdBy: call.createdBy,
+            conversationName: call.conversationName,
+            createdAt: call.createdAt
+        };
+        currentCallId = call.callId;
+        pendingRejoinCall = null;
+        try {
+            await connectCall(call.callId);
+        } catch (error) {
+            currentCallId = null;
+            currentCall = null;
+            showPanel('voiceRejoinPanel');
+            pendingRejoinCall = call;
+            showError(error.message || 'Could not rejoin the voice call.');
+        }
+    }
+
     async function accept() {
         if (!incomingCall) return;
         const call = incomingCall;
@@ -320,6 +345,7 @@
         }
         currentCallId = null;
         currentCall = null;
+        pendingRejoinCall = null;
         muted = false;
         showPanel('voiceSetupPanel');
         close();
@@ -333,6 +359,7 @@
         await disconnectRoom();
         currentCallId = null;
         currentCall = null;
+        pendingRejoinCall = null;
         showPanel('voiceSetupPanel');
         close();
     }
@@ -355,16 +382,14 @@
         polling = true;
         try {
             const result = await api('poll');
-            if (result.activeCall && !currentCallId) {
-                currentCallId = result.activeCall.callId;
-                currentCall = {
-                    callId: result.activeCall.callId,
-                    createdBy: result.activeCall.createdBy,
-                    conversationName: result.activeCall.conversationName,
-                    createdAt: result.activeCall.createdAt
-                };
-                await connectCall(currentCallId);
-            } else if (!currentCallId && result.incoming?.length && !incomingCall) {
+            if (result.activeCall && !currentCallId && !pendingRejoinCall) {
+                pendingRejoinCall = result.activeCall;
+                showPanel('voiceRejoinPanel');
+                el('voiceChatModal')?.classList.add('show');
+            } else if (!result.activeCall && pendingRejoinCall) {
+                pendingRejoinCall = null;
+                showPanel('voiceSetupPanel');
+            } else if (!currentCallId && !pendingRejoinCall && result.incoming?.length && !incomingCall) {
                 showIncoming(result.incoming[0]);
             } else if (incomingCall && !result.incoming?.some(call => call.callId === incomingCall.callId)) {
                 incomingCall = null;
@@ -398,6 +423,7 @@
         close,
         start,
         accept,
+        rejoin,
         decline,
         toggleMute,
         leave,
