@@ -22,6 +22,7 @@ import versionHandler from './api/version.js';
 import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
 import legalHandler from './api/legal.js';
+import updatesHandler from './api/updates.js';
 import mediaHandler from './api/media.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -132,6 +133,7 @@ app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 app.use('/api/legal', (req, res) => legalHandler(req, res));
+app.use('/api/updates', (req, res) => updatesHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
@@ -157,6 +159,7 @@ app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
 app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
+app.get('/changelog', (req, res) => res.sendFile(path.join(__dirname, 'changelog.html')));
 app.get('/contact', (req, res) => res.redirect(301, '/support'));
 app.get('/bug-report', (req, res) => res.redirect(302, '/support?type=bug'));
 app.get('/feature-request', (req, res) => res.redirect(302, '/support?type=feature'));
