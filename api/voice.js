@@ -133,11 +133,12 @@ export default async function handler(req, res) {
             let activeCall = null;
             for (const callId of Object.keys(activeMap).slice(0, 5)) {
                 const call = await getCall(callId);
-                if (!call || call.status === 'ended' || Number(call.expiresAt || 0) < Date.now()) {
+                if (!call || call.status === 'ended') {
                     await removeUserCall(uid, callId);
                     continue;
                 }
-                if (call.status === 'ringing' && Number(call.ringExpiresAt || 0) < Date.now()) {
+                if (Number(call.expiresAt || 0) < Date.now() ||
+                    (call.status === 'ringing' && Number(call.ringExpiresAt || 0) < Date.now())) {
                     await expireCall(callId, call);
                     continue;
                 }
@@ -172,8 +173,11 @@ export default async function handler(req, res) {
             const currentCalls = await db.ref('/voice/userCalls/' + uid).once('value');
             for (const existingCallId of Object.keys(currentCalls.val() || {})) {
                 const existingCall = await getCall(existingCallId);
-                if (!existingCall || existingCall.status === 'ended' || Number(existingCall.expiresAt || 0) < Date.now()) {
+                if (!existingCall || existingCall.status === 'ended') {
                     await removeUserCall(uid, existingCallId);
+                } else if (Number(existingCall.expiresAt || 0) < Date.now() ||
+                    (existingCall.status === 'ringing' && Number(existingCall.ringExpiresAt || 0) < Date.now())) {
+                    await expireCall(existingCallId, existingCall);
                 } else {
                     return response(res, 409, { error: 'You are already in a voice call.' });
                 }
