@@ -1,38 +1,31 @@
-# BSMS Web Mac Database API
+# BSMS Web Production Database and Media API
 
-The Mac mini hosts the persistent JSON database API and media service. The Express application API is a separate process. The current dev2 application API connects to the production database API over loopback, so dev2 is not an isolated data environment.
+The Mac mini hosts BSMS Web's persistent production JSON database API and media service. The database API is a private backend service: application servers connect to it using a server-side API key, while browser media operations use the signed upload and public-media endpoints.
 
-## Service layout
+## Production service
 
-| Service | Local address | Public hostname | Purpose |
-| --- | --- | --- | --- |
-| Production database and media API | `127.0.0.1:4901` | `api.bsms-web.com` and `media.bsms-web.com` | Production database operations and production media |
-| Dev2 application API | `127.0.0.1:4903` | `dev-api.bsms-web.com` | Express application handlers used by the dev2 website |
-| Optional isolated dev2 database/media API | `127.0.0.1:4902` | `dev-media.bsms-web.com` | Separate dev2 data and media; retained as an isolated service, but not the active data target for the current dev2 website |
+| Setting | Production value |
+| --- | --- |
+| Local bind address | `127.0.0.1` |
+| Local port | `4901` |
+| Database API hostname | `api.bsms-web.com` |
+| Public media hostname | `media.bsms-web.com` |
+| Database snapshot | Configured by `BSMS_WEB_DATA_FILE` |
+| Media directory | Configured by `BSMS_WEB_MEDIA_DIR` |
 
-Cloudflare Tunnel routes the public hostnames to the corresponding loopback services. Keep the database API bound to loopback; do not expose port 4901 or 4902 directly to the public internet.
+Cloudflare Tunnel routes the public API and media hostnames to the local service. Keep the service bound to loopback. Do not expose port 4901 directly to the public internet.
 
-## Current dev2 data flow
+## Request and access model
 
-1. Vercel serves the static dev2 frontend at `https://bsms-web-dev2.vercel.app`.
-2. The browser sends application API requests to `https://dev-api.bsms-web.com`.
-3. The dev2 Express application API runs locally on port `4903`.
-4. The dev2 application API sends database requests to `http://127.0.0.1:4901` using the production API key from its local `.env`.
-5. The browser uses `https://media.bsms-web.com` for production media reads and uploads.
+Most database and internal media endpoints require:
 
-The production API key must remain server-side in the Mac-hosted dev2 application API environment. Never place it in `js/api-origin.js`, frontend JavaScript, public Vercel environment variables, or committed files.
+`Authorization: Bearer <BSMS_WEB_API_KEY>`
 
-**Production impact:** Database writes made through dev2 affect the production database. Media uploads made through dev2 are stored in production media. Do not use dev2 for destructive testing or test uploads unless those changes are intended for production.
+The API key is for trusted server-side application code only. Never include it in frontend JavaScript, browser requests, public Vercel environment variables, source control, or documentation.
 
-## Optional isolated dev2 database
+### Browser-direct media endpoints
 
-The service on port `4902` remains available for isolated development or recovery testing. Its database and media paths must remain separate from production. The current dev2 website does not use this service for its database connection or media origin.
-
-The isolated service should use its own API key, data file, and media directory. Do not configure the dev2 application API to use port `4902` unless intentionally switching dev2 back to isolated data and media.
-
-## Browser-direct media endpoints
-
-These endpoints are intentionally accessible through the configured public media hostname and do not require the service API key:
+These endpoints are intentionally accessible through the configured public media hostname and do not require the database API key:
 
 - `OPTIONS /v1/media-upload-ticket` and `POST /v1/media-upload-ticket` — the browser sends its `X-Session-ID` plus upload metadata. The Mac validates the session, legal-policy acceptance, profile-image limits or chat-channel membership, then returns a short-lived signed upload URL. CORS is restricted to configured BSMS Web origins.
 - `OPTIONS /v1/media-upload/:mediaId` and `PUT /v1/media-upload/:mediaId` — the browser uploads the raw file directly to the Mac using the one-use signed capability.
@@ -40,9 +33,9 @@ These endpoints are intentionally accessible through the configured public media
 
 The browser does not send the database API key to these endpoints. Upload authorization is handled by the short-lived signed upload flow.
 
-## Internal database endpoints
+### Internal database endpoints
 
-These endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`:
+These endpoints require the bearer API key:
 
 - `GET /health` — authenticated service health.
 - `GET /v1/auth/session?sessionId=...` — resolve a session against the database, when enabled by the service implementation.
@@ -57,36 +50,36 @@ These endpoints require `Authorization: Bearer <BSMS_WEB_API_KEY>`:
 
 The service keeps a JSON snapshot plus a JSON Lines write-ahead journal. Mutations are serialized, journaled, and synced before they are acknowledged. A snapshot is compacted periodically. This avoids rewriting the full database for every chat message.
 
-The production service uses the production data file and production media directory. The isolated dev2 service, when used, must use separate absolute paths. Keep the files on persistent local storage and include the database snapshot, journal, and media in a tested backup plan.
+The snapshot, journal, and media directory must remain on persistent local storage and be included in a tested backup plan. A snapshot-only copy may not include the latest committed changes if the journal contains newer mutations.
 
 ## Environment
 
-### Dev2 application API
+Required:
 
-The dev2 application API environment includes:
+- `BSMS_WEB_API_KEY`: long random secret (at least 32 characters).
+- `BSMS_WEB_DATA_FILE`: absolute path to the persistent JSON snapshot.
 
-- `APP_HOST=127.0.0.1`
-- `APP_PORT=4903`
-- `APP_ALLOWED_ORIGINS=https://bsms-web-dev2.vercel.app` (additional local development origins may be included when needed)
-- `BSMS_WEB_API_URL=http://127.0.0.1:4901`
-- `BSMS_WEB_API_KEY`: the production database API key, stored only in the local server-side environment
-- `BSMS_WEB_PUBLIC_MEDIA_URL=https://media.bsms-web.com`
+Optional:
 
-Do not copy the real key into documentation or commit it to the repository.
+- `BSMS_WEB_API_HOST`: defaults to `127.0.0.1`.
+- `BSMS_WEB_API_PORT`: defaults to `4901`.
+- `BSMS_WEB_MEDIA_DIR`: absolute path to persistent media storage.
+- `BSMS_WEB_PUBLIC_MEDIA_URL`: public media origin; production uses `https://media.bsms-web.com`.
+- `BSMS_WEB_API_BODY_LIMIT`: defaults to `25mb`.
+- `BSMS_WEB_COMPACT_EVERY`: defaults to `1000` journaled mutations.
 
-### Production database API
+The application API's `BSMS_WEB_API_URL` must point to this service from trusted server-side code. Keep its API key in the same server-side environment. Never expose either setting to browser code.
 
-The production database API uses:
+## Operations and security
 
-- `BSMS_WEB_API_HOST=127.0.0.1`
-- `BSMS_WEB_API_PORT=4901`
-- `BSMS_WEB_API_KEY`: private production API key
-- `BSMS_WEB_DATA_FILE`: production JSON snapshot path
-- `BSMS_WEB_MEDIA_DIR`: production media directory
-- `BSMS_WEB_PUBLIC_MEDIA_URL=https://media.bsms-web.com` (default public media origin)
+- Keep the database API bound to `127.0.0.1`.
+- Route public traffic through the configured Cloudflare Tunnel hostnames.
+- Restrict CORS to the intended BSMS Web website origins.
+- Keep the API key private and rotate it if it is exposed.
+- Back up the live database state, snapshot, journal, and media directory.
+- Verify backups before relying on them for recovery.
+- Do not use production data for destructive tests.
 
-### Optional isolated dev2 database API
+## Development
 
-The isolated dev2 database API uses port `4902`, its own API key, a separate database file, a separate media directory, and `https://dev-media.bsms-web.com` as its public media hostname.
-
-Do not commit real API keys, database contents, private `.env` files, or user data.
+Development and preview environments may use separate application API processes and isolated database/media directories. Keep their credentials and data paths separate from production unless a deliberate shared-production-data test is intended. Never document or commit real credentials, private `.env` files, database contents, or user data.
