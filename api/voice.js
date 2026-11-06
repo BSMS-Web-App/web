@@ -7,7 +7,7 @@
  */
 
 import crypto from 'node:crypto';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { db, requestMacApi } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
@@ -64,6 +64,15 @@ async function expireCall(callId, call) {
     await db.ref('/voice/calls/' + callId + '/status').set('ended');
     const participants = Object.keys(call.participants || {});
     const invited = Object.keys(call.invited || {});
+    try {
+        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+        if (livekitUrl && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET && call.roomName) {
+            const roomService = new RoomServiceClient(livekitUrl, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
+            await roomService.deleteRoom(call.roomName);
+        }
+    } catch (error) {
+        console.warn('[BSMS Voice] Could not close LiveKit room:', error.message);
+    }
     await Promise.all([
         ...participants.map(uid => removeUserCall(uid, callId)),
         ...invited.map(uid => db.ref('/voice/invitations/' + uid + '/' + callId).remove())
@@ -136,7 +145,8 @@ export default async function handler(req, res) {
                         roomName: call.roomName,
                         createdBy: call.createdBy,
                         conversationName: call.conversationName || 'Chat',
-                        participants: Object.keys(call.participants || {})
+                        participants: Object.keys(call.participants || {}),
+                    createdAt: call.createdAt
                     };
                     break;
                 }
@@ -187,7 +197,7 @@ export default async function handler(req, res) {
             await Promise.all(Object.keys(invited).map(memberId =>
                 db.ref('/voice/invitations/' + memberId + '/' + callId).set({ createdAt: now })
             ));
-            return response(res, 200, { success: true, callId, conversationName });
+            return response(res, 200, { success: true, callId, conversationName, createdAt: now });
         }
 
         const callId = cleanId(payload.callId);
