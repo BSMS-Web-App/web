@@ -215,15 +215,15 @@ if(who==='HERO')actor(x,fy,CIV,0,k);else if(who==='ROWAN')actor(x,fy,1,0,k);else
 for(let r=0;r<2;r++)for(let c=0;c<4;c++)seat(c,r,r===1&&c===1?'HERO':r===1&&c===2?'ROWAN':'',0);
 sceneTitle('HEARTHVALE SCHOOL',W,H*.05);bars(W,H);}
 let lastArea='',stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
-const BOS=new Image();BOS.src='/img/last-harvest/bosses.png?v=8';
-const INT=new Image();INT.src='/img/last-harvest/interior.png?v=8';
+const BOS=new Image();BOS.src='/img/last-harvest/bosses.png?v=9';
+const INT=new Image();INT.onerror=()=>{if(!INT.dataset.f){INT.dataset.f='1';INT.src='/img/last-harvest/interior.png?v=9';}};INT.src='/img/interior.png?v=9';
 const CIV=4;
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
 const BR={cottage:[0,0,97,92],inn:[101,0,96,106],store:[201,0,88,106],workshop:[293,0,66,81],tree:[530,0,58,76],pine:[592,0,54,72]},HOUSES=['cottage','inn','store','workshop'];
-const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=8';
-const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=8';
+const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=9';
+const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=9';
 const NPC_MON={'PUMPKIN SENTINEL':9};
-const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=8';
+const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=9';
 const GENS=['Meadow','Orchard','Marsh','Cavern','Frostfall','Emberwood','Tempest','Crypt','Clockwork','Eclipse'],ARCH=['Slime','Bat','Beetle','Hound','Sprout','Wisp','Golem','Serpent','Crow'],BOSS=['Pumpkin Sentinel','Orchard Tyrant','Marsh Matriarch','Cavern Colossus','Frostfall Wyrm','Emberwood Behemoth','Tempest Roc','Crypt Lich King','Clockwork Titan','Eclipse Devourer'];
 /* monsters.png: 10 generations (rows) x 10 (9 monsters + 1 boss). index = gen*10+slot. Higher generations are stronger. */
 function monInfo(i){const g=(i/10)|0,a=i%10,boss=a===9;return{name:(boss?BOSS[g]:GENS[g]+' '+ARCH[a]).toUpperCase(),hp:Math.round((16+g*10+(boss?0:a))*(boss?2.4:1)),atk:Math.round((4+g*2)*(boss?1.5:1)),reward:Math.round((10+g*12)*(boss?4:1)),boss};}
@@ -487,10 +487,11 @@ ctx.restore();}
 
 const NPC_ROW={'ELDER MAPLE':19,'ROWAN':1,'MILLIE':8,'GUS':12,'PIPER':4,'MARA THE NEIGHBOR':28,'JUNIPER':14,'INNKEEPER BRAM':13,'NELL THE TRAVELER':38,'SHOPKEEPER TILLY':24,'FINN':21,'OLD CRAFTSMAN ORIN':29,'WREN THE APPRENTICE':31,'GATEKEEPER BRAWN':6,'GATEKEEPER WINONA':23};
 /* characters.png: one row per character, 12 frames: down, up, left, right x (idle, step, step) */
-function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;ctx.drawImage(CHARS,(face*3+(step||0))*16,row*16,16,16,Math.round(x-8*k),Math.round(fy-16*k),16*k,16*k);}
-const AIMG=new Image();AIMG.src='/img/last-harvest/anime.png?v=8';
+function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;const full=CHARS.naturalWidth>=192,col=full?face*3+(step||0):(face===1?1:0),m=(!full&&face===2)?-1:1;ctx.save();ctx.translate(Math.round(x),0);ctx.scale(m,1);ctx.drawImage(CHARS,col*16,row*16,16,16,-8*k,Math.round(fy-16*k),16*k,16*k);ctx.restore();}
+const AIMG=new Image();AIMG.src='/img/last-harvest/anime.png?v=9';
 /* anime.png: 16 anime busts 48x56: 0-2 heroes, 3 Rowan, 4 Rowan hollowed, 5 Brawn, 6 Winona, 7 Elder Maple, 8 Mara, 9 Thomas, 10 Instructor, 11 Millie, 12 Gus, 13 Piper, 14 Challenger, 15 Masked Merchant */
-function drawAnime(i,x,fy,k){if(!AIMG.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(Math.round(x),Math.round(fy),18*k,3*k,0,0,7);ctx.fill();ctx.imageSmoothingEnabled=false;ctx.drawImage(AIMG,(i%8)*48,((i/8)|0)*56,48,56,Math.round(x-24*k),Math.round(fy-56*k),48*k,56*k);}
+const ANIME_ROW={0:5,1:7,2:0,3:1,4:31,5:6,6:23,7:19,8:28,9:17,10:10,11:8,12:12,13:4,14:36,15:25};
+function drawAnime(i,x,fy,k){if(!AIMG.naturalWidth){drawSpriteK(ANIME_ROW[i]??1,0,0,x,fy,k*3);return;}ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(Math.round(x),Math.round(fy),18*k,3*k,0,0,7);ctx.fill();ctx.imageSmoothingEnabled=false;ctx.drawImage(AIMG,(i%8)*48,((i/8)|0)*56,48,56,Math.round(x-24*k),Math.round(fy-56*k),48*k,56*k);}
 function drawSprite(row,face,step,x,y){drawSpriteK(row,face,step,x,y+8,2);}
 function drawPerson(x,y,shirt,hat,name=''){if(BOSS_NPC[name]!==undefined){drawBossSprite(BOSS_NPC[name],x,y+8,2,Math.floor(performance.now()/500)%2,true);return;}const row=NPC_ROW[name]??[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
 const roomFurniture=[
@@ -521,11 +522,31 @@ ctx.restore();}
 /* ===== themed interiors: tile-grid rooms (each building has its own size, theme and layout) =====
    item = [sheet,a,b,w,h,col,row,solid]  sheet 'i' = Kenney Roguelike Indoors (a,b = sheet col,row), 't'/'d'/'f' = Kenney town/dungeon/farm tile index a, 'w' = window */
 const RM=[
-{t:'MAPLE COTTAGE',st:4,c:11,r:8,d:5,it:[['w',0,0,2,1,2,0,0],['w',0,0,2,1,7,0,0],['i',14,14,2,2,4,0,1],['i',19,12,1,1,9,1,0],['i',23,17,1,1,0,1,1],['i',23,17,1,1,1,1,1],['i',16,8,3,2,3,4,0],['i',3,0,2,2,2,3,1],['i',0,2,1,1,2,5,1],['i',8,0,2,2,9,2,1],['i',16,0,1,1,0,6,1],['i',17,0,1,1,10,6,1]],npc:[[7,4],[3,6]]},
-{t:'HEARTHVALE INN',st:1,c:16,r:9,d:8,it:[['w',0,0,2,1,1,0,0],['w',0,0,2,1,13,0,0],['i',5,12,2,2,2,0,1],['i',14,14,2,2,12,0,1],['i',22,9,1,3,14,0,1],['i',0,12,3,2,5,2,1],['i',0,12,3,2,8,2,1],['i',23,8,2,2,1,3,1],['i',16,10,3,2,6,6,0],['i',0,0,3,2,2,5,1],['i',0,0,3,2,10,5,1],['i',1,2,1,1,3,4,1],['i',1,2,1,1,11,4,1],['i',16,0,1,1,0,7,1],['i',17,0,1,1,15,7,1]],npc:[[7,1],[13,6]]},
-{t:'TILLY’S GENERAL STORE',st:0,c:14,r:9,d:7,it:[['w',0,0,2,1,1,0,0],['i',5,12,2,2,3,0,1],['i',5,12,2,2,5,0,1],['i',5,12,2,2,8,0,1],['i',5,12,2,2,10,0,1],['i',0,12,3,2,1,3,1],['i',5,12,2,2,6,4,1],['i',5,12,2,2,9,4,1],['i',16,8,3,2,5,6,0],['f',85,0,1,1,12,2,1],['f',96,0,1,1,13,2,1],['f',85,0,1,1,12,6,1],['f',74,0,1,1,1,6,1],['i',16,0,1,1,0,7,1]],npc:[[2,2],[10,7]]},
-{t:'ORIN’S WORKSHOP',st:3,c:9,r:7,d:4,it:[['w',0,0,2,1,6,0,0],['i',14,14,2,2,1,0,1],['t',115,0,1,1,4,1,0],['t',116,0,1,1,5,1,0],['d',74,0,1,1,3,3,1],['i',0,0,3,2,5,2,1],['d',89,0,1,1,0,5,1],['t',107,0,1,1,8,4,1],['t',107,0,1,1,8,5,1]],npc:[[2,3],[6,5]]}
+{t:'MAPLE COTTAGE',st:4,c:11,r:8,d:5,it:[
+ ['w',0,0,2,1,6,0,0],['i',19,13,1,1,9,0,0],['i',20,6,1,1,3,1,0],
+ ['i',0,12,1,2,0,0,1],['i',1,12,1,2,1,0,1],['i',8,12,1,2,2,0,1],['i',14,14,1,2,4,0,1],
+ ['i',20,17,1,1,0,2,1],['i',19,17,1,1,0,3,1],
+ ['p','rug',1,3,2,4,5,0],['i',0,0,3,1,2,3,1],['i',1,2,1,1,3,2,1],['i',0,2,1,1,3,4,1],
+ ['p','bed',0,2,2,9,2,1],['i',16,0,1,1,10,6,1]],npc:[[7,4],[3,6]]},
+{t:'HEARTHVALE INN',st:1,c:16,r:9,d:8,it:[
+ ['w',0,0,2,1,1,0,0],['w',0,0,2,1,12,0,0],['i',5,12,1,2,3,0,1],['i',6,12,1,2,11,0,1],['i',19,0,1,2,10,0,1],['i',14,14,1,2,13,0,1],['i',21,8,1,3,15,0,1],
+ ['i',0,12,1,2,5,2,1],['i',1,12,1,2,6,2,1],['i',2,12,1,2,7,2,1],['i',0,12,1,2,8,2,1],['i',1,12,1,2,9,2,1],
+ ['i',23,8,2,2,1,3,1],['p','rug',2,4,2,6,6,0],['i',4,7,4,1,6,5,1],
+ ['i',0,0,3,1,2,6,1],['i',1,2,1,1,3,5,1],['i',0,2,1,1,3,7,1],['i',0,0,3,1,11,6,1],['i',1,2,1,1,12,5,1],['i',0,2,1,1,12,7,1],
+ ['i',16,0,1,1,0,7,1],['i',17,0,1,1,15,7,1]],npc:[[7,1],[13,4]]},
+{t:'TILLY’S GENERAL STORE',st:0,c:14,r:9,d:7,it:[
+ ['w',0,0,2,1,1,0,0],['i',5,12,1,2,3,0,1],['i',6,12,1,2,4,0,1],['i',20,17,1,1,6,1,1],['i',19,17,1,1,7,1,1],['i',20,17,1,1,9,1,1],['i',21,17,1,1,10,1,1],
+ ['i',0,12,1,2,1,3,1],['i',1,12,1,2,2,3,1],['i',2,12,1,2,3,3,1],
+ ['i',5,12,1,2,6,4,1],['i',6,12,1,2,7,4,1],['i',5,12,1,2,9,4,1],['i',6,12,1,2,10,4,1],
+ ['f',85,0,1,1,12,2,1],['f',85,0,1,1,13,2,1],['f',96,0,1,1,12,3,1],['f',74,0,1,1,1,6,1],['p','rug',0,3,2,5,6,0],['i',16,0,1,1,0,7,1]],npc:[[2,2],[10,7]]},
+{t:'ORIN’S WORKSHOP',st:3,c:9,r:7,d:4,it:[
+ ['w',0,0,2,1,6,0,0],['i',14,14,1,2,1,0,1],['i',14,14,1,2,2,0,1],['i',20,6,1,1,4,1,0],['t',115,0,1,1,3,1,0],['t',116,0,1,1,5,1,0],
+ ['d',74,0,1,1,3,3,1],['i',0,0,3,1,5,3,1],['d',89,0,1,1,0,5,1],['t',107,0,1,1,8,4,1],['t',107,0,1,1,8,5,1]],npc:[[2,3],[6,5]]}
 ];
+/* procedural furniture: beds and rugs in the Kenney palette, any size in tiles */
+function procItem(i,x,y,s){const P=(a,b,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x+a*s),Math.round(y+b*s),Math.round(w*s),Math.round(h*s));},W=i[3]*16,H=i[4]*16,O='#3f2631';
+if(i[1]==='bed'){const bc=['#c8503c','#4f8f98','#8a5ab8'][i[2]%3];P(0,0,W,H,O);P(1,1,W-2,H-2,'#8a5a3a');P(1,1,W-2,5,'#6a4028');P(3,6,W-6,H-9,'#f2e8d0');P(5,8,(W-12)/2,6,'#fffaf0');P(W/2+1,8,(W-12)/2,6,'#fffaf0');P(3,17,W-6,H-20,bc);P(3,17,W-6,2,'rgba(255,255,255,.3)');P(3,24,W-6,2,'rgba(0,0,0,.2)');P(0,H-3,3,3,O);P(W-3,H-3,3,3,O);}
+else{const q=[['#a8483c','#c8685a'],['#3a7a4e','#4fa86a'],['#4a5a9a','#6a7ac0']][i[2]%3];P(0,0,W,H,O);P(1,1,W-2,H-2,q[0]);P(3,3,W-6,H-6,q[1]);P(5,5,W-10,H-10,q[0]);P(7,7,W-14,H-14,'#f2e8d0');P(8,8,W-16,H-16,q[1]);for(let a=2;a<W-2;a+=3){P(a,0,1,2,'#f2e8d0');P(a,H-2,1,2,'#f2e8d0');}}}
 function roomGeom(id){const R=RM[id],W=innerWidth,H=innerHeight,Z=Math.max(1,Math.min(3,Math.floor(Math.min(W*.94/(R.c*32),(H-150)/(R.r*32))))),U=32*Z,ox=Math.round((W-R.c*U)/2),oy=Math.round(120+(H-120-R.r*U)/2);return{R,Z,U,ox,oy,exitY:oy+(R.r-1)*U};}
 const rcx=(g,c)=>g.ox+(c+.5)*g.U,rcy=(g,r)=>g.oy+(r+.9)*g.U;
 function roomStart(id){const g=roomGeom(id);return{x:rcx(g,g.R.d),y:rcy(g,g.R.r-2)};}
@@ -535,7 +556,7 @@ function drawRoom(id,W,H,withNpc){const g=roomGeom(id),R=g.R,U=g.U,s=2*g.Z;px(0,
 roomShell(W,H,{wall:'#d5b88a',trim:'#49352d'},g.ox/W,g.oy/H,R.c*U/W,R.r*U/H,R.st,s,2);
 px(g.ox,g.oy+(R.r-1)*U,R.c*U,U,'#2b1a24');if(INT.naturalWidth){ctx.imageSmoothingEnabled=false;ctx.drawImage(INT,0,R.st*16,16,16,g.ox+R.d*U,g.oy+(R.r-1)*U,U,U);ctx.drawImage(INT,96,R.st*16,16,16,g.ox+R.d*U,g.oy+(R.r-1)*U,U,U);}
 ctx.strokeStyle='#3a2418';ctx.lineWidth=4;ctx.strokeRect(g.ox-2,g.oy-2,R.c*U+4,R.r*U+4);
-const dr=i=>{const x=g.ox+i[5]*U,y=g.oy+i[6]*U;if(i[0]==='i')kBlock(i[1],i[2],i[3],i[4],x,y,s);else if(i[0]==='w')winFrame(x+U*.12,y+U*.2,i[3]*U*.76,U*.9);else kTile(i[0],i[1],x,y,s);};
+const dr=i=>{const x=g.ox+i[5]*U,y=g.oy+i[6]*U;if(i[0]==='i')kBlock(i[1],i[2],i[3],i[4],x,y,s);else if(i[0]==='w')winFrame(x+U*.12,y+U*.2,i[3]*U*.76,U*.9);else if(i[0]==='p')procItem(i,x,y,s);else kTile(i[0],i[1],x,y,s);};
 R.it.filter(i=>i[0]==='w'||(!i[7]&&i[6]<2)).forEach(dr);R.it.filter(i=>!i[7]&&i[0]!=='w'&&i[6]>=2).forEach(dr);
 const list=R.it.filter(i=>i[7]).map(i=>({y:g.oy+(i[6]+i[4])*U,f:()=>dr(i)}));
 if(withNpc!==false)R.npc.forEach((n,k)=>{const nm=roomNPCs[id][k].name;list.push({y:rcy(g,n[1]),f:()=>personK(rcx(g,n[0]),rcy(g,n[1]),nm,s)});});
@@ -545,6 +566,7 @@ R.npc.forEach((n,i)=>{roomNPCSpots[interiorId][i]={x:rcx(g,n[0])/W,y:rcy(g,n[1])
 list.push({y:insidePlayer.y,f:()=>{drawSpriteK(heroRow(),facing,walking?1+alt:0,insidePlayer.x,insidePlayer.y,k);drawGear(insidePlayer.x,insidePlayer.y,k,facing,state.heroClass);}});
 list.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
 const vg=ctx.createRadialGradient(W/2,H*.55,H*.25,W/2,H*.55,Math.max(W,H)*.7);vg.addColorStop(0,'rgba(255,220,150,0)');vg.addColorStop(1,'rgba(30,12,10,.4)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+if(window.LH_GRID||/[?&]grid\b/.test(location.search)){ctx.font='10px monospace';ctx.textAlign='left';R.it.filter(i=>i[7]).forEach(i=>{ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(g.ox+i[5]*U,g.oy+i[6]*U,i[3]*U,i[4]*U);});R.npc.forEach(n=>{ctx.fillStyle='rgba(0,120,255,.35)';ctx.fillRect(g.ox+n[0]*U,g.oy+n[1]*U,U,U);});ctx.strokeStyle='rgba(255,255,255,.35)';ctx.fillStyle='#ffe066';for(let c=0;c<R.c;c++)for(let r=0;r<R.r;r++){const x=g.ox+c*U,y=g.oy+r*U;ctx.strokeRect(x,y,U,U);ctx.fillText(c+','+r,x+3,y+11);}}
 ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(R.t,W/2,g.oy-16);
 let tg=-1,dist=Infinity;R.npc.forEach((n,i)=>{const d=Math.hypot(insidePlayer.x-rcx(g,n[0]),insidePlayer.y-rcy(g,n[1]));if(d<U*3.3&&d<dist){tg=i;dist=d;}});
 if(tg>=0)drawWorldPrompt(rcx(g,R.npc[tg][0]),rcy(g,R.npc[tg][1])-U*1.05,'E · TALK');else if(insidePlayer.y>g.exitY)drawWorldPrompt(rcx(g,R.d),g.oy+(R.r-1)*U-6,'E · EXIT');}
