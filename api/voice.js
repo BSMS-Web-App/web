@@ -166,7 +166,14 @@ export default async function handler(req, res) {
             if (memberIds.length > MAX_CALL_PARTICIPANTS) return response(res, 400, { error: 'This conversation has too many members for a voice call.' });
 
             const currentCalls = await db.ref('/voice/userCalls/' + uid).once('value');
-            if (Object.keys(currentCalls.val() || {}).length) return response(res, 409, { error: 'You are already in a voice call.' });
+            for (const existingCallId of Object.keys(currentCalls.val() || {})) {
+                const existingCall = await getCall(existingCallId);
+                if (!existingCall || existingCall.status === 'ended' || Number(existingCall.expiresAt || 0) < Date.now()) {
+                    await removeUserCall(uid, existingCallId);
+                } else {
+                    return response(res, 409, { error: 'You are already in a voice call.' });
+                }
+            }
 
             const callId = crypto.randomUUID().replace(/-/g, '');
             const now = Date.now();
@@ -226,6 +233,11 @@ export default async function handler(req, res) {
         if (action === 'decline') {
             await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
             await db.ref('/voice/calls/' + callId + '/invited/' + uid).remove();
+            const pendingInvites = await db.ref('/voice/calls/' + callId + '/invited').once('value');
+            const participants = await db.ref('/voice/calls/' + callId + '/participants').once('value');
+            if (!Object.keys(pendingInvites.val() || {}).length && Object.keys(participants.val() || {}).length <= 1) {
+                await expireCall(callId, call);
+            }
             return response(res, 200, { success: true });
         }
 
@@ -263,7 +275,7 @@ export default async function handler(req, res) {
         }
 
         if (action === 'end') {
-            if (call.createdBy !== uid) return response(res, 403, { error: 'Only the call organizer can end this call for everyone.' });
+            if (!call.participants?.[uid]) return response(res, 403, { error: 'Only a current call participant can end this call.' });
             await expireCall(callId, call);
             return response(res, 200, { success: true });
         }
