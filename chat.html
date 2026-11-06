@@ -177,15 +177,51 @@ SPDX-License-Identifier: AGPL-3.0-only
     </div>
 </div>
 
-<div id="voiceChatModal" class="overlay" onclick="if(event.target===this) UI.closeModal('voiceChatModal')">
-    <div class="modal-card" style="align-items: center; text-align: center;">
-        <svg class="ic" style="width:64px; height:64px; fill:var(--accent); margin-bottom:16px;"><use href="#ico-phone"></use></svg>
-        <h2 style="font-size: 2rem; margin-bottom: 8px;">Voice Chat Coming Soon</h2>
-        <p style="color: var(--fg2); margin-bottom: 24px; line-height: 1.5;">
-            Real-time peer-to-peer voice calls and group audio rooms are currently in active development. Stay tuned for upcoming updates!
-        </p>
-        <button class="btn" style="width:100%;" onclick="UI.closeModal('voiceChatModal')">Got It</button>
-    </div>
+<div id="voiceChatModal" class="overlay" onclick="if(event.target===this) VoiceChatManager.close()">
+    <section class="voice-modal-card" role="dialog" aria-modal="true" aria-labelledby="voiceModalTitle">
+        <header class="voice-modal-header">
+            <div>
+                <div class="voice-title-row">
+                    <h2 id="voiceModalTitle">Voice chat</h2>
+                    <span class="voice-beta-pill">BETA</span>
+                </div>
+                <p id="voiceConversationName">Conversation voice room</p>
+            </div>
+            <button class="icon-btn" type="button" onclick="VoiceChatManager.close()" aria-label="Close voice chat"><svg class="ic"><use href="#ico-close"></use></svg></button>
+        </header>
+        <div id="voiceSetupPanel" class="voice-panel">
+            <div class="voice-empty-icon"><svg class="ic"><use href="#ico-phone"></use></svg></div>
+            <h3>Talk together</h3>
+            <p>Start an audio call with the people in this conversation. Group conversations can join the same room.</p>
+            <button id="voiceStartButton" class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.start()">Start voice call</button>
+            <p id="voiceSetupNote" class="voice-muted-note">Audio only during the beta. Video may be added later.</p>
+        </div>
+        <div id="voiceIncomingPanel" class="voice-panel" hidden>
+            <div class="voice-incoming-indicator"><span></span> Incoming call</div>
+            <h3 id="voiceCallerName">Someone is calling</h3>
+            <p id="voiceIncomingConversation">Conversation voice room</p>
+            <div class="voice-action-row">
+                <button class="btn sec" type="button" onclick="VoiceChatManager.decline()">Decline</button>
+                <button class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.accept()">Join call</button>
+            </div>
+        </div>
+        <div id="voiceActivePanel" class="voice-panel" hidden>
+            <div class="voice-live-indicator"><span></span> Connected</div>
+            <h3 id="voiceActiveTitle">Voice call</h3>
+            <p id="voiceCallStatusText">Connecting audio…</p>
+            <div id="voiceParticipants" class="voice-participants" aria-live="polite"></div>
+            <div class="voice-action-row voice-call-controls">
+                <button id="voiceMuteButton" class="btn sec" type="button" onclick="VoiceChatManager.toggleMute()"><svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span></button>
+                <button class="btn warn" type="button" onclick="VoiceChatManager.leave()"><svg class="ic"><use href="#ico-phone"></use></svg><span>Leave</span></button>
+            </div>
+            <button id="voiceEndButton" class="voice-end-all" type="button" onclick="VoiceChatManager.endForEveryone()">End call for everyone</button>
+        </div>
+        <p id="voiceError" class="voice-error" role="status" aria-live="polite" hidden></p>
+        <footer class="voice-modal-footer">
+            <span>BSMS Web Voice Chat is in beta.</span>
+            <a href="/support?type=bug">Report a Bug</a>
+        </footer>
+    </section>
 </div>
 
 <!-- Fullscreen Image Viewer Modal -->
@@ -650,6 +686,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </div>
 
 <script src="/js/chat.js"></script>
+<script type="module" src="/js/voice-chat.js"></script>
 
 <!-- Profile Picture Hover Popup -->
 <div id="pfpHoverPopup" class="pfp-hover-popup" style="display:none;">
