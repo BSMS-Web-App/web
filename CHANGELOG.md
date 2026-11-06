@@ -4,6 +4,51 @@
   <p>A chronological record of updates, improvements, and changes to BSMS Web since it became open source.</p>
 </div>
 
+## v6.10.0
+
+- Application API and Hosting Architecture
+- Centralized API and Media Routing
+- Homepage and Routing Corrections
+- Production Architecture Documentation
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.10.0)
+
+## v6.9.0
+
+- Direct Mac-Hosted Media and Chat Attachments
+- Account Password Security
+- API Security and Request Protection
+- Halloween Haunt Retirement
+- Repository Issue and Pull Request Workflows
+- Homepage and Subdomain Routing
+- Chat and User Interface Improvements
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.9.0)
+
+## v6.8.0
+
+- Terms of Service & Privacy Policy
+- General Support Conversations
+- Analytics Cleanup
+- Repository Licensing
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.8.0)
+
+## v6.7.0
+
+- Temporary Halloween Theme
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.7.0)
+
+## v6.6.0
+
+- Halloween Haunt Phase 2
+- Halloween Haunt Synchronization and Reliability
+- Support Requests and Administrative Review
+- Repository Validation and Documentation
+
+[View the full changelog](https://github.com/BSMS-Web-App/web/releases/tag/v6.6.0)
+
 ## v6.5.0
 
 - Halloween Haunt Save System and Offline Gameplay
