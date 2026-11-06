@@ -10,10 +10,12 @@
     'use strict';
 
     const API_ORIGIN = 'https://app-api-dev2.bsms-web.com';
+    const MEDIA_ORIGIN = 'https://media-dev2.bsms-web.com';
     const API_PATH = /^\/(?:api(?:\/|$)|games\/saves(?:\/|$)|raw(?:\/|$))/;
     const originalFetch = window.fetch.bind(window);
 
     window.BSMS_API_ORIGIN = API_ORIGIN;
+    window.BSMS_MEDIA_ORIGIN = MEDIA_ORIGIN;
 
     window.fetch = function(input, init) {
         // Application requests use URL strings. Leave Request objects and
