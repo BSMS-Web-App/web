@@ -99,6 +99,7 @@ const pageFileLimiter = rateLimit({
 // Apply CORS before body parsing and rate limiting so browser preflight requests terminate cleanly.
 app.use('/api', apiCors);
 app.use('/games/saves', apiCors);
+app.use('/raw', apiCors);
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
