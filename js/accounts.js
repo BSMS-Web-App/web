@@ -475,7 +475,7 @@ function handleAvatarUpload(e) {
                 if (!blob) return showAlert('Could not prepare this image.');
                 try {
                     const sessionId = localStorage.getItem('session_id') || '';
-                    const ticketResponse = await fetch('https://media.bsms-web.com/v1/media-upload-ticket', {
+                    const ticketResponse = await fetch(`${window.BSMS_MEDIA_ORIGIN}/v1/media-upload-ticket`, {
                         method: 'POST',
                         mode: 'cors',
                         cache: 'no-store',
