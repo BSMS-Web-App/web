@@ -10,7 +10,7 @@
     'use strict';
 
     const API_ORIGIN = 'https://dev-api.bsms-web.com';
-    const MEDIA_ORIGIN = 'https://dev-media.bsms-web.com';
+    const MEDIA_ORIGIN = 'https://media.bsms-web.com';
     const API_PATH = /^\/(?:api(?:\/|$)|games\/saves(?:\/|$)|raw(?:\/|$))/;
     const originalFetch = window.fetch.bind(window);
 
