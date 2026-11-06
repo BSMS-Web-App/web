@@ -507,7 +507,7 @@ const UI = {
             const bgVal = c.config?.theme?.background;
             const isImage = bgVal && (
                 bgVal.startsWith('data:image/') ||
-                bgVal.startsWith('https://media-dev2.bsms-web.com/')
+                bgVal.startsWith(window.BSMS_MEDIA_ORIGIN + '/')
             );
             GroupManager.setThemeMode(isImage ? 'image' : 'color');
             document.getElementById('gsThemeBgColor').value = (bgVal && !isImage) ? bgVal : '#000000';
@@ -1310,7 +1310,7 @@ const ChatManager = {
             if(c.config.theme.background) {
                 const background = String(c.config.theme.background);
                 const isImage = background.startsWith('data:image/') ||
-                    background.startsWith('https://media-dev2.bsms-web.com/');
+                    background.startsWith(window.BSMS_MEDIA_ORIGIN + '/');
                 if (isImage) {
                     const cssUrl = background.replace(/["\\\\]/g, '');
                     mv.style.setProperty('--chat-wp', `url("${cssUrl}")`);
