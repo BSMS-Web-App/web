@@ -137,6 +137,10 @@ export default async function handler(req, res) {
                     await removeUserCall(uid, callId);
                     continue;
                 }
+                if (call.status === 'ringing' && Number(call.ringExpiresAt || 0) < Date.now()) {
+                    await expireCall(callId, call);
+                    continue;
+                }
                 if (call.participants?.[uid]) {
                     activeCall = {
                         callId,
