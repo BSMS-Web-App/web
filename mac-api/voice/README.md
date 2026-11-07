@@ -37,10 +37,22 @@ The chat UI asks the Mac API to verify that the LiveKit server responds to an au
 ## Initial setup
 
 1. Copy `.env.example` to `.env`.
-2. Replace `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` with unique random values. Keep `.env` private and never commit it.
-3. Keep `LIVEKIT_TURN_ENABLED=false` for the first local connectivity test. TURN/TLS is enabled only after its certificate files and public network routing are ready.
+2. Generate unique credentials locally (for example, use `openssl rand -hex 32` for each value) and put them in `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`. Keep `.env` private and never commit it.
+3. Keep `LIVEKIT_TURN_ENABLED=false` for the first connectivity test. TURN/TLS needs a separate network design and must not be enabled from this template without that work.
 4. Start the service from this directory with `docker compose up -d`.
 5. Confirm the LiveKit server is healthy with `docker compose logs --tail=100 livekit`.
+
+## Deploying the BSMS Web code to the Mac
+
+The API handler is part of the BSMS Web repository, not this Docker container. Update the same repository checkout that runs the Mac-hosted Express API to branch `dev2`, then run `npm install` in that checkout so `livekit-server-sdk` is installed. Add these values to that checkout's existing root `.env`:
+
+- `LIVEKIT_URL=wss://voice.bsms-web.com`
+- `LIVEKIT_API_KEY` — the same key used by the LiveKit container.
+- `LIVEKIT_API_SECRET` — the same secret used by the LiveKit container.
+
+If `APP_ALLOWED_ORIGINS` is explicitly set in that root `.env`, make sure it includes `https://bsms-web-dev2.vercel.app` while testing. Preserve any other existing allowed origins. Restart the Mac-hosted Express API after updating its code and environment.
+
+The website files must also be deployed to the dev2 preview. Do not merge this beta into `main` just to test it.
 
 The compose file publishes:
 - TCP 7880 for LiveKit HTTP/WebSocket signaling (keep the origin private behind the configured HTTPS/WSS proxy).
