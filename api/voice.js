@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
     try {
         if (action === 'config') {
-            const livekitUrl = String(process.env.LIVEKIT_URL || '').trim().replace(/\\/+$/, '');
+            const livekitUrl = String(process.env.LIVEKIT_URL || '').trim().replace(/\/+$/, '');
             const apiKey = process.env.LIVEKIT_API_KEY;
             const apiSecret = process.env.LIVEKIT_API_SECRET;
             const configured = Boolean(livekitUrl.startsWith('wss://') && apiKey && apiSecret);
