@@ -15,8 +15,24 @@ The voice feature remains unavailable until the LiveKit service and its API envi
 
 1. Docker Desktop installed and running.
 2. A DNS name for the LiveKit WebSocket endpoint, planned as `voice.bsms-web.com`.
-3. Direct inbound network access to the configured WebRTC media ports. Cloudflare Tunnel can proxy the HTTPS/WebSocket signaling endpoint, but it does not proxy the UDP media port range.
+3. Direct inbound network access to the configured WebRTC media ports. Cloudflare Tunnel supports the HTTPS/WebSocket signaling endpoint, but it does not carry the direct UDP media traffic used by WebRTC.
 4. A trusted TLS certificate and a reachable TURN hostname before enabling TURN/TLS.
+
+## Cloudflare and router routing
+
+Create a Cloudflare Tunnel public-hostname route for `voice.bsms-web.com` to `http://localhost:7880`. WebSockets must be enabled for the zone. Keep the LiveKit API port behind this HTTPS/WSS route; do not expose TCP 7880 directly.
+
+On the router, forward these ports to the Mac's reserved LAN IP:
+
+- UDP 50000–50100 — primary WebRTC audio media.
+- TCP 7881 — WebRTC-over-TCP fallback.
+- UDP 3478 — only if embedded TURN/UDP is enabled later.
+
+The Cloudflare Tunnel route handles signaling, not the media ports. If the router or internet provider cannot deliver inbound UDP to the Mac, calls may connect inconsistently or fail. The Mac's local firewall must also allow the published LiveKit ports.
+
+## Beta readiness check
+
+The chat UI asks the Mac API to verify that the LiveKit server responds to an authenticated API request. The voice button stays disabled if the environment variables are missing or the LiveKit endpoint cannot be reached. This confirms signaling/API reachability only; it does not prove that router forwarding or UDP media works. A real call between two accounts is still required for that final test.
 
 ## Initial setup
 
@@ -36,9 +52,7 @@ The exact public port-forwarding and DNS configuration must match the network an
 
 ## TURN/TLS
 
-When the certificate files exist at `certs/fullchain.pem` and `certs/privkey.pem`, set `LIVEKIT_TURN_ENABLED=true` and set `LIVEKIT_TURN_DOMAIN` to a DNS-only hostname that resolves to the home public IP. Forward TCP 5349 and UDP 3478 to the Mac. TURN/TLS on 5349 improves compatibility with networks that block direct UDP, but it is not guaranteed to work on networks that only allow outbound TLS on TCP 443.
-
-For a network that blocks 5349, a later network design may place TURN/TLS on 443. That requires a dedicated listener/IP or a layer-4 TLS routing design; it must not be improvised by sending TURN traffic through an ordinary HTTP reverse proxy.
+When the certificate files exist at `certs/fullchain.pem` and `certs/privkey.pem`, TURN can be evaluated as a separate follow-up. **Do not enable the current TURN/TLS setting as-is for a public beta:** LiveKit documents that when no layer-4 load balancer is in front, its advertised TURN/TLS port must be 443. The current Compose template uses 5349 and the Mac already uses HTTPS services, so a deliberate port-443 routing design is needed first. Do not route TURN through an ordinary HTTP reverse proxy.
 
 ## BSMS Web environment variables
 
