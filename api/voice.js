@@ -93,13 +93,25 @@ export default async function handler(req, res) {
 
     try {
         if (action === 'config') {
-            const livekitUrl = String(process.env.LIVEKIT_URL || '').trim().replace(/\/+$/, '');
-            const configured = Boolean(
-                livekitUrl.startsWith('wss://') &&
-                process.env.LIVEKIT_API_KEY &&
-                process.env.LIVEKIT_API_SECRET
-            );
-            return response(res, 200, { enabled: configured, beta: true, livekitUrl: configured ? livekitUrl : null });
+            const livekitUrl = String(process.env.LIVEKIT_URL || '').trim().replace(/\\/+$/, '');
+            const apiKey = process.env.LIVEKIT_API_KEY;
+            const apiSecret = process.env.LIVEKIT_API_SECRET;
+            const configured = Boolean(livekitUrl.startsWith('wss://') && apiKey && apiSecret);
+
+            if (!configured) {
+                return response(res, 200, { enabled: false, beta: true, reason: 'not_configured' });
+            }
+
+            // Verify the Mac-hosted LiveKit service is reachable before enabling the UI.
+            try {
+                const httpUrl = livekitUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+                const roomService = new RoomServiceClient(httpUrl, apiKey, apiSecret);
+                await roomService.listRooms();
+                return response(res, 200, { enabled: true, beta: true, livekitUrl });
+            } catch (error) {
+                console.warn('[BSMS Voice] LiveKit readiness check failed:', error.message);
+                return response(res, 200, { enabled: false, beta: true, reason: 'server_unreachable' });
+            }
         }
 
         if (action === 'poll') {
