@@ -13,6 +13,7 @@
     const POLL_INTERVAL = 5000;
     const context = () => window.BSMSChatContext || {};
     let configured = false;
+    let configurationReason = 'not_configured';
     let livekit = null;
     let room = null;
     let currentCallId = null;
@@ -96,7 +97,14 @@
             showPanel('voiceSetupPanel');
         }
         if (el('voiceStartButton')) el('voiceStartButton').disabled = !configured || !conversation || Boolean(currentCallId);
-        if (!configured && conversation) showError('Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.');
+        if (!configured && conversation) {
+            const message = configurationReason === 'server_unreachable'
+                ? 'The voice server is not reachable. Check that LiveKit is running on the Mac and that voice.bsms-web.com routes to it.'
+                : configurationReason === 'api_unavailable'
+                    ? 'The voice service could not be checked. Make sure the Mac-hosted BSMS API is online, then reload this page.'
+                    : 'Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.';
+            showError(message);
+        }
         el('voiceChatModal')?.classList.add('show');
     }
 
@@ -422,8 +430,10 @@
         try {
             const config = await api('config');
             configured = Boolean(config.enabled);
+            configurationReason = config.reason || (configured ? '' : 'not_configured');
         } catch {
             configured = false;
+            configurationReason = 'api_unavailable';
         }
         if (el('voiceStartButton')) el('voiceStartButton').disabled = !configured;
         if (!pollTimer) {
