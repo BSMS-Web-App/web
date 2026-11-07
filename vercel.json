@@ -35,35 +35,5 @@
   "git": {
     "deploymentEnabled": false
   },
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "builds": [
-    {
-      "src": "api/voice.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "admin/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "css/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "img/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "js/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "metadata.json",
-      "use": "@vercel/static"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
