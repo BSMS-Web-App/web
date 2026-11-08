@@ -168,7 +168,6 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.h
 app.get('/users', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
 app.get('/events', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
-app.get('/verity', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
 app.get('/metadata.json', (req, res) => res.sendFile(path.join(__dirname, 'metadata.json')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/accounts.html', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
@@ -181,7 +180,6 @@ app.get('/401.html', (req, res) => res.status(401).sendFile(path.join(__dirname,
 app.get('/users.html', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
 app.get('/events.html', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
 app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
-app.get('/verity.html', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
 
 // Serve only intentionally public asset directories. The repository root contains
 // server code, API handlers, configuration, and deployment metadata and must not be static.
