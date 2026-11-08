@@ -198,6 +198,12 @@ export default async function handler(req, res) {
             const cid = cleanId(payload.cid);
             const type = String(payload.type || '');
             if (!cid || !['dms', 'gcs'].includes(type)) return response(res, 400, { error: 'Invalid conversation.' });
+            if (type === 'gcs') {
+                return response(res, 409, {
+                    error: 'Voice chat is not yet available for group chats.',
+                    code: 'GROUP_VOICE_UNAVAILABLE'
+                });
+            }
             const conversation = await getConversation(type, cid);
             if (!conversation?.members?.[uid]) return response(res, 403, { error: 'You are not a member of this conversation.' });
 
@@ -228,8 +234,19 @@ export default async function handler(req, res) {
                 otherUid = memberIds.find(id => id !== uid);
                 const presenceSnapshot = await db.ref('/chat/users/' + otherUid).once('value');
                 const presence = presenceSnapshot.val() || {};
-                const online = presence.status === 'online' && Date.now() - Number(presence.lastSeen || 0) < 25000;
-                if (!online) return response(res, 409, { error: 'This person is currently offline. You can only call someone who is online.' });
+                const lastSeen = Number(presence.lastSeen);
+                const presenceAge = Date.now() - lastSeen;
+                const online = presence.status === 'online' &&
+                    Number.isFinite(lastSeen) &&
+                    lastSeen > 0 &&
+                    presenceAge >= 0 &&
+                    presenceAge <= 20000;
+                if (!online) {
+                    return response(res, 409, {
+                        error: 'This person is currently offline. You can only call someone who is online.',
+                        code: 'USER_OFFLINE'
+                    });
+                }
 
                 const otherAccountSnapshot = await db.ref('/accounts/' + otherUid).once('value');
                 const otherAccount = otherAccountSnapshot.val() || {};
@@ -280,22 +297,58 @@ export default async function handler(req, res) {
         }
 
         if (action === 'accept') {
+            if (call.type !== 'dms' || call.createdBy === uid || !call.invited?.[uid]) {
+                return response(res, 403, { error: 'This invitation is not for your account.' });
+            }
             const invitation = await db.ref('/voice/invitations/' + uid + '/' + callId).once('value');
             if (!invitation.val() || call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
                 return response(res, 410, { error: 'This call invitation has expired.' });
             }
             const currentCalls = await db.ref('/voice/userCalls/' + uid).once('value');
-            if (Object.keys(currentCalls.val() || {}).length) return response(res, 409, { error: 'You are already in a voice call.' });
-            const joinedAt = Date.now();
-            if (call.type === 'dms') {
-                await db.ref('/voice/calls/' + callId + '/participants/' + call.createdBy).set({ joinedAt });
+            if (Object.keys(currentCalls.val() || {}).length) {
+                return response(res, 409, { error: 'You are already in a voice call.' });
             }
-            await db.ref('/voice/calls/' + callId + '/participants/' + uid).set({ joinedAt });
-            await db.ref('/voice/calls/' + callId + '/connectedAt').set(joinedAt);
-            await db.ref('/voice/calls/' + callId + '/status').set('active');
-            await db.ref('/voice/calls/' + callId + '/expiresAt').set(Date.now() + MAX_CALL_AGE_MS);
-            await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
-            await addUserCall(uid, callId);
+
+            // Only activate the call after the invited recipient has connected to LiveKit.
+            // A transaction prevents duplicate/late answers from marking an ended call active.
+            const joinedAt = Date.now();
+            const callRef = db.ref('/voice/calls/' + callId);
+            const transaction = await callRef.transaction(current => {
+                if (
+                    !current ||
+                    current.type !== 'dms' ||
+                    current.createdBy === uid ||
+                    current.status !== 'ringing' ||
+                    Number(current.ringExpiresAt || 0) < joinedAt ||
+                    !current.invited?.[uid] ||
+                    Object.keys(current.participants || {}).length
+                ) return;
+
+                const participants = { ...(current.participants || {}) };
+                participants[current.createdBy] = { joinedAt };
+                participants[uid] = { joinedAt };
+                const invited = { ...(current.invited || {}) };
+                delete invited[uid];
+
+                return {
+                    ...current,
+                    status: 'active',
+                    connectedAt: joinedAt,
+                    expiresAt: joinedAt + MAX_CALL_AGE_MS,
+                    participants,
+                    invited
+                };
+            });
+
+            if (!transaction.committed) {
+                return response(res, 410, { error: 'This call is no longer available to answer.' });
+            }
+
+            await Promise.all([
+                db.ref('/voice/invitations/' + uid + '/' + callId).remove(),
+                addUserCall(call.createdBy, callId),
+                addUserCall(uid, callId)
+            ]);
             return response(res, 200, { success: true, connectedAt: joinedAt });
         }
 
@@ -316,8 +369,18 @@ export default async function handler(req, res) {
         }
 
         if (action === 'token') {
-            if (call.status === 'ended' || Number(call.expiresAt || 0) < Date.now() || !call.participants?.[uid]) {
-                return response(res, 403, { error: 'You are not an active participant in this call.' });
+            const isActiveParticipant = Boolean(call.participants?.[uid]);
+            const isInvitedDmRecipient = call.type === 'dms' &&
+                call.status === 'ringing' &&
+                call.createdBy !== uid &&
+                Boolean(call.invited?.[uid]) &&
+                Number(call.ringExpiresAt || 0) >= Date.now();
+            if (
+                call.status === 'ended' ||
+                Number(call.expiresAt || 0) < Date.now() ||
+                (!isActiveParticipant && !isInvitedDmRecipient)
+            ) {
+                return response(res, 403, { error: 'You are not authorized to join this voice call.' });
             }
             const apiKey = process.env.LIVEKIT_API_KEY;
             const apiSecret = process.env.LIVEKIT_API_SECRET;
