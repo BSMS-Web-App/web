@@ -142,6 +142,10 @@ export default async function handler(req, res) {
             const incoming = [];
             for (const callId of Object.keys(invitationMap).slice(0, 10)) {
                 const call = await getCall(callId);
+                if (call && call.type !== 'dms') {
+                    await expireCall(callId, call, 'unsupported_call_type');
+                    continue;
+                }
                 if (!call || call.status === 'ended') {
                     await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
                     continue;
@@ -188,6 +192,10 @@ export default async function handler(req, res) {
             let outgoingCall = null;
             for (const callId of Object.keys(activeMap).slice(0, 5)) {
                 const call = await getCall(callId);
+                if (call && call.type !== 'dms') {
+                    await expireCall(callId, call, 'unsupported_call_type');
+                    continue;
+                }
                 if (!call || call.status === 'ended') {
                     await removeUserCall(uid, callId);
                     continue;
