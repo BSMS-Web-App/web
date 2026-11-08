@@ -388,8 +388,7 @@
         if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {});
     }
 
-    async function connectCall(callId, options = {}) {
-        const deferActivation = Boolean(options.deferActivation);
+    async function connectCall(callId) {
         const auth = await api('token', { callId });
         const sdk = await loadClient();
         currentCallId = callId;
@@ -416,13 +415,9 @@
 
         try {
             await room.connect(auth.url, auth.token, { autoSubscribe: true });
-            // Joining the transport is not the same as answering. Keep the
-            // microphone disabled until the server confirms explicit acceptance.
-            await room.localParticipant.setMicrophoneEnabled(!deferActivation);
-            if (deferActivation) {
-                updateParticipants();
-                return;
-            }
+            // This function is only called after the server marks the user as
+            // an active participant, so microphone access is enabled afterward.
+            await room.localParticipant.setMicrophoneEnabled(true);
         } catch (error) {
             console.error('[BSMS Voice] LiveKit connection failed:', {
                 callId,
