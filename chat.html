@@ -184,7 +184,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <header class="voice-modal-header">
             <div>
                 <div class="voice-title-row">
-                    <h2 id="voiceModalTitle">Voice Chat</h2>
+                    <h2 id="voiceModalTitle">Voice Call</h2>
                     <span class="voice-beta-pill">BETA</span>
                 </div>
                 <p id="voiceConversationName">Direct message call</p>
@@ -244,7 +244,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div id="voiceBetaNotice" class="voice-beta-notice" role="alertdialog" aria-modal="false" aria-labelledby="voiceBetaNoticeTitle" hidden>
     <div class="voice-beta-notice-icon"><svg class="ic"><use href="#ico-phone"></use></svg></div>
     <div class="voice-beta-notice-copy">
-        <strong id="voiceBetaNoticeTitle">Voice Chat is still in beta</strong>
+        <strong id="voiceBetaNoticeTitle">Voice Calls are still in beta</strong>
         <span>Expect bugs and occasional connection issues while we improve it.</span>
     </div>
     <button type="button" class="voice-beta-notice-dismiss" onclick="VoiceChatManager.dismissBetaNotice()">Got it</button>
@@ -620,7 +620,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <h3 id="activeChatName">---</h3>
                 <span id="activeChatStatus">---</span>
             </div>
-            <button class="icon-btn" id="btnVoiceChat" title="Voice Chat" onclick="UI.showVoiceChatModal()"><svg class="ic"><use href="#ico-phone"></use></svg></button>
+            <button class="icon-btn" id="btnVoiceChat" title="Voice Call" onclick="UI.showVoiceChatModal()"><svg class="ic"><use href="#ico-phone"></use></svg></button>
             <button class="icon-btn" id="btnHideDM" style="display:none;" title="Hide Conversation" onclick="ChatManager.confirmHideDM()"><svg class="ic"><use href="#ico-eye-off"></use></svg></button>
             <button class="icon-btn" id="btnGroupSettings" style="display:none;" onclick="UI.openSettings()"><svg class="ic"><use href="#ico-settings"></use></svg></button>
             <button class="icon-btn" id="btnLeaveGroup" style="display:none;color:#ef4444;" onclick="GroupManager.leaveGroup()" data-ga="chat_leave_group"><svg class="ic"><use href="#ico-leave"></use></svg></button>
