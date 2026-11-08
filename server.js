@@ -35,12 +35,18 @@ app.set('trust proxy', 1);
 
 // The application API runs behind Cloudflare Tunnel on the Mac mini.
 // Browser origins are explicitly allowlisted; no wildcard CORS is used.
-const allowedOrigins = new Set(
-    (process.env.APP_ALLOWED_ORIGINS || 'https://bsms-web-dev2.vercel.app,http://localhost:3000')
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean)
-);
+const allowedOrigins = new Set([
+    'https://bsms-web.com',
+    'https://www.bsms-web.com',
+    'https://bsms-web.vercel.app',
+    'https://bsms-web-dev2.vercel.app',
+    'https://dev2.bsms-web.com',
+    'https://bsms-web-beta.vercel.app',
+    'https://bsms-web-development.vercel.app',
+    'https://bsms-web-dev3.vercel.app',
+    'http://localhost:3000',
+    ...String(process.env.APP_ALLOWED_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean)
+]);
 
 function apiCors(req, res, next) {
     const origin = req.get('Origin');
