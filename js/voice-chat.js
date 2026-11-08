@@ -622,6 +622,7 @@
         }
         currentCallId = null;
         currentCall = null;
+        currentCallAccepted = false;
         pendingRejoinCall = null;
         muted = false;
         syncMiniCard();
@@ -637,6 +638,7 @@
         await disconnectRoom();
         currentCallId = null;
         currentCall = null;
+        currentCallAccepted = false;
         pendingRejoinCall = null;
         syncMiniCard();
         showPanel('voiceSetupPanel');
@@ -674,6 +676,7 @@
                 await disconnectRoom();
                 currentCallId = null;
                 currentCall = null;
+                currentCallAccepted = false;
                 pendingRejoinCall = null;
                 muted = false;
                 syncMiniCard();
@@ -712,6 +715,7 @@
                         createdAt: result.activeCall.createdAt
                     };
                     currentCallId = result.activeCall.callId;
+                    currentCallAccepted = true;
                     outgoingCall = null;
                     await connectCall(currentCallId);
                 } else if (!pendingRejoinCall) {
