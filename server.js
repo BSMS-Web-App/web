@@ -23,6 +23,7 @@ import versionHandler from './api/version.js';
 import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
 import legalHandler from './api/legal.js';
+import updatesHandler from './api/updates.js';
 import mediaHandler from './api/media.js';
 import voiceHandler from './api/voice.js';
 
@@ -145,6 +146,7 @@ app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 app.use('/api/legal', (req, res) => legalHandler(req, res));
+app.use('/api/updates', (req, res) => updatesHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
 app.use('/api/voice', (req, res) => voiceHandler(req, res));
 
