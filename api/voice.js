@@ -186,7 +186,7 @@ export default async function handler(req, res) {
                         createdBy: call.createdBy,
                         conversationName: call.conversationName || 'Chat',
                         participants: Object.keys(call.participants || {}),
-                        createdAt: call.createdAt
+                        createdAt: call.connectedAt || call.createdAt
                     };
                     break;
                 }
@@ -291,11 +291,12 @@ export default async function handler(req, res) {
                 await db.ref('/voice/calls/' + callId + '/participants/' + call.createdBy).set({ joinedAt });
             }
             await db.ref('/voice/calls/' + callId + '/participants/' + uid).set({ joinedAt });
+            await db.ref('/voice/calls/' + callId + '/connectedAt').set(joinedAt);
             await db.ref('/voice/calls/' + callId + '/status').set('active');
             await db.ref('/voice/calls/' + callId + '/expiresAt').set(Date.now() + MAX_CALL_AGE_MS);
             await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
             await addUserCall(uid, callId);
-            return response(res, 200, { success: true });
+            return response(res, 200, { success: true, connectedAt: joinedAt });
         }
 
         if (action === 'decline') {
