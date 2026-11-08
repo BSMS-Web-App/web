@@ -18,6 +18,8 @@
     let room = null;
     let currentCallId = null;
     let currentCall = null;
+    let currentCallAccepted = false;
+    let acceptInProgress = false;
     let incomingCall = null;
     let outgoingCall = null;
     let pendingRejoinCall = null;
@@ -72,7 +74,12 @@
             cache: 'no-store'
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Voice chat request failed.');
+        if (!response.ok) {
+            const error = new Error(data.error || 'Voice chat request failed.');
+            error.status = response.status;
+            error.action = action;
+            throw error;
+        }
         return data;
     }
 
@@ -361,7 +368,27 @@
         track.detach().forEach(node => node.remove());
     }
 
-    async function connectCall(callId) {
+    async function presentActiveCall() {
+        muted = false;
+        if (el('voiceMuteButton')) el('voiceMuteButton').innerHTML = '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
+        if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = 'In call';
+        if (el('voiceActiveName')) el('voiceActiveName').textContent = currentCall?.conversationName || 'Voice call';
+        setConversationName(currentCall?.conversationName || 'Voice call');
+        showPanel('voiceActivePanel');
+        showError('');
+        updateParticipants();
+        startDurationClock(currentCall?.createdAt);
+        syncMiniCard();
+        setupMiniCardDragging();
+        const modal = el('voiceChatModal');
+        modal?.classList.remove('voice-modal-closing');
+        modal?.classList.add('show');
+        syncMiniCard();
+        if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {});
+    }
+
+    async function connectCall(callId, options = {}) {
+        const deferActivation = Boolean(options.deferActivation);
         const auth = await api('token', { callId });
         const sdk = await loadClient();
         currentCallId = callId;
@@ -385,30 +412,25 @@
 
         try {
             await room.connect(auth.url, auth.token, { autoSubscribe: true });
-            await room.localParticipant.setMicrophoneEnabled(true);
+            // Joining the transport is not the same as answering. Keep the
+            // microphone disabled until the server confirms explicit acceptance.
+            await room.localParticipant.setMicrophoneEnabled(!deferActivation);
+            if (deferActivation) {
+                updateParticipants();
+                return;
+            }
         } catch (error) {
+            console.error('[BSMS Voice] LiveKit connection failed:', {
+                callId,
+                status: error?.status || null,
+                message: error?.message || String(error)
+            });
             await disconnectRoom();
             currentCallId = null;
             throw error;
         }
-        muted = false;
-        if (el('voiceMuteButton')) el('voiceMuteButton').innerHTML = '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
-        if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = 'In call';
-        if (el('voiceActiveName')) el('voiceActiveName').textContent = currentCall?.conversationName || 'Voice call';
-        setConversationName(currentCall?.conversationName || 'Voice call');
-        showPanel('voiceActivePanel');
-        showError('');
-        updateParticipants();
-        startDurationClock(currentCall?.createdAt);
-        syncMiniCard();
-        setupMiniCardDragging();
-        const modal = el('voiceChatModal');
-        modal?.classList.remove('voice-modal-closing');
-        modal?.classList.add('show');
-        syncMiniCard();
-        if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {});
+        await presentActiveCall();
     }
-
     async function start() {
         const conversation = activeConversation();
         if (!conversation) return showError('Open a conversation before starting a voice call.');
