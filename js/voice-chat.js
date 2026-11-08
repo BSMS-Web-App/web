@@ -25,6 +25,9 @@
     let pollTimer = null;
     let disconnecting = false;
     let durationTimer = null;
+    let betaNoticeDismissed = false;
+    let miniCardDrag = null;
+    let activeConversationType = 'dms';
 
     const el = (id) => document.getElementById(id);
 
@@ -70,9 +73,11 @@
         if (!cid || !channel) return null;
         const type = state.activeType || channel._type || (cid.startsWith('gc') ? 'gcs' : 'dms');
         if (!['dms', 'gcs'].includes(type)) return null;
+        const otherUid = Object.keys(channel.members || {}).find(uid => uid !== state.user?.uid);
+        const otherAccount = otherUid ? state.accountsCache?.[otherUid] : null;
         const name = type === 'gcs'
             ? (channel.name || 'Group chat')
-            : (Object.keys(channel.members || {}).find(uid => uid !== state.user?.uid) || 'Direct message');
+            : (otherAccount?.displayName || otherAccount?.name || otherAccount?.username || (otherUid ? '@' + otherUid : 'Direct message'));
         return { cid, type, name };
     }
 
@@ -84,6 +89,7 @@
         showError('');
         const conversation = activeConversation();
         setConversationName(conversation?.name || 'No conversation selected');
+        if (conversation) activeConversationType = conversation.type;
         if (!conversation) {
             showPanel('voiceSetupPanel');
             showError('Open a direct message or group conversation before starting a call.');
@@ -111,6 +117,81 @@
     function close() {
         el('voiceChatModal')?.classList.remove('show');
         showError('');
+    }
+
+    function showBetaNotice() {
+        const notice = el('voiceBetaNotice');
+        if (!notice) return;
+        notice.hidden = false;
+        notice.classList.add('show');
+    }
+
+    function dismissBetaNotice() {
+        betaNoticeDismissed = true;
+        const notice = el('voiceBetaNotice');
+        if (notice) {
+            notice.classList.remove('show');
+            notice.hidden = true;
+        }
+    }
+
+    function syncMiniCard() {
+        const card = el('voiceMiniCard');
+        if (!card) return;
+        const active = Boolean(currentCallId && room);
+        card.hidden = !active;
+        if (!active) return;
+        const name = currentCall?.conversationName || activeConversation()?.name || 'Voice call';
+        if (el('voiceMiniName')) el('voiceMiniName').textContent = name;
+        if (el('voiceMiniMute')) {
+            el('voiceMiniMute').innerHTML = muted
+                ? '<svg class="ic"><use href="#ico-mic"></use></svg>'
+                : '<svg class="ic"><use href="#ico-mic"></use></svg>';
+            el('voiceMiniMute').classList.toggle('is-muted', muted);
+            el('voiceMiniMute').setAttribute('aria-label', muted ? 'Unmute microphone' : 'Mute microphone');
+            el('voiceMiniMute').title = muted ? 'Unmute microphone' : 'Mute microphone';
+        }
+    }
+
+    function setupMiniCardDragging() {
+        const card = el('voiceMiniCard');
+        const handle = card?.querySelector('.voice-mini-drag-handle');
+        if (!card || !handle || handle.dataset.bound) return;
+        handle.dataset.bound = 'true';
+        handle.addEventListener('pointerdown', event => {
+            if (event.target.closest('button')) return;
+            const rect = card.getBoundingClientRect();
+            miniCardDrag = { pointerId: event.pointerId, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
+            card.style.left = rect.left + 'px';
+            card.style.top = rect.top + 'px';
+            card.style.right = 'auto';
+            handle.setPointerCapture(event.pointerId);
+            event.preventDefault();
+        });
+        handle.addEventListener('pointermove', event => {
+            if (!miniCardDrag || miniCardDrag.pointerId !== event.pointerId) return;
+            const maxLeft = Math.max(8, window.innerWidth - card.offsetWidth - 8);
+            const maxTop = Math.max(8, window.innerHeight - card.offsetHeight - 8);
+            card.style.left = Math.min(maxLeft, Math.max(8, event.clientX - miniCardDrag.offsetX)) + 'px';
+            card.style.top = Math.min(maxTop, Math.max(8, event.clientY - miniCardDrag.offsetY)) + 'px';
+        });
+        const stop = event => {
+            if (miniCardDrag?.pointerId === event.pointerId) miniCardDrag = null;
+        };
+        handle.addEventListener('pointerup', stop);
+        handle.addEventListener('pointercancel', stop);
+        window.addEventListener('resize', () => {
+            if (card.hidden || !card.style.left) return;
+            const rect = card.getBoundingClientRect();
+            card.style.left = Math.min(window.innerWidth - card.offsetWidth - 8, Math.max(8, rect.left)) + 'px';
+            card.style.top = Math.min(window.innerHeight - card.offsetHeight - 8, Math.max(8, rect.top)) + 'px';
+        });
+    }
+
+    function expand() {
+        if (!currentCallId) return;
+        showPanel('voiceActivePanel');
+        el('voiceChatModal')?.classList.add('show');
     }
 
     function showIncoming(call) {
@@ -158,9 +239,12 @@
             chip.append(dot, name);
             target.appendChild(chip);
         });
-        if (el('voiceCallStatusText')) {
-            el('voiceCallStatusText').textContent = people.length + (people.length === 1 ? ' person connected' : ' people connected');
-        }
+        const groupSection = el('voiceGroupPeopleSection');
+        if (groupSection) groupSection.hidden = activeConversationType !== 'gcs';
+        const status = el('voiceCallStatusText');
+        if (status) status.textContent = activeConversationType === 'gcs'
+            ? people.length + (people.length === 1 ? ' person connected' : ' people connected')
+            : '';
     }
 
     function startDurationClock(startedAt) {
@@ -169,7 +253,9 @@
             const elapsed = Math.max(0, Math.floor((Date.now() - Number(startedAt || Date.now())) / 1000));
             const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const seconds = String(elapsed % 60).padStart(2, '0');
-            if (el('voiceCallDuration')) el('voiceCallDuration').textContent = minutes + ':' + seconds;
+            const formatted = minutes + ':' + seconds;
+            if (el('voiceCallDuration')) el('voiceCallDuration').textContent = formatted;
+            if (el('voiceMiniDuration')) el('voiceMiniDuration').textContent = formatted;
         };
         render();
         durationTimer = window.setInterval(render, 1000);
@@ -211,7 +297,7 @@
         room.on(sdk.RoomEvent.ParticipantDisconnected, updateParticipants);
         room.on(sdk.RoomEvent.ActiveSpeakersChanged, updateParticipants);
         room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
-            if (el('voiceEnableAudioButton')) el('voiceEnableAudioButton').hidden = Boolean(room?.canPlaybackAudio);
+            if (!room?.canPlaybackAudio) room.startAudio().catch(() => {});
         });
         room.on(sdk.RoomEvent.Disconnected, () => {
             if (!disconnecting) handleUnexpectedDisconnect();
@@ -227,18 +313,21 @@
         }
         muted = false;
         if (el('voiceMuteButton')) el('voiceMuteButton').innerHTML = '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
-        if (el('voiceEndButton')) el('voiceEndButton').hidden = false;
-        if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = currentCall?.conversationName || 'Voice call';
+        if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = 'Voice Chat (BETA)';
+        if (el('voiceActiveName')) el('voiceActiveName').textContent = currentCall?.conversationName || 'Voice call';
         setConversationName(currentCall?.conversationName || 'Voice call');
         showPanel('voiceActivePanel');
         showError('');
         updateParticipants();
-        if (el('voiceEnableAudioButton')) el('voiceEnableAudioButton').hidden = Boolean(room?.canPlaybackAudio);
         startDurationClock(currentCall?.createdAt);
+        syncMiniCard();
+        setupMiniCardDragging();
         el('voiceChatModal')?.classList.add('show');
+        if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {});
     }
 
     async function start() {
+        showBetaNotice();
         const conversation = activeConversation();
         if (!conversation) return showError('Open a conversation before starting a voice call.');
         if (!configured) return showError('Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.');
@@ -342,6 +431,7 @@
                     ? '<svg class="ic"><use href="#ico-mic"></use></svg><span>Unmute</span>'
                     : '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
             }
+            syncMiniCard();
         } catch (error) {
             muted = !muted;
             showError(error.message || 'Could not change microphone state.');
@@ -369,6 +459,7 @@
         currentCall = null;
         pendingRejoinCall = null;
         muted = false;
+        syncMiniCard();
         showPanel('voiceSetupPanel');
         close();
     }
@@ -382,6 +473,7 @@
         currentCallId = null;
         currentCall = null;
         pendingRejoinCall = null;
+        syncMiniCard();
         showPanel('voiceSetupPanel');
         close();
     }
@@ -392,6 +484,7 @@
         await disconnectRoom();
         currentCallId = null;
         currentCall = null;
+        syncMiniCard();
         if (callId) {
             try { await api('leave', { callId }); } catch {}
         }
@@ -452,8 +545,13 @@
         toggleMute,
         enableAudio,
         leave,
-        endForEveryone
+        endForEveryone,
+        expand,
+        dismissBetaNotice
     };
 
-    window.addEventListener('load', initialize, { once: true });
+    window.addEventListener('load', () => {
+        setupMiniCardDragging();
+        initialize();
+    }, { once: true });
 })();
