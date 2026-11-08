@@ -81,6 +81,7 @@
 
     function ensureHost() {
         if (shadowRoot) return;
+        previousBodyOverflow = document.body.style.overflow;
         overlayHost = document.createElement('div');
         overlayHost.id = 'bsms-unified-updates-host';
         overlayHost.style.cssText = 'position:fixed;inset:0;z-index:100000;pointer-events:none;';
@@ -624,7 +625,10 @@
         review: key => openDocument(key, true)
     });
 
-    window.addEventListener('bsms:auth-changed', checkUpdates);
+    window.addEventListener('bsms:auth-changed', () => {
+        try { sessionStorage.removeItem(DEFERRED_KEY); } catch {}
+        checkUpdates();
+    });
     window.addEventListener('storage', event => {
         if (event.key === SESSION_KEY || event.key === AUTH_KEY) checkUpdates();
     });
