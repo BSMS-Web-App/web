@@ -78,6 +78,7 @@
             const error = new Error(data.error || 'Voice chat request failed.');
             error.status = response.status;
             error.action = action;
+            console.warn('[BSMS Voice] API request failed:', { action, status: response.status, message: error.message });
             throw error;
         }
         return data;
@@ -406,8 +407,11 @@
         room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
             if (!room?.canPlaybackAudio) room.startAudio().catch(() => {});
         });
-        room.on(sdk.RoomEvent.Disconnected, () => {
-            if (!disconnecting) handleUnexpectedDisconnect();
+        room.on(sdk.RoomEvent.Disconnected, (reason) => {
+            if (!disconnecting) {
+                console.warn('[BSMS Voice] LiveKit room disconnected:', { callId, reason: String(reason || 'unknown') });
+                handleUnexpectedDisconnect();
+            }
         });
 
         try {
@@ -648,17 +652,23 @@
     async function handleUnexpectedDisconnect() {
         const callId = currentCallId;
         const wasAccepted = currentCallAccepted;
+        const rejoinData = currentCall ? { ...currentCall, callId } : (pendingRejoinCall ? { ...pendingRejoinCall, callId } : null);
         stopDurationClock();
         await disconnectRoom();
         currentCallId = null;
-        currentCall = null;
         currentCallAccepted = false;
         syncMiniCard();
-        // A ringing invitee is not a participant. Never send leave until the
-        // explicit accept action has committed on the server.
         if (callId && wasAccepted) {
-            try { await api('leave', { callId }); } catch {}
-        } else if (callId && !acceptInProgress) {
+            // A transient LiveKit disconnect should not end the server call.
+            // Keep the active call record so the user can explicitly rejoin.
+            pendingRejoinCall = rejoinData;
+            currentCall = null;
+            showPanel('voiceRejoinPanel');
+            showError('Your connection was interrupted. The call may still be active; choose Rejoin to try again.');
+            return;
+        }
+        currentCall = null;
+        if (callId && !acceptInProgress) {
             try { await api('decline', { callId }); } catch {}
         }
         showPanel('voiceSetupPanel');
@@ -670,7 +680,8 @@
         try {
             const result = await api('poll');
 
-            if (currentCallId && result.endedCallIds?.includes(currentCallId)) {
+            const trackedCallId = currentCallId || pendingRejoinCall?.callId;
+            if (trackedCallId && result.endedCallIds?.includes(trackedCallId)) {
                 const panelWasOpen = Boolean(el('voiceChatModal')?.classList.contains('show'));
                 stopDurationClock();
                 await disconnectRoom();
