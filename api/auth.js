@@ -10,6 +10,7 @@ import { hashPassword, verifyPassword, needsPasswordRehash } from './passwords.j
 import { moderateContent } from './moderation.js';
 import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
 import { mediaUrl } from '../lib/media-url.js';
+import { getLatestReleaseVersion } from '../lib/release-changelog.js';
 
 async function rejectFlaggedContent(res, value, label) {
     const result = await moderateContent(value);
@@ -170,6 +171,7 @@ export default async function handler(req, res) {
                     followers: {},
                     following: {},
                     createdAt: currentTimestamp,
+                    updatesSeenThrough: getLatestReleaseVersion(),
                     avatar: '',
                     legalAcceptance: {
                         terms: { version: LEGAL_POLICY_VERSIONS.terms, acceptedAt: currentTimestamp },
