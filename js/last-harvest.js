@@ -29,7 +29,7 @@ const save=()=>localStorage.setItem(SAVE,JSON.stringify(state));
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
-const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4},{x:21,y:24,w:5,h:4}];
+const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4},{x:21,y:24,w:5,h:4},{x:18,y:12,w:3,h:2}];
 function gateBlocked(tx,ty){return GUARDS.some(g=>!state.beaten[g.id]&&tx>=g.gate.x&&tx<g.gate.x+g.gate.w&&ty>=g.gate.y&&ty<g.gate.y+g.gate.h);}
 function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(gateBlocked(tx,ty))return true;if(tileAt(tx,ty))return true;for(const b of solids)if(tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h)return true;for(const t of trees)if(Math.hypot(x-(t.x*TILE+16),y-(t.y*TILE+18))<20)return true;return false;}
 const trees=[];for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++){const edge=x<4||y<3||x>MAP_W-5||y>MAP_H-5;const inBuilding=solids.some(b=>x>=b.x-1&&x<b.x+b.w+1&&y>=b.y-1&&y<b.y+b.h+1);const onRoad=(y>=11&&y<15)||(x>=15&&x<19);if(edge&&!inBuilding&&!onRoad&&rand(x,y)>.18)trees.push({x,y});}
@@ -57,7 +57,7 @@ const BOSSES=[
 {name:'HOLLOW KING',hp:560,atk:27,reward:640,xp:430,theme:['#120a22','#3a1f5a','#b06aff'],sig:{n:'SOUL DRAIN',k:'drain',t:'opens its jaw, violet light pouring out...'},lines:['"You have come so far, little keeper."','"But hunger is older than harvest. I will devour the Everfeast and all of Hearthvale."'],win:['*The Hollow King dissolves into violet sparks. The sanctuary is silent.*']},
 {name:'HEART GUARDIAN',hp:700,atk:30,reward:900,xp:600,theme:['#2a0a14','#8a1f3a','#ff6a8a'],sig:{n:'EVERFEAST PULSE',k:'dread',t:'swells, the whole sanctuary beating with it...'},lines:['*A colossal crimson heart beats in the sanctuary, wrapped in golden thorns. Every beat shakes the ground.*','The Heart of Hearthvale will not give up its secret without a fight.'],win:['*The Heart slows, glows warm, and begins to beat steadily again. The Everfeast is saved.*']}
 ];
-const BOSS_NPC={};BOSSES.forEach((b,i)=>{BOSS_NPC[b.name]=i;});
+const BOSS_NPC={};BOSSES.forEach((b,i)=>{if(b.name!=='ROWAN')BOSS_NPC[b.name]=i;});
 
 
 state.beaten=state.beaten||{};
@@ -65,8 +65,233 @@ GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1}
 GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
 const POS={'ELDER MAPLE':[12,12],'ROWAN':[21,12],'MILLIE':[16,20],'GUS':[17,26],'PIPER':[30,13]};npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
 npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
-function spawnLair(){if(!state.beaten.south)return;const i=Math.min(state.stage||0,BOSSES.length-1);if(i<1||state.beaten['boss'+i]||GUARDS.some(g=>g.id==='boss'+i))return;const B=BOSSES[i],g={id:'boss'+i,name:B.name,tx:16,ty:33,gate:{x:15,y:33,w:4,h:1},bi:i,lines:B.lines,win:B.win};GUARDS.push(g);npcs.push({x:g.tx*TILE+16,y:g.ty*TILE+24,name:g.name,color:'#000',lines:g.lines,trainer:g});}
+function spawnLair(){if(!state.beaten.south)return;const i=Math.min(state.stage||0,BOSSES.length-1);if(i<1||state.beaten['boss'+i]||GUARDS.some(g=>g.id==='boss'+i))return;const B=BOSSES[i],g={id:'boss'+i,name:B.name,tx:16,ty:33,gate:{x:15,y:33,w:4,h:1},bi:i,lines:B.lines,win:B.win};GUARDS.push(g);npcs.push({x:g.tx*TILE+16,y:g.ty*TILE+24,name:'ROAD: '+chapters[i].place.toUpperCase(),color:'#000',lines:[],region:i});}
 if(state.beaten.south&&!(state.stage>0))state.stage=1;spawnLair();
+/* ================= v10 SYSTEMS: art loading, audio, title, skills, regions, city, tower, leaderboard ================= */
+function loadImg(list){const im=new Image();let i=0;im.onerror=()=>{if(++i<list.length)im.src=list[i];};im.src=list[0];return im;}
+const VIL=loadImg(['/img/last-harvest/village.png?v=10']);
+const VR={cottage:[0,0,112,80],inn:[120,0,128,80],store:[256,0,128,80],workshop:[0,90,80,64],house1:[100,90,80,64],house2:[190,90,80,64],house3:[280,90,96,64],tower:[380,0,96,144],fountain0:[0,180,64,40],fountain1:[70,180,64,40],journal:[150,180,16,16]};
+function drawFountainSprite(){if(!VIL.naturalWidth)return;const r=VR['fountain'+(Math.floor(performance.now()/380)%2)];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*TILE-16,14*TILE-r[3]*2+4,r[2]*2,r[3]*2);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);}
+function ov(html,cls){const el=document.createElement('div');el.className='lh-ov '+(cls||'');el.innerHTML='<div class="pn">'+html+'</div>';document.body.appendChild(el);el.close=()=>el.remove();return el;}
+function whenIdle(fn){const iv=setInterval(()=>{if(!dialogue&&!battle&&!cinematic&&!transitioning&&!titleOpen&&$('lh-create').hidden){clearInterval(iv);fn();}},300);}
+/* ---------- sound: effects, talking blip (your recording), music ---------- */
+var muted=false;try{muted=localStorage.getItem('lh_mute')==='1';}catch(e){}
+function setMuted(v){muted=v;try{localStorage.setItem('lh_mute',v?'1':'0');}catch(e){}if(v)stopMusic();}
+const TALK={buf:null,tried:0};
+function talkBlip(){if(muted)return;const a=audio();if(!a)return;if(!TALK.buf&&!TALK.tried){TALK.tried=1;(async()=>{for(const u of['/audio/last-harvest/talk.mp3?v=10','/img/last-harvest/talk.mp3?v=10']){try{const r=await fetch(u);if(!r.ok)continue;TALK.buf=await a.decodeAudioData(await r.arrayBuffer());return;}catch(e){}}})();}
+if(TALK.buf){const s=a.createBufferSource(),g=a.createGain();s.buffer=TALK.buf;s.playbackRate.value=.85+Math.random()*.55;g.gain.value=.55;s.connect(g);g.connect(a.destination);s.start();}else tone(260+rnd(180),.045,'square',.025);}
+function initSfx(){Object.assign(SFX,{door(){tone(180,.08,'square',.05,-60);tone(120,.12,'triangle',.05,-40,.06);},menu(){tone(660,.05,'square',.04);},select(){tone(880,.06,'square',.05);tone(1320,.08,'square',.05,0,.06);},coin(){tone(988,.06,'square',.05);tone(1319,.12,'square',.05,0,.07);},levelup(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.14,'square',.05,0,i*.08));},portal(){tone(200,.6,'sine',.06,800);tone(400,.5,'triangle',.04,600,.1);},unlock(){[392,523,659,784].forEach((f,i)=>tone(f,.18,'triangle',.06,0,i*.12));}});}
+const MUS={
+title:{bpm:84,l:[72,0,0,0,79,0,0,0,76,0,74,72,74,0,0,0,71,0,0,0,79,0,0,0,77,0,76,74,72,0,0,0],b:[48,0,43,0,45,0,41,0]},
+village:{bpm:96,l:[76,0,79,0,81,79,76,0,74,0,77,0,79,77,74,0,72,0,76,0,79,76,72,0,71,0,74,0,77,74,71,0,76,0,79,0,81,79,76,0,79,0,83,0,81,79,76,0,77,0,76,0,74,0,72,0,71,72,74,0,67,0,0,0],b:[48,53,48,53,48,43,41,43,48,53,48,55,53,52,48,43]},
+wander:{bpm:78,l:[69,0,72,0,74,0,72,0,69,0,67,0,64,0,0,0,67,0,69,0,72,0,74,0,76,0,74,0,72,0,0,0],b:[45,45,43,43,41,41,43,40]},
+battle:{bpm:168,l:[69,0,72,69,76,0,72,69,67,0,71,67,74,0,71,67,65,0,69,65,72,0,69,65,64,67,71,67,76,74,71,0],b:[45,45,43,43,41,41,40,43]},
+boss:{bpm:180,l:[62,0,65,62,69,0,65,62,60,0,64,60,67,0,64,60,58,0,62,58,65,0,62,58,57,60,64,60,69,67,64,0],b:[38,38,36,36,34,34,33,36]},
+story:{bpm:70,l:[64,0,0,67,0,0,71,0,69,0,0,67,0,0,64,0,62,0,0,65,0,0,69,0,67,0,0,64,0,0,0,0],b:[40,0,0,0,38,0,0,0]}};
+let musCur=null,musTimer=0,musStep=0;
+function stopMusic(){clearInterval(musTimer);musTimer=0;musCur=null;}
+function playMusic(n){if(muted||!AC||AC.state!=='running')return;if(musCur===n)return;stopMusic();musCur=n;musStep=0;const T=MUS[n];if(!T)return;const ms=60000/T.bpm/2;musTimer=setInterval(()=>{const s=musStep++,l=T.l[s%T.l.length],bb=T.b[((s/4)|0)%T.b.length];if(l)tone(440*Math.pow(2,(l-69)/12),ms*.0009,'square',.012);if(s%4===0&&bb)tone(440*Math.pow(2,(bb-69)/12),ms*.0036,'triangle',.028);},ms);}
+function musicTick(){if(muted)return;const want=titleOpen?'title':battle?(battle.B?'boss':'battle'):cinematic?'story':scene==='area'?'wander':'village';if(want!==musCur)playMusic(want);}
+addEventListener('keydown',e=>{if((e.key==='m'||e.key==='M')&&!titleOpen&&$('lh-create').hidden){setMuted(!muted);}});
+/* ---------- portraits: one anime face per character ---------- */
+const AN_MAP={get YOU(){return({Guardian:0,Scout:1,Mage:2})[state.heroClass]??0;},ROWAN:3,'ELDER MAPLE':7,MARA:8,THOMAS:9,INSTRUCTOR:10,MILLIE:11,GUS:12,PIPER:13,'GATEKEEPER BRAWN':5,'GATEKEEPER WINONA':6,CHALLENGER:14,'MASKED MERCHANT':15,JUNIPER:16,'INNKEEPER BRAM':17,'NELL THE TRAVELER':18,'SHOPKEEPER TILLY':19,FINN:20,'OLD CRAFTSMAN ORIN':21,'WREN THE APPRENTICE':22,ANNOUNCER:23,'TOWER KEEPER':23,'FARMER FLINT':24,'HAZEL THE HUNTER':25,'OLD WILLOW':26,PIP:27,'ORCHARD KEEPER DAHLIA':28,'FISHER MARLO':29,'SMUGGLER VEX':30,'SHADOW BROKER':31,'FROST RANGER ILSA':32,'MONK TORV':33,'CAPTAIN ALDRIC':34,'SISTER MIRELLE':35,'TINKER COG':36,'ORACLE SELENE':37,'BRIGAND BRUNO':38,'HOLLOW KING':39,'MARA THE NEIGHBOR':40,'GOLDLEAF MAYOR':41,'MERCHANT MARISOL':42,'INNKEEPER ROSA':43,'WAITER GHOST':44,'HALL STEWARD ORLAN':45,'ICE SPRITE':46,'ANCIENT KEEPER':47};
+function initRows(){Object.assign(NPC_ROW,{'HAZEL THE HUNTER':37,'OLD WILLOW':20,PIP:18,'ORCHARD KEEPER DAHLIA':34,'FARMER FLINT':15,'BRIGAND BRUNO':3,'FISHER MARLO':33,'WAITER GHOST':44,'ORACLE SELENE':49,'SMUGGLER VEX':16,'SHADOW BROKER':43,'MERCHANT MARISOL':39,'HALL STEWARD ORLAN':42,'ANCIENT KEEPER':40,'FROST RANGER ILSA':48,'MONK TORV':47,'ICE SPRITE':45,'CAPTAIN ALDRIC':36,'SISTER MIRELLE':25,'TINKER COG':32,MARA:28,THOMAS:17,'GOLDLEAF MAYOR':30,'INNKEEPER ROSA':41,'TOWER KEEPER':46});}
+/* ---------- skills: start with one, unlock more as you level, max 4 equipped ---------- */
+const SKILL_LV=[1,2,3,5,7,9,11,13];
+const SKILL_EXTRA={
+Guardian:[{n:'TAUNT ROAR',mp:4,kind:'melee',base:8,per:1.5,weaken:4,d:'A thundering roar that weakens the foe\u2019s attacks for 4 turns.',msg:'You roar and the foe flinches!'},{n:'MOUNTAIN SLAM',mp:12,kind:'melee',base:36,per:3.2,stun:.6,d:'A crushing blow. 60% chance to stun.',msg:'You bring the shield down like a mountain!'},{n:'RALLY CRY',mp:7,ward:1,heal:18,d:'Recover HP and brace for the next hit.',msg:'You rally yourself. Hold the line!'},{n:'UNBREAKABLE',mp:11,ward:3,heal:22,d:'Take 70% less damage for 3 turns and heal.',msg:'Nothing can break you now!'}],
+Scout:[{n:'TRIPWIRE',mp:4,kind:'arrow',base:10,per:1.6,stun:.7,d:'A trapped shot. 70% chance to stun.',msg:'You loose a snaring shot!'},{n:'POISON DART',mp:6,kind:'arrow',base:12,per:2,burn:4,d:'Poison that burns for 4 turns.',msg:'A venom-tipped dart flies!'},{n:'WIND DASH',mp:6,ward:1,heal:14,d:'Dodge the next strike and recover a little.',msg:'You slip away on the wind!'},{n:'RAIN OF ARROWS',mp:13,kind:'arrow',base:8,per:1.8,hits:5,crit:.3,d:'Five arrows with a high critical chance.',msg:'Arrows fall like rain!'}],
+Mage:[{n:'STORM CALL',mp:9,kind:'magic',base:18,per:2.4,hits:2,d:'Two bolts of lightning.',msg:'Lightning answers your call!'},{n:'MEND LIGHT',mp:7,heal:30,d:'A warm light restores your HP.',msg:'Golden light mends your wounds.'},{n:'SOUL DRAIN',mp:8,kind:'magic',base:18,per:2.2,healSelf:12,d:'Steal life from the foe.',msg:'You drain the foe\u2019s spirit!'},{n:'METEOR',mp:15,kind:'magic',base:46,per:3.5,burn:3,d:'A falling star. Burns for 3 turns.',msg:'A meteor tears the sky open!'}]};
+function skillCat(){const c=state.heroClass in SKILLS?state.heroClass:'Guardian';if(!SKILLS._ext){for(const k in SKILL_EXTRA)SKILLS[k].push(...SKILL_EXTRA[k]);SKILLS._ext=1;}return SKILLS[c];}
+function knownSkills(){const cat=skillCat();if(!Array.isArray(state.skills)||!state.skills.length)state.skills=[0];return state.skills.filter(i=>cat[i]).map(i=>cat[i]);}
+let offering=false;
+function offerSkillsWhenReady(){whenIdle(offerSkills);}
+function offerSkills(){if(offering)return;const cat=skillCat();state.skills=state.skills&&state.skills.length?state.skills:[0];state.skipped=state.skipped||[];const idx=cat.findIndex((s,i)=>!state.skills.includes(i)&&SKILL_LV[i]<=state.level&&!state.skipped.includes(i));if(idx<0)return;offering=true;sfx('unlock');const s=cat[idx];
+ const el=ov('<h3>NEW SKILL UNLOCKED!</h3><p><b>'+esc(s.n)+'</b> \u00b7 '+s.mp+' MP</p><p>'+esc(s.d)+'</p><div class="row"><button class="lh-ob" id="sk-yes">LEARN</button><button class="lh-ob alt" id="sk-no">SKIP</button></div><p class="note">You know '+state.skills.length+'/4 skills.</p>');
+ const done=()=>{el.close();offering=false;save();setTimeout(offerSkills,200);};
+ el.querySelector('#sk-no').onclick=()=>{sfx('menu');state.skipped.push(idx);done();};
+ el.querySelector('#sk-yes').onclick=()=>{sfx('select');if(state.skills.length<4){state.skills.push(idx);done();return;}
+  el.querySelector('.pn').innerHTML='<h3>FORGET WHICH SKILL?</h3><p>You can only know 4. Choose one to forget for <b>'+esc(s.n)+'</b>.</p><div class="col">'+state.skills.map((k,i)=>'<button class="lh-ob" data-f="'+i+'"><b>'+esc(cat[k].n)+'</b> \u00b7 '+cat[k].mp+' MP<br><small>'+esc(cat[k].d)+'</small></button>').join('')+'</div><div class="row"><button class="lh-ob alt" id="sk-keep">KEEP MY SKILLS</button></div>';
+  el.querySelector('#sk-keep').onclick=()=>{sfx('menu');state.skipped.push(idx);done();};
+  el.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{sfx('select');state.skills.splice(+b.dataset.f,1,idx);done();});};}
+/* ---------- leaderboard (global when signed in to BSMS, always saved locally) ---------- */
+function sessionId(){try{return localStorage.getItem('session_id')||localStorage.getItem('bsms_session')||'';}catch(e){return'';}}
+function localBoard(){try{return JSON.parse(localStorage.getItem('lh_tower_scores')||'[]');}catch(e){return[];}}
+function addLocalScore(f){const r=localBoard();r.push({name:state.name||'Adventurer',floor:f,cls:state.heroClass,level:state.level||1,t:Date.now()});r.sort((a,b)=>b.floor-a.floor||a.t-b.t);try{localStorage.setItem('lh_tower_scores',JSON.stringify(r.slice(0,20)));}catch(e){}}
+async function submitTower(f){addLocalScore(f);const sid=sessionId();if(!sid)return false;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify({action:'tower-score',floor:f,cls:state.heroClass,level:state.level||1})});return r.ok;}catch(e){return false;}}
+async function showLeaderboard(){const el=ov('<h3>TOWER LEADERBOARD</h3><div id="lb-body">Loading\u2026</div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
+ let rows=null,online=false;try{const sid=sessionId();const r=await fetch('/api/last-harvest?action=tower-leaderboard',{headers:sid?{'X-Session-ID':sid}:{}});if(r.ok){const d=await r.json();rows=d.leaderboard||[];online=true;}}catch(e){}
+ if(!rows)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
+ el.querySelector('#lb-body').innerHTML=(rows.length?'<table><tr><th>#</th><th>NAME</th><th>FLOOR</th><th>CLASS</th></tr>'+rows.slice(0,20).map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.displayName||r.name)+'</td><td>'+r.floor+'</td><td>'+esc(r.cls||'')+' L'+(r.level||1)+'</td></tr>').join('')+'</table>':'<p>No climbers yet. Be the first!</p>')+'<p class="note">'+(online?'Global ranking.':'Local ranking only. Sign in to BSMS to join the global leaderboard.')+'</p>';}
+/* ---------- the Goldleaf Tower ---------- */
+let tower=null;
+function towerEnter(){const best=Math.max(0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Defeat one foe per floor. Your HP and MP carry over, with a small rest between floors. If you fall, your highest floor is posted on the leaderboard.</p><p>Your best: <b>floor '+best+'</b></p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
+ el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();tower={floor:1,best:0};towerFloor();};}
+function banner(t,sub,cb){const el=document.createElement('div');el.className='lh-banner';el.innerHTML='<div><h2>'+esc(t)+'</h2><p>'+esc(sub||'')+'</p></div>';document.body.appendChild(el);sfx('alert');setTimeout(()=>{el.remove();cb&&cb();},1500);}
+function towerFloor(){const f=tower.floor,g=Math.min(9,Math.floor((f-1)/5)),boss=f%10===0,i=g*10+(boss?9:rnd(9)),m=monInfo(i),sc=1+f*.045;
+ const enc={id:'tower',tower:true,wild:true,name:m.name,mi:i,hp:Math.round(m.hp*sc*(boss?1.4:1)),atk:Math.round(m.atk*(1+f*.035)),reward:6*f+(boss?60:0),xp:12+f*3+(boss?40:0),win:[],onEnd:won=>towerResult(won)};
+ banner('FLOOR '+f,boss?'GUARDIAN FLOOR':GENS[g].toUpperCase()+' CHAMBER',()=>startBattle(enc));}
+function towerResult(won){if(won){tower.best=tower.floor;tower.floor++;state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.2));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.3));save();whenIdle(towerMenu);}else{const f=tower.best;tower=null;whenIdle(()=>towerEnd(f));}}
+function towerMenu(){updateHud();const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00b7 MP '+state.mp+'/'+state.maxMp+'</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+tower.floor+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
+ el.querySelector('#tw-up').onclick=()=>{sfx('select');el.close();towerFloor();};el.querySelector('#tw-out').onclick=()=>{sfx('menu');el.close();const f=tower.best;tower=null;towerEnd(f);};}
+async function towerEnd(f){AREA=getCity();scene='area';stepper=null;areaPlayer={x:20*32+16,y:11*32+24};state.hp=Math.max(state.hp,Math.ceil(state.maxHp*.5));updateHud();save();const ok=f>0?await submitTower(f):false;
+ const el=ov('<h3>TOWER RESULT</h3><p>You reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
+ el.querySelector('#tr-x').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tr-b').onclick=()=>{el.close();showLeaderboard();};}
+/* ---------- title screen ---------- */
+let titleOpen=false;
+function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div><p class="lh-title-hint">Press M to mute \u00b7 Arrow keys + Enter, or tap</p>';document.body.appendChild(el);
+ const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
+ let sel=0;const menu=$b('lh-title-menu');const render=()=>{menu.innerHTML=items.map((it,i)=>'<button class="lh-tbtn'+(i===sel?' sel':'')+'" data-i="'+i+'">'+it[0]+'</button>').join('');};render();
+ function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();}
+ const choose=i=>{const k=items[i][1];sfx('select');
+  if(k==='continue'){closeTitle();}
+  else if(k==='new'){if(hasSave){if(!confirm('Start a new adventure? Your saved progress on this device will be replaced.'))return;localStorage.removeItem(SAVE);try{sessionStorage.setItem('lh_skip_title','1');}catch(e){}location.reload();return;}closeTitle();$('lh-create').hidden=false;}
+  else if(k==='board'){showLeaderboard();}
+  else if(k==='sound'){setMuted(!muted);items[i][0]='SOUND: '+(muted?'OFF':'ON');render();if(!muted)playMusic('title');}};
+ menu.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){sel=+b.dataset.i;choose(sel);}});
+ function kd(e){if(!titleOpen)return;if(e.key==='ArrowDown'||e.key==='s'){sel=(sel+1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='ArrowUp'||e.key==='w'){sel=(sel+items.length-1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='Enter'||e.key===' '||e.key==='e'){choose(sel);e.preventDefault();e.stopPropagation();}}
+ addEventListener('keydown',kd,true);animateTitle(el.querySelector('canvas'));}
+function animateTitle(cv){const g=cv.getContext('2d'),t0=performance.now(),leaves=Array.from({length:30},(_,i)=>({x:Math.random(),y:Math.random(),s:1+Math.random()*2,v:.03+Math.random()*.05,ph:Math.random()*6,c:['#e8863a','#d2552e','#f2b84a','#9a5a2a'][i%4]}));
+ function frame(){if(!titleOpen||!cv.isConnected)return;const W=cv.width=innerWidth,H=cv.height=innerHeight,t=(performance.now()-t0)/1000;g.imageSmoothingEnabled=false;
+  const sk=g.createLinearGradient(0,0,0,H);sk.addColorStop(0,'#1d1440');sk.addColorStop(.55,'#8a3c5a');sk.addColorStop(1,'#f0a050');g.fillStyle=sk;g.fillRect(0,0,W,H);
+  for(let i=0;i<60;i++){g.fillStyle='rgba(255,240,200,'+(.3+.5*Math.abs(Math.sin(t*1.3+i)))+')';g.fillRect((i*97)%W,(i*53)%Math.floor(H*.5),2,2);}
+  const mr=Math.min(W,H)*.07;g.fillStyle='#fff3c8';g.beginPath();g.arc(W*.8,H*.2,mr,0,7);g.fill();g.fillStyle='#e8d7a0';g.beginPath();g.arc(W*.8+mr*.3,H*.2-mr*.2,mr*.3,0,7);g.fill();
+  const hill=(base,amp,col,sp,ph)=>{g.fillStyle=col;g.beginPath();g.moveTo(0,H);for(let x=0;x<=W;x+=8)g.lineTo(x,base+Math.sin((x+t*sp)*.006+ph)*amp);g.lineTo(W,H);g.fill();};
+  hill(H*.64,H*.05,'#5a2a4a',6,0);hill(H*.72,H*.06,'#3a1e3c',12,2);
+  if(VIL.naturalWidth){const row=['cottage','house2','inn','house1','store'],sc=Math.max(2,Math.min(Math.floor(W/430),Math.floor(H/190))),tw=row.reduce((a,n)=>a+VR[n][2]*sc,0),gap=Math.max(6,(W-tw)/(row.length+1));let cx=gap;row.forEach(n=>{const r=VR[n];g.drawImage(VIL,r[0],r[1],r[2],r[3],Math.round(cx),Math.round(H*.84-r[3]*sc),r[2]*sc,r[3]*sc);cx+=r[2]*sc+gap;});}
+  g.fillStyle='#24142e';g.fillRect(0,H*.84,W,H*.16);
+  [.1,.33,.56,.7,.9].forEach((fx,i)=>{const a=.25+.15*Math.sin(t*5+i*2),gr=g.createRadialGradient(W*fx+30,H*.8,2,W*fx+30,H*.8,80);gr.addColorStop(0,'rgba(255,200,100,'+a+')');gr.addColorStop(1,'rgba(255,200,100,0)');g.fillStyle=gr;g.fillRect(W*fx-50,H*.7,160,130);});
+  for(let i=0;i<14;i++){const x=(Math.sin(t*.4+i*1.7)*.5+.5)*W,y=H*.7+Math.sin(t*.9+i)*H*.08;g.fillStyle='rgba(255,240,140,'+(.4+.4*Math.sin(t*3+i))+')';g.fillRect(x,y,3,3);}
+  leaves.forEach(l=>{l.y+=l.v*.016;l.x+=Math.sin(t*1.5+l.ph)*.0004;if(l.y>1.05){l.y=-.05;l.x=Math.random();}g.save();g.translate(l.x*W,l.y*H);g.rotate(t*1.2+l.ph);g.fillStyle=l.c;g.fillRect(-l.s*2,-l.s,l.s*4,l.s*2);g.restore();});
+  const fs=Math.max(22,Math.min(W*.07,H*.11)),by=H*.2+Math.sin(t*2)*6;g.textAlign='center';g.font='bold '+fs+'px "Press Start 2P",monospace';
+  g.fillStyle='#3f1a24';g.fillText('THE LAST',W/2+4,by+4);g.fillText('HARVEST',W/2+4,by+fs*1.5+4);
+  const gr2=g.createLinearGradient(0,by-fs,0,by+fs*2);gr2.addColorStop(0,'#ffe9a0');gr2.addColorStop(1,'#f08a2a');g.fillStyle=gr2;g.fillText('THE LAST',W/2,by);g.fillText('HARVEST',W/2,by+fs*1.5);
+  const pr=fs*.55,py=by+fs*.5+Math.abs(Math.sin(t*3))*-8;g.fillStyle='#e3862a';g.beginPath();g.ellipse(W/2-fs*4.3,py,pr,pr*.8,0,0,7);g.fill();g.fillStyle='#b86a1e';g.fillRect(W/2-fs*4.3-2,py-pr*.8,4,pr*1.6);g.fillStyle='#4e974c';g.fillRect(W/2-fs*4.3-3,py-pr*.8-8,6,10);
+  g.font=Math.max(9,fs*.26)+'px "Press Start 2P",monospace';g.fillStyle='rgba(255,240,210,'+(.65+.35*Math.sin(t*3))+')';g.fillText('A 16-BIT AUTUMN ADVENTURE',W/2,by+fs*2.5);
+  requestAnimationFrame(frame);}requestAnimationFrame(frame);}
+/* ---------- chapter regions, Goldleaf City ---------- */
+const BIO={
+0:{g:[['t',0],['t',1],['t',0],['t',2]],tint:'rgba(255,220,140,.08)',ob:[{a:3,b:15,two:1},{a:4,b:16,two:1},{a:5}]},
+1:{g:[['t',0],['t',0],['t',1],['t',2]],tint:'rgba(210,120,30,.16)',ob:[{a:3,b:15,two:1},{a:4,b:16,two:1},{a:27},{a:28},{a:5}]},
+2:{g:[['t',0],['t',1],['t',0],['t',2]],tint:'rgba(255,200,70,.14)',ob:[{a:3,b:15,two:1},{a:27},{a:3,b:15,two:1},{a:5}],dec:[['f',96],['f',85],['f',6],['f',20],['f',44]]},
+3:{g:[['t',0],['t',1]],tint:'rgba(20,120,110,.38)',ob:[{a:5},{a:28},{sh:'b',a:37},{sh:'b',a:38},{sh:'b',a:36}],dec:[['f',64],['f',65]]},
+4:{g:[['d',48],['d',49],['d',50],['d',48]],tint:'rgba(40,10,70,.38)',ob:[{sh:'d',a:89},{sh:'f',a:96},{sh:'f',a:85},{sh:'d',a:28}],dec:[['d',113],['d',115]]},
+5:{hall:1,tint:'rgba(70,20,20,.3)',ob:[{i:[0,2,1,1]},{i:[1,2,1,1]},{i:[7,4,1,1]},{sh:'f',a:85},{i:[20,17,1,1]}],dec:[['d',113],['f',74]]},
+6:{g:[['t',0],['t',1],['t',2]],tint:'rgba(215,235,255,.6)',ob:[{a:4,b:16,two:1},{a:28},{a:4,b:16,two:1},{sh:'f',a:77}]},
+7:{g:[['d',0],['d',1],['d',0],['d',12]],tint:'rgba(20,0,30,.4)',ob:[{sh:'d',a:28},{sh:'d',a:40},{sh:'d',a:64},{sh:'d',a:58}]},
+8:{g:[['t',25],['t',39],['t',40],['t',25]],tint:'rgba(140,20,40,.32)',ob:[{sh:'f',a:79},{sh:'f',a:67},{a:28},{sh:'f',a:89}],dec:[['f',79],['f',67]]},
+9:{g:[['t',0],['t',2],['t',1]],tint:'rgba(255,220,120,.24)',ob:[{a:3,b:15,two:1},{a:5},{a:4,b:16,two:1}],dec:[['f',83],['f',8],['t',2]]}};
+const STORY={
+1:{intro:['AUTUMNWOOD FOREST. The golden leaves drift upward here, as if pointing the way.','Your mother\u2019s journal says the Keepers marked this wood with the First Seal.'],
+ npcs:[['HAZEL THE HUNTER',25,['Careful, traveler. The Thornback Stag used to be a gentle spirit of these woods.','Hunger drives him mad now. He guards the First Seal at the far end of the forest.']],['OLD WILLOW',26,['I knew your parents. Mara hummed to the trees while Thomas carried the lantern.','They were taken through the Seal door, deeper into the valley. Follow the golden leaves.']],['PIP',27,['Psst! The Stag hates sudden noises. But he loves ripe apples!','If you hear antlers rattle, run in zig-zags.']]],
+ post:['The Stag\u2019s antlers crumble into golden leaves and the First Seal glows.','A thread of light stretches toward the Golden Apple Valley.']},
+2:{intro:['GOLDEN APPLE VALLEY. Once the richest orchard in the land, now every tree hangs heavy with rot.'],
+ npcs:[['ORCHARD KEEPER DAHLIA',28,['The Golem is made of everything we failed to harvest: rotten apples, broken crates, forgotten work.','Your mother hid a scarf in the oldest tree. It still carries Keeper magic.']],['FARMER FLINT',24,['Our harvest vanished after a masked merchant bought every crate \u201cfor the Hollow table.\u201d','I should never have sold to him.']],['BRIGAND BRUNO',38,['I used to raid this orchard. Then the Golem ate my cart. Never again!','Keep to the dirt path and avoid the rotten patches.']]],
+ post:['The Golem collapses into compost and a single golden apple tree grows from it.','Mara\u2019s scarf glows, pointing toward the Sunken Pantry where the Keepers kept their ledger.']},
+3:{intro:['THE SUNKEN PANTRY. The old larder lies flooded, its shelves full of silent jars.'],
+ npcs:[['FISHER MARLO',29,['The Chef drowned guarding the Keepers\u2019 ledger. Now he cooks for no one and nothing.','His ladle can freeze you in place. Strike when he lifts it.']],['WAITER GHOST',44,['Table for none. The Chef still sets places for the Keepers who never returned.','He remembers your father. Thomas always praised his soup.']],['ORACLE SELENE',37,['I see a ledger bound in blue ribbon. Page seven lists a delivery: \u201cone Keeper, to the Shadowmarket.\u201d','Your parents are alive, but the road to them runs through shadows.']]],
+ post:['The Chef smiles one last time and sinks into the water. The blue ledger floats up.','Page seven: \u201cDelivered to the Masked Merchant, Shadowmarket.\u201d Your parents were sold in the dark.']},
+4:{intro:['SHADOWMARKET. Lanterns burn without flame, and every stall sells something you will regret buying.'],
+ npcs:[['SMUGGLER VEX',30,['Everything has a price here, even the truth. Free tip: the Merchant never works alone.','A boy in a green cloak asked about your parents last night. He looked scared.']],['SHADOW BROKER',31,['Your friend Rowan sold his name for a promise: his lost mother\u2019s necklace, found.','The Merchant keeps promises exactly as written, and not one letter more.']],['MERCHANT MARISOL',42,['Don\u2019t look at me like that. I only sell potions. Honest ones. Mostly.','If you break the Merchant\u2019s mask, the shadows may let go.']]],
+ post:['The Merchant\u2019s mask cracks and a hollow wind rushes out. A note falls: \u201cRowan has chosen. Come to the Banquet Hall.\u201d','Your heart sinks. Rowan, your oldest friend, waits at the end of the road.']},
+5:{intro:['THE BROKEN BANQUET HALL. A feast frozen in time: plates still full, candles still burning, nobody left to eat.'],
+ npcs:[['HALL STEWARD ORLAN',45,['The young man in dark armor sits at the head table. He says he is saving a seat for you.','He keeps whispering: \u201cIf I win, I get to see them again.\u201d']],['NELL THE TRAVELER',18,['I saw Rowan weeping at the table. The Hollow King promised him his parents back.','Do not hate him. Hunger makes liars of kings and promises of ghosts.']],['ANCIENT KEEPER',47,['The Hollow King was never a monster by birth. He was the first guest we turned away.','Break the chain around Rowan\u2019s heart with kindness, not just strength.']]],
+ post:['The black armor falls away and Rowan collapses, free. \u201cI\u2019m sorry,\u201d he whispers. \u201cI only wanted my family back.\u201d','Rowan vows to guard the village while you finish the journey. A golden thread leads north to the Frostfall Mountains.']},
+6:{intro:['FROSTFALL MOUNTAINS. Snow falls in perfect silence. Somewhere above, a king hoards the last feast of winter.'],
+ npcs:[['FROST RANGER ILSA',32,['The Turkey King was a gentle harvest spirit, until the Hollow King taught him to hoard.','He sits atop the watchtower guarding a table that never empties and never feeds anyone.']],['MONK TORV',33,['Hunger and greed wear the same crown. Remind him what a feast is for: sharing.','Take the lantern path. The avalanche slope is a trap.']],['ICE SPRITE',46,['Hee hee! Want to see my snow fort? The King is grumpy because nobody visits him anymore.']]],
+ post:['The Turkey King laughs for the first time in a century and tears the golden feast apart: \u201cTake it. Share it.\u201d','The watchtower gate opens, revealing the road to the Hollow Fortress.']},
+7:{intro:['THE HOLLOW FORTRESS. Black banners hang from towers built to keep the world out and the hunger in.'],
+ npcs:[['CAPTAIN ALDRIC',34,['I served the First Keepers. When the Hollow King rose I swore to hold this gate. I failed.','My brother wears the Hollow Knight\u2019s armor now. Free him, and the fortress will fall silent.']],['SISTER MIRELLE',35,['Beneath the throne lies the First Promise, carved by the Keepers: \u201cNo table shall stand empty.\u201d','The Hollow King broke it, but promises can be repaired.']],['TINKER COG',36,['I built these doors, you know. Clockwork, gears, the whole thing. The knight smashes through them like paper!']]],
+ post:['The Hollow Knight kneels, his armor falling to dust. Captain Aldric salutes: \u201cGo. The throne is open.\u201d','Deep within, a golden door hums with the Everfeast\u2019s last light.']},
+8:{intro:['EVERFEAST SANCTUARY. The golden table stretches into darkness, set for a feast that never began.'],
+ npcs:[['ANCIENT KEEPER',47,['This is where it began, child. The King was our first guest, the one we forgot to invite.','He does not want to destroy the feast. He wants a seat at it.']],['MARA',8,['(a faint echo) We are here, sweetheart\u2026 beyond the King. Be brave.']],['THOMAS',9,['(a faint echo) We left the lantern lit for you.']]],
+ post:['The Hollow King\u2019s crown shatters. He looks at the empty table, then at you. \u201cMay I\u2026 sit?\u201d','The golden door of the Heart opens.']},
+9:{intro:['HEART OF HEARTHVALE. The Everfeast\u2019s beating heart: a garden of gold under a sky of stars.'],
+ npcs:[['MARA',8,['My darling! You came all this way\u2026 The Heart Guardian only tests those who love Hearthvale.']],['THOMAS',9,['We were never lost. The Heart held us safe until someone brave enough could share the feast again.']],['ROWAN',3,['I made it too! Whatever it asks, we face it together.']]],
+ post:['The Heart Guardian blooms into a thousand lanterns. The Everfeast burns bright again.','Hearthvale is saved, and the whole village sits at one long golden table. There is a seat for everyone, even the Hollow King.']}};
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const AREAS={};let AREA=null,areaPlayer={x:0,y:0};
+function getRegion(c){return AREAS['r'+c]||(AREAS['r'+c]=genRegion(c));}
+function getCity(){return AREAS.city||(AREAS.city=genCity());}
+function genRegion(c){const B=BIO[c],S=STORY[c],w=44,h=26,rng=mulberry(c*7919+13),T=(x,y)=>y*w+x;
+ const open=new Uint8Array(w*h),solid=new Uint8Array(w*h),ob=new Uint8Array(w*h),enc=new Uint8Array(w*h),pathY=[];
+ let py=13;for(let x=0;x<w;x++){if(x>6&&x<w-10&&rng()<.3)py+=rng()<.5?-1:1;py=Math.max(6,Math.min(h-7,py));pathY[x]=py;}
+ const carve=(x,y)=>{if(x>0&&y>0&&x<w-1&&y<h-1)open[T(x,y)]=1;};
+ for(let x=0;x<w-1;x++)for(let dy=-1;dy<=1;dy++)carve(x,pathY[x]+dy);
+ const npcPos=[];[[10,-4],[22,4],[33,-4]].forEach(([cx,off])=>{const cy=pathY[cx]+off;for(let y=cy-3;y<=cy+3;y++)for(let x=cx-4;x<=cx+4;x++)if(((x-cx)/4.4)**2+((y-cy)/3.4)**2<=1)carve(x,y);for(let y=Math.min(cy,pathY[cx]);y<=Math.max(cy,pathY[cx]);y++)for(let dx=0;dx<2;dx++)carve(cx+dx,y);npcPos.push([cx,cy]);});
+ const bx=w-8,by=pathY[bx];for(let y=by-5;y<=by+5;y++)for(let x=bx-4;x<=bx+5;x++)carve(x,y);
+ for(let y=pathY[1]-2;y<=pathY[1]+2;y++)for(let x=1;x<=5;x++)carve(x,y);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(!open[i]){if(x===0||y===0||x===w-1||y===h-1||rng()<.8){solid[i]=1;ob[i]=1+Math.floor(rng()*B.ob.length);}}else if(x>6&&x<bx-5&&Math.abs(y-pathY[x])>2&&rng()<.5)enc[i]=1;}
+ const dec=[];if(B.dec)for(let k=0;k<70;k++){const x=1+Math.floor(rng()*(w-2)),y=1+Math.floor(rng()*(h-2));if(open[T(x,y)]&&!solid[T(x,y)])dec.push({x,y,d:B.dec[Math.floor(rng()*B.dec.length)]});}
+ solid[T(0,pathY[1])]=0;ob[T(0,pathY[1])]=0;
+ const npcs=S.npcs.map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));
+ const g={id:'boss'+c,name:BOSSES[c].name,bi:c,lines:BOSSES[c].lines,win:BOSSES[c].win};
+ npcs.push({x:bx+1,y:by,name:BOSSES[c].name,trainer:g,boss:true,bi:c});
+ for(let dy=-1;dy<=1;dy++)for(let dx=0;dx<=2;dx++){solid[T(bx+dx,by+dy)]=1;ob[T(bx+dx,by+dy)]=0;}
+ return{id:'r'+c,chapter:c,name:chapters[c].place,w,h,solid,ob,enc,dec,npcs,spawn:{x:2,y:pathY[1]},exits:[{x:0,y:pathY[1],to:'village'}],bio:B,boss:g,pathY,mus:'wander'};}
+function genCity(){const w=40,h=26,solid=new Uint8Array(w*h),ground=new Uint8Array(w*h),ob=new Uint8Array(w*h),T=(x,y)=>y*w+x,rng=mulberry(777),B=BIO[0];
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let r=0;if(y>=12&&y<=14)r=1;if(x>=18&&x<=21&&y>=8)r=1;if(x>=12&&x<=27&&y>=10&&y<=19)r=2;ground[T(x,y)]=r;}
+ const bld=[{n:'tower',x:17,y:0,w:6,h:9},{n:'inn',x:3,y:3,w:8,h:5},{n:'store',x:29,y:3,w:8,h:5},{n:'house1',x:4,y:16,w:5,h:4},{n:'house2',x:31,y:16,w:5,h:4},{n:'house3',x:5,y:21,w:6,h:4}];
+ bld.forEach(b=>{for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)solid[T(x,y)]=1;});
+ for(let y=15;y<=16;y++)for(let x=18;x<=21;x++)solid[T(x,y)]=1;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(solid[i]||ground[i])continue;if(x===0||y===h-1||x===w-1||(y===0&&(x<17||x>22))||rng()<.07){solid[i]=1;ob[i]=1+Math.floor(rng()*3);}}
+ const npcs=[
+ {x:20,y:10,name:'TOWER KEEPER',act:'tower',lines:['Welcome to the Goldleaf Tower! Every floor holds a stronger foe.','Climb as high as you dare. The highest climber wins eternal glory.']},
+ {x:23,y:10,name:'LEADERBOARD',act:'board',lines:[]},
+ {x:13,y:11,name:'GOLDLEAF MAYOR',lines:['Welcome to Goldleaf City! Once a market for the Everfeast, now a refuge for travelers.','They say the Tower grows a floor every time a champion falls. Mind your step.']},
+ {x:33,y:8,name:'MERCHANT MARISOL',act:'shop',lines:[]},
+ {x:7,y:8,name:'INNKEEPER ROSA',act:'inn',lines:[]},
+ {x:26,y:17,name:'WREN THE APPRENTICE',lines:['I\u2019m training to climb the Tower someday. Floor ten is my dream!','Tip: keep a few potions for the guardian floors.']},
+ {x:9,y:20,name:'GUS',lines:['Goldleaf\u2019s bread is the best. Don\u2019t tell the village I said that.']}];
+ return{id:'city',chapter:0,city:true,name:'Goldleaf City',w,h,solid,ob,ground,enc:null,dec:[],npcs,spawn:{x:1,y:13},exits:[{x:0,y:12,to:'village'},{x:0,y:13,to:'village'},{x:0,y:14,to:'village'}],bio:B,bld,mus:'village'};}
+function enterRegion(c){const A=getRegion(c);startArea(A,A.spawn.x,A.spawn.y);setDialogue(STORY[c].intro.map(t=>['JOURNAL',t]));}
+function startArea(A,tx,ty){AREA=A;A.leaving=false;A.bossTalk=0;scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
+function enterArea(id){if(id==='city'){startArea(getCity(),1,13);setDialogue([['GOLDLEAF MAYOR','Welcome to Goldleaf City, traveler! The Tower stands to the north.']]);}}
+function leaveArea(to){sfx('portal');const c=AREA&&AREA.chapter;const city=AREA&&AREA.city;AREA=null;scene='outside';stepper=null;if(city){state.x=44*TILE+16;state.y=12*TILE+24;}else{state.x=16*TILE+16;state.y=32*TILE+24;}updateHud();save();}
+function areaHit(x,y){const A=AREA,tx=Math.floor(x/32),ty=Math.floor(y/32);if(tx<0||ty<0||tx>=A.w||ty>=A.h)return true;if(A.solid[ty*A.w+tx])return true;return A.npcs.some(n=>n.x===tx&&n.y===ty);}
+function areaWild(c){const g=Math.max(0,Math.min(9,c+(Math.random()<.35?0:-1))),i=g*10+rnd(9),m=monInfo(i);return{id:'wild',wild:true,name:m.name,mi:i,hp:Math.round(m.hp*1.1),atk:m.atk,reward:m.reward,xp:15+g*14,win:[]};}
+function areaStep(){const A=AREA,tx=Math.floor(areaPlayer.x/32),ty=Math.floor(areaPlayer.y/32);
+ if(A.exits.some(e=>e.x===tx&&e.y===ty)){leaveArea('village');return;}
+ if(A.boss&&!state.beaten[A.boss.id]){const n=A.npcs.find(q=>q.boss);if(n&&!A.bossTalk&&Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24))<5*32){areaBossIntro(n);return;}}
+ if(A.enc&&A.enc[ty*A.w+tx]&&Math.random()<.11&&!battle&&!dialogue)startBattle(areaWild(A.chapter));else if(A.pathY&&tx>7&&tx<A.w-14&&Math.abs(ty-A.pathY[tx])<=1&&Math.random()<.03&&!battle&&!dialogue)startBattle(areaWild(A.chapter));}
+function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;A.bossTalk=1;sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{A.bossTalk=0;startBattle(g);});}
+function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.boss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
+function areaInteract(){if(dialogue){advanceDialogue();return;}if(cinematic||titleOpen||!$('lh-game-menu').hidden)return;const A=AREA;let f=null,d0=1e9;for(const n of A.npcs){const d=Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24));if(d<(n.boss?150:64)&&d<d0){f=n;d0=d;}}
+ if(!f){setDialogue([['JOURNAL','Nothing here but the wind.']]);return;}
+ if(f.boss){areaBossIntro(f);return;}
+ if(f.act==='tower'){setDialogue(f.lines.map(t=>[f.name,t]),()=>towerEnter());return;}
+ if(f.act==='board'){showLeaderboard();return;}
+ if(f.act==='shop'){if(state.coins>=30){state.coins-=30;state.potions=(state.potions||0)+1;sfx('coin');updateHud();save();setDialogue([[f.name,'One potion for 30 coins. Pleasure doing business! You carry '+state.potions+' now.']]);}else setDialogue([[f.name,'Potions are 30 coins each. Come back when your purse is heavier!']]);return;}
+ if(f.act==='inn'){state.hp=state.maxHp;state.mp=state.maxMp;sfx('heal');updateHud();save();setDialogue([[f.name,'Rest your bones, dear. There! Fully refreshed.']]);return;}
+ setDialogue(f.lines.map(t=>[f.name,t]));}
+function areaGround(A,x,y){const U=32,B=A.bio;if(B.hall){ctx.imageSmoothingEnabled=false;ctx.drawImage(INT,((x*7+y*3)%3)*16,16,16,16,x*U,y*U,U,U);return;}
+ if(A.ground){const k=A.ground[y*A.w+x];if(k===1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}if(k===2){kTile('t',43,x*U,y*U);return;}}
+ else if(A.pathY&&Math.abs(y-A.pathY[x])<=1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}
+ const g=B.g[Math.floor(rand(x+11,y+7)*B.g.length)%B.g.length];kTile(g[0],g[1],x*U,y*U);}
+function areaObstacle(A,x,y,k){const U=32,o=A.bio.ob[k];if(!o)return;if(o.i){kBlock(o.i[0],o.i[1],o.i[2],o.i[3],x*U,y*U,2);return;}const sh=o.sh||'t';if(o.two){kTile(sh,o.a,x*U,(y-1)*U);kTile(sh,o.b,x*U,y*U);}else kTile(sh,o.a,x*U,y*U);}
+function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000;
+ const cx=A.w*U<=W?-(W-A.w*U)/2:Math.max(0,Math.min(A.w*U-W,areaPlayer.x-W/2)),cy=A.h*U<=H?-(H-A.h*U)/2:Math.max(0,Math.min(A.h*U-H,areaPlayer.y-H/2));
+ ctx.clearRect(0,0,W,H);px(0,0,W,H,'#0d0a14');ctx.save();ctx.translate(-Math.floor(cx),-Math.floor(cy));
+ const x0=Math.max(0,Math.floor(cx/U)-1),y0=Math.max(0,Math.floor(cy/U)-1),x1=Math.min(A.w-1,Math.ceil((cx+W)/U)),y1=Math.min(A.h-1,Math.ceil((cy+H)/U)+1);
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)areaGround(A,x,y);
+ for(const d of A.dec){if(d.x>=x0&&d.x<=x1&&d.y>=y0&&d.y<=y1)kTile(d.d[0],d.d[1],d.x*U,d.y*U);}
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*A.w+x;if(A.ob[i])areaObstacle(A,x,y,A.ob[i]-1);}
+ if(A.bld)for(const b of A.bld){if(!VIL.naturalWidth)continue;const r=VR[b.n];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],b.x*U,(b.y+b.h)*U-r[3]*2,r[2]*2,r[3]*2);}
+ if(A.city&&VIL.naturalWidth){const r=VR['fountain'+(Math.floor(t*2.6)%2)];ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*U,17*U-r[3]*2+4,r[2]*2,r[3]*2);}
+ ctx.fillStyle=A.bio.tint||'rgba(0,0,0,0)';ctx.fillRect(Math.floor(cx),Math.floor(cy),W,H);
+ const ex=A.exits[0];ctx.fillStyle='rgba(255,230,140,'+(.35+.25*Math.sin(t*4))+')';A.exits.forEach(e=>ctx.fillRect(e.x*U,e.y*U,U,U));
+ const ents=A.npcs.map(n=>({y:n.y*U+24,f:()=>{const x=n.x*U+16,y=n.y*U+24;if(n.boss){if(!state.beaten[n.trainer.id])drawBossSprite(n.bi,x,y+20,2,Math.floor(t*2)%2,true);return;}if(n.name==='LEADERBOARD'){kTile('t',83,x-16,y-24);ctx.fillStyle='#ffd84a';ctx.fillRect(x-4,y-20,8,6);return;}const row=NPC_ROW[n.name]??11;let face=0;const dx=areaPlayer.x-x,dy=areaPlayer.y-y;if(Math.hypot(dx,dy)<110)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}}));
+ ents.push({y:areaPlayer.y,f:()=>drawPlayer(areaPlayer.x,areaPlayer.y)});ents.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
+ if(!dialogue&&!battle){let best=null,bd=1e9;for(const n of A.npcs){const d=Math.hypot(areaPlayer.x-(n.x*U+16),areaPlayer.y-(n.y*U+24));if(d<(n.boss?150:64)&&d<bd){best=n;bd=d;}}if(best&&!(best.boss&&state.beaten[best.trainer.id]))drawWorldPrompt(best.x*U+16,best.y*U-(best.boss?96:22),best.boss?'E \u00b7 CHALLENGE':'E \u00b7 TALK');}
+ ctx.restore();
+ const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,Math.max(W,H)*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.35)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+ return{camX:cx,camY:cy};}
+function exitBuilding(){const id=interiorId;scene='outside';state.x=([10.5,34,22,5.5][id])*TILE;state.y=([10.9,10.9,22.9,29.9][id])*TILE;sfx('door');updateHud();save();}
+function ensureCityGate(){if(scene!=='outside'||!npcs||(questStep||0)<3||npcs.some(n=>n.city))return;npcs.push({x:45*TILE+16,y:12*TILE+24,name:'ROAD TO GOLDLEAF CITY',color:'#000',lines:[],city:true});if(!state.cityUnlocked){state.cityUnlocked=true;save();setTimeout(()=>{sfx('unlock');if(!dialogue&&!battle&&!cinematic)setDialogue([['ELDER MAPLE','A new road has opened to the east: Goldleaf City. They say a great Tower rises there, where champions test their strength.']]);},1200);}}
+function drawPortal(x,y,col){const t=performance.now()/1000;ctx.fillStyle='#8a88a0';ctx.fillRect(x-34,y-66,14,68);ctx.fillRect(x+20,y-66,14,68);ctx.fillRect(x-34,y-76,68,14);ctx.fillStyle='#b8b6cc';ctx.fillRect(x-34,y-66,4,68);ctx.fillRect(x-34,y-76,68,4);ctx.fillStyle='#5a5870';ctx.fillRect(x+30,y-66,4,68);
+ const g=ctx.createRadialGradient(x,y-32,4,x,y-32,30);g.addColorStop(0,'rgba(255,236,150,.95)');g.addColorStop(.55,col||'rgba(170,90,230,.85)');g.addColorStop(1,'rgba(40,10,80,.35)');ctx.fillStyle=g;ctx.fillRect(x-20,y-62,40,64);for(let i=0;i<6;i++){const a=t*2+i*1.05;ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillRect(Math.round(x+Math.cos(a)*12-2),Math.round(y-32+Math.sin(a)*22-2),4,4);}}
+
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
 
 // Hand-drawn original pixel-art tiles and sprites. The palette, outlines,
@@ -109,7 +334,7 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
@@ -127,7 +352,7 @@ const props=[
 for(const [kind,x,y] of props){if(!clearPropTile(x,y))continue;({bush:drawBush,flower:drawFlower,lamp:drawLamp,bench:drawBench,pumpkin:drawPumpkin,rock:drawRock})[kind](x,y);}
 drawFence(3,22,3);drawFence(41,22,3);drawFarm();
 /* fountain, sign and village details */
-px(18*TILE,12*TILE,3*TILE,2*TILE,'#536a78');px(18*TILE+5,12*TILE+4,3*TILE-10,34,'#b5d1c9');px(18*TILE+12,12*TILE+8,42,25,'#5cabb4');px(18*TILE+20,12*TILE-7,26,10,'#e8e6cf');px(18*TILE+29,12*TILE-3,8,5,'#7dc9cf');
+drawFountainSprite();
 kTile('t',83,27*TILE-16,10*TILE);
 drawGates();
 for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55',n.name);}
@@ -151,7 +376,8 @@ function bars(W,H){px(0,0,W,H*.07,'#000');px(0,H*.93,W,H*.07,'#000');if(cinemati
 function drawHomeScene(W,H){const{g,list}=drawRoom(0,W,H,false),a=cinematic.actors,k=2*g.Z;
 for(const n of ['ROWAN','HERO']){const p=a[n];if(p)list.push({y:p.y,f:()=>{drawSpriteK(n==='HERO'?heroRow():1,p.face||0,p.step||0,p.x,p.y,k);if(n==='HERO')drawGear(p.x,p.y,k,p.face||0,state.heroClass);}});}
 list.sort((p,q)=>p.y-q.y).forEach(o=>o.f());const t=performance.now()/1000;
-if(cinematic.sparkle){const tx=g.ox+3*g.U,ty=g.oy+4*g.U;ctx.fillStyle='rgba(255,220,120,'+(.45+.3*Math.sin(t*4))+')';ctx.beginPath();ctx.arc(tx,ty,g.U*.45,0,7);ctx.fill();}
+if(VIL.naturalWidth){ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,150,180,16,16,Math.round(g.ox+3*g.U),Math.round(g.oy+3*g.U-g.U*.2),g.U,g.U);}
+if(cinematic.sparkle){const tx=g.ox+3.5*g.U,ty=g.oy+3.4*g.U;ctx.fillStyle='rgba(255,220,120,'+(.45+.3*Math.sin(t*4))+')';ctx.beginPath();ctx.arc(tx,ty,g.U*.45,0,7);ctx.fill();}
 const dk=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,Math.max(W,H)*.6);dk.addColorStop(0,'rgba(10,5,20,.12)');dk.addColorStop(1,'rgba(10,5,20,.62)');ctx.fillStyle=dk;ctx.fillRect(0,0,W,H);sceneTitle('MAPLE COTTAGE',W,H*.115);bars(W,H);}
 function drawLoreScene(W,H){const act=cinematic.act||0,tt=(performance.now()-(cinematic.t0||0))/1000,s=Math.max(3,Math.round(H/150)),u=16*s,k=Math.max(3,Math.round(H/150));
 ctx.save();const z=1+Math.min(.1,tt*.01);ctx.translate(W/2,H/2);ctx.scale(z,z);ctx.translate(-W/2,-H/2+Math.sin(tt*.5)*5);
@@ -215,15 +441,15 @@ if(who==='HERO')actor(x,fy,CIV,0,k);else if(who==='ROWAN')actor(x,fy,1,0,k);else
 for(let r=0;r<2;r++)for(let c=0;c<4;c++)seat(c,r,r===1&&c===1?'HERO':r===1&&c===2?'ROWAN':'',0);
 sceneTitle('HEARTHVALE SCHOOL',W,H*.05);bars(W,H);}
 let lastArea='',stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
-const BOS=new Image();BOS.src='/img/last-harvest/bosses.png?v=9';
-const INT=new Image();INT.onerror=()=>{if(!INT.dataset.f){INT.dataset.f='1';INT.src='/img/last-harvest/interior.png?v=9';}};INT.src='/img/interior.png?v=9';
+const BOS=loadImg(['/img/last-harvest/bosses.png?v=10','/img/bosses.png?v=10']);
+const INT=loadImg(['/img/interior.png?v=10','/img/last-harvest/interior.png?v=10']);
 const CIV=4;
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
 const BR={cottage:[0,0,97,92],inn:[101,0,96,106],store:[201,0,88,106],workshop:[293,0,66,81],tree:[530,0,58,76],pine:[592,0,54,72]},HOUSES=['cottage','inn','store','workshop'];
-const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=9';
-const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=9';
+const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=10';
+const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=10';
 const NPC_MON={'PUMPKIN SENTINEL':9};
-const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=9';
+const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=10';
 const GENS=['Meadow','Orchard','Marsh','Cavern','Frostfall','Emberwood','Tempest','Crypt','Clockwork','Eclipse'],ARCH=['Slime','Bat','Beetle','Hound','Sprout','Wisp','Golem','Serpent','Crow'],BOSS=['Pumpkin Sentinel','Orchard Tyrant','Marsh Matriarch','Cavern Colossus','Frostfall Wyrm','Emberwood Behemoth','Tempest Roc','Crypt Lich King','Clockwork Titan','Eclipse Devourer'];
 /* monsters.png: 10 generations (rows) x 10 (9 monsters + 1 boss). index = gen*10+slot. Higher generations are stronger. */
 function monInfo(i){const g=(i/10)|0,a=i%10,boss=a===9;return{name:(boss?BOSS[g]:GENS[g]+' '+ARCH[a]).toUpperCase(),hp:Math.round((16+g*10+(boss?0:a))*(boss?2.4:1)),atk:Math.round((4+g*2)*(boss?1.5:1)),reward:Math.round((10+g*12)*(boss?4:1)),boss};}
@@ -237,7 +463,7 @@ const pathSet=new Set();[[0,11,48,4],[15,0,4,36],[19,14,10,2]].forEach(([x,y,w,h
 function drawPaths(camX,camY,W,H){const P=(i,j)=>i<0||j<0||i>=MAP_W||j>=MAP_H||pathSet.has(i+','+j);for(let j=Math.max(0,Math.floor(camY/TILE));j<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);j++)for(let i=Math.max(0,Math.floor(camX/TILE));i<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);i++){if(!P(i,j))continue;const t=!P(i,j-1),b=!P(i,j+1),l=!P(i-1,j),r=!P(i+1,j);let n=25;if(t&&l)n=12;else if(t&&r)n=14;else if(b&&l)n=36;else if(b&&r)n=38;else if(t)n=13;else if(b)n=37;else if(l)n=24;else if(r)n=26;else{const q=rand(i+5,j+2);n=q<.18?39:q<.3?40:q<.4?41:25;}kTile('t',n,i*TILE,j*TILE);}}
 function drawTree(x,y){const o=rand(x+3,y+9);if(o<.3){kTile('t',o<.15?27:28,x*TILE,y*TILE);return;}const a=o<.65?[3,15]:[4,16];kTile('t',a[0],x*TILE,(y-1)*TILE);kTile('t',a[1],x*TILE,y*TILE);}
 const HSTY={cottage:{rt:[52,53,54],rm:[64,65,66],w:[72,73,75],win:84,door:85},inn:{rt:[52,53,54],rm:[64,65,66],w:[76,77,79],win:88,door:89},store:{rt:[48,49,50],rm:[60,61,62],w:[72,73,75],win:84,door:86},workshop:{rt:[48,49,50],rm:[60,61,62],w:[76,77,79],win:88,door:90}};
-function drawBuilding(b,n){const S=HSTY[n];for(let r=0;r<b.h;r++)for(let c=0;c<b.w;c++){const e=c===0?0:c===b.w-1?2:1;let t;if(r<b.h-2)t=(r===0?S.rt:S.rm)[e];else if(r===b.h-2)t=(e===1&&c%2===1)?S.win:S.w[e];else t=c===(b.w>>1)?S.door:S.w[e];kTile('t',t,(b.x+c)*TILE,(b.y+r)*TILE);}}
+function drawBuilding(b,n){const r=VR[n];if(!VIL.naturalWidth)return;ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],Math.round(b.x*TILE),Math.round((b.y+b.h)*TILE-r[3]*2),r[2]*2,r[3]*2);}
 function drawFarm(){for(let r=0;r<3;r++)for(let c=0;c<5;c++){const x=(28+c)*TILE,y=(25+r)*TILE;kTile('f',[48,49,49,49,51][c],x,y);kTile('f',[6,20,32,44,54][(c+r)%5],x,y);}for(let c=0;c<5;c++){const f=c===0?80:c===4?82:81;kTile('t',f,(28+c)*TILE,24*TILE);kTile('t',f,(28+c)*TILE,28*TILE);}kTile('f',120,36*TILE,26*TILE);kTile('f',122,31*TILE,30*TILE);kTile('f',96,34*TILE,24*TILE);kTile('f',85,35*TILE,25*TILE);for(let j=19;j<22;j++)for(let i=4;i<9;i++)kTile('f',65,i*TILE,j*TILE);[[18,19,19,19,20],[36,37,37,37,38],[36,37,37,37,38],[54,55,55,55,56]].forEach((row,j)=>row.forEach((t,i)=>kTile('b',t,(21+i)*TILE,(24+j)*TILE)));}
 function drawGates(){for(const g of GUARDS){if(state.beaten[g.id])continue;const h=g.gate.w>=g.gate.h;for(let j=0;j<g.gate.h;j++)for(let i=0;i<g.gate.w;i++)kTile('t',h?81:59,(g.gate.x+i)*TILE,(g.gate.y+j)*TILE);(h?[[g.gate.x-1,g.gate.y],[g.gate.x+g.gate.w,g.gate.y]]:[[g.gate.x,g.gate.y-1],[g.gate.x,g.gate.y+g.gate.h]]).forEach(([a,c])=>kTile('b',88,a*TILE,c*TILE));}}
 /* ===== Battles: alert -> screen wipe -> entrance -> animated turn-based fight ===== */
@@ -246,7 +472,7 @@ const $b=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,m
 /* --- tiny synth sound effects (WebAudio, no files needed) --- */
 let AC=null;
 function audio(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}return AC;}
-function tone(f,d,type,v,slide,delay){const a=audio();if(!a)return;try{const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
+function tone(f,d,type,v,slide,delay){if(muted)return;const a=audio();if(!a)return;try{const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
 const SFX={
 alert(){tone(988,.09);tone(1480,.14,'square',.05,0,.1);},
 warn(){for(let i=0;i<4;i++)tone(300,.22,'sawtooth',.05,260,i*.28);},
@@ -290,11 +516,11 @@ document.body.appendChild(el);
 el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.a)pkAct(b.dataset.a);else if(b.dataset.s!==undefined)pkSkillPick(+b.dataset.s);else if(b.dataset.m)pkMenu(b.dataset.m);});
 return el;}
 function pkMenu(kind){const m=$b('pk-menu');if(!m||!battle)return;battle.sel=-1;
-if(kind==='skills'){const list=SKILLS[state.heroClass]||SKILLS.Guardian;m.className='pk-menu sk';
+if(kind==='skills'){const list=knownSkills();m.className='pk-menu sk';
 m.innerHTML=list.map((s,i)=>'<button data-s="'+i+'"'+(state.mp<s.mp?' disabled':'')+'><b>'+s.n+'</b><em>'+s.mp+' MP</em></button>').join('')+'<button data-m="main" class="back">\u25C0 BACK</button>';
 $b('pk-t').textContent='Choose a skill. You have '+state.mp+' / '+state.maxMp+' MP.';}
 else{m.className='pk-menu';m.innerHTML='<button data-a="attack">FIGHT</button><button data-a="skill">SKILL</button><button data-a="guard">GUARD</button><button data-a="item">POTION \u00D7'+(state.potions||0)+'</button><button data-a="run">RUN</button>';$b('pk-t').textContent='What will you do?';}}
-function pkSkillPick(i){if(!battle||battle.busy)return;const sk=(SKILLS[state.heroClass]||SKILLS.Guardian)[i];if(!sk)return;
+function pkSkillPick(i){if(!battle||battle.busy)return;const sk=knownSkills()[i];if(!sk)return;
 if(battle.sel===i){pkSkill(i);return;}
 battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
 $b('pk-t').textContent=sk.n+' \u2014 '+sk.d+' (Tap again to cast)';}
@@ -342,11 +568,11 @@ function rageFx(){const b=battle;b.shake=18;b.flashR=1;sfx('boom');const G=geo()
 async function pkAct(a){const b=battle;if(!b||b.busy)return;
 if(a==='skill'){pkMenu('skills');return;}
 b.busy=true;const e=b.e;
-if(a==='run'){if(b.g.wild){await pkSay('You got away safely!');pkEnd();return;}await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
+if(a==='run'){if(b.g.wild&&!b.g.tower){await pkSay('You got away safely!');pkEnd();return;}await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
 if(a==='item'){if(!state.potions){await pkSay('No potions left!',800);pkMenu('main');b.busy=false;return;}state.potions--;state.hp=Math.min(state.maxHp,state.hp+28);healFx(28);pkPanel();await pkSay('A potion restores 28 HP!',900);await endRound();return;}
 await heroAttack(null);}
-async function pkSkill(i){const b=battle;if(!b||b.busy)return;const sk=(SKILLS[state.heroClass]||SKILLS.Guardian)[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
+async function pkSkill(i){const b=battle;if(!b||b.busy)return;const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
 async function heroAttack(sk){const b=battle,e=b.e,cls=state.heroClass,lv=state.level;
 if(!sk){const kind=cls==='Scout'?'arrow':cls==='Mage'?'magic':'melee';const crit=Math.random()<.1;let d=8+lv*2+(cls==='Guardian'?3:0)+rnd(4);if(crit)d=Math.round(d*1.6);
 await pkSay(crit?'A critical strike!':'You attack!',420);await heroStrike(kind,d,crit,cls==='Mage'?'#d29bff':'#e8d890');await pkSay('It deals '+d+' damage!',650);}
@@ -393,13 +619,13 @@ return true;}
 async function pkWin(){const b=battle,g=b.g,B=b.B;if(g.friendly){b.phase='dying';b.busy=true;await pkSay(g.name+' yields!',900);pkEnd(false);return;}b.phase='dying';b.busy=true;sfx(B?'boom':'hit');const G=geo();
 await tween(B?1300:650,p=>{b.dead=p;if(B){if(Math.random()<.45)burst(G.fx+(Math.random()-.5)*G.fh*.8,G.fy-Math.random()*G.fh,9,['#ffffff','#ffd84a','#ff6a2e',BOSSES[b.e.bi].theme[2]],230);if(p<.85)b.shake=Math.max(b.shake,8);}else if(p<.3)burst(G.fx,G.fy-G.fh*.5,3,['#ffffff','#ffd84a'],140);});
 b.dead=1;b.flashW=B?1:0;sfx('win');await pkSay(g.name+' was defeated!',1000);
-const reward=B?B.reward:g.reward,xp=B?B.xp:40;state.coins+=reward;state.xp+=xp;let up=0;
+const reward=B?B.reward:g.reward,xp=B?B.xp:(g.xp||40);state.coins+=reward;state.xp+=xp;let up=0;
 while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=6;state.maxMp+=2;state.hp=state.maxHp;up++;}
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));state.potions=(state.potions||0)+2;}
 if(!g.wild)state.beaten[g.id]=true;const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
 if(B){state.stage=Math.max(state.stage||0,g.bi+1);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);}else extra.push(['THE LAST HARVEST','The Everfeast burns bright again. Hearthvale is saved, thanks to you, '+state.name+'.']);spawnLair();}
-pkEnd();
+pkEnd();if(up){sfx('levelup');offerSkillsWhenReady();}
 const lines=(g.win||[]).map(t=>[g.name,t]);lines.push(['REWARD','You earned '+reward+' coins'+(B?' and 2 potions':'')+(up?' and reached level '+state.level+'!':'.')]);
 setDialogue([...lines,...extra]);}
 
@@ -488,12 +714,12 @@ ctx.restore();}
 const NPC_ROW={'ELDER MAPLE':19,'ROWAN':1,'MILLIE':8,'GUS':12,'PIPER':4,'MARA THE NEIGHBOR':28,'JUNIPER':14,'INNKEEPER BRAM':13,'NELL THE TRAVELER':38,'SHOPKEEPER TILLY':24,'FINN':21,'OLD CRAFTSMAN ORIN':29,'WREN THE APPRENTICE':31,'GATEKEEPER BRAWN':6,'GATEKEEPER WINONA':23};
 /* characters.png: one row per character, 12 frames: down, up, left, right x (idle, step, step) */
 function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;const full=CHARS.naturalWidth>=192,col=full?face*3+(step||0):(face===1?1:0),m=(!full&&face===2)?-1:1;ctx.save();ctx.translate(Math.round(x),0);ctx.scale(m,1);ctx.drawImage(CHARS,col*16,row*16,16,16,-8*k,Math.round(fy-16*k),16*k,16*k);ctx.restore();}
-const AIMG=new Image();AIMG.src='/img/last-harvest/anime.png?v=9';
+const AIMG=new Image();AIMG.src='/img/last-harvest/anime.png?v=10';
 /* anime.png: 16 anime busts 48x56: 0-2 heroes, 3 Rowan, 4 Rowan hollowed, 5 Brawn, 6 Winona, 7 Elder Maple, 8 Mara, 9 Thomas, 10 Instructor, 11 Millie, 12 Gus, 13 Piper, 14 Challenger, 15 Masked Merchant */
 const ANIME_ROW={0:5,1:7,2:0,3:1,4:31,5:6,6:23,7:19,8:28,9:17,10:10,11:8,12:12,13:4,14:36,15:25};
 function drawAnime(i,x,fy,k){if(!AIMG.naturalWidth){drawSpriteK(ANIME_ROW[i]??1,0,0,x,fy,k*3);return;}ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(Math.round(x),Math.round(fy),18*k,3*k,0,0,7);ctx.fill();ctx.imageSmoothingEnabled=false;ctx.drawImage(AIMG,(i%8)*48,((i/8)|0)*56,48,56,Math.round(x-24*k),Math.round(fy-56*k),48*k,56*k);}
 function drawSprite(row,face,step,x,y){drawSpriteK(row,face,step,x,y+8,2);}
-function drawPerson(x,y,shirt,hat,name=''){if(BOSS_NPC[name]!==undefined){drawBossSprite(BOSS_NPC[name],x,y+8,2,Math.floor(performance.now()/500)%2,true);return;}const row=NPC_ROW[name]??[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
+function drawPerson(x,y,shirt,hat,name=''){if(name.startsWith('ROAD')){drawPortal(x,y+8,name.includes('GOLDLEAF')?'rgba(255,200,80,.85)':null);return;}if(BOSS_NPC[name]!==undefined){drawBossSprite(BOSS_NPC[name],x,y+8,2,Math.floor(performance.now()/500)%2,true);return;}const row=NPC_ROW[name]??[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
 const roomFurniture=[
 [[.11,.38,.12,.12],[.42,.23,.16,.18],[.77,.4,.14,.23]],
 [[.10,.29,.16,.07],[.31,.29,.16,.07],[.52,.29,.16,.07],[.73,.29,.16,.07],[.08,.48,.25,.09],[.68,.48,.24,.09]],
@@ -577,7 +803,7 @@ let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
 function drawDialoguePortrait(name){
 const c=$('lh-portrait'),p=c.getContext('2d');p.clearRect(0,0,64,64);p.fillStyle='#26334a';p.fillRect(0,0,64,64);
-const AN={ROWAN:3,'ELDER MAPLE':7,MARA:8,THOMAS:9,INSTRUCTOR:10,MILLIE:11,GUS:12,PIPER:13,'GATEKEEPER BRAWN':5,'GATEKEEPER WINONA':6,CHALLENGER:14,YOU:({Guardian:0,Scout:1,Mage:2})[state.heroClass]??0}[name];if(AN!==undefined&&AIMG.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(AIMG,(AN%8)*48,((AN/8)|0)*56,48,56,8,6,48,56);return;}
+if(name==='JOURNAL'&&VIL.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(VIL,150,180,16,16,8,8,48,48);return;}if(BOSS_NPC[name]!==undefined&&BOS.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(BOS,BOSS_NPC[name]*64,0,64,64,0,0,64,64);return;}const AN=AN_MAP[name];if(AN!==undefined&&AIMG.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(AIMG,(AN%8)*48,((AN/8)|0)*56,48,56,8,6,48,56);return;}
 let shirt='#b94b38',hair='#634b3a';
 const all=[...npcs,...roomNPCs.flat()];
 const npc=all.find(n=>n.name===name);
@@ -590,14 +816,16 @@ p.fillStyle='#172a3a';p.fillRect(17,45,30,8);p.fillStyle=shirt;p.fillRect(15,26,
 }
 function positionSpeechBubble(){}
 function closeDialogue(){ $('lh-dialogue').hidden=true;dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
-function typeText(t){clearInterval(typer);fullText=t;typing=true;const el=$('lh-dialogue-text');let i=0;el.textContent='';typer=setInterval(()=>{el.textContent=t.slice(0,++i);if(i>=t.length)finishType();},24);}
+function typeText(t){clearInterval(typer);fullText=t;typing=true;const el=$('lh-dialogue-text');let i=0;el.textContent='';typer=setInterval(()=>{el.textContent=t.slice(0,++i);if(i%2===0&&t[i-1]!==' ')talkBlip();if(i>=t.length)finishType();},24);}
 function finishType(){clearInterval(typer);typing=false;$('lh-dialogue-text').textContent=fullText;}
 function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer=roomStart(id);facing=1;updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
-function interact(){if(transitioning||battle)return;if(scene==='inside'){if(dialogue){advanceDialogue();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<64&&d<dist){found=n;dist=d;}}
 if(found){
+if(found.region!==undefined){sfx('portal');enterRegion(found.region);return;}
+if(found.city){enterArea('city');return;}
 if(found.trainer&&!state.beaten[found.trainer.id]){setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
 if(found.name==='ELDER MAPLE'&&questStep===0){questStep=1;setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
 else if(found.name==='ROWAN'&&questStep===1){questStep=2;setDialogue([[found.name,'I will check the fountain. You should search the buildings.'],['QUEST UPDATED','Enter a building and look for clues.']]);}
@@ -659,22 +887,22 @@ cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';st
 })();
 }
 
-function areaName(){return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
-function updateQuest(){if(state.beaten&&state.beaten.south){const i=Math.min(state.stage||0,BOSSES.length-1);$('lh-quest-text').textContent=(state.beaten['boss'+i]||(state.stage||0)>=BOSSES.length)?'Hearthvale is saved!':'Defeat the '+BOSSES[i].name+' on the south road';return;}const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
+function areaName(){if(scene==='area'&&AREA)return AREA.name;return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
+function updateQuest(){if(state.beaten&&state.beaten.south){const i=Math.min(state.stage||0,BOSSES.length-1);$('lh-quest-text').textContent=(state.beaten['boss'+i]||(state.stage||0)>=BOSSES.length)?'Hearthvale is saved!':'Defeat the '+BOSSES[i].name+(i>0?' in '+chapters[i].place:' on the south road');return;}const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:areaName().toUpperCase();updateQuest();}
-function move(dt){walking=false;const ins=scene==='inside',P=ins?insidePlayer:state;
-if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(!ins){const an=areaName();if(an!==lastArea){lastArea=an;updateHud();}}if(!ins&&++stepCount%4===0)save();if(!ins&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){startBattle(wildEncounter());}}
-if(battle||dialogue||cinematic||transitioning||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;
-if(!ins){P.x=Math.floor(P.x/TILE)*TILE+16;P.y=Math.floor(P.y/TILE)*TILE+24;}
+function move(dt){walking=false;const ins=scene==='inside',ar=scene==='area',P=ins?insidePlayer:ar?areaPlayer:state;
+if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(ar)areaStep();if(!ins&&!ar){const an=areaName();if(an!==lastArea){lastArea=an;updateHud();}}if(!ins&&!ar&&++stepCount%4===0)save();if(!ins&&!ar&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){startBattle(wildEncounter());}}
+if(titleOpen||battle||dialogue||cinematic||transitioning||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;
+if(!ins&&!ar){P.x=Math.floor(P.x/TILE)*TILE+16;P.y=Math.floor(P.y/TILE)*TILE+24;}
 let dx=joystick.x,dy=joystick.y;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;
 if(Math.abs(dx)<.35&&Math.abs(dy)<.35){turnWait=0;return;}
 const f=Math.abs(dx)>=Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);
 if(f!==facing){facing=f;turnWait=.09;return;}
 if(turnWait>0){turnWait-=dt;return;}
 const SS=ins?roomGeom(interiorId).U:TILE,nx=P.x+[0,0,-1,1][f]*SS,ny=P.y+[1,-1,0,0][f]*SS;
-const hit=ins?roomHit(nx,ny):(blocked(nx,ny)||npcs.some(n=>Math.floor(n.x/TILE)===Math.floor(nx/TILE)&&Math.floor(n.y/TILE)===Math.floor(ny/TILE)));
-if(hit)return;stepper={fx:P.x,fy:P.y,tx:nx,ty:ny,t:0};walking=true;}
-function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);lastCam=drawWorld();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
+const hit=ins?roomHit(nx,ny):ar?areaHit(nx,ny):(blocked(nx,ny)||npcs.some(n=>Math.floor(n.x/TILE)===Math.floor(nx/TILE)&&Math.floor(n.y/TILE)===Math.floor(ny/TILE)));
+if(hit){if(ins&&f===0&&P.y>roomGeom(interiorId).exitY)exitBuilding();return;}stepper={fx:P.x,fy:P.y,tx:nx,ty:ny,t:0};walking=true;}
+function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);areaTick();ensureCityGate();musicTick();lastCam=drawWorld();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
@@ -718,6 +946,8 @@ $('lh-menu').addEventListener('click',()=>{$('lh-game-menu').hidden=false;render
 document.querySelectorAll('[data-rpg-tab]').forEach(b=>b.addEventListener('click',()=>renderRpgMenu(b.dataset.rpgTab)));
 $('lh-resume').addEventListener('click',()=>{$('lh-game-menu').hidden=true;});
 $('lh-reset').addEventListener('click',()=>{if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){localStorage.removeItem(SAVE);location.reload();}});
-if(state.name){$('lh-create').hidden=true;updateHud();}else{$('lh-create').hidden=false;}
-if(!state.seenIntro&&state.name){$('lh-create').hidden=false;}
+initSfx();initRows();
+if(state.seenIntro)offerSkillsWhenReady();
+if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},enterRegion,enterArea,towerEnter,showLeaderboard,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
+{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}if(skip)$('lh-create').hidden=false;else showTitle(hasSave);}
 })();
