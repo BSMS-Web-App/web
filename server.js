@@ -6,7 +6,8 @@
 
 import 'dotenv/config';
 import express from 'express';
-import { rateLimit } from 'express-rate-limit';
+import crypto from 'node:crypto';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -67,6 +68,11 @@ function apiCors(req, res, next) {
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 120,
+    keyGenerator: (req) => {
+        const sessionId = String(req.get('X-Session-ID') || '').trim();
+        if (sessionId) return 'session:' + crypto.createHash('sha256').update(sessionId).digest('hex');
+        return ipKeyGenerator(req.ip);
+    },
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     message: { error: 'Too many requests. Please try again shortly.' }
