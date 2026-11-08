@@ -11,7 +11,6 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { db, requestMacApi } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
-const MAX_CALL_PARTICIPANTS = 20;
 const RING_TIMEOUT_MS = 10 * 1000;
 const MAX_CALL_AGE_MS = 6 * 60 * 60 * 1000;
 
@@ -40,7 +39,7 @@ async function authenticate(sessionId) {
 }
 
 async function getConversation(type, cid) {
-    if (!['dms', 'gcs'].includes(type) || !cleanId(cid)) return null;
+    if (type !== 'dms' || !cleanId(cid)) return null;
     const snapshot = await db.ref('/chat/conversations/' + type + '/' + cid).once('value');
     return snapshot.val();
 }
@@ -69,28 +68,35 @@ async function removeUserCall(uid, callId) {
 }
 
 async function expireCall(callId, call, reason = 'ended') {
-    if (!call || call.status === 'ended') return;
-    await db.ref('/voice/calls/' + callId + '/endReason').set(reason);
-    await db.ref('/voice/calls/' + callId + '/status').set('ended');
-    const participants = Object.keys(call.participants || {});
-    const invited = Object.keys(call.invited || {});
-    const affectedUsers = [...new Set([call.createdBy, ...participants, ...invited].filter(Boolean))];
+    if (!call) return false;
+    const callRef = db.ref('/voice/calls/' + callId);
+    const endedAt = Date.now();
+    const transaction = await callRef.transaction(current => {
+        if (!current || current.status === 'ended') return current;
+        return { ...current, status: 'ended', endReason: reason, endedAt };
+    });
+    const endedCall = transaction.snapshot?.val() || call;
+    if (!transaction.committed) return endedCall?.status === 'ended';
+    const participants = Object.keys(endedCall.participants || {});
+    const invited = Object.keys(endedCall.invited || {});
+    const affectedUsers = [...new Set([endedCall.createdBy, ...participants, ...invited].filter(Boolean))];
     await Promise.all(affectedUsers.map(uid =>
-        db.ref('/voice/endedCalls/' + uid + '/' + callId).set({ at: Date.now(), reason })
+        db.ref('/voice/endedCalls/' + uid + '/' + callId).set({ at: endedAt, reason })
     ));
     try {
-        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
-        if (livekitUrl && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET && call.roomName) {
+        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\\/+$/, '');
+        if (livekitUrl && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET && endedCall.roomName) {
             const roomService = new RoomServiceClient(livekitUrl, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
-            await roomService.deleteRoom(call.roomName);
+            await roomService.deleteRoom(endedCall.roomName);
         }
     } catch (error) {
-        console.warn('[BSMS Voice] Could not close LiveKit room:', error.message);
+        console.warn('[BSMS Voice] Could not close LiveKit call:', error.message);
     }
     await Promise.all([
         ...affectedUsers.map(uid => removeUserCall(uid, callId)),
         ...invited.map(uid => db.ref('/voice/invitations/' + uid + '/' + callId).remove())
     ]);
+    return true;
 }
 
 export default async function handler(req, res) {
@@ -223,19 +229,12 @@ export default async function handler(req, res) {
         if (action === 'start') {
             const cid = cleanId(payload.cid);
             const type = String(payload.type || '');
-            if (!cid || !['dms', 'gcs'].includes(type)) return response(res, 400, { error: 'Invalid conversation.' });
-            if (type === 'gcs') {
-                return response(res, 409, {
-                    error: 'Voice chat is not yet available for group chats.',
-                    code: 'GROUP_VOICE_UNAVAILABLE'
-                });
-            }
+            if (!cid || type !== 'dms') return response(res, 400, { error: 'Voice calls are only available in direct messages.' });
             const conversation = await getConversation(type, cid);
             if (!conversation?.members?.[uid]) return response(res, 403, { error: 'You are not a member of this conversation.' });
 
             const memberIds = Object.keys(conversation.members || {});
-            if (memberIds.length < 2) return response(res, 400, { error: 'At least two conversation members are required.' });
-            if (memberIds.length > MAX_CALL_PARTICIPANTS) return response(res, 400, { error: 'This conversation has too many members for a voice call.' });
+            if (memberIds.length !== 2) return response(res, 400, { error: 'A voice call requires exactly two people.' });
 
             const currentCalls = await db.ref('/voice/userCalls/' + uid).once('value');
             for (const existingCallId of Object.keys(currentCalls.val() || {})) {
@@ -253,7 +252,7 @@ export default async function handler(req, res) {
             const callId = crypto.randomUUID().replace(/-/g, '');
             const now = Date.now();
             const callerName = account.displayName || account.username || uid;
-            let conversationName = conversation.name || 'Group chat';
+            let conversationName = 'Direct message';
             let otherUid = null;
             let otherName = null;
             if (type === 'dms') {
@@ -271,14 +270,12 @@ export default async function handler(req, res) {
                 otherName = otherAccount.displayName || otherAccount.username || 'Direct message';
                 conversationName = callerName + ' and ' + otherName;
             }
-            const invited = {};
-            for (const memberId of memberIds) if (memberId !== uid) invited[memberId] = true;
+            const invited = { [otherUid]: true };
 
             const call = {
                 callId,
                 cid,
                 type,
-                roomName: 'bsms-' + callId,
                 createdBy: uid,
                 callerName,
                 calleeName: otherName,
@@ -287,7 +284,7 @@ export default async function handler(req, res) {
                 createdAt: now,
                 ringExpiresAt: now + RING_TIMEOUT_MS,
                 expiresAt: now + MAX_CALL_AGE_MS,
-                participants: type === 'dms' ? {} : { [uid]: { joinedAt: now } },
+                participants: {},
                 invited
             };
             await db.ref('/voice/calls/' + callId).set(call);
@@ -315,6 +312,9 @@ export default async function handler(req, res) {
         }
 
         if (action === 'accept') {
+            if (payload.answerConfirmed !== true) {
+                return response(res, 400, { error: 'Answering requires an explicit confirmation.' });
+            }
             if (call.type !== 'dms' || call.createdBy === uid) {
                 return response(res, 403, { error: 'This invitation is not for your account.' });
             }
@@ -331,6 +331,10 @@ export default async function handler(req, res) {
                     return response(res, 200, { success: true, connectedAt: latestCall.connectedAt || latestCall.createdAt, alreadyAccepted: true });
                 }
                 return response(res, 410, { error: 'This call invitation has expired.' });
+            }
+            if (!(await isFreshOnline(uid, 15000))) {
+                await expireCall(callId, call, 'callee_offline');
+                return response(res, 410, { error: 'Your online status expired. Reopen chat before answering.' });
             }
             if (!(await isFreshOnline(call.createdBy, 15000))) {
                 await expireCall(callId, call, 'caller_offline');
@@ -378,6 +382,7 @@ export default async function handler(req, res) {
 
                 return {
                     ...current,
+                    roomName: 'bsms-' + callId,
                     status: 'active',
                     connectedAt: joinedAt,
                     expiresAt: joinedAt + MAX_CALL_AGE_MS,
@@ -420,21 +425,10 @@ export default async function handler(req, res) {
         }
 
         if (action === 'decline') {
-            if (call.type === 'dms') {
-                if (!call.invited?.[uid]) return response(res, 403, { error: 'This invitation is not for your account.' });
-                if (call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
-                    return response(res, 410, { error: 'This call is no longer available.' });
-                }
-                await expireCall(callId, call, 'declined');
-                return response(res, 200, { success: true });
+            if (call.type !== 'dms' || !call.invited?.[uid] || call.status !== 'ringing') {
+                return response(res, 410, { error: 'This call is no longer available.' });
             }
-            await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
-            await db.ref('/voice/calls/' + callId + '/invited/' + uid).remove();
-            const pendingInvites = await db.ref('/voice/calls/' + callId + '/invited').once('value');
-            const participants = await db.ref('/voice/calls/' + callId + '/participants').once('value');
-            if (!Object.keys(pendingInvites.val() || {}).length && Object.keys(participants.val() || {}).length <= 1) {
-                await expireCall(callId, call);
-            }
+            await expireCall(callId, call, 'declined');
             return response(res, 200, { success: true });
         }
 
@@ -464,31 +458,16 @@ export default async function handler(req, res) {
             return response(res, 200, { token: await token.toJwt(), url: livekitUrl, roomName: call.roomName });
         }
 
-        if (action === 'leave') {
+        if (action === 'leave' || action === 'end') {
             if (call.status === 'ended') return response(res, 200, { success: true, alreadyEnded: true });
-            if (call.type === 'dms') {
-                if (!call.participants?.[uid]) {
-                    await removeUserCall(uid, callId);
-                    return response(res, 200, { success: true, alreadyLeft: true });
-                }
-                await expireCall(callId, call);
+            if (call.status === 'ringing' && call.createdBy === uid) {
+                await expireCall(callId, call, 'cancelled');
                 return response(res, 200, { success: true });
             }
-            await db.ref('/voice/calls/' + callId + '/participants/' + uid).remove();
-            await removeUserCall(uid, callId);
-            const remaining = await db.ref('/voice/calls/' + callId + '/participants').once('value');
-            if (!Object.keys(remaining.val() || {}).length) await expireCall(callId, call);
-            return response(res, 200, { success: true });
-        }
-
-        if (action === 'end') {
-            if (call.status === 'ended') return response(res, 200, { success: true, alreadyEnded: true });
-            if (call.type === 'dms' && call.createdBy === uid && call.status === 'ringing') {
-                await expireCall(callId, call);
-                return response(res, 200, { success: true });
+            if (call.status !== 'active' || !call.participants?.[uid]) {
+                return response(res, 403, { error: 'Only one of the two people in an active call can end it.' });
             }
-            if (!call.participants?.[uid]) return response(res, 403, { error: 'Only a current call participant can end this call.' });
-            await expireCall(callId, call);
+            await expireCall(callId, call, 'hangup');
             return response(res, 200, { success: true });
         }
 
