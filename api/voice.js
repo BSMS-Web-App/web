@@ -425,18 +425,9 @@ export default async function handler(req, res) {
         }
 
         if (action === 'token') {
-            const isActiveParticipant = Boolean(call.participants?.[uid]);
-            const isInvitedDmRecipient = call.type === 'dms' &&
-                call.status === 'ringing' &&
-                call.createdBy !== uid &&
-                Boolean(call.invited?.[uid]) &&
-                Number(call.ringExpiresAt || 0) >= Date.now();
-            if (
-                call.status === 'ended' ||
-                Number(call.expiresAt || 0) < Date.now() ||
-                (!isActiveParticipant && !isInvitedDmRecipient)
-            ) {
-                return response(res, 403, { error: 'You are not authorized to join this voice call.' });
+            const isActiveParticipant = call.status === 'active' && Boolean(call.participants?.[uid]);
+            if (call.status === 'ended' || Number(call.expiresAt || 0) < Date.now() || !isActiveParticipant) {
+                return response(res, 403, { error: 'You are not an active participant in this voice call.' });
             }
             const apiKey = process.env.LIVEKIT_API_KEY;
             const apiSecret = process.env.LIVEKIT_API_SECRET;
