@@ -84,7 +84,7 @@ async function expireCall(callId, call, reason = 'ended') {
         db.ref('/voice/endedCalls/' + uid + '/' + callId).set({ at: endedAt, reason })
     ));
     try {
-        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\\/+$/, '');
+        const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
         if (livekitUrl && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET && endedCall.roomName) {
             const roomService = new RoomServiceClient(livekitUrl, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
             await roomService.deleteRoom(endedCall.roomName);
