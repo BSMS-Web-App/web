@@ -133,3 +133,48 @@
     .voice-beta-notice-copy span { font-size:.77rem; }
     .voice-beta-notice-dismiss { padding:8px 10px; }
 }
+
+
+/* Voice call interaction polish */
+.voice-panel-enter { animation: voicePanelEnter .28s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes voicePanelEnter {
+    from { opacity:0; transform:translateY(10px) scale(.985); filter:blur(3px); }
+    to { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+}
+#voiceChatModal.show .voice-modal-card {
+    animation: voiceModalEnter .32s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes voiceModalEnter {
+    from { opacity:0; transform:translateY(18px) scale(.965); filter:blur(5px); }
+    to { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+}
+#voiceChatModal.voice-modal-closing { display:flex !important; animation:voiceOverlayFade .18s ease both; }
+#voiceChatModal.voice-modal-closing .voice-modal-card { animation:voiceModalExit .18s ease both; }
+@keyframes voiceOverlayFade { to { opacity:0; } }
+@keyframes voiceModalExit { to { opacity:0; transform:translateY(10px) scale(.98); filter:blur(3px); } }
+.voice-mini-card.is-closing { animation:voiceMiniOut .16s ease both; pointer-events:none; }
+@keyframes voiceMiniOut { to { opacity:0; transform:translateY(-7px) scale(.97); filter:blur(3px); } }
+.voice-beta-notice { animation:voiceToastEnter .32s cubic-bezier(.2,.8,.2,1) both; }
+.voice-beta-notice.is-closing { animation:voiceToastExit .18s ease both; }
+@keyframes voiceToastEnter { from { opacity:0; transform:translate(-50%,12px) scale(.97); filter:blur(4px); } to { opacity:1; transform:translate(-50%,0) scale(1); filter:blur(0); } }
+@keyframes voiceToastExit { to { opacity:0; transform:translate(-50%,8px) scale(.98); filter:blur(3px); } }
+.voice-outgoing-panel { padding-top:30px; }
+.voice-outgoing-orbit {
+    width:68px; height:68px; margin:0 auto 18px; display:grid; place-items:center;
+    border-radius:50%; background:rgba(187,0,30,.12); color:var(--accent);
+    animation:voiceDialPulse 1.65s ease-in-out infinite;
+}
+.voice-outgoing-orbit .ic { width:29px; height:29px; }
+@keyframes voiceDialPulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(187,0,30,.2); transform:scale(1); }
+    50% { box-shadow:0 0 0 14px rgba(187,0,30,0); transform:scale(1.055); }
+}
+.voice-outgoing-status { font-size:.88rem; margin-top:-8px !important; }
+.voice-outgoing-panel > .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:145px; }
+.voice-outgoing-panel > .btn .ic { width:17px; height:17px; }
+@media (prefers-reduced-motion: reduce) {
+    .voice-panel-enter, #voiceChatModal.show .voice-modal-card, .voice-mini-card,
+    .voice-beta-notice, .voice-outgoing-orbit { animation:none !important; }
+    #voiceChatModal.voice-modal-closing, #voiceChatModal.voice-modal-closing .voice-modal-card,
+    .voice-mini-card.is-closing, .voice-beta-notice.is-closing { animation:none !important; }
+}
