@@ -12,7 +12,7 @@ import { db, requestMacApi } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
 const MAX_CALL_PARTICIPANTS = 20;
-const RING_TIMEOUT_MS = 60 * 1000;
+const RING_TIMEOUT_MS = 10 * 1000;
 const MAX_CALL_AGE_MS = 6 * 60 * 60 * 1000;
 
 function cleanId(value, max = 128) {
@@ -59,14 +59,15 @@ async function removeUserCall(uid, callId) {
     await db.ref('/voice/userCalls/' + uid + '/' + callId).remove();
 }
 
-async function expireCall(callId, call) {
+async function expireCall(callId, call, reason = 'ended') {
     if (!call || call.status === 'ended') return;
+    await db.ref('/voice/calls/' + callId + '/endReason').set(reason);
     await db.ref('/voice/calls/' + callId + '/status').set('ended');
     const participants = Object.keys(call.participants || {});
     const invited = Object.keys(call.invited || {});
     const affectedUsers = [...new Set([call.createdBy, ...participants, ...invited].filter(Boolean))];
     await Promise.all(affectedUsers.map(uid =>
-        db.ref('/voice/endedCalls/' + uid + '/' + callId).set(Date.now())
+        db.ref('/voice/endedCalls/' + uid + '/' + callId).set({ at: Date.now(), reason })
     ));
     try {
         const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
@@ -124,7 +125,15 @@ export default async function handler(req, res) {
             const incoming = [];
             for (const callId of Object.keys(invitationMap).slice(0, 10)) {
                 const call = await getCall(callId);
-                if (!call || !['ringing', 'active'].includes(call.status) || Number(call.ringExpiresAt || 0) < Date.now()) {
+                if (!call || call.status === 'ended') {
+                    await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
+                    continue;
+                }
+                if (call.status === 'ringing' && Number(call.ringExpiresAt || 0) < Date.now()) {
+                    await expireCall(callId, call, 'no_answer');
+                    continue;
+                }
+                if (!['ringing', 'active'].includes(call.status)) {
                     await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
                     continue;
                 }
@@ -147,6 +156,11 @@ export default async function handler(req, res) {
             const endedSnapshot = await db.ref('/voice/endedCalls/' + uid).once('value');
             const endedMap = endedSnapshot.val() || {};
             const endedCallIds = Object.keys(endedMap);
+            const endedCallReasons = {};
+            for (const id of endedCallIds) {
+                const value = endedMap[id];
+                endedCallReasons[id] = value && typeof value === 'object' ? value.reason || 'ended' : 'ended';
+            }
             if (endedCallIds.length) {
                 await Promise.all(endedCallIds.map(id => db.ref('/voice/endedCalls/' + uid + '/' + id).remove()));
             }
@@ -161,9 +175,12 @@ export default async function handler(req, res) {
                     await removeUserCall(uid, callId);
                     continue;
                 }
-                if (Number(call.expiresAt || 0) < Date.now() ||
-                    (call.status === 'ringing' && Number(call.ringExpiresAt || 0) < Date.now())) {
-                    await expireCall(callId, call);
+                if (call.status === 'ringing' && Number(call.ringExpiresAt || 0) < Date.now()) {
+                    await expireCall(callId, call, 'no_answer');
+                    continue;
+                }
+                if (Number(call.expiresAt || 0) < Date.now()) {
+                    await expireCall(callId, call, 'expired');
                     continue;
                 }
                 if (call.type === 'dms' && call.status === 'ringing' && call.createdBy === uid) {
@@ -191,7 +208,7 @@ export default async function handler(req, res) {
                     break;
                 }
             }
-            return response(res, 200, { incoming, activeCall, outgoingCall, endedCallIds });
+            return response(res, 200, { incoming, activeCall, outgoingCall, endedCallIds, endedCallReasons });
         }
 
         if (action === 'start') {
@@ -292,7 +309,7 @@ export default async function handler(req, res) {
             if (call.createdBy !== uid || call.status !== 'ringing') {
                 return response(res, 403, { error: 'Only the caller can cancel an unanswered call.' });
             }
-            await expireCall(callId, call);
+            await expireCall(callId, call, 'cancelled');
             return response(res, 200, { success: true });
         }
 
@@ -361,7 +378,10 @@ export default async function handler(req, res) {
         if (action === 'decline') {
             if (call.type === 'dms') {
                 if (!call.invited?.[uid]) return response(res, 403, { error: 'This invitation is not for your account.' });
-                await expireCall(callId, call);
+                if (call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
+                    return response(res, 410, { error: 'This call is no longer available.' });
+                }
+                await expireCall(callId, call, 'declined');
                 return response(res, 200, { success: true });
             }
             await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
