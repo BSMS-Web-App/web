@@ -57,6 +57,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <symbol id="ico-unpin" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
         <symbol id="ico-send" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></symbol>
         <symbol id="ico-mic" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></symbol>
+        <symbol id="ico-expand" viewBox="0 0 24 24"><path d="M4 9V4h5L7.2 5.8l4 4L9.8 11.2l-4-4L4 9zm16 6v5h-5l1.8-1.8-4-4 1.4-1.4 4 4L20 15zM15 4h5v5l-1.8-1.8-4 4-1.4-1.4 4-4L15 4zM4 15l1.8 1.8 4-4 1.4 1.4-4 4L9 20H4v-5z"/></symbol>
         <symbol id="ico-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
         <symbol id="ico-dots" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></symbol>
         <symbol id="ico-reply" viewBox="0 0 24 24"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></symbol>
@@ -212,18 +213,21 @@ SPDX-License-Identifier: AGPL-3.0-only
             <p>Rejoin the audio room when you're ready. Your microphone will only be enabled after you choose to rejoin.</p>
             <button class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.rejoin()">Rejoin voice call</button>
         </div>
-        <div id="voiceActivePanel" class="voice-panel" hidden>
-            <div class="voice-live-indicator"><span></span> Connected</div>
-            <h3 id="voiceActiveTitle">Voice call</h3>
+        <div id="voiceActivePanel" class="voice-panel voice-active-layout" hidden>
+            <div class="voice-active-heading">
+                <h3 id="voiceActiveTitle">Voice Chat (BETA)</h3>
+            </div>
+            <p id="voiceActiveName" class="voice-active-name">Conversation</p>
             <p id="voiceCallDuration" class="voice-call-duration">00:00</p>
-            <p id="voiceCallStatusText">Connecting audio…</p>
-            <button id="voiceEnableAudioButton" class="btn sec" type="button" onclick="VoiceChatManager.enableAudio()" hidden>Tap to enable audio</button>
-            <div id="voiceParticipants" class="voice-participants" aria-live="polite"></div>
+            <section id="voiceGroupPeopleSection" class="voice-group-people" hidden>
+                <h4>Currently connected</h4>
+                <div id="voiceParticipants" class="voice-participants" aria-live="polite"></div>
+            </section>
+            <p id="voiceCallStatusText" class="voice-call-status" aria-live="polite">Connecting audio…</p>
             <div class="voice-action-row voice-call-controls">
                 <button id="voiceMuteButton" class="btn sec" type="button" onclick="VoiceChatManager.toggleMute()"><svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span></button>
-                <button class="btn warn" type="button" onclick="VoiceChatManager.leave()"><svg class="ic"><use href="#ico-phone"></use></svg><span>Leave</span></button>
+                <button class="btn warn" type="button" onclick="VoiceChatManager.leave()"><svg class="ic"><use href="#ico-phone"></use></svg><span>Leave Call</span></button>
             </div>
-            <button id="voiceEndButton" class="voice-end-all" type="button" onclick="VoiceChatManager.endForEveryone()">End call for everyone</button>
         </div>
         <p id="voiceError" class="voice-error" role="status" aria-live="polite" hidden></p>
         <footer class="voice-modal-footer">
@@ -232,6 +236,28 @@ SPDX-License-Identifier: AGPL-3.0-only
         </footer>
     </section>
 </div>
+
+<div id="voiceBetaNotice" class="voice-beta-notice" role="alertdialog" aria-modal="false" aria-labelledby="voiceBetaNoticeTitle" hidden>
+    <div class="voice-beta-notice-icon"><svg class="ic"><use href="#ico-phone"></use></svg></div>
+    <div class="voice-beta-notice-copy">
+        <strong id="voiceBetaNoticeTitle">Voice Chat is still in beta</strong>
+        <span>Expect bugs and occasional connection issues while we improve it.</span>
+    </div>
+    <button type="button" class="voice-beta-notice-dismiss" onclick="VoiceChatManager.dismissBetaNotice()">Got it</button>
+</div>
+
+<aside id="voiceMiniCard" class="voice-mini-card" aria-label="Active voice call" hidden>
+    <div class="voice-mini-drag-handle" title="Drag to move"><span></span></div>
+    <div class="voice-mini-main">
+        <div class="voice-mini-copy">
+            <strong id="voiceMiniName">Voice call</strong>
+            <span id="voiceMiniDuration">00:00</span>
+        </div>
+        <button id="voiceMiniMute" class="voice-mini-icon" type="button" onclick="VoiceChatManager.toggleMute()" aria-label="Mute microphone" title="Mute microphone"><svg class="ic"><use href="#ico-mic"></use></svg></button>
+        <button class="voice-mini-icon voice-mini-leave" type="button" onclick="VoiceChatManager.leave()" aria-label="Leave call" title="Leave call"><svg class="ic"><use href="#ico-phone"></use></svg></button>
+        <button class="voice-mini-icon" type="button" onclick="VoiceChatManager.expand()" aria-label="Expand voice chat" title="Expand voice chat"><svg class="ic"><use href="#ico-expand"></use></svg></button>
+    </div>
+</aside>
 
 <!-- Fullscreen Image Viewer Modal -->
 <div id="imageViewerModal" class="image-viewer-modal" onclick="if(event.target===this) ImageViewer.close()">
