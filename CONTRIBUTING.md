@@ -72,13 +72,15 @@ Examples include:
 - `dev1`
 - `dev2`
 - `dev3`
+- `dev4`
 
-Your assigned branch is your workspace for development and testing.
+Your assigned branch is your workspace for development and testing. Branch names and assignments may change, so confirm your current assignment with the repository owner rather than assuming a branch is available.
 
 - Commit and push your changes to your assigned branch.
 - Do not work directly on another collaborator's branch unless authorized.
 - Do not merge changes into `main` yourself unless you have explicit permission.
 - Do not force-push or delete branches unless authorized.
+- Do not move work to another collaborator's branch just because it appears to be available.
 
 **Important:** Branch permissions are enforced by GitHub settings and rulesets, not by this document alone.
 
@@ -108,9 +110,10 @@ Never commit:
 - Passwords, access tokens, or session secrets.
 - Private user information.
 - Environment files containing secrets.
+- Database snapshots, journals, media uploads, or other production data.
 - Other confidential configuration data.
 
-If you accidentally expose a secret, notify the repository owner immediately. Removing it from the latest commit alone may not remove it from Git history.
+If you accidentally expose a secret, notify the repository owner immediately. Removing it from the latest commit alone may not remove it from Git history. Exposed credentials may need to be revoked or rotated.
 
 ## Submitting a Pull Request
 
@@ -143,6 +146,7 @@ Include:
 - Testing performed and its results.
 - Screenshots when they help explain visual changes.
 - Known issues or potential risks.
+- Any new environment variables, external services, dependencies, or deployment steps required.
 
 Do not leave important sections incomplete.
 
