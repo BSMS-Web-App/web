@@ -166,6 +166,7 @@
     }
 
     function closeOverlay() {
+        if (!overlayHost && !overlay) return;
         if (reviewLayer) {
             reviewLayer.remove();
             reviewLayer = null;
