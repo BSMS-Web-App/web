@@ -494,12 +494,14 @@
             createdAt: call.createdAt
         };
         currentCallId = call.callId;
+        currentCallAccepted = true;
         pendingRejoinCall = null;
         try {
             await connectCall(call.callId);
         } catch (error) {
             currentCallId = null;
             currentCall = null;
+            currentCallAccepted = false;
             showPanel('voiceRejoinPanel');
             pendingRejoinCall = call;
             showError(error.message || 'Could not rejoin the voice call.');
@@ -507,7 +509,8 @@
     }
 
     async function accept() {
-        if (!incomingCall) return;
+        if (!incomingCall || acceptInProgress) return;
+        acceptInProgress = true;
         const call = incomingCall;
         const joinButton = el('voiceIncomingPanel')?.querySelector('.voice-primary-btn');
         if (joinButton) {
@@ -518,6 +521,7 @@
         activeConversationType = 'dms';
         incomingCall = null;
         currentCallId = call.callId;
+        currentCallAccepted = false;
         currentCall = {
             callId: call.callId,
             createdBy: call.callerUid,
@@ -530,18 +534,21 @@
             // The invited recipient may receive a temporary LiveKit token while ringing.
             // Connect the recipient first, then mark the call active only after LiveKit
             // confirms the recipient has actually joined. This prevents auto-answering.
-            await connectCall(call.callId);
+            await connectCall(call.callId, { deferActivation: true });
             const accepted = await api('accept', { callId: call.callId });
             acceptedByServer = true;
+            currentCallAccepted = true;
             currentCall.createdAt = accepted.connectedAt || Date.now();
+            if (!room || !currentCallId) throw new Error('The voice connection ended before the call could be accepted.');
+            await room.localParticipant.setMicrophoneEnabled(true);
             outgoingCall = null;
-            startDurationClock(currentCall.createdAt);
-            updateParticipants();
+            await presentActiveCall();
         } catch (error) {
             stopDurationClock();
             await disconnectRoom();
             currentCallId = null;
             currentCall = null;
+            currentCallAccepted = false;
             // If the server never activated this call, do not send "leave":
             // the recipient is not an active participant yet. Decline it instead.
             if (!acceptedByServer) {
@@ -552,6 +559,7 @@
             showPanel('voiceSetupPanel');
             showError(error.message || 'Could not join the call.');
         } finally {
+            acceptInProgress = false;
             if (joinButton) {
                 joinButton.disabled = false;
                 joinButton.textContent = 'Join call';
@@ -637,18 +645,23 @@
 
     async function handleUnexpectedDisconnect() {
         const callId = currentCallId;
+        const wasAccepted = currentCallAccepted;
         stopDurationClock();
         await disconnectRoom();
         currentCallId = null;
         currentCall = null;
+        currentCallAccepted = false;
         syncMiniCard();
-        if (callId) {
+        // A ringing invitee is not a participant. Never send leave until the
+        // explicit accept action has committed on the server.
+        if (callId && wasAccepted) {
             try { await api('leave', { callId }); } catch {}
+        } else if (callId && !acceptInProgress) {
+            try { await api('decline', { callId }); } catch {}
         }
         showPanel('voiceSetupPanel');
         showError('The voice connection ended. You can try joining again.');
     }
-
     async function poll() {
         if (polling || !context().user?.uid || !sessionId()) return;
         polling = true;
