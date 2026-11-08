@@ -503,14 +503,15 @@
             createdAt: Date.now()
         };
 
+        let acceptedByServer = false;
         try {
-            // Record the explicit Join call action before issuing a LiveKit token.
-            // The recipient cannot enter the room while the call is still ringing.
-            const accepted = await api('accept', { callId: call.callId });
-            currentCall.createdAt = accepted.connectedAt || Date.now();
-
-            // Connect only after the server has atomically marked the call active.
+            // The invited recipient may receive a temporary LiveKit token while ringing.
+            // Connect the recipient first, then mark the call active only after LiveKit
+            // confirms the recipient has actually joined. This prevents auto-answering.
             await connectCall(call.callId);
+            const accepted = await api('accept', { callId: call.callId });
+            acceptedByServer = true;
+            currentCall.createdAt = accepted.connectedAt || Date.now();
             outgoingCall = null;
             startDurationClock(currentCall.createdAt);
             updateParticipants();
@@ -519,8 +520,13 @@
             await disconnectRoom();
             currentCallId = null;
             currentCall = null;
-            try { await api('leave', { callId: call.callId }); }
-            catch { try { await api('decline', { callId: call.callId }); } catch {} }
+            // If the server never activated this call, do not send "leave":
+            // the recipient is not an active participant yet. Decline it instead.
+            if (!acceptedByServer) {
+                try { await api('decline', { callId: call.callId }); } catch {}
+            } else {
+                try { await api('leave', { callId: call.callId }); } catch {}
+            }
             showPanel('voiceSetupPanel');
             showError(error.message || 'Could not join the call.');
         } finally {
