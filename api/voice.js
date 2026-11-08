@@ -326,6 +326,10 @@ export default async function handler(req, res) {
             }
             const invitation = await db.ref('/voice/invitations/' + uid + '/' + callId).once('value');
             if (!invitation.val() || call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
+                const latestCall = await getCall(callId);
+                if (latestCall?.status === 'active' && latestCall.participants?.[uid]) {
+                    return response(res, 200, { success: true, connectedAt: latestCall.connectedAt || latestCall.createdAt, alreadyAccepted: true });
+                }
                 return response(res, 410, { error: 'This call invitation has expired.' });
             }
             if (!(await isFreshOnline(call.createdBy, 15000))) {
@@ -383,6 +387,16 @@ export default async function handler(req, res) {
             });
 
             const acceptedCall = transaction.snapshot?.val();
+            if (acceptedCall?.status === 'active' && acceptedCall?.participants?.[uid] && acceptedCall?.participants?.[call.createdBy]) {
+                if (!transaction.committed || acceptedCall.connectedAt !== joinedAt) {
+                    await Promise.all([
+                        db.ref('/voice/invitations/' + uid + '/' + callId).remove(),
+                        addUserCall(call.createdBy, callId),
+                        addUserCall(uid, callId)
+                    ]);
+                    return response(res, 200, { success: true, connectedAt: acceptedCall.connectedAt || acceptedCall.createdAt, alreadyAccepted: true });
+                }
+            }
             if (
                 !transaction.committed ||
                 acceptedCall?.connectedAt !== joinedAt ||
