@@ -90,17 +90,15 @@
         const channel = cid ? state.channels?.[cid] : null;
         if (!cid || !channel) return null;
         const type = state.activeType || channel._type || (cid.startsWith('gc') ? 'gcs' : 'dms');
-        if (!['dms', 'gcs'].includes(type)) return null;
+        if (type !== 'dms') return null;
         const otherUid = Object.keys(channel.members || {}).find(uid => uid !== state.user?.uid);
         const otherAccount = otherUid ? state.accountsCache?.[otherUid] : null;
-        const name = type === 'gcs'
-            ? (channel.name || 'Group chat')
-            : (otherAccount?.displayName || otherAccount?.name || otherAccount?.username || (otherUid ? '@' + otherUid : 'Direct message'));
-        return { cid, type, name };
+        const name = otherAccount?.displayName || otherAccount?.name || otherAccount?.username || (otherUid ? '@' + otherUid : 'Direct message');
+        return { cid, type: 'dms', name };
     }
 
     function setConversationName(name) {
-        if (el('voiceConversationName')) el('voiceConversationName').textContent = name || 'Conversation voice room';
+        if (el('voiceConversationName')) el('voiceConversationName').textContent = name || 'Direct message call';
     }
 
     function open() {
