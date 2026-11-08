@@ -81,6 +81,7 @@ export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Origin','same-origin');return res.status(204).end();}
  if(!['GET','POST'].includes(req.method))return res.status(405).json({error:'Method not allowed.'});
+ if((req.method==='GET'&&req.query&&req.query.action==='tower-leaderboard')||(req.method==='POST'&&(req.body||{}).action==='tower-score'))return towerApi(req,res);
  if(!isEnabled())return res.status(404).json({error:'The Last Harvest contest is not open.'});
  const sessionId=req.headers['x-session-id'];
  let user;
@@ -118,4 +119,28 @@ export default async function handler(req,res){
   }
   return res.status(400).json({error:'Unknown action.'});
  }catch(error){console.error('[Last Harvest] API error:',error);return res.status(500).json({error:'Could not save contest progress.'});}
+}
+
+/* ---- Goldleaf Tower leaderboard (open to any signed-in account; independent of the private contest) ---- */
+async function towerApi(req,res){
+ try{
+  if(req.method==='GET'){
+   const snap=await db.ref('/last_harvest_tower/best').once('value');
+   const rows=Object.values(snap.val()||{}).filter(r=>r&&Number.isInteger(r.floor));
+   rows.sort((a,b)=>b.floor-a.floor||a.at-b.at);
+   return res.status(200).json({success:true,leaderboard:rows.slice(0,50).map((r,i)=>({rank:i+1,displayName:r.displayName,floor:r.floor,cls:r.cls,level:r.level}))});
+  }
+  const user=await resolveUser(req.headers['x-session-id']);
+  if(!user)return res.status(401).json({error:'Please sign in to post a score.'});
+  if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot post scores.'});
+  const body=req.body||{},floor=Math.floor(Number(body.floor));
+  if(!Number.isInteger(floor)||floor<1||floor>500)return res.status(400).json({error:'Invalid floor.'});
+  const ref=db.ref('/last_harvest_tower/best/'+user.uid),snap=await ref.once('value'),prev=snap.val()||null,now=Date.now();
+  if(prev&&now-(prev.lastSubmit||0)<8000)return res.status(429).json({error:'Please wait a moment before posting again.'});
+  if(floor>(prev?prev.floor:0)+40)return res.status(400).json({error:'Score rejected.'});
+  const cls=['Guardian','Scout','Mage'].includes(body.cls)?body.cls:'Guardian',level=Math.max(1,Math.min(99,Math.floor(Number(body.level)||1)));
+  const best=(!prev||floor>prev.floor)?{uid:user.uid,displayName:String(user.account.display_name||user.account.username||'Player').slice(0,32),floor,cls,level,at:now,lastSubmit:now}:{...prev,lastSubmit:now};
+  await ref.set(best);
+  return res.status(200).json({success:true,floor:best.floor});
+ }catch(e){return res.status(503).json({error:'Leaderboard unavailable.'});}
 }
