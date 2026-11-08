@@ -209,7 +209,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <div id="voiceIncomingPanel" class="voice-panel" hidden>
             <div class="voice-incoming-indicator"><span></span> Incoming call</div>
             <h3 id="voiceCallerName">Someone is calling</h3>
-            <p id="voiceIncomingConversation">Conversation voice room</p>
+            <p id="voiceIncomingConversation">Direct message call</p>
             <div class="voice-action-row">
                 <button class="btn sec" type="button" onclick="VoiceChatManager.decline()">Decline</button>
                 <button class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.accept(event)">Answer</button>
@@ -218,7 +218,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <div id="voiceRejoinPanel" class="voice-panel" hidden>
             <div class="voice-incoming-indicator"><span></span> Active call</div>
             <h3>You're still in a call</h3>
-            <p>Rejoin the audio room when you're ready. Your microphone will only be enabled after you choose to rejoin.</p>
+            <p>Rejoin the call when you're ready. Your microphone will only be enabled after you choose to rejoin.</p>
             <button class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.rejoin()">Rejoin call</button>
         </div>
         <div id="voiceActivePanel" class="voice-panel voice-active-layout" hidden>
