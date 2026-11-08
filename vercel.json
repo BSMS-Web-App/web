@@ -35,5 +35,13 @@
   "git": {
     "deploymentEnabled": false
   },
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/auth.js": {
+      "includeFiles": "CHANGELOG.md"
+    },
+    "api/updates.js": {
+      "includeFiles": "CHANGELOG.md"
+    }
+  }
 }
