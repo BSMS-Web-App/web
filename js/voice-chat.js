@@ -535,32 +535,30 @@
 
         let acceptedByServer = false;
         try {
-            // The invited recipient may receive a temporary LiveKit token while ringing.
-            // Connect the recipient first, then mark the call active only after LiveKit
-            // confirms the recipient has actually joined. This prevents auto-answering.
-            await connectCall(call.callId, { deferActivation: true });
+            // Only the explicit Join button can accept. The server first commits
+            // the participant state; only then can this client obtain a LiveKit token.
             const accepted = await api('accept', { callId: call.callId });
             acceptedByServer = true;
             currentCallAccepted = true;
             currentCall.createdAt = accepted.connectedAt || Date.now();
-            if (!room || !currentCallId) throw new Error('The voice connection ended before the call could be accepted.');
-            await room.localParticipant.setMicrophoneEnabled(true);
+            await connectCall(call.callId);
             outgoingCall = null;
-            await presentActiveCall();
         } catch (error) {
             stopDurationClock();
             await disconnectRoom();
             currentCallId = null;
-            currentCall = null;
             currentCallAccepted = false;
-            // If the server never activated this call, do not send "leave":
-            // the recipient is not an active participant yet. Decline it instead.
-            if (!acceptedByServer) {
-                try { await api('decline', { callId: call.callId }); } catch {}
+            if (acceptedByServer) {
+                // The server accepted the call, but the media connection failed.
+                // Preserve the active call so the user can retry with Rejoin.
+                pendingRejoinCall = { ...currentCall, callId: call.callId };
+                showPanel('voiceRejoinPanel');
             } else {
-                try { await api('leave', { callId: call.callId }); } catch {}
+                try { await api('decline', { callId: call.callId }); } catch {}
+                pendingRejoinCall = null;
+                showPanel('voiceSetupPanel');
             }
-            showPanel('voiceSetupPanel');
+            currentCall = null;
             showError(error.message || 'Could not join the call.');
         } finally {
             acceptInProgress = false;
