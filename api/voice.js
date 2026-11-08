@@ -230,6 +230,9 @@ export default async function handler(req, res) {
             const cid = cleanId(payload.cid);
             const type = String(payload.type || '');
             if (!cid || type !== 'dms') return response(res, 400, { error: 'Voice calls are only available in direct messages.' });
+            if (!(await isFreshOnline(uid, 15000))) {
+                return response(res, 409, { error: 'Your chat status is offline. Reopen chat and try again.', code: 'CALLER_OFFLINE' });
+            }
             const conversation = await getConversation(type, cid);
             if (!conversation?.members?.[uid]) return response(res, 403, { error: 'You are not a member of this conversation.' });
 
@@ -359,8 +362,8 @@ export default async function handler(req, res) {
                 await removeUserCall(uid, existingCallId);
             }
 
-            // Only activate the call after the invited recipient has connected to LiveKit.
-            // A transaction prevents duplicate/late answers from marking an ended call active.
+            // The call becomes active only after the invited recipient explicitly
+            // answers. No LiveKit room is assigned while the call is merely ringing.
             const joinedAt = Date.now();
             const callRef = db.ref('/voice/calls/' + callId);
             const transaction = await callRef.transaction(current => {
@@ -434,7 +437,7 @@ export default async function handler(req, res) {
 
         if (action === 'token') {
             const isActiveParticipant = call.status === 'active' && Boolean(call.participants?.[uid]);
-            if (call.status === 'ended' || Number(call.expiresAt || 0) < Date.now() || !isActiveParticipant) {
+            if (call.status !== 'active' || Number(call.expiresAt || 0) < Date.now() || !isActiveParticipant || !call.roomName) {
                 return response(res, 403, { error: 'You are not an active participant in this voice call.' });
             }
             const apiKey = process.env.LIVEKIT_API_KEY;
