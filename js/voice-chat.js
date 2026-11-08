@@ -494,6 +494,8 @@
         }
         showError('');
         activeConversationType = 'dms';
+        incomingCall = null;
+        currentCallId = call.callId;
         currentCall = {
             callId: call.callId,
             createdBy: call.callerUid,
@@ -502,12 +504,13 @@
         };
 
         try {
-            // First connect the recipient to LiveKit while the call is still ringing.
-            // Only then tell the server to mark the call answered and admit the caller.
-            await connectCall(call.callId);
+            // Record the explicit Join call action before issuing a LiveKit token.
+            // The recipient cannot enter the room while the call is still ringing.
             const accepted = await api('accept', { callId: call.callId });
             currentCall.createdAt = accepted.connectedAt || Date.now();
-            incomingCall = null;
+
+            // Connect only after the server has atomically marked the call active.
+            await connectCall(call.callId);
             outgoingCall = null;
             startDurationClock(currentCall.createdAt);
             updateParticipants();
@@ -518,7 +521,6 @@
             currentCall = null;
             try { await api('leave', { callId: call.callId }); }
             catch { try { await api('decline', { callId: call.callId }); } catch {} }
-            incomingCall = null;
             showPanel('voiceSetupPanel');
             showError(error.message || 'Could not join the call.');
         } finally {
@@ -528,7 +530,6 @@
             }
         }
     }
-
     async function decline() {
         if (!incomingCall) return;
         const call = incomingCall;
@@ -642,6 +643,23 @@
                     UI.showToast('The other person ended the call.');
                 }
                 return;
+            }
+
+            if (outgoingCall && result.endedCallIds?.includes(outgoingCall.callId)) {
+                const reason = result.endedCallReasons?.[outgoingCall.callId] || 'ended';
+                const message = reason === 'declined'
+                    ? 'The recipient declined your call.'
+                    : reason === 'no_answer'
+                        ? 'The recipient didn’t answer within 10 seconds.'
+                        : 'The call ended before it was answered.';
+                const panelWasOpen = Boolean(el('voiceChatModal')?.classList.contains('show'));
+                outgoingCall = null;
+                if (panelWasOpen) {
+                    showPanel('voiceSetupPanel');
+                    showError(message);
+                } else if (typeof UI !== 'undefined' && UI.showToast) {
+                    UI.showToast(message);
+                }
             }
 
             if (result.activeCall && !currentCallId) {
