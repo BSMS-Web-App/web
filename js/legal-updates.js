@@ -592,6 +592,8 @@
         if (session !== currentSessionId) {
             currentSessionId = session;
             requestError = '';
+        } else if (overlay) {
+            return;
         }
 
         try {
@@ -626,11 +628,16 @@
     });
 
     window.addEventListener('bsms:auth-changed', () => {
+        currentSessionId = '';
         try { sessionStorage.removeItem(DEFERRED_KEY); } catch {}
         checkUpdates();
     });
     window.addEventListener('storage', event => {
-        if (event.key === SESSION_KEY || event.key === AUTH_KEY) checkUpdates();
+        if (event.key === SESSION_KEY || event.key === AUTH_KEY) {
+            currentSessionId = '';
+            try { sessionStorage.removeItem(DEFERRED_KEY); } catch {}
+            checkUpdates();
+        }
     });
     window.addEventListener('focus', checkUpdates);
 
