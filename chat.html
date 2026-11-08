@@ -198,6 +198,14 @@ SPDX-License-Identifier: AGPL-3.0-only
             <button id="voiceStartButton" class="btn voice-primary-btn" type="button" onclick="VoiceChatManager.start()">Start voice call</button>
             <p id="voiceSetupNote" class="voice-muted-note">Audio only during the beta. Video may be added later.</p>
         </div>
+        <div id="voiceOutgoingPanel" class="voice-panel voice-outgoing-panel" hidden>
+            <div class="voice-outgoing-orbit"><svg class="ic"><use href="#ico-phone"></use></svg></div>
+            <div class="voice-incoming-indicator"><span></span> Calling</div>
+            <h3 id="voiceOutgoingName">The other person</h3>
+            <p id="voiceOutgoingConversation">Direct message</p>
+            <p class="voice-outgoing-status">Waiting for them to answer…</p>
+            <button class="btn warn" type="button" onclick="VoiceChatManager.cancelOutgoing()"><svg class="ic"><use href="#ico-phone"></use></svg> Cancel call</button>
+        </div>
         <div id="voiceIncomingPanel" class="voice-panel" hidden>
             <div class="voice-incoming-indicator"><span></span> Incoming call</div>
             <h3 id="voiceCallerName">Someone is calling</h3>
@@ -215,7 +223,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         </div>
         <div id="voiceActivePanel" class="voice-panel voice-active-layout" hidden>
             <div class="voice-active-heading">
-                <h3 id="voiceActiveTitle">Voice Chat (BETA)</h3>
+                <h3 id="voiceActiveTitle">In call</h3>
             </div>
             <p id="voiceActiveName" class="voice-active-name">Conversation</p>
             <p id="voiceCallDuration" class="voice-call-duration">00:00</p>
@@ -231,7 +239,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         </div>
         <p id="voiceError" class="voice-error" role="status" aria-live="polite" hidden></p>
         <footer class="voice-modal-footer">
-            <span>BSMS Web Voice Chat is in beta.</span>
+            <span>Voice call controls</span>
             <a href="/support?type=bug">Report a Bug</a>
         </footer>
     </section>
