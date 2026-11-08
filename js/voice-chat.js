@@ -605,6 +605,7 @@
 
     async function disconnectRoom() {
         disconnecting = true;
+        connectionAttempt = false;
         if (room) {
             try { room.removeAllListeners(); } catch {}
             try { await room.disconnect(); } catch {}
