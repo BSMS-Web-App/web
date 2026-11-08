@@ -19,6 +19,7 @@
     let currentCallId = null;
     let currentCall = null;
     let incomingCall = null;
+    let outgoingCall = null;
     let pendingRejoinCall = null;
     let muted = false;
     let polling = false;
@@ -32,9 +33,18 @@
     const el = (id) => document.getElementById(id);
 
     function showPanel(name) {
-        ['voiceSetupPanel', 'voiceIncomingPanel', 'voiceRejoinPanel', 'voiceActivePanel'].forEach(id => {
+        ['voiceSetupPanel', 'voiceIncomingPanel', 'voiceOutgoingPanel', 'voiceRejoinPanel', 'voiceActivePanel'].forEach(id => {
             const node = el(id);
-            if (node) node.hidden = id !== name;
+            if (!node) return;
+            const shouldShow = id === name;
+            node.hidden = !shouldShow;
+            if (shouldShow) {
+                node.classList.remove('voice-panel-enter');
+                void node.offsetWidth;
+                node.classList.add('voice-panel-enter');
+            } else {
+                node.classList.remove('voice-panel-enter');
+            }
         });
     }
 
@@ -95,6 +105,8 @@
             showError('Open a direct message or group conversation before starting a call.');
         } else if (currentCallId) {
             showPanel('voiceActivePanel');
+        } else if (outgoingCall) {
+            showOutgoing(outgoingCall);
         } else if (pendingRejoinCall) {
             showPanel('voiceRejoinPanel');
         } else if (incomingCall) {
@@ -111,18 +123,32 @@
                     : 'Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.';
             showError(message);
         }
-        el('voiceChatModal')?.classList.add('show');
+        const modal = el('voiceChatModal');
+        modal?.classList.remove('voice-modal-closing');
+        modal?.classList.add('show');
+        syncMiniCard();
     }
 
     function close() {
-        el('voiceChatModal')?.classList.remove('show');
+        const modal = el('voiceChatModal');
         showError('');
+        if (modal?.classList.contains('show')) {
+            modal.classList.remove('voice-modal-closing');
+            modal.classList.add('voice-modal-closing');
+            window.setTimeout(() => {
+                modal.classList.remove('voice-modal-closing', 'show');
+                syncMiniCard();
+            }, 190);
+        } else {
+            syncMiniCard();
+        }
     }
 
     function showBetaNotice() {
         const notice = el('voiceBetaNotice');
         if (!notice) return;
         notice.hidden = false;
+        notice.classList.remove('is-closing');
         notice.classList.add('show');
     }
 
@@ -130,17 +156,36 @@
         betaNoticeDismissed = true;
         const notice = el('voiceBetaNotice');
         if (notice) {
-            notice.classList.remove('show');
-            notice.hidden = true;
+            notice.classList.add('is-closing');
+            window.setTimeout(() => {
+                notice.classList.remove('show', 'is-closing');
+                notice.hidden = true;
+            }, 180);
         }
     }
 
     function syncMiniCard() {
         const card = el('voiceMiniCard');
         if (!card) return;
+        const modalOpen = Boolean(el('voiceChatModal')?.classList.contains('show'));
         const active = Boolean(currentCallId && room);
-        card.hidden = !active;
-        if (!active) return;
+        const shouldShow = active && !modalOpen;
+        if (!shouldShow) {
+            if (!card.hidden && !card.classList.contains('is-closing')) {
+                card.classList.add('is-closing');
+                window.setTimeout(() => {
+                    if (el('voiceChatModal')?.classList.contains('show') || !currentCallId || !room) {
+                        card.hidden = true;
+                        card.classList.remove('is-closing');
+                    }
+                }, 160);
+            } else if (card.hidden) {
+                card.classList.remove('is-closing');
+            }
+            return;
+        }
+        card.hidden = false;
+        card.classList.remove('is-closing');
         const name = currentCall?.conversationName || activeConversation()?.name || 'Voice call';
         if (el('voiceMiniName')) el('voiceMiniName').textContent = name;
         if (el('voiceMiniMute')) {
@@ -191,7 +236,30 @@
     function expand() {
         if (!currentCallId) return;
         showPanel('voiceActivePanel');
-        el('voiceChatModal')?.classList.add('show');
+        const modal = el('voiceChatModal');
+        modal?.classList.remove('voice-modal-closing');
+        modal?.classList.add('show');
+        syncMiniCard();
+    }
+
+    function showOutgoing(call) {
+        outgoingCall = call;
+        if (el('voiceOutgoingName')) el('voiceOutgoingName').textContent = call.calleeName || 'The other person';
+        if (el('voiceOutgoingConversation')) el('voiceOutgoingConversation').textContent = call.conversationName || 'Direct message';
+        showPanel('voiceOutgoingPanel');
+        const modal = el('voiceChatModal');
+        modal?.classList.remove('voice-modal-closing');
+        modal?.classList.add('show');
+        syncMiniCard();
+    }
+
+    async function cancelOutgoing() {
+        if (!outgoingCall) return;
+        const call = outgoingCall;
+        outgoingCall = null;
+        try { await api('cancel', { callId: call.callId }); } catch (error) { showError(error.message || 'Could not cancel the call.'); }
+        showPanel('voiceSetupPanel');
+        close();
     }
 
     function showIncoming(call) {
@@ -322,7 +390,10 @@
         startDurationClock(currentCall?.createdAt);
         syncMiniCard();
         setupMiniCardDragging();
-        el('voiceChatModal')?.classList.add('show');
+        const modal = el('voiceChatModal');
+        modal?.classList.remove('voice-modal-closing');
+        modal?.classList.add('show');
+        syncMiniCard();
         if (room && !room.canPlaybackAudio) room.startAudio().catch(() => {});
     }
 
@@ -338,15 +409,28 @@
         try {
             const result = await api('start', conversation);
             startedCallId = result.callId;
-            currentCallId = result.callId;
-            currentCall = { callId: result.callId, createdBy: context().user?.uid, conversationName: result.conversationName || conversation.name, createdAt: result.createdAt };
-            await connectCall(result.callId);
+            if (conversation.type === 'dms') {
+                showOutgoing({
+                    callId: result.callId,
+                    type: 'dms',
+                    cid: conversation.cid,
+                    calleeName: result.calleeName || conversation.name,
+                    conversationName: result.conversationName || conversation.name,
+                    createdAt: result.createdAt
+                });
+            } else {
+                currentCallId = result.callId;
+                currentCall = { callId: result.callId, createdBy: context().user?.uid, conversationName: result.conversationName || conversation.name, createdAt: result.createdAt };
+                await connectCall(result.callId);
+            }
         } catch (error) {
             if (startedCallId) {
                 try { await api('end', { callId: startedCallId }); } catch {}
             }
             currentCallId = null;
             currentCall = null;
+            outgoingCall = null;
+            syncMiniCard();
             showPanel('voiceSetupPanel');
             showError(error.message || 'Could not start the voice call.');
         } finally {
@@ -390,6 +474,7 @@
                 createdAt: call.createdAt
             };
             incomingCall = null;
+            outgoingCall = null;
             await connectCall(call.callId);
         } catch (error) {
             try { await api('leave', { callId: call.callId }); } catch {}
@@ -497,14 +582,57 @@
         polling = true;
         try {
             const result = await api('poll');
-            if (result.activeCall && !currentCallId && !pendingRejoinCall) {
-                pendingRejoinCall = result.activeCall;
-                showPanel('voiceRejoinPanel');
-                el('voiceChatModal')?.classList.add('show');
+
+            if (currentCallId && result.endedCallIds?.includes(currentCallId)) {
+                stopDurationClock();
+                await disconnectRoom();
+                currentCallId = null;
+                currentCall = null;
+                pendingRejoinCall = null;
+                muted = false;
+                syncMiniCard();
+                showPanel('voiceSetupPanel');
+                close();
+                showError('The other person ended the call.');
+                return;
+            }
+
+            if (result.activeCall && !currentCallId) {
+                if (outgoingCall?.callId === result.activeCall.callId) {
+                    currentCall = {
+                        callId: result.activeCall.callId,
+                        createdBy: result.activeCall.createdBy,
+                        conversationName: result.activeCall.conversationName,
+                        createdAt: result.activeCall.createdAt
+                    };
+                    currentCallId = result.activeCall.callId;
+                    outgoingCall = null;
+                    await connectCall(currentCallId);
+                } else if (!pendingRejoinCall) {
+                    pendingRejoinCall = result.activeCall;
+                    showPanel('voiceRejoinPanel');
+                    const modal = el('voiceChatModal');
+                    modal?.classList.remove('voice-modal-closing');
+                    modal?.classList.add('show');
+                    syncMiniCard();
+                }
             } else if (!result.activeCall && pendingRejoinCall) {
                 pendingRejoinCall = null;
                 showPanel('voiceSetupPanel');
-            } else if (!currentCallId && !pendingRejoinCall && result.incoming?.length && !incomingCall) {
+            }
+
+            if (outgoingCall && !result.activeCall) {
+                if (result.outgoingCall?.callId === outgoingCall.callId) {
+                    if (!el('voiceChatModal')?.classList.contains('show')) showOutgoing(outgoingCall);
+                } else {
+                    outgoingCall = null;
+                    showPanel('voiceSetupPanel');
+                    close();
+                    showError('The call ended before it was answered.');
+                }
+            }
+
+            if (!currentCallId && !outgoingCall && !pendingRejoinCall && result.incoming?.length && !incomingCall) {
                 showIncoming(result.incoming[0]);
             } else if (incomingCall && !result.incoming?.some(call => call.callId === incomingCall.callId)) {
                 incomingCall = null;
@@ -541,6 +669,7 @@
         start,
         accept,
         rejoin,
+        cancelOutgoing,
         decline,
         toggleMute,
         enableAudio,
