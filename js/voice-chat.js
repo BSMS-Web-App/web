@@ -27,6 +27,7 @@
     let polling = false;
     let pollTimer = null;
     let disconnecting = false;
+    let connectionAttempt = false;
     let durationTimer = null;
     let betaNoticeDismissed = false;
     let miniCardDrag = null;
@@ -389,46 +390,48 @@
     }
 
     async function connectCall(callId) {
-        const auth = await api('token', { callId });
-        const sdk = await loadClient();
         currentCallId = callId;
-        room = new sdk.Room({
-            adaptiveStream: true,
-            dynacast: true,
-            audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-        });
+        connectionAttempt = true;
         disconnecting = false;
-        room.on(sdk.RoomEvent.TrackSubscribed, (track) => attachAudio(track));
-        room.on(sdk.RoomEvent.TrackUnsubscribed, (track) => detachAudio(track));
-        room.on(sdk.RoomEvent.ParticipantConnected, updateParticipants);
-        room.on(sdk.RoomEvent.ParticipantDisconnected, updateParticipants);
-        room.on(sdk.RoomEvent.ActiveSpeakersChanged, updateParticipants);
-        room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
-            if (!room?.canPlaybackAudio) room.startAudio().catch(() => {});
-        });
-        room.on(sdk.RoomEvent.Disconnected, (reason) => {
-            if (!disconnecting) {
-                console.warn('[BSMS Voice] LiveKit room disconnected:', { callId, reason: String(reason || 'unknown') });
-                handleUnexpectedDisconnect();
-            }
-        });
-
         try {
+            const auth = await api('token', { callId });
+            const sdk = await loadClient();
+            room = new sdk.Room({
+                adaptiveStream: true,
+                dynacast: true,
+                audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+            room.on(sdk.RoomEvent.TrackSubscribed, (track) => attachAudio(track));
+            room.on(sdk.RoomEvent.TrackUnsubscribed, (track) => detachAudio(track));
+            room.on(sdk.RoomEvent.ParticipantConnected, updateParticipants);
+            room.on(sdk.RoomEvent.ParticipantDisconnected, updateParticipants);
+            room.on(sdk.RoomEvent.ActiveSpeakersChanged, updateParticipants);
+            room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
+                if (!room?.canPlaybackAudio) room.startAudio().catch(() => {});
+            });
+            room.on(sdk.RoomEvent.Disconnected, (reason) => {
+                if (!disconnecting && !connectionAttempt) {
+                    console.warn('[BSMS Voice] LiveKit room disconnected:', { callId, reason: String(reason || 'unknown') });
+                    handleUnexpectedDisconnect();
+                }
+            });
+
             await room.connect(auth.url, auth.token, { autoSubscribe: true });
-            // This function is only called after the server marks the user as
-            // an active participant, so microphone access is enabled afterward.
             await room.localParticipant.setMicrophoneEnabled(true);
+            connectionAttempt = false;
+            await presentActiveCall();
         } catch (error) {
+            connectionAttempt = false;
             console.error('[BSMS Voice] LiveKit connection failed:', {
                 callId,
                 status: error?.status || null,
+                action: error?.action || null,
                 message: error?.message || String(error)
             });
             await disconnectRoom();
             currentCallId = null;
             throw error;
         }
-        await presentActiveCall();
     }
     async function start() {
         const conversation = activeConversation();
