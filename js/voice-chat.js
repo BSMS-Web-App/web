@@ -487,6 +487,7 @@
             // the participant state; only then can this client obtain a LiveKit token.
             const accepted = await api('accept', { callId: call.callId, answerConfirmed: true });
             acceptedByServer = true;
+            showBetaNotice();
             currentCallAccepted = true;
             currentCall.createdAt = accepted.connectedAt || Date.now();
             await connectCall(call.callId);
