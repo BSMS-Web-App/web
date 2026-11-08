@@ -76,12 +76,14 @@ async function expireCall(callId, call, reason = 'ended') {
         return { ...current, status: 'ended', endReason: reason, endedAt };
     });
     const endedCall = transaction.snapshot?.val() || call;
-    if (!transaction.committed) return endedCall?.status === 'ended';
+    if (endedCall?.status !== 'ended') return false;
+    const finalReason = endedCall.endReason || reason;
+    const finalEndedAt = Number(endedCall.endedAt) || endedAt;
     const participants = Object.keys(endedCall.participants || {});
     const invited = Object.keys(endedCall.invited || {});
     const affectedUsers = [...new Set([endedCall.createdBy, ...participants, ...invited].filter(Boolean))];
     await Promise.all(affectedUsers.map(uid =>
-        db.ref('/voice/endedCalls/' + uid + '/' + callId).set({ at: endedAt, reason })
+        db.ref('/voice/endedCalls/' + uid + '/' + callId).set({ at: finalEndedAt, reason: finalReason })
     ));
     try {
         const livekitUrl = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
