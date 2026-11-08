@@ -114,8 +114,16 @@
         } else {
             showPanel('voiceSetupPanel');
         }
-        if (el('voiceStartButton')) el('voiceStartButton').disabled = !configured || !conversation || Boolean(currentCallId);
-        if (!configured && conversation) {
+        if (el('voiceStartButton')) {
+            el('voiceStartButton').disabled = !conversation || (!configured && conversation.type !== 'gcs') || Boolean(currentCallId);
+        }
+        const setupDescription = el('voiceSetupDescription');
+        if (setupDescription) {
+            setupDescription.textContent = conversation?.type === 'gcs'
+                ? 'Voice chat is not yet available for group chats.'
+                : 'Start an audio call with the person in this direct message.';
+        }
+        if (!configured && conversation && conversation.type !== 'gcs') {
             const message = configurationReason === 'server_unreachable'
                 ? 'The voice server is not reachable. Check that LiveKit is running on the Mac and that voice.bsms-web.com routes to it.'
                 : configurationReason === 'api_unavailable'
@@ -385,7 +393,7 @@
         }
         muted = false;
         if (el('voiceMuteButton')) el('voiceMuteButton').innerHTML = '<svg class="ic"><use href="#ico-mic"></use></svg><span>Mute</span>';
-        if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = 'Voice Chat (BETA)';
+        if (el('voiceActiveTitle')) el('voiceActiveTitle').textContent = 'In call';
         if (el('voiceActiveName')) el('voiceActiveName').textContent = currentCall?.conversationName || 'Voice call';
         setConversationName(currentCall?.conversationName || 'Voice call');
         showPanel('voiceActivePanel');
@@ -402,9 +410,21 @@
     }
 
     async function start() {
-        showBetaNotice();
         const conversation = activeConversation();
         if (!conversation) return showError('Open a conversation before starting a voice call.');
+        if (conversation.type === 'gcs') {
+            if (typeof UI !== 'undefined' && UI.showConfirm) {
+                UI.showConfirm(
+                    'Voice chat is not yet available for group chats.',
+                    [{ text: 'Got it', sec: true }],
+                    'Voice chat unavailable'
+                );
+            } else {
+                showError('Voice chat is not yet available for group chats.');
+            }
+            return;
+        }
+        showBetaNotice();
         if (!configured) return showError('Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.');
         const button = el('voiceStartButton');
         let startedCallId = null;
@@ -467,26 +487,45 @@
     async function accept() {
         if (!incomingCall) return;
         const call = incomingCall;
+        const joinButton = el('voiceIncomingPanel')?.querySelector('.voice-primary-btn');
+        if (joinButton) {
+            joinButton.disabled = true;
+            joinButton.textContent = 'Joining…';
+        }
         showError('');
+        activeConversationType = 'dms';
+        currentCall = {
+            callId: call.callId,
+            createdBy: call.callerUid,
+            conversationName: call.conversationName,
+            createdAt: Date.now()
+        };
+
         try {
+            // First connect the recipient to LiveKit while the call is still ringing.
+            // Only then tell the server to mark the call answered and admit the caller.
+            await connectCall(call.callId);
             const accepted = await api('accept', { callId: call.callId });
-            currentCallId = call.callId;
-            currentCall = {
-                callId: call.callId,
-                createdBy: call.callerUid,
-                conversationName: call.conversationName,
-                createdAt: accepted.connectedAt || Date.now()
-            };
+            currentCall.createdAt = accepted.connectedAt || Date.now();
             incomingCall = null;
             outgoingCall = null;
-            await connectCall(call.callId);
+            startDurationClock(currentCall.createdAt);
+            updateParticipants();
         } catch (error) {
-            try { await api('leave', { callId: call.callId }); } catch {}
+            stopDurationClock();
+            await disconnectRoom();
             currentCallId = null;
             currentCall = null;
+            try { await api('leave', { callId: call.callId }); }
+            catch { try { await api('decline', { callId: call.callId }); } catch {} }
             incomingCall = null;
             showPanel('voiceSetupPanel');
             showError(error.message || 'Could not join the call.');
+        } finally {
+            if (joinButton) {
+                joinButton.disabled = false;
+                joinButton.textContent = 'Join call';
+            }
         }
     }
 
