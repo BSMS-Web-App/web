@@ -587,20 +587,6 @@
         close();
     }
 
-    async function endForEveryone() {
-        const callId = currentCallId;
-        if (!callId) return;
-        try { await api('end', { callId }); } catch (error) { showError(error.message); return; }
-        stopDurationClock();
-        await disconnectRoom();
-        currentCallId = null;
-        currentCall = null;
-        currentCallAccepted = false;
-        pendingRejoinCall = null;
-        syncMiniCard();
-        showPanel('voiceSetupPanel');
-        close();
-    }
 
     async function handleUnexpectedDisconnect() {
         const callId = currentCallId;
@@ -752,7 +738,6 @@
         toggleMute,
         enableAudio,
         leave,
-        endForEveryone,
         expand,
         dismissBetaNotice
     };
