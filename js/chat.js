@@ -2084,9 +2084,17 @@ const AuthManager = {
             }
 
             document.addEventListener("visibilitychange", () => {
-                if (document.visibilityState === 'visible') ApiClient.call('status', { status: 'online' });
-                else ApiClient.call('status', { status: 'offline' });
+                if (document.visibilityState === 'visible') ApiClient.call('status', { status: 'online' }).catch(() => {});
+                else ApiClient.call('status', { status: 'offline' }).catch(() => {});
             });
+
+            // Keep presence fresh while the chat tab is visible. The voice API only
+            // permits calls when the target's online heartbeat is recent.
+            window.setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    ApiClient.call('status', { status: 'online' }).catch(() => {});
+                }
+            }, 10000);
 
             const handleDisconnect = () => {
                 const sid = localStorage.getItem('session_id') || "";
