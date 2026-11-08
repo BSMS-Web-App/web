@@ -51,6 +51,15 @@ async function getCall(callId) {
     return snapshot.val();
 }
 
+async function isFreshOnline(uid, maxAgeMs = 15000) {
+    if (!uid) return false;
+    const snapshot = await db.ref('/chat/users/' + uid).once('value');
+    const presence = snapshot.val() || {};
+    const lastSeen = Number(presence.lastSeen);
+    const age = Date.now() - lastSeen;
+    return presence.status === 'online' && Number.isFinite(lastSeen) && lastSeen > 0 && age >= 0 && age <= maxAgeMs;
+}
+
 async function addUserCall(uid, callId) {
     await db.ref('/voice/userCalls/' + uid + '/' + callId).set(Date.now());
 }
@@ -133,7 +142,7 @@ export default async function handler(req, res) {
                     await expireCall(callId, call, 'no_answer');
                     continue;
                 }
-                if (!['ringing', 'active'].includes(call.status)) {
+                if (call.status !== 'ringing') {
                     await db.ref('/voice/invitations/' + uid + '/' + callId).remove();
                     continue;
                 }
@@ -249,15 +258,7 @@ export default async function handler(req, res) {
             let otherName = null;
             if (type === 'dms') {
                 otherUid = memberIds.find(id => id !== uid);
-                const presenceSnapshot = await db.ref('/chat/users/' + otherUid).once('value');
-                const presence = presenceSnapshot.val() || {};
-                const lastSeen = Number(presence.lastSeen);
-                const presenceAge = Date.now() - lastSeen;
-                const online = presence.status === 'online' &&
-                    Number.isFinite(lastSeen) &&
-                    lastSeen > 0 &&
-                    presenceAge >= 0 &&
-                    presenceAge <= 20000;
+                const online = await isFreshOnline(otherUid, 15000);
                 if (!online) {
                     return response(res, 409, {
                         error: 'This person is currently offline. You can only call someone who is online.',
@@ -314,16 +315,40 @@ export default async function handler(req, res) {
         }
 
         if (action === 'accept') {
-            if (call.type !== 'dms' || call.createdBy === uid || !call.invited?.[uid]) {
+            if (call.type !== 'dms' || call.createdBy === uid) {
+                return response(res, 403, { error: 'This invitation is not for your account.' });
+            }
+            if (call.status === 'active' && call.participants?.[uid]) {
+                return response(res, 200, { success: true, connectedAt: call.connectedAt || call.createdAt, alreadyAccepted: true });
+            }
+            if (!call.invited?.[uid]) {
                 return response(res, 403, { error: 'This invitation is not for your account.' });
             }
             const invitation = await db.ref('/voice/invitations/' + uid + '/' + callId).once('value');
             if (!invitation.val() || call.status !== 'ringing' || Number(call.ringExpiresAt || 0) < Date.now()) {
                 return response(res, 410, { error: 'This call invitation has expired.' });
             }
+            if (!(await isFreshOnline(call.createdBy, 15000))) {
+                await expireCall(callId, call, 'caller_offline');
+                return response(res, 410, { error: 'The caller is no longer online. This call has ended.' });
+            }
+
             const currentCalls = await db.ref('/voice/userCalls/' + uid).once('value');
-            if (Object.keys(currentCalls.val() || {}).length) {
-                return response(res, 409, { error: 'You are already in a voice call.' });
+            for (const existingCallId of Object.keys(currentCalls.val() || {})) {
+                if (existingCallId === callId) continue;
+                const existingCall = await getCall(existingCallId);
+                if (!existingCall || existingCall.status === 'ended' || Number(existingCall.expiresAt || 0) < Date.now()) {
+                    if (existingCall && existingCall.status !== 'ended') await expireCall(existingCallId, existingCall, 'expired');
+                    else await removeUserCall(uid, existingCallId);
+                    continue;
+                }
+                if (existingCall.status === 'active' && existingCall.participants?.[uid]) {
+                    return response(res, 409, { error: 'You are already in a voice call.' });
+                }
+                if (existingCall.status === 'ringing' && existingCall.createdBy === uid && Number(existingCall.ringExpiresAt || 0) >= Date.now()) {
+                    return response(res, 409, { error: 'You already have an outgoing call in progress.' });
+                }
+                await removeUserCall(uid, existingCallId);
             }
 
             // Only activate the call after the invited recipient has connected to LiveKit.
@@ -367,11 +392,16 @@ export default async function handler(req, res) {
                 return response(res, 410, { error: 'This call is no longer available to answer.' });
             }
 
-            await Promise.all([
-                db.ref('/voice/invitations/' + uid + '/' + callId).remove(),
-                addUserCall(call.createdBy, callId),
-                addUserCall(uid, callId)
-            ]);
+            try {
+                await Promise.all([
+                    db.ref('/voice/invitations/' + uid + '/' + callId).remove(),
+                    addUserCall(call.createdBy, callId),
+                    addUserCall(uid, callId)
+                ]);
+            } catch (error) {
+                await expireCall(callId, acceptedCall, 'accept_sync_failed');
+                throw error;
+            }
             return response(res, 200, { success: true, connectedAt: joinedAt });
         }
 
@@ -430,8 +460,12 @@ export default async function handler(req, res) {
         }
 
         if (action === 'leave') {
+            if (call.status === 'ended') return response(res, 200, { success: true, alreadyEnded: true });
             if (call.type === 'dms') {
-                if (!call.participants?.[uid]) return response(res, 403, { error: 'You are not an active participant in this call.' });
+                if (!call.participants?.[uid]) {
+                    await removeUserCall(uid, callId);
+                    return response(res, 200, { success: true, alreadyLeft: true });
+                }
                 await expireCall(callId, call);
                 return response(res, 200, { success: true });
             }
@@ -443,6 +477,7 @@ export default async function handler(req, res) {
         }
 
         if (action === 'end') {
+            if (call.status === 'ended') return response(res, 200, { success: true, alreadyEnded: true });
             if (call.type === 'dms' && call.createdBy === uid && call.status === 'ringing') {
                 await expireCall(callId, call);
                 return response(res, 200, { success: true });
