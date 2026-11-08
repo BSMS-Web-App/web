@@ -322,7 +322,7 @@ export default async function handler(req, res) {
                     Number(current.ringExpiresAt || 0) < joinedAt ||
                     !current.invited?.[uid] ||
                     Object.keys(current.participants || {}).length
-                ) return;
+                ) return current;
 
                 const participants = { ...(current.participants || {}) };
                 participants[current.createdBy] = { joinedAt };
@@ -340,7 +340,13 @@ export default async function handler(req, res) {
                 };
             });
 
-            if (!transaction.committed) {
+            const acceptedCall = transaction.snapshot?.val();
+            if (
+                !transaction.committed ||
+                acceptedCall?.connectedAt !== joinedAt ||
+                !acceptedCall?.participants?.[uid] ||
+                !acceptedCall?.participants?.[call.createdBy]
+            ) {
                 return response(res, 410, { error: 'This call is no longer available to answer.' });
             }
 
