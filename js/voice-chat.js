@@ -256,10 +256,14 @@
     async function cancelOutgoing() {
         if (!outgoingCall) return;
         const call = outgoingCall;
-        outgoingCall = null;
-        try { await api('cancel', { callId: call.callId }); } catch (error) { showError(error.message || 'Could not cancel the call.'); }
-        showPanel('voiceSetupPanel');
-        close();
+        try {
+            await api('cancel', { callId: call.callId });
+            outgoingCall = null;
+            showPanel('voiceSetupPanel');
+            close();
+        } catch (error) {
+            showError(error.message || 'Could not cancel the call.');
+        }
     }
 
     function showIncoming(call) {
@@ -465,13 +469,13 @@
         const call = incomingCall;
         showError('');
         try {
-            await api('accept', { callId: call.callId });
+            const accepted = await api('accept', { callId: call.callId });
             currentCallId = call.callId;
             currentCall = {
                 callId: call.callId,
                 createdBy: call.callerUid,
                 conversationName: call.conversationName,
-                createdAt: call.createdAt
+                createdAt: accepted.connectedAt || Date.now()
             };
             incomingCall = null;
             outgoingCall = null;
