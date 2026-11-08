@@ -588,6 +588,7 @@
             const result = await api('poll');
 
             if (currentCallId && result.endedCallIds?.includes(currentCallId)) {
+                const panelWasOpen = Boolean(el('voiceChatModal')?.classList.contains('show'));
                 stopDurationClock();
                 await disconnectRoom();
                 currentCallId = null;
@@ -595,9 +596,12 @@
                 pendingRejoinCall = null;
                 muted = false;
                 syncMiniCard();
-                showPanel('voiceSetupPanel');
-                close();
-                showError('The other person ended the call.');
+                if (panelWasOpen) {
+                    showPanel('voiceSetupPanel');
+                    showError('The other person ended the call.');
+                } else if (typeof UI !== 'undefined' && UI.showToast) {
+                    UI.showToast('The other person ended the call.');
+                }
                 return;
             }
 
@@ -629,10 +633,14 @@
                 if (result.outgoingCall?.callId === outgoingCall.callId) {
                     if (!el('voiceChatModal')?.classList.contains('show')) showOutgoing(outgoingCall);
                 } else {
+                    const panelWasOpen = Boolean(el('voiceChatModal')?.classList.contains('show'));
                     outgoingCall = null;
-                    showPanel('voiceSetupPanel');
-                    close();
-                    showError('The call ended before it was answered.');
+                    if (panelWasOpen) {
+                        showPanel('voiceSetupPanel');
+                        showError('The call ended before it was answered.');
+                    } else if (typeof UI !== 'undefined' && UI.showToast) {
+                        UI.showToast('The call ended before it was answered.');
+                    }
                 }
             }
 
