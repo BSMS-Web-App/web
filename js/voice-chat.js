@@ -31,7 +31,6 @@
     let durationTimer = null;
     let betaNoticeDismissed = false;
     let miniCardDrag = null;
-    let activeConversationType = 'dms';
 
     const el = (id) => document.getElementById(id);
 
@@ -108,10 +107,9 @@
         showError('');
         const conversation = activeConversation();
         setConversationName(conversation?.name || 'No conversation selected');
-        if (conversation) activeConversationType = conversation.type;
         if (!conversation) {
             showPanel('voiceSetupPanel');
-            showError('Open a direct message or group conversation before starting a call.');
+            showError('Open a direct message before starting a call.');
         } else if (currentCallId) {
             showPanel('voiceActivePanel');
         } else if (outgoingCall) {
@@ -124,15 +122,15 @@
             showPanel('voiceSetupPanel');
         }
         if (el('voiceStartButton')) {
-            el('voiceStartButton').disabled = !conversation || (!configured && conversation.type !== 'gcs') || Boolean(currentCallId);
+            el('voiceStartButton').disabled = !conversation || conversation.type !== 'dms' || !configured || Boolean(currentCallId);
         }
         const setupDescription = el('voiceSetupDescription');
         if (setupDescription) {
-            setupDescription.textContent = conversation?.type === 'gcs'
-                ? 'Voice chat is not yet available for group chats.'
-                : 'Start an audio call with the person in this direct message.';
+            setupDescription.textContent = conversation?.type === 'dms'
+                ? 'Start an audio call with the person in this direct message.'
+                : 'Voice calls are only available in direct messages.';
         }
-        if (!configured && conversation && conversation.type !== 'gcs') {
+        if (!configured && conversation?.type === 'dms') {
             const message = configurationReason === 'server_unreachable'
                 ? 'The voice server is not reachable. Check that LiveKit is running on the Mac and that voice.bsms-web.com routes to it.'
                 : configurationReason === 'api_unavailable'
@@ -308,33 +306,6 @@
         return livekit;
     }
 
-    function updateParticipants() {
-        const target = el('voiceParticipants');
-        if (!target || !room) return;
-        target.replaceChildren();
-        const local = room.localParticipant;
-        const people = [];
-        if (local) people.push({ name: local.name || local.identity || 'You', local: true });
-        room.remoteParticipants?.forEach(participant => {
-            people.push({ name: participant.name || participant.identity || 'Participant', local: false });
-        });
-        people.forEach(person => {
-            const chip = document.createElement('span');
-            chip.className = 'voice-participant' + (person.local ? ' local' : '');
-            const dot = document.createElement('span');
-            dot.className = 'voice-participant-dot';
-            const name = document.createElement('span');
-            name.textContent = person.name + (person.local ? ' (you)' : '');
-            chip.append(dot, name);
-            target.appendChild(chip);
-        });
-        const groupSection = el('voiceGroupPeopleSection');
-        if (groupSection) groupSection.hidden = activeConversationType !== 'gcs';
-        const status = el('voiceCallStatusText');
-        if (status) status.textContent = activeConversationType === 'gcs'
-            ? people.length + (people.length === 1 ? ' person connected' : ' people connected')
-            : '';
-    }
 
     function startDurationClock(startedAt) {
         if (durationTimer) window.clearInterval(durationTimer);
@@ -378,7 +349,7 @@
         setConversationName(currentCall?.conversationName || 'Voice call');
         showPanel('voiceActivePanel');
         showError('');
-        updateParticipants();
+        if (el('voiceCallStatusText')) el('voiceCallStatusText').textContent = 'Audio connected';
         startDurationClock(currentCall?.createdAt);
         syncMiniCard();
         setupMiniCardDragging();
@@ -403,9 +374,6 @@
             });
             room.on(sdk.RoomEvent.TrackSubscribed, (track) => attachAudio(track));
             room.on(sdk.RoomEvent.TrackUnsubscribed, (track) => detachAudio(track));
-            room.on(sdk.RoomEvent.ParticipantConnected, updateParticipants);
-            room.on(sdk.RoomEvent.ParticipantDisconnected, updateParticipants);
-            room.on(sdk.RoomEvent.ActiveSpeakersChanged, updateParticipants);
             room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
                 if (!room?.canPlaybackAudio) room.startAudio().catch(() => {});
             });
@@ -436,17 +404,8 @@
     async function start() {
         const conversation = activeConversation();
         if (!conversation) return showError('Open a conversation before starting a voice call.');
-        if (conversation.type === 'gcs') {
-            if (typeof UI !== 'undefined' && UI.showConfirm) {
-                UI.showConfirm(
-                    'Voice chat is not yet available for group chats.',
-                    [{ text: 'Got it', sec: true }],
-                    'Voice chat unavailable'
-                );
-            } else {
-                showError('Voice chat is not yet available for group chats.');
-            }
-            return;
+        if (conversation.type !== 'dms') {
+            return showError('Voice calls are only available in direct messages.');
         }
         showBetaNotice();
         if (!configured) return showError('Voice calling is not configured yet. The beta interface is ready, but the Mac voice server still needs setup.');
@@ -457,20 +416,14 @@
         try {
             const result = await api('start', conversation);
             startedCallId = result.callId;
-            if (conversation.type === 'dms') {
-                showOutgoing({
-                    callId: result.callId,
-                    type: 'dms',
-                    cid: conversation.cid,
-                    calleeName: result.calleeName || conversation.name,
-                    conversationName: result.conversationName || conversation.name,
-                    createdAt: result.createdAt
-                });
-            } else {
-                currentCallId = result.callId;
-                currentCall = { callId: result.callId, createdBy: context().user?.uid, conversationName: result.conversationName || conversation.name, createdAt: result.createdAt };
-                await connectCall(result.callId);
-            }
+            showOutgoing({
+                callId: result.callId,
+                type: 'dms',
+                cid: conversation.cid,
+                calleeName: result.calleeName || conversation.name,
+                conversationName: result.conversationName || conversation.name,
+                createdAt: result.createdAt
+            });
         } catch (error) {
             if (startedCallId) {
                 try { await api('end', { callId: startedCallId }); } catch {}
@@ -510,8 +463,8 @@
         }
     }
 
-    async function accept() {
-        if (!incomingCall || acceptInProgress) return;
+    async function accept(event) {
+        if (!event?.isTrusted || !incomingCall || acceptInProgress) return;
         acceptInProgress = true;
         const call = incomingCall;
         const joinButton = el('voiceIncomingPanel')?.querySelector('.voice-primary-btn');
@@ -520,7 +473,6 @@
             joinButton.textContent = 'Joining…';
         }
         showError('');
-        activeConversationType = 'dms';
         incomingCall = null;
         currentCallId = call.callId;
         currentCallAccepted = false;
@@ -535,7 +487,7 @@
         try {
             // Only the explicit Join button can accept. The server first commits
             // the participant state; only then can this client obtain a LiveKit token.
-            const accepted = await api('accept', { callId: call.callId });
+            const accepted = await api('accept', { callId: call.callId, answerConfirmed: true });
             acceptedByServer = true;
             currentCallAccepted = true;
             currentCall.createdAt = accepted.connectedAt || Date.now();
@@ -616,11 +568,17 @@
 
     async function leave() {
         const callId = currentCallId;
+        if (!callId) return;
+        // End the server-side call first. If that request fails, keep the local
+        // connection alive so the other person is not stranded in a ghost call.
+        try {
+            await api('end', { callId });
+        } catch (error) {
+            showError(error.message || 'Could not end the call. Please try again.');
+            return;
+        }
         stopDurationClock();
         await disconnectRoom();
-        if (callId) {
-            try { await api('leave', { callId }); } catch {}
-        }
         currentCallId = null;
         currentCall = null;
         currentCallAccepted = false;
