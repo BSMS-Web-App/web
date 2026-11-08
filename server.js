@@ -6,7 +6,8 @@
 
 import 'dotenv/config';
 import express from 'express';
-import { rateLimit } from 'express-rate-limit';
+import crypto from 'node:crypto';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -23,6 +24,7 @@ import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
 import legalHandler from './api/legal.js';
 import mediaHandler from './api/media.js';
+import voiceHandler from './api/voice.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,12 +35,18 @@ app.set('trust proxy', 1);
 
 // The application API runs behind Cloudflare Tunnel on the Mac mini.
 // Browser origins are explicitly allowlisted; no wildcard CORS is used.
-const allowedOrigins = new Set(
-    (process.env.APP_ALLOWED_ORIGINS || 'https://bsms-web-dev2.vercel.app,http://localhost:3000')
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean)
-);
+const allowedOrigins = new Set([
+    'https://bsms-web.com',
+    'https://www.bsms-web.com',
+    'https://bsms-web.vercel.app',
+    'https://bsms-web-dev2.vercel.app',
+    'https://dev2.bsms-web.com',
+    'https://bsms-web-beta.vercel.app',
+    'https://bsms-web-development.vercel.app',
+    'https://bsms-web-dev3.vercel.app',
+    'http://localhost:3000',
+    ...String(process.env.APP_ALLOWED_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean)
+]);
 
 function apiCors(req, res, next) {
     const origin = req.get('Origin');
@@ -66,6 +74,11 @@ function apiCors(req, res, next) {
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 120,
+    keyGenerator: (req) => {
+        const sessionId = String(req.get('X-Session-ID') || '').trim();
+        if (sessionId) return 'session:' + crypto.createHash('sha256').update(sessionId).digest('hex');
+        return ipKeyGenerator(req.ip);
+    },
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     message: { error: 'Too many requests. Please try again shortly.' }
@@ -133,6 +146,7 @@ app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 app.use('/api/legal', (req, res) => legalHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
+app.use('/api/voice', (req, res) => voiceHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
@@ -166,7 +180,6 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.h
 app.get('/users', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
 app.get('/events', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
-app.get('/verity', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
 app.get('/metadata.json', (req, res) => res.sendFile(path.join(__dirname, 'metadata.json')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/accounts.html', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
@@ -179,7 +192,6 @@ app.get('/401.html', (req, res) => res.status(401).sendFile(path.join(__dirname,
 app.get('/users.html', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
 app.get('/events.html', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
 app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
-app.get('/verity.html', (req, res) => res.sendFile(path.join(__dirname, 'verity.html')));
 
 // Serve only intentionally public asset directories. The repository root contains
 // server code, API handlers, configuration, and deployment metadata and must not be static.
