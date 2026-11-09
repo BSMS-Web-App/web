@@ -1,1 +1,193 @@
-:root{color-scheme:dark;--player-bg:#08080b;--player-panel:rgba(20,20,25,.94);--player-border:rgba(255,255,255,.12);--player-text:#fff;--player-muted:rgba(255,255,255,.62)}*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--player-bg);color:var(--player-text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}.player-bar{position:fixed;inset:0 0 auto;z-index:5;height:58px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);align-items:center;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));background:var(--player-panel);border-bottom:1px solid var(--player-border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}.vault-back{display:inline-flex;align-items:center;gap:10px;width:max-content;color:#fff;text-decoration:none;font-size:14px;font-weight:650;white-space:nowrap}.vault-back svg{width:19px;height:19px;color:#ff526b;flex:none}.vault-back:hover{color:#ffb7c2}.player-title{grid-column:2;grid-row:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font-size:15px;font-weight:650}.player-spacer{grid-column:3}.player-stage{position:absolute;inset:58px 0 0;background:#000}#gameFrame{display:block;width:100%;height:100%;border:0;background:#000}.player-loading{position:absolute;inset:0;z-index:1;display:grid;place-items:center;color:var(--player-muted);font-size:14px;pointer-events:none}@media(max-width:600px){.player-bar{height:54px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding-inline:12px}.vault-back{gap:7px;font-size:12px}.vault-back svg{width:17px;height:17px}.player-title{grid-column:2;text-align:right;font-size:13px}.player-stage{inset:54px 0 0}}
+/*
+ * BSMS Web game player
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+:root {
+  color-scheme: dark;
+  --player-bg: #000;
+  --player-panel: rgba(12, 12, 15, .94);
+  --player-panel-soft: rgba(25, 25, 30, .78);
+  --player-border: rgba(255, 255, 255, .12);
+  --player-text: #fff;
+  --player-muted: rgba(255, 255, 255, .62);
+  --player-red: #BB001E;
+  --player-red-bright: #d10022;
+}
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--player-bg);
+  color: var(--player-text);
+  font-family: var(--bsms-font-body, 'Patrick Hand', cursive);
+}
+.game-player-page { background: #000; }
+.player-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 5;
+  height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  background: var(--player-panel);
+  border-bottom: 1px solid rgba(187, 0, 30, .38);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+.player-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(187,0,30,.72), transparent);
+  pointer-events: none;
+}
+.vault-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: 100%;
+  color: #fff;
+  text-decoration: none;
+  font-size: 19px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: color .18s ease, transform .18s ease;
+}
+.vault-back svg { width: 20px; height: 20px; color: var(--player-red-bright); flex: none; }
+.vault-back:hover { color: #ffb7c2; transform: translateX(-2px); }
+.player-title {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+.player-brand {
+  justify-self: end;
+  color: rgba(255,255,255,.86);
+  font-size: 19px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.player-brand span,
+.loading-brand span { color: var(--player-red-bright); }
+.player-stage {
+  position: absolute;
+  inset: 64px 0 0;
+  overflow: hidden;
+  background: #000;
+}
+#gameFrame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+.player-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(187,0,30,.13), transparent 48%),
+    #050506;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .32s ease, visibility .32s ease;
+}
+.player-loading.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+.loading-card {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 34px 30px 30px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 24px;
+  background: linear-gradient(155deg, rgba(30,30,35,.88), rgba(12,12,15,.94));
+  box-shadow: 0 24px 80px rgba(0,0,0,.48), 0 0 42px rgba(187,0,30,.08);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  text-align: center;
+}
+.loading-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 8px 28px rgba(187,0,30,.2);
+  margin-bottom: 13px;
+}
+.loading-brand { font-size: 29px; line-height: 1.1; font-weight: 700; }
+.loading-title { margin-top: 17px; font-size: 20px; color: #fff; }
+.loading-track {
+  width: 100%;
+  height: 5px;
+  margin-top: 19px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+}
+.loading-track span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8f0017, var(--player-red-bright), #ff647b);
+  box-shadow: 0 0 16px rgba(209,0,34,.55);
+  animation: bsms-loading-sweep 1.35s ease-in-out infinite;
+}
+.loading-caption { margin-top: 12px; color: var(--player-muted); font-size: 16px; }
+.player-loading.is-error .loading-track { display: none; }
+.player-loading.is-error .loading-caption { color: #ff9aa9; }
+@keyframes bsms-loading-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(280%); }
+}
+@media (max-width: 680px) {
+  .player-bar {
+    height: 58px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    padding-inline: 12px;
+  }
+  .vault-back { gap: 7px; font-size: 15px; }
+  .vault-back svg { width: 18px; height: 18px; }
+  .player-title {
+    grid-column: 2;
+    font-size: 17px;
+    text-align: right;
+  }
+  .player-brand { display: none; }
+  .player-stage { inset: 58px 0 0; }
+  .loading-card { padding: 28px 22px 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-track span { animation-duration: 3s; }
+  .vault-back { transition: none; }
+}
