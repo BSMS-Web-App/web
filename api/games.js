@@ -37,7 +37,7 @@ async function getUserBySession(sessionId, uidHint) {
     return null;
 }
 
-async function readSaves(uid) {
+async function readLegacySaves(uid) {
     const rawSnap = await db.ref('/accounts/' + uid + '/game_saves_raw').once('value');
     const rawValue = rawSnap.val();
     if (rawValue) {
@@ -53,10 +53,8 @@ async function readSaves(uid) {
     return legacy && typeof legacy === 'object' && !Array.isArray(legacy) ? legacy : {};
 }
 
-async function writeSaves(uid, saves) {
-    const rawString = JSON.stringify(saves);
-    await db.ref('/accounts/' + uid + '/game_saves_raw').set(rawString);
-
+async function writeLegacySaves(uid, saves) {
+    await db.ref('/accounts/' + uid + '/game_saves_raw').set(JSON.stringify(saves));
     const safeObject = {};
     for (const [key, value] of Object.entries(saves)) {
         const safeKey = key.replace(/[.#$[\]\/]/g, '_');
@@ -89,7 +87,6 @@ export default async function handler(req, res) {
 
     const sessionId = String(req.headers['x-session-id'] || req.query.sessionId || req.headers['x-device-id'] || '').trim();
     const uidHint = String(req.headers['x-uid'] || req.query.uid || '').trim();
-
     if (!sessionId) return res.status(401).json({ error: 'Unauthorized. A valid account session is required.' });
 
     const user = await getUserBySession(sessionId, uidHint);
@@ -105,13 +102,17 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
         try {
-            const saves = await readSaves(uid);
             const gameId = req.query.gameId;
             if (gameId !== undefined) {
                 if (!validGameId(String(gameId))) return res.status(400).json({ error: 'Invalid game ID.' });
-                const imported = saves.imported55gms && saves.imported55gms[String(gameId)];
-                return res.status(200).json({ success: true, saveData: imported && typeof imported === 'object' ? imported : {} });
+                const snap = await db.ref('/accounts/' + uid + '/imported_game_saves/55gms/' + String(gameId)).once('value');
+                const saveData = snap.val();
+                return res.status(200).json({
+                    success: true,
+                    saveData: saveData && typeof saveData === 'object' && !Array.isArray(saveData) ? saveData : {}
+                });
             }
+            const saves = await readLegacySaves(uid);
             return res.status(200).json({ success: true, saves });
         } catch (error) {
             console.error('[BSMS Web :: Games] Error fetching saves:', error);
@@ -122,30 +123,21 @@ export default async function handler(req, res) {
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
         try {
             const payload = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-
-            // Imported 55GMS games update only their own account-scoped save slot.
             if (payload.action === 'saveImportedGame') {
                 const gameId = String(payload.gameId || '');
                 const saveData = payload.saveData;
                 if (!validGameId(gameId) || !validateGameSave(saveData)) {
                     return res.status(400).json({ error: 'Invalid imported-game save data.' });
                 }
-
-                const saves = await readSaves(uid);
-                if (!saves.imported55gms || typeof saves.imported55gms !== 'object' || Array.isArray(saves.imported55gms)) {
-                    saves.imported55gms = {};
-                }
-                saves.imported55gms[gameId] = saveData;
-                await writeSaves(uid, saves);
+                await db.ref('/accounts/' + uid + '/imported_game_saves/55gms/' + gameId).set(saveData);
                 return res.status(200).json({ success: true, gameId, count: Object.keys(saveData).length });
             }
 
-            // Preserve the existing full-save behavior used by the original BSMS game library.
             const saves = payload.saves || {};
             if (typeof saves !== 'object' || saves === null || Array.isArray(saves)) {
                 return res.status(400).json({ error: 'Invalid saves format.' });
             }
-            await writeSaves(uid, saves);
+            await writeLegacySaves(uid, saves);
             return res.status(200).json({ success: true, count: Object.keys(saves).length });
         } catch (error) {
             console.error('[BSMS Web :: Games] Error saving cloud saves:', error);
