@@ -164,4 +164,22 @@ html, body {
 
 
 /* 55GMS catalog cards */
-.game-thumb{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:14px;background:var(--input-bg);border:1px solid var(--border);margin-bottom:14px}.game-thumb.image-failed{display:none}.game-source{display:block;color:var(--fg2);font-size:15px;margin:-8px 0 12px;letter-spacing:.02em}#globalUserBtn{padding:0}
+.game-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 18px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.game-thumb.image-failed { display: none; }
+.game-source {
+  display: block;
+  color: var(--fg2);
+  font-size: 15px;
+  margin: -8px 0 12px;
+  letter-spacing: .02em;
+}
+#globalUserBtn { padding: 0; }
