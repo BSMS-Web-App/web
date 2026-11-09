@@ -198,7 +198,6 @@ const playBtn = document.getElementById('playBtn');
 const cancelLoadBtn = document.getElementById('cancelLoadBtn');
 const gameContainer = document.getElementById('gameContainer');
 const gameIframe = document.getElementById('gameIframe');
-const inGameMenu = document.getElementById('inGameMenu');
 const toast = document.getElementById('toast');
 const searchInput = document.getElementById('gameSearch');
 const azFiltersContainer = document.getElementById('azFilters');
@@ -442,7 +441,7 @@ function showToast() {
     setTimeout(() => toast.classList.remove('show'), 4500);
 }
 
-// In-Game Message Listener Map (Escape + Storage Sync)
+// In-Game Message Listener Map (Storage Sync)
 window.addEventListener('message', (e) => {
     if (e.origin === window.location.origin && e.data?.type === 'bsms-return-game-vault') {
         window.location.assign('/g');
