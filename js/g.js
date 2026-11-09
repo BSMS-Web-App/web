@@ -1,4 +1,5 @@
 (() => {
+if(!localStorage.getItem("session_id")){const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);localStorage.setItem("session_id",Array.from(bytes,b=>b.toString(36).padStart(2,"0")).join(""));}
 const key="bsms_auth_session",grid=document.getElementById("gamesGrid"),search=document.getElementById("gameSearch"),filters=document.getElementById("azFilters"),user=document.getElementById("globalUserBtn"),offline=document.getElementById("offlineBanner");
 let games=[],letter="All",auth=null;
 addEventListener("offline",()=>offline.classList.add("show"));addEventListener("online",()=>offline.classList.remove("show"));if(!navigator.onLine)offline.classList.add("show");
