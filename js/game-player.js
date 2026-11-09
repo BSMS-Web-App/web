@@ -107,11 +107,12 @@
           "X-Session-ID": sessionId,
           "X-UID": accountUid
         };
+        const requestBody = JSON.stringify({ action: "saveImportedGame", gameId, saveData });
         const response = await fetch(cloudEndpoint, {
           method: "POST",
           headers,
-          body: JSON.stringify({ action: "saveImportedGame", gameId, saveData }),
-          keepalive: !!keepalive,
+          body: requestBody,
+          keepalive: !!keepalive && new Blob([requestBody]).size <= 60000,
           cache: "no-store"
         });
         const result = await response.json().catch(() => ({}));
