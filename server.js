@@ -202,7 +202,35 @@ app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
             return res.status(413).send('Game asset is too large.');
         }
 
-        const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+        const extension = filePath.split('.').pop().toLowerCase();
+        const mimeTypes = {
+            html: 'text/html; charset=utf-8',
+            htm: 'text/html; charset=utf-8',
+            js: 'text/javascript; charset=utf-8',
+            mjs: 'text/javascript; charset=utf-8',
+            cjs: 'text/javascript; charset=utf-8',
+            css: 'text/css; charset=utf-8',
+            json: 'application/json; charset=utf-8',
+            svg: 'image/svg+xml',
+            png: 'image/png',
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            avif: 'image/avif',
+            ico: 'image/x-icon',
+            mp3: 'audio/mpeg',
+            mp4: 'video/mp4',
+            webm: 'video/webm',
+            wasm: 'application/wasm',
+            woff: 'font/woff',
+            woff2: 'font/woff2',
+            ttf: 'font/ttf',
+            otf: 'font/otf',
+            xml: 'application/xml',
+            txt: 'text/plain; charset=utf-8'
+        };
+        const contentType = mimeTypes[extension] || upstream.headers.get('content-type') || 'application/octet-stream';
         if (/^(text\/|application\/(?:javascript|json|xml)|image\/svg\+xml)/i.test(contentType)) {
             let source = bytes.toString('utf8');
             source = source
