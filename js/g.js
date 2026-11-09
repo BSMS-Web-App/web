@@ -306,17 +306,24 @@ function renderGamesGrid(listToRender) {
         sourceLabel.className = "game-source";
         sourceLabel.textContent = game.source === "55gms" ? "55GMS" : "BSMS Web";
 
-        const playButton = document.createElement("button");
+        let playButton;
+        if (game.source === "55gms") {
+            playButton = document.createElement("a");
+            playButton.href = `/game-player.html?id=${encodeURIComponent(game.id || game.name)}&src=${encodeURIComponent(game.launchUrl)}&title=${encodeURIComponent(displayName)}`;
+            playButton.target = "_blank";
+            playButton.rel = "opener";
+        } else {
+            playButton = document.createElement("button");
+            playButton.type = "button";
+            playButton.addEventListener("click", () => {
+                history.pushState(null, null, `#${game.name}`);
+                triggerLoadGame(game);
+            });
+        }
         playButton.className = "btn";
-        playButton.type = "button";
         playButton.textContent = "Play";
 
         card.append(thumbnail, title, sourceLabel, playButton);
-
-        card.querySelector(".btn").addEventListener("click", () => {
-            history.pushState(null, null, `#${game.name}`);
-            triggerLoadGame(game);
-        });
 
         gamesGrid.appendChild(card);
     });
@@ -329,18 +336,6 @@ async function triggerLoadGame(game) {
     loadingText.textContent = `Loading ${game.name}...`;
     openPopup('loadingOverlay');
     
-    if (game.source === "55gms") {
-        closePopup("loadingOverlay");
-        isGameRunning = true;
-        gameIframe.src = game.launchUrl;
-        gameContainer.style.display = "block";
-        setTimeout(() => {
-            gameIframe.focus();
-            showToast();
-        }, 250);
-        return;
-    }
-
     currentFetchController = new AbortController();
 
     try {
@@ -355,11 +350,6 @@ async function triggerLoadGame(game) {
         const scriptToInject = `
             <script>
                 (function() {
-                    window.addEventListener('keydown', function(e) {
-                        if(e.key === 'Escape') {
-                            window.parent.postMessage({ type: 'bsms-esc' }, '*');
-                        }
-                    });
                     // Ensure instant focus
                     window.addEventListener('mousedown', function() {
                         window.focus();
@@ -454,8 +444,11 @@ function showToast() {
 
 // In-Game Message Listener Map (Escape + Storage Sync)
 window.addEventListener('message', (e) => {
+    if (e.origin === window.location.origin && e.data?.type === 'bsms-return-game-vault') {
+        window.location.assign('/g');
+        return;
+    }
     if (!e.data) return;
-    if (e.data.type === 'bsms-esc') toggleInGameMenu();
     if (e.data.type === 'bsms-storage-save') {
         const { key, val } = e.data;
         if (key && key !== SESSION_KEY && key !== 'session_id') {
@@ -474,9 +467,6 @@ window.addEventListener('message', (e) => {
         scheduleCloudSave(600);
     }
 });
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isGameRunning) toggleInGameMenu();
-});
 window.addEventListener('beforeunload', () => {
     if (isGameRunning) pushCloudSaves(true);
 });
@@ -484,22 +474,7 @@ window.addEventListener('pagehide', () => {
     if (isGameRunning) pushCloudSaves(true);
 });
 
-function toggleInGameMenu() {
-    if (inGameMenu.classList.contains('show')) {
-        resumeGame();
-    } else {
-        openPopup('inGameMenu');
-        pushCloudSaves(); 
-    }
-}
-
-function resumeGame() {
-    closePopup('inGameMenu');
-    gameIframe.focus();
-}
-
 function quitGame(skipHistoryAction = false) {
-    closePopup('inGameMenu');
     gameContainer.style.display = 'none';
     isGameRunning = false;
     
