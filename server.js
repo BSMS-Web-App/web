@@ -160,9 +160,12 @@ app.get('/raw/package.json', (req, res) => res.type('text/plain').sendFile(path.
 app.get('/raw/vercel.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'vercel.json')));
 app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'server.js')));
 
+// Rate-limit routes that read and serve individual page files.
+app.use(pageFileLimiter);
+
 // Same-origin proxy for the approved 55GMS game repositories.
 // Only the two known repositories are accessible; this is not an open proxy.
-app.get(/^\\/game-assets\\/(.+)$/, async (req, res) => {
+app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
     try {
         const parts = String(req.params[0] || '').split('/');
         const [owner, repository, ref, ...fileParts] = parts;
@@ -172,7 +175,7 @@ app.get(/^\\/game-assets\\/(.+)$/, async (req, res) => {
             owner !== '55gms' ||
             !['55GMS', 'assets'].includes(repository) ||
             !ref || !/^[A-Za-z0-9._-]+$/.test(ref) ||
-            !filePath || fileParts.some((part) => !part || part === '.' || part === '..' || part.includes('\\\\'))
+            !filePath || fileParts.some((part) => !part || part === '.' || part === '..' || part.includes('\\'))
         ) {
             return res.status(400).send('Invalid game asset path.');
         }
@@ -210,8 +213,6 @@ app.get(/^\\/game-assets\\/(.+)$/, async (req, res) => {
     }
 });
 
-// Rate-limit routes that read and serve individual page files.
-app.use(pageFileLimiter);
 
 // Clean URLs
 // Serve the original homepage at the root path.
