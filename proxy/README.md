@@ -4,9 +4,9 @@ A separate, privacy-focused browser proxy project. It is independent from the ma
 
 ## Project status
 
-**Foundation + outbound connection test.**
+**Foundation + controlled BSMS-owned website request test.**
 
-The interface and Node.js service are in place. The first server-side test makes one fixed outbound request to an IP-check endpoint and reports the public IP used by the proxy server. It does not fetch arbitrary URLs or provide general website browsing yet.
+The interface and Node.js service are in place. The first server-side test makes one fixed outbound request to an IP-check endpoint and reports the public IP used by the proxy server. It only fetches paths on the fixed `https://bsms-web.com` origin and returns limited metadata; it does not return or execute the remote HTML.
 
 The intended privacy property is that a destination contacted by the proxy server sees the server's outbound IP for that request, rather than the visitor's direct public IP. The proxy service itself can still receive the visitor's IP. This is not a VPN or an anonymity guarantee.
 
@@ -23,9 +23,10 @@ The intended privacy property is that a destination contacted by the proxy serve
 
 - `GET /` — browser interface.
 - `GET /health` — service health.
-- `GET /api/egress-check` — checks the server's outbound IP using a fixed upstream URL. Rate-limited per direct client connection in process memory.
+- `GET /api/egress-check` — checks the server's outbound IP using a fixed upstream URL.
+- `GET /api/site-check?path=/` — fetches a path on the fixed BSMS-owned site and returns page metadata only.
 
-The egress endpoint does not accept a URL parameter, does not forward request headers or cookies, and does not expose a general fetch function.
+The site-check endpoint accepts a path only, checks DNS results, blocks private and special-use IP ranges, revalidates same-origin redirects, forwards no visitor cookies or authorization headers, applies a timeout and response-size cap, and returns metadata only. These are prototype safeguards, not a complete production security review.
 
 ## Local development
 
@@ -37,7 +38,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:8788`. Use **Test connection** to verify the server's outbound connection.
+Open `http://127.0.0.1:8788`. Enter a URL on `https://bsms-web.com` and press **Continue** to test the server-side request.
 
 ## Planned structure
 
