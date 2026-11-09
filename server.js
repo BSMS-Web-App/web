@@ -160,6 +160,56 @@ app.get('/raw/package.json', (req, res) => res.type('text/plain').sendFile(path.
 app.get('/raw/vercel.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'vercel.json')));
 app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'server.js')));
 
+// Same-origin proxy for the approved 55GMS game repositories.
+// Only the two known repositories are accessible; this is not an open proxy.
+app.get(/^\\/game-assets\\/(.+)$/, async (req, res) => {
+    try {
+        const parts = String(req.params[0] || '').split('/');
+        const [owner, repository, ref, ...fileParts] = parts;
+        const filePath = fileParts.join('/');
+
+        if (
+            owner !== '55gms' ||
+            !['55GMS', 'assets'].includes(repository) ||
+            !ref || !/^[A-Za-z0-9._-]+$/.test(ref) ||
+            !filePath || fileParts.some((part) => !part || part === '.' || part === '..' || part.includes('\\\\'))
+        ) {
+            return res.status(400).send('Invalid game asset path.');
+        }
+
+        const upstreamUrl = 'https://raw.githubusercontent.com/' +
+            [owner, repository, ref, filePath].join('/');
+        const upstream = await fetch(upstreamUrl, {
+            redirect: 'follow',
+            signal: AbortSignal.timeout(12000),
+            headers: { 'User-Agent': 'BSMS-Web-Game-Asset-Proxy' }
+        });
+
+        if (!upstream.ok) {
+            return res.status(upstream.status).send('Game asset unavailable.');
+        }
+
+        const declaredLength = Number(upstream.headers.get('content-length') || 0);
+        if (declaredLength > 50 * 1024 * 1024) {
+            return res.status(413).send('Game asset is too large.');
+        }
+
+        const bytes = Buffer.from(await upstream.arrayBuffer());
+        if (bytes.length > 50 * 1024 * 1024) {
+            return res.status(413).send('Game asset is too large.');
+        }
+
+        res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Length', String(bytes.length));
+        return res.status(200).send(bytes);
+    } catch (error) {
+        console.error('[BSMS Web :: Game Asset Proxy]', error);
+        return res.status(502).send('Unable to retrieve game asset.');
+    }
+});
+
 // Rate-limit routes that read and serve individual page files.
 app.use(pageFileLimiter);
 
