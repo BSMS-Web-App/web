@@ -4,6 +4,17 @@
   <p>A chronological record of updates, improvements, and changes to BSMS Web since it became open source.</p>
 </div>
 
+
+## v6.11.0
+
+- Voice Chat (Beta)
+- Voice Calling Security and Reliability
+- Chat and Homepage Improvements
+- Voice Infrastructure and Deployment
+- Project Documentation and Contributor Guidelines
+
+[View the full changelog for this release](https://github.com/BSMS-Web-App/web/releases/tag/v6.11.0)
+
 ## v6.10.0
 
 - Application API and Hosting Architecture
