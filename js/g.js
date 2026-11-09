@@ -308,7 +308,11 @@ function renderGamesGrid(listToRender) {
         let playButton;
         if (game.source === "55gms") {
             playButton = document.createElement("a");
-            playButton.href = `/game-player.html?id=${encodeURIComponent(game.id || game.name)}&src=${encodeURIComponent(game.launchUrl)}&title=${encodeURIComponent(displayName)}`;
+            const assetMatch = (game.image || "").match(/^https:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/assets@([^/]+)\/(misc\/[^/]+\/)/);
+            const assetBase = assetMatch
+                ? `https://raw.githubusercontent.com/55gms/assets/${assetMatch[1]}/${assetMatch[2]}`
+                : "";
+            playButton.href = `/game-player.html?id=${encodeURIComponent(game.id || game.name)}&src=${encodeURIComponent(game.launchUrl)}&assetBase=${encodeURIComponent(assetBase)}&title=${encodeURIComponent(displayName)}`;
             playButton.target = "_blank";
             playButton.rel = "opener";
         } else {
