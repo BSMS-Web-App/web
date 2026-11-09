@@ -79,7 +79,7 @@
 
     // Also rewrite any remaining literal references to the 55GMS origin to GitHub's raw host.
     html = html.replace(/https?:\/\/(?:www\.)?55gms\.com/gi, "https://raw.githubusercontent.com/55gms/55GMS/main/static");
-    html = html.replace(/<script\b[^>]*src=["'][^"']*55gms\/gms-ads[^"']*["'][^>]*>\s*<\/script>/gi, "");
+    html = html.replace(/<script\b[^>]*src=["'][^"']*raw\.githubusercontent\.com\/55gms\/gms-ads[^"']*["'][^>]*>\s*<\/script>/gi, "");
 
     // Replace an existing base URL, or add one so relative game files resolve against GitHub.
     const baseTag = assetBase
