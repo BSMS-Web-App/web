@@ -13,30 +13,62 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("show"), 2800);
 }
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const value = input.value.trim();
+function getOwnedSitePath(value) {
+  let candidate = value.trim();
+  if (!candidate) throw new Error("Enter a BSMS Web website address.");
 
-  if (!value) {
-    hint.textContent = "Enter a website address to prepare a session.";
-    input.focus();
-    return;
-  }
-
-  let candidate = value;
   if (!/^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(candidate)) {
     candidate = `https://${candidate}`;
   }
 
+  const parsed = new URL(candidate);
+  if (parsed.protocol !== "https:" ||
+      !["bsms-web.com", "www.bsms-web.com"].includes(parsed.hostname) ||
+      parsed.port || parsed.username || parsed.password) {
+    throw new Error("For this first test, enter a page on https://bsms-web.com.");
+  }
+  return parsed.pathname + parsed.search;
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  let sitePath;
+
   try {
-    const parsed = new URL(candidate);
-    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Unsupported protocol");
-    if (!parsed.hostname || !parsed.hostname.includes(".")) throw new Error("Invalid host");
-    hint.textContent = `Address recognized: ${parsed.hostname}. Website navigation is not connected yet.`;
-    showToast("Website browsing is not available in this preview.");
-  } catch {
-    hint.textContent = "That address doesn't look valid. Try a full website domain.";
+    sitePath = getOwnedSitePath(input.value);
+  } catch (error) {
+    hint.textContent = error.message;
     input.focus();
+    return;
+  }
+
+  hint.textContent = "Requesting the BSMS Web page from the proxy server…";
+  connectionTitle.textContent = "Fetching BSMS Web";
+  connectionDescription.textContent = "The server is requesting the page. Its HTML will not be executed.";
+  const goButton = form.querySelector("button[type=submit]");
+  goButton.disabled = true;
+  goButton.textContent = "Checking…";
+
+  try {
+    const response = await fetch(`/api/site-check?path=${encodeURIComponent(sitePath)}`, {
+      headers: { accept: "application/json" },
+      cache: "no-store"
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "The site request failed.");
+
+    connectionTitle.textContent = `BSMS Web responded · HTTP ${result.statusCode}`;
+    connectionDescription.textContent = `${result.title} · ${result.bytesReceived.toLocaleString()} bytes received by the server`;
+    hint.textContent = `Successfully requested ${result.destination}${result.finalPath}`.replace(/\s+/g, " ");
+    showToast("The proxy server reached BSMS Web.");
+  } catch (error) {
+    connectionTitle.textContent = "Website request failed";
+    connectionDescription.textContent = error.message || "The proxy server could not fetch that page.";
+    hint.textContent = "Check the address and try again.";
+    showToast("The BSMS Web request could not be completed.");
+  } finally {
+    goButton.disabled = false;
+    goButton.innerHTML = 'Continue <span aria-hidden="true">→</span>';
   }
 });
 
@@ -48,7 +80,6 @@ testButton.addEventListener("click", async () => {
 
   try {
     const response = await fetch("/api/egress-check", {
-      method: "GET",
       headers: { accept: "application/json" },
       cache: "no-store"
     });
