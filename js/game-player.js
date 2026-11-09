@@ -126,10 +126,10 @@ function rewriteGameHtml(html, base) {
 
   // Route raw GitHub files from the two approved 55GMS repositories through BSMS Web.
   html = html.replace(
-    /https?:\\/\\/raw\\.githubusercontent\\.com\\/(55gms)\\/(55GMS|assets)\\/([^/"'\s)]+)\\/([^"'\s)]+)/gi,
+    /https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi,
     "/game-assets/$1/$2/$3/$4"
   ).replace(
-    /https?:\\/\\/cdn\\.jsdelivr\\.net\\/gh\\/55gms\\/(55GMS|assets)@([^/"'\s)]+)\\/([^"'\s)]+)/gi,
+    /https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi,
     "/game-assets/55gms/$1/$2/$3"
   );
 
