@@ -8,7 +8,8 @@ const loading = document.getElementById("playerLoading");
 const loadingTitle = document.getElementById("loadingTitle");
 const loadingCaption = document.getElementById("loadingCaption");
 const back = document.getElementById("vaultBack");
-const MAIN = "/game-assets/55gms/55GMS/main/static/";
+const ASSET_ORIGIN = "https://assets.bsms-web.com";
+const MAIN = ASSET_ORIGIN + "/game-assets/55gms/55GMS/main/static/";
 
 const sid = localStorage.getItem("session_id") || "";
 let auth = null;
@@ -36,7 +37,7 @@ function gameSlug(game) {
 
 function assetBase(image) {
   const match = String(image || "").match(/^https:\/\/raw\.githubusercontent\.com\/55gms\/assets\/([^/]+)\/(misc\/[^/]+\/)/i);
-  return match ? "/game-assets/55gms/assets/" + match[1] + "/" + match[2] : "";
+  return match ? ASSET_ORIGIN + "/game-assets/55gms/assets/" + match[1] + "/" + match[2] : "";
 }
 
 function saveData() {
@@ -127,10 +128,10 @@ function rewriteGameHtml(html, base) {
   // Route raw GitHub files from the two approved 55GMS repositories through BSMS Web.
   html = html.replace(
     /https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi,
-    "/game-assets/$1/$2/$3/$4"
+    ASSET_ORIGIN + "/game-assets/$1/$2/$3/$4"
   ).replace(
     /https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi,
-    "/game-assets/55gms/$1/$2/$3"
+    ASSET_ORIGIN + "/game-assets/55gms/$1/$2/$3"
   );
 
   // Rewrite old 55GMS absolute URLs to the same-origin static mirror.
@@ -197,7 +198,7 @@ async function load() {
 
     const sameOriginPath = sourceUrl.pathname.replace(
       /^\/55gms\/55GMS\//,
-      "/game-assets/55gms/55GMS/"
+      ASSET_ORIGIN + "/game-assets/55gms/55GMS/"
     );
     const gameResponse = await fetch(sameOriginPath, { cache: "force-cache" });
     if (!gameResponse.ok) throw Error("The game HTML could not be retrieved.");
