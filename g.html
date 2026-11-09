@@ -102,17 +102,8 @@ SPDX-License-Identifier: AGPL-3.0-only
   <button id="exitGameBtn" type="button" aria-label="Exit game" title="Exit game">×</button>
 </div>
 
-<!-- In-Game Menu -->
-<div id="inGameMenu" class="overlay" style="z-index: 4000;">
-  <div class="popup" style="align-items:center;">
-    <h2 style="margin-bottom: 24px;">Game Menu</h2>
-    <button class="btn" onclick="resumeGame()" style="margin-bottom:12px;" data-ga="games_resume_btn">Resume Game</button>
-    <button class="btn sec" onclick="quitGame(false)" data-ga="games_quit_btn">Quit Game & Save</button>
-  </div>
-</div>
-
 <!-- Toast Notification -->
-<div id="toast">Press the <b>Escape</b> key to show menu</div>
+<div id="toast">Game loaded. Use the browser controls to return to the Game Vault.</div>
 
 <!-- Core Application Script -->
 <script src="/js/g.js"></script>    
