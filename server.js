@@ -203,17 +203,17 @@ app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
         }
 
         const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
-        if (/^(text\\/|application\\/(?:javascript|json|xml)|image\\/svg\\+xml)/i.test(contentType)) {
+        if (/^(text\/|application\/(?:javascript|json|xml)|image\/svg\+xml)/i.test(contentType)) {
             let source = bytes.toString('utf8');
             source = source
-                .replace(/https?:\\/\\/raw\\.githubusercontent\\.com\\/(55gms)\\/(55GMS|assets)\\/([^/"'\\s)]+)\\/([^"'\\s)]+)/gi, '/game-assets/$1/$2/$3/$4')
-                .replace(/https?:\\/\\/cdn\\.jsdelivr\\.net\\/gh\\/55gms\\/(55GMS|assets)@([^/"'\\s)]+)\\/([^"'\\s)]+)/gi, '/game-assets/55gms/$1/$2/$3')
-                .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/assets\\//gi, '/game-assets/55gms/55GMS/main/static/assets/')
-                .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/img\\//gi, '/game-assets/55gms/55GMS/main/static/img/')
-                .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/misc\\//gi, '/game-assets/55gms/55GMS/main/static/misc/')
-                .replace(/(["'(=])\\/assets\\//g, '$1/game-assets/55gms/55GMS/main/static/assets/')
-                .replace(/(["'(=])\\/img\\//g, '$1/game-assets/55gms/55GMS/main/static/img/')
-                .replace(/(["'(=])\\/misc\\//g, '$1/game-assets/55gms/55GMS/main/static/misc/');
+                .replace(/https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi, '/game-assets/$1/$2/$3/$4')
+                .replace(/https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi, '/game-assets/55gms/$1/$2/$3')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, '/game-assets/55gms/55GMS/main/static/assets/')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, '/game-assets/55gms/55GMS/main/static/img/')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, '/game-assets/55gms/55GMS/main/static/misc/')
+                .replace(/(["'(=])\/assets\//g, '$1/game-assets/55gms/55GMS/main/static/assets/')
+                .replace(/(["'(=])\/img\//g, '$1/game-assets/55gms/55GMS/main/static/img/')
+                .replace(/(["'(=])\/misc\//g, '$1/game-assets/55gms/55GMS/main/static/misc/');
             bytes = Buffer.from(source);
         }
 
