@@ -308,7 +308,7 @@ function renderGamesGrid(listToRender) {
         let playButton;
         if (game.source === "55gms") {
             playButton = document.createElement("a");
-            const assetMatch = (game.image || "").match(/^https:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/assets@([^/]+)\/(misc\/[^/]+\/)/);
+            const assetMatch = (game.image || "").match(/^https:\/\/raw\.githubusercontent\.com\/55gms\/assets\/([^/]+)\/(misc\/[^/]+\/)/);
             const assetBase = assetMatch
                 ? `https://raw.githubusercontent.com/55gms/assets/${assetMatch[1]}/${assetMatch[2]}`
                 : "";
