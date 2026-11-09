@@ -62,31 +62,31 @@
   function rewriteGitHubSources(html) {
     // Move 55GMS asset-CDN URLs to the corresponding immutable GitHub raw files.
     html = html.replace(
-      /https?:\\/\\/cdn\\.jsdelivr\\.net\\/gh\\/55gms\\/assets@([^/]+)\\//gi,
+      /https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/assets@([^/]+)\//gi,
       "https://raw.githubusercontent.com/55gms/assets/$1/"
     );
     html = html.replace(
-      /https?:\\/\\/cdn\\.jsdelivr\\.net\\/gh\\/55gms\\/gms-ads@([^/]+)\\//gi,
+      /https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/gms-ads@([^/]+)\//gi,
       "https://raw.githubusercontent.com/55gms/gms-ads/$1/"
     );
 
     // Replace 55GMS root-hosted files with their equivalents in the main GitHub repository.
-    html = html.replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/assets\\//gi, MAIN_RAW + "assets/");
-    html = html.replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/img\\//gi, MAIN_RAW + "img/");
-    html = html.replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/misc\\//gi, MAIN_RAW + "misc/");
-    html = html.replace(/(["'(=])\\/assets\\//g, "$1" + MAIN_RAW + "assets/");
-    html = html.replace(/(["'(=])\\/img\\//g, "$1" + MAIN_RAW + "img/");
+    html = html.replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, MAIN_RAW + "assets/");
+    html = html.replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, MAIN_RAW + "img/");
+    html = html.replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, MAIN_RAW + "misc/");
+    html = html.replace(/(["'(=])\/assets\//g, "$1" + MAIN_RAW + "assets/");
+    html = html.replace(/(["'(=])\/img\//g, "$1" + MAIN_RAW + "img/");
 
     // Also rewrite any remaining literal references to the 55GMS origin to GitHub's raw host.
-    html = html.replace(/https?:\\/\\/(?:www\\.)?55gms\\.com/gi, "https://raw.githubusercontent.com/55gms/55GMS/main/static");
-    html = html.replace(/<script\\b[^>]*src=["'][^"']*55gms\\/gms-ads[^"']*["'][^>]*>\\s*<\\/script>/gi, "");
+    html = html.replace(/https?:\/\/(?:www\.)?55gms\.com/gi, "https://raw.githubusercontent.com/55gms/55GMS/main/static");
+    html = html.replace(/<script\b[^>]*src=["'][^"']*55gms\/gms-ads[^"']*["'][^>]*>\s*<\/script>/gi, "");
 
     // Replace an existing base URL, or add one so relative game files resolve against GitHub.
     const baseTag = assetBase
       ? '<base href="' + assetBase.replace(/"/g, "&quot;") + '">'
       : "";
-    if (/<base\\b[^>]*>/i.test(html)) {
-      if (assetBase) html = html.replace(/<base\\b[^>]*>/i, baseTag);
+    if (/<base\b[^>]*>/i.test(html)) {
+      if (assetBase) html = html.replace(/<base\b[^>]*>/i, baseTag);
     } else if (baseTag) {
       html = html.replace(/<head([^>]*)>/i, "<head$1>" + baseTag);
     }
