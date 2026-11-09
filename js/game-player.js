@@ -34,10 +34,15 @@ function gameSlug(game) {
 }
 
 function sameOriginAsset(url) {
-  return String(url || "").replace(
-    /^https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\\s)]+)\/([^"'\\s)]+)/gi,
-    "/game-assets/$1/$2/$3/$4"
-  );
+  return String(url || "")
+    .replace(
+      /^https?:\\/\\/raw\\.githubusercontent\\.com\\/(55gms)\\/(55GMS|assets)\\/([^/"'\\s)]+)\\/([^"'\\s)]+)/gi,
+      "/game-assets/$1/$2/$3/$4"
+    )
+    .replace(
+      /^https?:\\/\\/cdn\\.jsdelivr\\.net\\/gh\\/55gms\\/(55GMS|assets)@([^/"'\\s)]+)\\/([^"'\\s)]+)/gi,
+      "/game-assets/55gms/$1/$2/$3"
+    );
 }
 
 function assetBase(image) {
@@ -131,7 +136,13 @@ function rewriteGameHtml(html, base) {
     .replace(/<script\b[^>]*src=["'][^"']*(?:gms-ads|poki-sdk)[^"']*["'][^>]*>\s*<\/script>/gi, "");
 
   // Route raw GitHub files from the two approved 55GMS repositories through BSMS Web.
-  html = sameOriginAsset(html);
+  html = html.replace(
+    /https?:\\/\\/raw\\.githubusercontent\\.com\\/(55gms)\\/(55GMS|assets)\\/([^/"'\\s)]+)\\/([^"'\\s)]+)/gi,
+    "/game-assets/$1/$2/$3/$4"
+  ).replace(
+    /https?:\\/\\/cdn\\.jsdelivr\\.net\\/gh\\/55gms\\/(55GMS|assets)@([^/"'\\s)]+)\\/([^"'\\s)]+)/gi,
+    "/game-assets/55gms/$1/$2/$3"
+  );
 
   // Rewrite old 55GMS absolute URLs to the same-origin static mirror.
   html = html
