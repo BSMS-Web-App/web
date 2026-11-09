@@ -140,16 +140,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-16",
-    "name": "Archery World Tour",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@00698fd3d67cef4cd2f19b8435b0a7d7e213ea57/misc/archeryWorldTour/img.webp?v=1",
-    "preview": "https://55gms.com/img/videos/preview/archeryworldtour.mp4",
-    "launchUrl": "https://55gms.com/misc/archeryWorldTour/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-17",
     "name": "Super Star Car",
     "author": "",
@@ -166,26 +156,6 @@
     "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/asmallworldcup/img.webp",
     "preview": "https://55gms.com/img/videos/preview/asmallworldcup.mp4",
     "launchUrl": "https://55gms.com/misc/asmallworldcup/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-19",
-    "name": "Awesome Tanks",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/awesometanks/game.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/awesometanks/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-20",
-    "name": "Awesome Tanks 2",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/awsometanks2/icon.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/awsometanks2/index.html",
     "usesProxy": false,
     "source": "55gms"
   },
@@ -470,16 +440,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-49",
-    "name": "Skibidi Shooter",
-    "author": "Luqman Kalil",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/skibidi-shooter/img.webp",
-    "preview": "https://55gms.com/img/videos/preview/skibidishooter.mp4",
-    "launchUrl": "https://55gms.com/misc/skibidi-shooter/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-50",
     "name": "Hotline Miami",
     "author": "Dennaton Games",
@@ -556,16 +516,6 @@
     "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/doodlejump/icon.webp",
     "preview": "",
     "launchUrl": "https://55gms.com/misc/doodlejump/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-58",
-    "name": "Gun Spin",
-    "author": "",
-    "image": "https://55gms.com/img/games/gunspin.webp",
-    "preview": "https://55gms.com/img/videos/preview/gunspin.mp4",
-    "launchUrl": "https://55gms.com/misc/gunspin/index.html",
     "usesProxy": false,
     "source": "55gms"
   },
@@ -820,16 +770,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-84",
-    "name": "Funny Shooter 2",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/funny-shooter-2/img.webp",
-    "preview": "https://55gms.com/img/videos/preview/funnyshooter2.mp4",
-    "launchUrl": "https://55gms.com/misc/funny-shooter-2/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-85",
     "name": "Block Blast",
     "author": "",
@@ -966,26 +906,6 @@
     "image": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/grindcraft/img.webp",
     "preview": "https://55gms.com/img/videos/preview/grindcraft.mp4",
     "launchUrl": "https://55gms.com/misc/grindcraft/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-99",
-    "name": "Gun Mayhem 2",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/flash/img/gm2.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/flash/index.html?swf=gmayhem2.swf",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-100",
-    "name": "Gun Mayhem 3",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/flash/img/gm3.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/flash/index.html?swf=gun-mayhem-3.swf",
     "usesProxy": false,
     "source": "55gms"
   },
@@ -1290,16 +1210,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-131",
-    "name": "Knife Hit",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/knifehit/icon.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/knifehit/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-132",
     "name": "Little Alchemy",
     "author": "",
@@ -1576,16 +1486,6 @@
     "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/pingponggo/img.webp",
     "preview": "https://55gms.com/img/videos/preview/pingponggo.mp4",
     "launchUrl": "https://55gms.com/misc/pingponggo/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-160",
-    "name": "Mr. Bullet",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/mrbullet/icon-256.webp",
-    "preview": "https://55gms.com/img/videos/preview/mrbullet.mp4",
-    "launchUrl": "https://55gms.com/misc/mrbullet/index.html",
     "usesProxy": false,
     "source": "55gms"
   },
@@ -2650,26 +2550,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-268",
-    "name": "Time Shooter 1",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/time-shooter1/img.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/time-shooter1/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-269",
-    "name": "Time Shooter 2",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/time-shooter2/img.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/time-shooter2/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-270",
     "name": "Kiwi Clicker",
     "author": "",
@@ -3200,16 +3080,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-325",
-    "name": "Knife Merge",
-    "author": "WeDoYouPlay",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/knife-merge/img.webp",
-    "preview": "https://55gms.com/img/videos/preview/knifemerge.mp4",
-    "launchUrl": "https://55gms.com/misc/knife-merge/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-326",
     "name": "Dino Simulator",
     "author": "Story Giant Games",
@@ -3430,16 +3300,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-348",
-    "name": "Johnny Trigger Sniper",
-    "author": "SayGames",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/johnny-trigger-sniper/img.webp",
-    "preview": "https://55gms.com/img/videos/preview/johnnytriggersniper.mp4",
-    "launchUrl": "https://55gms.com/misc/johnny-trigger-sniper/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-349",
     "name": "Roller",
     "author": "Fancade",
@@ -3506,16 +3366,6 @@
     "image": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/world-of-screw/img.webp",
     "preview": "https://55gms.com/img/videos/preview/worldofscrew.mp4",
     "launchUrl": "https://55gms.com/misc/world-of-screw/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-356",
-    "name": "Bullet Bros",
-    "author": "gametornado",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/bullet-bros/img.webp",
-    "preview": "https://55gms.com/img/videos/preview/bulletbros.mp4",
-    "launchUrl": "https://55gms.com/misc/bullet-bros/index.html",
     "usesProxy": false,
     "source": "55gms"
   },
@@ -4536,16 +4386,6 @@
     "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/sketchbook/img.webp",
     "preview": "",
     "launchUrl": "https://55gms.com/misc/sketchbook/index.html",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-459",
-    "name": "Time Shooter 3",
-    "author": "GoGoMan",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/time-shooter-3/img.webp",
-    "preview": "https://55gms.com/img/videos/preview/timeshooter3.mp4",
-    "launchUrl": "https://55gms.com/misc/time-shooter-3/index.html",
     "usesProxy": false,
     "source": "55gms"
   },
