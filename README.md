@@ -13,7 +13,7 @@
   [![Database](https://img.shields.io/badge/Database-Self--Hosted-6A5ACD)](https://bsms-web.com)
   [![Hosting](https://img.shields.io/badge/Hosting-Vercel-black?logo=vercel)](https://vercel.com/)
 
-  [Website](https://bsms-web.com) · [Report a Bug](https://github.com/BSMS-Web-App/web/issues) · [View Releases](https://github.com/BSMS-Web-App/web/releases)
+  [Website](https://bsms-web.com) · [Report a Bug](https://bsms-web.com/support?type=bug) · [View Releases](https://github.com/BSMS-Web-App/web/releases)
 </div>
 
 ---
