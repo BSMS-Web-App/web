@@ -57,7 +57,7 @@ async function writeLegacySaves(uid, saves) {
     await db.ref('/accounts/' + uid + '/game_saves_raw').set(JSON.stringify(saves));
     const safeObject = {};
     for (const [key, value] of Object.entries(saves)) {
-        const safeKey = key.replace(/[.#$[\]\/]/g, '_');
+        const safeKey = key.replace(/[.#$\[\]\/]/g, '_');
         safeObject[safeKey] = value;
     }
     await db.ref('/accounts/' + uid + '/game_saves').set(safeObject);
