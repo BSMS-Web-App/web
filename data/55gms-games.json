@@ -1960,16 +1960,6 @@
     "source": "55gms"
   },
   {
-    "id": "55gms-198",
-    "name": "Poker",
-    "author": "",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/poker/poker.webp",
-    "preview": "",
-    "launchUrl": "https://www.247freepoker.com/",
-    "usesProxy": true,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-199",
     "name": "Raft Wars",
     "author": "Martijn Kunst",
@@ -2917,16 +2907,6 @@
     "preview": "",
     "launchUrl": "https://digdig.io/",
     "usesProxy": true,
-    "source": "55gms"
-  },
-  {
-    "id": "55gms-294",
-    "name": "Buckshot Roulette",
-    "author": "Bread",
-    "image": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/buckshot/img.webp",
-    "preview": "",
-    "launchUrl": "https://55gms.com/misc/buckshot/index.html",
-    "usesProxy": false,
     "source": "55gms"
   },
   {
