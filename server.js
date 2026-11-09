@@ -170,6 +170,7 @@ app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.h
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
+app.get('/g/:gameSlug', (req, res) => res.sendFile(path.join(__dirname, 'game-player.html')));
 app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
 app.get('/contact', (req, res) => res.redirect(301, '/support'));
 app.get('/bug-report', (req, res) => res.redirect(302, '/support?type=bug'));
