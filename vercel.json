@@ -15,7 +15,7 @@
   "rewrites": [
     {
       "source": "/g/:gameSlug",
-      "destination": "/game-player.html?slug=:gameSlug"
+      "destination": "/game-player?slug=:gameSlug"
     }
   ],
   "git": {
