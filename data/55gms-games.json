@@ -1,15 +1,5 @@
 [
   {
-    "id": "55gms-1",
-    "name": "[!!] Request A Game",
-    "author": "",
-    "image": "https://55gms.com/img/jotform.png",
-    "preview": "",
-    "launchUrl": "https://docs.google.com/forms/d/e/1FAIpQLSfY7Eh5sWLn9DcNHilyp2Xi_I8YA0MxXbENQDsatkwD_F1qeA/viewform",
-    "usesProxy": false,
-    "source": "55gms"
-  },
-  {
     "id": "55gms-2",
     "name": "1v1.lol",
     "author": "",
