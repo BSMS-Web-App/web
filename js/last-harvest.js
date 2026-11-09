@@ -24,13 +24,15 @@ const chapters=[
 let state={name:'',heroClass:'Guardian',x:MAP_W*TILE/2,y:MAP_H*TILE/2,stage:0,coins:100,hp:40,cutscene:0,seenIntro:false};
 try{const old=JSON.parse(localStorage.getItem(SAVE));if(old&&old.name)state={...state,...old};}catch(e){}
 let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalked=false,questStep=0,dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13,cinematic=null;
+questStep=state.questStep!==undefined?state.questStep:((state.cityUnlocked||(state.beaten&&(state.beaten.north||state.beaten.east||state.beaten.south)))?4:0);
+function setQ(n){questStep=n;state.questStep=n;try{save();}catch(e){}}
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
 const save=()=>localStorage.setItem(SAVE,JSON.stringify(state));
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
 const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25,w:5,h:4},{x:21,y:24,w:5,h:4},{x:18,y:12,w:3,h:2}];
-function gateBlocked(tx,ty){return GUARDS.some(g=>!state.beaten[g.id]&&tx>=g.gate.x&&tx<g.gate.x+g.gate.w&&ty>=g.gate.y&&ty<g.gate.y+g.gate.h);}
+function gateBlocked(tx,ty){return GUARDS.some(g=>{if(state.beaten[g.id])return false;const b=g.block||g.gate;return tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h;});}
 function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(gateBlocked(tx,ty))return true;if(tileAt(tx,ty))return true;for(const b of solids)if(tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h)return true;for(const t of trees)if(Math.hypot(x-(t.x*TILE+16),y-(t.y*TILE+18))<20)return true;return false;}
 const trees=[];for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++){const edge=x<4||y<3||x>MAP_W-5||y>MAP_H-5;const inBuilding=solids.some(b=>x>=b.x-1&&x<b.x+b.w+1&&y>=b.y-1&&y<b.y+b.h+1);const onRoad=(y>=11&&y<15)||(x>=15&&x<19);if(edge&&!inBuilding&&!onRoad&&rand(x,y)>.18)trees.push({x,y});}
 const npcs=[{x:16*TILE,y:12*TILE,name:'ELDER MAPLE',color:'#b8c7a1',lines:['The village square feels colder today. Your parents were last seen near the fountain.','The Everfeast is older than Hearthvale. Find the truth, not just the missing keepers.']},{x:22*TILE,y:13*TILE,name:'ROWAN',color:'#bb6542',lines:['I will come with you. We have been friends forever—trust me.','The woods are full of strange creatures. Keep your guard up.']},{x:14*TILE,y:16*TILE,name:'MILLIE',color:'#d9a0a5',lines:['I run the village flower stall. The golden leaves have been falling the wrong way today.','Your mother used to buy marigolds every Harvest Eve.']},{x:25*TILE,y:16*TILE,name:'GUS',color:'#668db4',lines:['I keep the village well clean. Last night, I heard footsteps by the north road.','Someone dropped a torn piece of a royal-looking banner near the fountain.']},{x:29*TILE,y:12*TILE,name:'PIPER',color:'#d1ad53',lines:['I saw Rowan speaking to a cloaked stranger. Maybe it was nothing…','Please be careful out there, okay?']}];
@@ -41,8 +43,8 @@ const roomNPCs=[
 [{x:.34,y:.56,name:'OLD CRAFTSMAN ORIN',color:'#7885a7',lines:['Your parents asked me to keep this old map safe.','The symbol on it matches the seal beneath the village fountain.']},{x:.68,y:.48,name:'WREN THE APPRENTICE',color:'#bd8c53',lines:['I am learning to repair tools. The workshop has been busy lately.','Orin knows more about the Everfeast than he lets on.']}]
 ];
 const GUARDS=[
-{id:'north',name:'GATEKEEPER BRAWN',tx:16,ty:5,gate:{x:15,y:5,w:4,h:1},an:5,hp:34,atk:6,reward:60,lines:['Halt! The north road is closed until the harvest bell rings.','If you want to pass, prove you can protect Hearthvale!'],win:['Hmph... you fight like a true keeper. The north road is open.']},
-{id:'east',name:'GATEKEEPER WINONA',tx:40,ty:12,gate:{x:40,y:11,w:1,h:4},an:6,hp:40,atk:7,reward:75,lines:['The east road is closed. Too many strangers lately.','Show me your strength and I will let you through!'],win:['Impressive! Go on — the east road is yours.']}
+{id:'north',name:'GATEKEEPER BRAWN',tx:16,ty:5,gate:{x:15,y:5,w:4,h:1},row:6,hp:34,atk:6,reward:60,lines:['Halt! The north road is closed until the harvest bell rings.','If you want to pass, prove you can protect Hearthvale!'],win:['Hmph... you fight like a true keeper. The north road is open.']},
+{id:'east',name:'GATEKEEPER WINONA',tx:40,ty:12,gate:{x:40,y:11,w:1,h:4},row:23,hp:40,atk:7,reward:75,lines:['The east road is closed. Too many strangers lately.','Show me your strength and I will let you through!'],win:['Impressive! Go on — the east road is yours.']}
 ];
 /* --- chapter bosses: one per storyline, painted from the Kenney palette (bosses.png, 64x64 each) --- */
 const BOSSES=[
@@ -61,7 +63,7 @@ const BOSS_NPC={};BOSSES.forEach((b,i)=>{if(b.name!=='ROWAN')BOSS_NPC[b.name]=i;
 
 
 state.beaten=state.beaten||{};
-GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win});
+GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win});
 GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
 const POS={'ELDER MAPLE':[12,12],'ROWAN':[21,12],'MILLIE':[16,20],'GUS':[17,26],'PIPER':[30,13]};npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
 npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
@@ -94,9 +96,7 @@ function stopMusic(){clearInterval(musTimer);musTimer=0;musCur=null;}
 function playMusic(n){if(muted||!AC||AC.state!=='running')return;if(musCur===n)return;stopMusic();musCur=n;musStep=0;const T=MUS[n];if(!T)return;const ms=60000/T.bpm/2;musTimer=setInterval(()=>{const s=musStep++,l=T.l[s%T.l.length],bb=T.b[((s/4)|0)%T.b.length];if(l)tone(440*Math.pow(2,(l-69)/12),ms*.0009,'square',.012);if(s%4===0&&bb)tone(440*Math.pow(2,(bb-69)/12),ms*.0036,'triangle',.028);},ms);}
 function musicTick(){if(muted)return;const want=titleOpen?'title':battle?(battle.B?'boss':'battle'):cinematic?'story':scene==='area'?'wander':'village';if(want!==musCur)playMusic(want);}
 addEventListener('keydown',e=>{if((e.key==='m'||e.key==='M')&&!titleOpen&&$('lh-create').hidden){setMuted(!muted);}});
-/* ---------- portraits: one anime face per character ---------- */
-const AN_MAP={get YOU(){return({Guardian:0,Scout:1,Mage:2})[state.heroClass]??0;},ROWAN:3,'ELDER MAPLE':7,MARA:8,THOMAS:9,INSTRUCTOR:10,MILLIE:11,GUS:12,PIPER:13,'GATEKEEPER BRAWN':5,'GATEKEEPER WINONA':6,CHALLENGER:14,'MASKED MERCHANT':15,JUNIPER:16,'INNKEEPER BRAM':17,'NELL THE TRAVELER':18,'SHOPKEEPER TILLY':19,FINN:20,'OLD CRAFTSMAN ORIN':21,'WREN THE APPRENTICE':22,ANNOUNCER:23,'TOWER KEEPER':23,'FARMER FLINT':24,'HAZEL THE HUNTER':25,'OLD WILLOW':26,PIP:27,'ORCHARD KEEPER DAHLIA':28,'FISHER MARLO':29,'SMUGGLER VEX':30,'SHADOW BROKER':31,'FROST RANGER ILSA':32,'MONK TORV':33,'CAPTAIN ALDRIC':34,'SISTER MIRELLE':35,'TINKER COG':36,'ORACLE SELENE':37,'BRIGAND BRUNO':38,'HOLLOW KING':39,'MARA THE NEIGHBOR':40,'GOLDLEAF MAYOR':41,'MERCHANT MARISOL':42,'INNKEEPER ROSA':43,'WAITER GHOST':44,'HALL STEWARD ORLAN':45,'ICE SPRITE':46,'ANCIENT KEEPER':47};
-function initRows(){Object.assign(NPC_ROW,{'HAZEL THE HUNTER':37,'OLD WILLOW':20,PIP:18,'ORCHARD KEEPER DAHLIA':34,'FARMER FLINT':15,'BRIGAND BRUNO':3,'FISHER MARLO':33,'WAITER GHOST':44,'ORACLE SELENE':49,'SMUGGLER VEX':16,'SHADOW BROKER':43,'MERCHANT MARISOL':39,'HALL STEWARD ORLAN':42,'ANCIENT KEEPER':40,'FROST RANGER ILSA':48,'MONK TORV':47,'ICE SPRITE':45,'CAPTAIN ALDRIC':36,'SISTER MIRELLE':25,'TINKER COG':32,MARA:28,THOMAS:17,'GOLDLEAF MAYOR':30,'INNKEEPER ROSA':41,'TOWER KEEPER':46});}
+function initRows(){Object.assign(NPC_ROW,{INSTRUCTOR:10,CHALLENGER:36,ANNOUNCER:46,'HAZEL THE HUNTER':37,'OLD WILLOW':20,PIP:18,'ORCHARD KEEPER DAHLIA':34,'FARMER FLINT':15,'BRIGAND BRUNO':3,'FISHER MARLO':33,'WAITER GHOST':44,'ORACLE SELENE':49,'SMUGGLER VEX':16,'SHADOW BROKER':43,'MERCHANT MARISOL':39,'HALL STEWARD ORLAN':42,'ANCIENT KEEPER':40,'FROST RANGER ILSA':48,'MONK TORV':47,'ICE SPRITE':45,'CAPTAIN ALDRIC':36,'SISTER MIRELLE':25,'TINKER COG':32,MARA:28,THOMAS:17,'GOLDLEAF MAYOR':30,'INNKEEPER ROSA':41,'TOWER KEEPER':46});}
 /* ---------- skills: start with one, unlock more as you level, max 4 equipped ---------- */
 const SKILL_LV=[1,2,3,5,7,9,11,13];
 const SKILL_EXTRA={
@@ -248,24 +248,27 @@ function genCity(){const w=40,h=26,solid=new Uint8Array(w*h),ground=new Uint8Arr
 function enterRegion(c){const A=getRegion(c);startArea(A,A.spawn.x,A.spawn.y);setDialogue(STORY[c].intro.map(t=>['JOURNAL',t]));}
 function startArea(A,tx,ty){AREA=A;A.leaving=false;A.bossTalk=0;scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
 function enterArea(id){if(id==='city'){startArea(getCity(),1,13);setDialogue([['GOLDLEAF MAYOR','Welcome to Goldleaf City, traveler! The Tower stands to the north.']]);}}
-function leaveArea(to){sfx('portal');const c=AREA&&AREA.chapter;const city=AREA&&AREA.city;AREA=null;scene='outside';stepper=null;if(city){state.x=44*TILE+16;state.y=12*TILE+24;}else{state.x=16*TILE+16;state.y=32*TILE+24;}updateHud();save();}
+function leaveArea(to){sfx('portal');const c=AREA&&AREA.chapter;const city=AREA&&AREA.city;const ret=AREA&&AREA.ret;AREA=null;scene='outside';stepper=null;if(city){state.x=44*TILE+16;state.y=12*TILE+24;}else if(ret){state.x=ret.x;state.y=ret.y;}else{state.x=16*TILE+16;state.y=32*TILE+24;}updateHud();save();}
 function areaHit(x,y){const A=AREA,tx=Math.floor(x/32),ty=Math.floor(y/32);if(tx<0||ty<0||tx>=A.w||ty>=A.h)return true;if(A.solid[ty*A.w+tx])return true;return A.npcs.some(n=>n.x===tx&&n.y===ty);}
 function areaWild(c){const g=Math.max(0,Math.min(9,c+(Math.random()<.35?0:-1))),i=g*10+rnd(9),m=monInfo(i);return{id:'wild',wild:true,name:m.name,mi:i,hp:Math.round(m.hp*1.1),atk:m.atk,reward:m.reward,xp:15+g*14,win:[]};}
 function areaStep(){const A=AREA,tx=Math.floor(areaPlayer.x/32),ty=Math.floor(areaPlayer.y/32);
+ if(A.wilds){const z=A.zone[ty*A.w+tx];if(z!==A.curZone){const first=A.curZone===undefined;A.curZone=z;A.name=WZ[z].n;updateHud();if(!first)banner(WZ[z].n,'Monsters Lv '+WZ[z].lv);}}
  if(A.exits.some(e=>e.x===tx&&e.y===ty)){leaveArea('village');return;}
  if(A.boss&&!state.beaten[A.boss.id]){const n=A.npcs.find(q=>q.boss);if(n&&!A.bossTalk&&Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24))<5*32){areaBossIntro(n);return;}}
- if(A.enc&&A.enc[ty*A.w+tx]&&Math.random()<.11&&!battle&&!dialogue)startBattle(areaWild(A.chapter));else if(A.pathY&&tx>7&&tx<A.w-14&&Math.abs(ty-A.pathY[tx])<=1&&Math.random()<.03&&!battle&&!dialogue)startBattle(areaWild(A.chapter));}
+ if(A.enc&&A.enc[ty*A.w+tx]&&Math.random()<.12&&!battle&&!dialogue)startBattle(areaWild(A.wilds?A.zone[ty*A.w+tx]:A.chapter));else if(A.pathY&&tx>7&&tx<A.w-14&&Math.abs(ty-A.pathY[tx])<=1&&Math.random()<.03&&!battle&&!dialogue)startBattle(areaWild(A.chapter));}
 function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;A.bossTalk=1;sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{A.bossTalk=0;startBattle(g);});}
-function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.boss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
+function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
 function areaInteract(){if(dialogue){advanceDialogue();return;}if(cinematic||titleOpen||!$('lh-game-menu').hidden)return;const A=AREA;let f=null,d0=1e9;for(const n of A.npcs){const d=Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24));if(d<(n.boss?150:64)&&d<d0){f=n;d0=d;}}
  if(!f){setDialogue([['JOURNAL','Nothing here but the wind.']]);return;}
  if(f.boss){areaBossIntro(f);return;}
+ if(f.alpha){setDialogue([['JOURNAL',f.lines[0]]],()=>startBattle(f.trainer));return;}
+ if(f.chest){openChest(f);return;}
  if(f.act==='tower'){setDialogue(f.lines.map(t=>[f.name,t]),()=>towerEnter());return;}
  if(f.act==='board'){showLeaderboard();return;}
  if(f.act==='shop'){if(state.coins>=30){state.coins-=30;state.potions=(state.potions||0)+1;sfx('coin');updateHud();save();setDialogue([[f.name,'One potion for 30 coins. Pleasure doing business! You carry '+state.potions+' now.']]);}else setDialogue([[f.name,'Potions are 30 coins each. Come back when your purse is heavier!']]);return;}
  if(f.act==='inn'){state.hp=state.maxHp;state.mp=state.maxMp;sfx('heal');updateHud();save();setDialogue([[f.name,'Rest your bones, dear. There! Fully refreshed.']]);return;}
  setDialogue(f.lines.map(t=>[f.name,t]));}
-function areaGround(A,x,y){const U=32,B=A.bio;if(B.hall){ctx.imageSmoothingEnabled=false;ctx.drawImage(INT,((x*7+y*3)%3)*16,16,16,16,x*U,y*U,U,U);return;}
+function areaGround(A,x,y){if(A.wilds){wildGround(A,x,y);return;}const U=32,B=A.bio;if(B.hall){ctx.imageSmoothingEnabled=false;ctx.drawImage(INT,((x*7+y*3)%3)*16,16,16,16,x*U,y*U,U,U);return;}
  if(A.ground){const k=A.ground[y*A.w+x];if(k===1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}if(k===2){kTile('t',43,x*U,y*U);return;}}
  else if(A.pathY&&Math.abs(y-A.pathY[x])<=1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}
  const g=B.g[Math.floor(rand(x+11,y+7)*B.g.length)%B.g.length];kTile(g[0],g[1],x*U,y*U);}
@@ -276,17 +279,80 @@ function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000;
  const x0=Math.max(0,Math.floor(cx/U)-1),y0=Math.max(0,Math.floor(cy/U)-1),x1=Math.min(A.w-1,Math.ceil((cx+W)/U)),y1=Math.min(A.h-1,Math.ceil((cy+H)/U)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)areaGround(A,x,y);
  for(const d of A.dec){if(d.x>=x0&&d.x<=x1&&d.y>=y0&&d.y<=y1)kTile(d.d[0],d.d[1],d.x*U,d.y*U);}
+ if(A.wilds){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(A.enc[y*A.w+x]&&!A.solid[y*A.w+x])tallGrass(A,x,y,t);wildCamp(A,t);}
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*A.w+x;if(A.ob[i])areaObstacle(A,x,y,A.ob[i]-1);}
  if(A.bld)for(const b of A.bld){if(!VIL.naturalWidth)continue;const r=VR[b.n];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],b.x*U,(b.y+b.h)*U-r[3]*2,r[2]*2,r[3]*2);}
  if(A.city&&VIL.naturalWidth){const r=VR['fountain'+(Math.floor(t*2.6)%2)];ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*U,17*U-r[3]*2+4,r[2]*2,r[3]*2);}
  ctx.fillStyle=A.bio.tint||'rgba(0,0,0,0)';ctx.fillRect(Math.floor(cx),Math.floor(cy),W,H);
  const ex=A.exits[0];ctx.fillStyle='rgba(255,230,140,'+(.35+.25*Math.sin(t*4))+')';A.exits.forEach(e=>ctx.fillRect(e.x*U,e.y*U,U,U));
- const ents=A.npcs.map(n=>({y:n.y*U+24,f:()=>{const x=n.x*U+16,y=n.y*U+24;if(n.boss){if(!state.beaten[n.trainer.id])drawBossSprite(n.bi,x,y+20,2,Math.floor(t*2)%2,true);return;}if(n.name==='LEADERBOARD'){kTile('t',83,x-16,y-24);ctx.fillStyle='#ffd84a';ctx.fillRect(x-4,y-20,8,6);return;}const row=NPC_ROW[n.name]??11;let face=0;const dx=areaPlayer.x-x,dy=areaPlayer.y-y;if(Math.hypot(dx,dy)<110)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}}));
+ const ents=A.npcs.map(n=>({y:n.y*U+24,f:()=>{const x=n.x*U+16,y=n.y*U+24;if(n.boss){if(!state.beaten[n.trainer.id])drawBossSprite(n.bi,x,y+20,2,Math.floor(t*2)%2,true);return;}if(n.sign){kTile('t',83,x-16,y-24);return;}if(n.chest){kTile('d',state.chests&&state.chests[n.chest]?91:89,x-16,y-24,2);return;}if(n.alpha){const tt=performance.now()/1000;ctx.fillStyle='rgba(255,60,60,'+(.18+.08*Math.sin(tt*4))+')';ctx.beginPath();ctx.ellipse(x,y+4,36,13,0,0,7);ctx.fill();drawMon(n.trainer.mi,x,y+6+Math.sin(tt*3)*2,4);return;}if(n.name==='LEADERBOARD'){kTile('t',83,x-16,y-24);ctx.fillStyle='#ffd84a';ctx.fillRect(x-4,y-20,8,6);return;}const row=NPC_ROW[n.name]??11;let face=0;const dx=areaPlayer.x-x,dy=areaPlayer.y-y;if(Math.hypot(dx,dy)<110)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}}));
  ents.push({y:areaPlayer.y,f:()=>drawPlayer(areaPlayer.x,areaPlayer.y)});ents.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
- if(!dialogue&&!battle){let best=null,bd=1e9;for(const n of A.npcs){const d=Math.hypot(areaPlayer.x-(n.x*U+16),areaPlayer.y-(n.y*U+24));if(d<(n.boss?150:64)&&d<bd){best=n;bd=d;}}if(best&&!(best.boss&&state.beaten[best.trainer.id]))drawWorldPrompt(best.x*U+16,best.y*U-(best.boss?96:22),best.boss?'E \u00b7 CHALLENGE':'E \u00b7 TALK');}
+ if(A.wilds){const ptx=Math.floor(areaPlayer.x/U),pty=Math.floor(areaPlayer.y/U);if(A.enc[pty*A.w+ptx]){ctx.save();ctx.beginPath();ctx.rect(ptx*U,pty*U+U*.55,U,U*.45);ctx.clip();tallGrass(A,ptx,pty,t);ctx.restore();}}
+ if(!dialogue&&!battle){let best=null,bd=1e9;for(const n of A.npcs){const d=Math.hypot(areaPlayer.x-(n.x*U+16),areaPlayer.y-(n.y*U+24));if(d<(n.boss?150:64)&&d<bd){best=n;bd=d;}}if(best&&!(best.boss&&state.beaten[best.trainer.id]))drawWorldPrompt(best.x*U+16,best.y*U-(best.boss?96:22),(best.boss||best.alpha)?'E \u00b7 CHALLENGE':best.chest?'E \u00b7 OPEN':'E \u00b7 TALK');}
  ctx.restore();
  const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,Math.max(W,H)*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.35)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+ if(A.wilds&&W>=560&&!dialogue&&!battle){const m=wildsMini(A),sc=W<760?1:2,mx=W-A.w*sc-14,my=H-A.h*sc-40;ctx.imageSmoothingEnabled=false;ctx.fillStyle='rgba(38,51,74,.9)';ctx.fillRect(mx-4,my-4,A.w*sc+8,A.h*sc+8);ctx.drawImage(m,mx,my,A.w*sc,A.h*sc);ctx.fillStyle=Math.floor(t*3)%2?'#ffffff':'#e03838';ctx.fillRect(mx+Math.floor(areaPlayer.x/32)*sc-1,my+Math.floor(areaPlayer.y/32)*sc-1,sc+2,sc+2);}
  return{camX:cx,camY:cy};}
+
+/* ================= THE WILDLANDS: a big open map with five monster zones ================= */
+const WZ=[
+{n:'SUNNY MEADOW',g:0,lv:'1-2',tint:'rgba(255,230,150,.05)',blade:['#2f8f3d','#56b85a']},
+{n:'ORCHARD WOODS',g:1,lv:'3-4',tint:'rgba(230,140,40,.14)',blade:['#8a7a2a','#c0a43a']},
+{n:'MISTY MARSH',g:2,lv:'5-6',tint:'rgba(60,150,150,.18)',blade:['#2a7a68','#3fa88a']},
+{n:'STONE HOLLOW',g:3,lv:'7-8',tint:'rgba(70,80,140,.2)',blade:['#3a5a7a','#5a86a8']},
+{n:'FROST RIDGE',g:4,lv:'9-10',tint:'rgba(190,225,255,.22)',blade:['#7aa8c8','#cfe8f8']}];
+function getWilds(){return AREAS.wilds||(AREAS.wilds=genWilds());}
+function enterWilds(){const A=getWilds();A.ret={x:16*TILE+16,y:3*TILE+24};A.curZone=undefined;A.name='THE WILDLANDS';startArea(A,A.spawn.x,A.spawn.y);
+ setDialogue([['JOURNAL','THE WILDLANDS: a vast stretch of untamed country north of Hearthvale. Stone roads are safe. Monsters hide in the tall grass.'],['JOURNAL','Five zones grow more dangerous the farther you roam. Rest at the Ranger Camp, open chests, and beat each zone\u2019s Alpha for big rewards. A minimap shows where you are.']]);}
+function ensureWildsGate(){if(scene!=='outside'||!state.beaten||!state.beaten.north||npcs.some(n=>n.wilds))return;npcs.push({x:16*TILE+16,y:2*TILE+24,name:'ROAD: THE WILDLANDS',color:'#000',lines:[],wilds:true});}
+function openChest(f){state.chests=state.chests||{};if(state.chests[f.chest]){setDialogue([['JOURNAL','The chest is empty.']]);return;}state.chests[f.chest]=1;state.coins=(state.coins||0)+f.coins;if(f.potion)state.potions=(state.potions||0)+1;sfx('coin');updateHud();save();setDialogue([['JOURNAL','You open the chest and find '+f.coins+' coins'+(f.potion?' and a potion!':'!')]]);}
+function wildGround(A,x,y){const U=32,i=y*A.w+x,k=A.ground[i],z=A.zone[i];
+ if(k===3){const t=performance.now()/1000,o=Math.floor((Math.sin(t*1.6+x*.9+y*.5)+1)*4);ctx.fillStyle='#4aa8d8';ctx.fillRect(x*U,y*U,U,U);ctx.fillStyle='#8fd4f4';ctx.fillRect(x*U+4+o,y*U+10,10,3);ctx.fillRect(x*U+16-o,y*U+22,10,3);return;}
+ if(k===1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);}
+ else{const B=BIO[A.zb[z]],g=B.g[Math.floor(rand(x+11,y+7)*B.g.length)%B.g.length];kTile(g[0],g[1],x*U,y*U);}
+ ctx.fillStyle=WZ[z].tint;ctx.fillRect(x*U,y*U,U,U);}
+function tallGrass(A,x,y,t){const U=32,z=A.zone[y*A.w+x],c=WZ[z].blade,h0=(x*7+y*13)%5;for(let k=0;k<4;k++){const bx=x*U+3+k*7+((h0+k)%3),hh=10+((h0+k*2)%5)*2,sw=Math.round(Math.sin(t*2+x*.7+k)*1.5);ctx.fillStyle=c[k%2];ctx.fillRect(bx+sw,y*U+U-4-hh,3,hh);ctx.fillStyle=c[(k+1)%2];ctx.fillRect(bx+sw+3,y*U+U-1-hh,2,hh-3);}}
+function wildCamp(A,t){const U=32,x=48*U+16,y=55*U+22,f=Math.floor(t*8)%3;ctx.fillStyle='#5b3a2b';ctx.fillRect(x-12,y+2,24,5);ctx.fillRect(x-8,y-1,16,4);ctx.fillStyle='#e8832e';ctx.fillRect(x-6,y-10-f,12,11+f);ctx.fillStyle='#ffd84a';ctx.fillRect(x-3,y-8-f,6,8+f);ctx.fillStyle='#fff4d8';ctx.fillRect(x-1,y-4,2,4);ctx.fillStyle='rgba(255,180,60,.12)';ctx.beginPath();ctx.arc(x,y-4,70+f*4,0,7);ctx.fill();}
+function wildsMini(A){if(!A.mm){const c=document.createElement('canvas');c.width=A.w;c.height=A.h;const g=c.getContext('2d'),zc=['#7bc86c','#d9a04a','#4fa9a0','#8a7f9a','#cfe6f6'];for(let y=0;y<A.h;y++)for(let x=0;x<A.w;x++){const i=y*A.w+x;g.fillStyle=A.ground[i]===3?'#4aa8d8':A.solid[i]?'#2f5a3a':A.ground[i]===1?'#e8c690':zc[A.zone[i]];g.fillRect(x,y,1,1);}A.mm=c;}return A.mm;}
+function genWilds(){
+ const w=96,h=64,rng=mulberry(7771),T=(x,y)=>y*w+x,N=w*h;
+ const solid=new Uint8Array(N),ob=new Uint8Array(N),enc=new Uint8Array(N),zone=new Uint8Array(N),ground=new Uint8Array(N),prot=new Uint8Array(N),dec=[];
+ const ZB=[0,1,2,7,6],OBL=[],OFF=[];ZB.forEach((b,z)=>{OFF[z]=OBL.length;BIO[b].ob.forEach(o=>OBL.push(o));});
+ const G1=[],G2=[];for(let i=0;i<1600;i++){G1.push(rng());G2.push(rng());}
+ const s3=t=>t*t*(3-2*t),vn=(G,x,y)=>{const X=Math.floor(x),Y=Math.floor(y),fx=s3(x-X),fy=s3(y-Y),g=(a,b)=>G[(((b%40)+40)%40)*40+(((a%40)+40)%40)],t=g(X,Y)+(g(X+1,Y)-g(X,Y))*fx,b=g(X,Y+1)+(g(X+1,Y+1)-g(X,Y+1))*fx;return t+(b-t)*fy;};
+ const zoneAt=(x,y)=>{const xx=x+(vn(G2,x*.07,y*.07)-.5)*10,yy=y+(vn(G2,x*.07+9,y*.07+5)-.5)*8;return yy>=44?0:yy>=24?(xx<48?1:2):(xx<48?3:4);};
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)zone[T(x,y)]=zoneAt(x,y);
+ const carve=(cx,cy,r,rd)=>{for(let y=Math.floor(cy-r);y<=Math.ceil(cy+r);y++)for(let x=Math.floor(cx-r);x<=Math.ceil(cx+r);x++){if(x<0||y<0||x>=w||y>=h)continue;if((x-cx)**2+(y-cy)**2>r*r+.5)continue;const i=T(x,y);solid[i]=0;ob[i]=0;prot[i]=1;if(rd)ground[i]=1;}};
+ const road=pts=>{for(let k=0;k<pts.length-1;k++){const[x0,y0]=pts[k],[x1,y1]=pts[k+1],n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0));for(let q=0;q<=n;q++)carve(x0+(x1-x0)*q/n,y0+(y1-y0)*q/n,1.4,true);}};
+ road([[48,63],[48,50],[47,40],[48,30],[50,20],[48,8]]);
+ road([[48,52],[36,54],[24,54],[10,56]]);road([[48,52],[60,54],[74,56],[86,56]]);
+ road([[48,34],[36,34],[24,32],[14,30],[8,38]]);road([[14,30],[22,22],[20,10]]);
+ road([[48,34],[60,34],[72,32],[82,30],[88,40]]);road([[82,30],[74,20],[76,10]]);
+ road([[48,14],[34,12],[20,10]]);road([[48,14],[62,12],[76,10]]);
+ carve(48,56,4.6,true);carve(48,62,2.5,true);carve(48,8,4,true);
+ const alphaPos=[[10,56],[8,38],[88,40],[20,10],[76,10]];alphaPos.forEach(([x,y])=>carve(x,y,3,false));
+ const chestPos=[[24,52],[86,54],[14,27],[66,31],[84,28],[22,24],[74,22],[52,20],[34,10],[62,10]];chestPos.forEach(([x,y])=>carve(x,y,1.6,false));
+ const signPos=[[45,60],[45,46],[45,26]];signPos.forEach(([x,y])=>carve(x,y,1.2,false));
+ const lake=(cx,cy,rx,ry)=>{for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){if(x<3||y<3||x>w-4||y>h-4)continue;if(((x-cx)/rx)**2+((y-cy)/ry)**2>1)continue;const i=T(x,y);if(prot[i])continue;solid[i]=1;ob[i]=0;ground[i]=3;}};
+ [[62,28,5,3],[78,38,6,4],[70,42,4,2.5],[84,26,3,2],[20,48,4,2.5],[76,50,5,3],[22,40,3,2],[62,14,4,3]].forEach(a=>lake(...a));
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(prot[i]||ground[i]===3)continue;const z=zone[i],edge=x<2||y<2||x>w-3||y>h-3;let tree=edge;if(!edge){const d=vn(G1,x*.11,y*.11)*.7+vn(G2,x*.31,y*.31)*.3;tree=d>.64;}if(tree){solid[i]=1;ob[i]=OFF[z]+1+Math.floor(rng()*BIO[ZB[z]].ob.length);}}
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(solid[i]||ground[i]!==0||prot[i])continue;if(vn(G1,x*.2+30,y*.2+11)>.5)enc[i]=1;}
+ const DEC=[[['t',2],['t',2],['t',29]],[['t',29],['t',17]],BIO[2].dec,[['d',42],['d',43]],[['t',17],['t',2]]];
+ for(let k=0;k<320;k++){const x=1+Math.floor(rng()*(w-2)),y=1+Math.floor(rng()*(h-2)),i=T(x,y);if(solid[i]||enc[i]||ground[i]!==0)continue;const L=DEC[zone[i]];dec.push({x,y,d:L[Math.floor(rng()*L.length)]});}
+ const mk=z=>{const mi=z*10+9,m=monInfo(mi);return{id:'alpha'+z,name:m.name,mi,hp:Math.round(m.hp*1.7),atk:Math.round(m.atk*1.15)+1,reward:m.reward*3,xp:60+z*40,alpha:true,win:['The Alpha collapses and flees. You find a potion in its den.']};};
+ const npcs=[
+  {x:46,y:54,name:'OLD WILLOW',act:'inn',lines:[]},{x:50,y:54,name:'PIP',act:'shop',lines:[]},
+  {x:48,y:58,name:'HAZEL THE HUNTER',lines:['This is the Ranger Camp. Stone roads are safe; monsters hide in the swaying tall grass.','South is the Sunny Meadow. Orchard Woods lie west of the crossroads, Misty Marsh east. Stone Hollow and Frost Ridge are for veterans only.','Every zone has an Alpha at the end of its road. They hit hard, but they drop potions.']},
+  {x:47,y:8,name:'ORACLE SELENE',lines:['The Everfeast was a promise between the First Keepers and the harvest spirits: one feast each year, and the land never starves.','The Hollow King feeds on broken promises. Every guardian you defeat weakens him.','Your parents passed through this shrine. They left toward the old roads.']},
+  {x:45,y:60,name:'JOURNAL',sign:true,lines:['THE WILDLANDS. Stay on the stone road when hurt. Tall grass hides monsters. The Ranger Camp is just north.']},
+  {x:45,y:46,name:'JOURNAL',sign:true,lines:['Crossroads. West: ORCHARD WOODS (Lv 3-4). East: MISTY MARSH (Lv 5-6). Beyond: dangerous country.']},
+  {x:45,y:26,name:'JOURNAL',sign:true,lines:['STONE HOLLOW (west, Lv 7-8) and FROST RIDGE (east, Lv 9-10). Turn back if you are weak!']}];
+ alphaPos.forEach(([x,y],z)=>{const g=mk(z);npcs.push({x,y,name:g.name,alpha:true,trainer:g,lines:['A massive '+g.name.toLowerCase()+' blocks the den. It growls.']});});
+ chestPos.forEach(([x,y],k)=>npcs.push({x,y,name:'CHEST',chest:'wc'+k,coins:30+k*18,potion:k%3===2,lines:[]}));
+ npcs.push({x:50,y:7,name:'CHEST',chest:'wshrine',coins:250,potion:true,lines:[]});
+ solid[T(48,55)]=1;
+ const exits=[];for(let x=46;x<=50;x++)exits.push({x,y:63,to:'village'});
+ return{id:'wilds',wilds:true,name:'THE WILDLANDS',w,h,solid,ob,enc,zone,zb:ZB,ground,dec,npcs,spawn:{x:48,y:60},exits,bio:{g:BIO[0].g,ob:OBL,tint:'rgba(0,0,0,0)'},mus:'wander'};}
 function exitBuilding(){const id=interiorId;scene='outside';state.x=([10.5,34,22,5.5][id])*TILE;state.y=([10.9,10.9,22.9,29.9][id])*TILE;sfx('door');updateHud();save();}
 function ensureCityGate(){if(scene!=='outside'||!npcs||(questStep||0)<3||npcs.some(n=>n.city))return;npcs.push({x:45*TILE+16,y:12*TILE+24,name:'ROAD TO GOLDLEAF CITY',color:'#000',lines:[],city:true});if(!state.cityUnlocked){state.cityUnlocked=true;save();setTimeout(()=>{sfx('unlock');if(!dialogue&&!battle&&!cinematic)setDialogue([['ELDER MAPLE','A new road has opened to the east: Goldleaf City. They say a great Tower rises there, where champions test their strength.']]);},1200);}}
 function drawPortal(x,y,col){const t=performance.now()/1000;ctx.fillStyle='#8a88a0';ctx.fillRect(x-34,y-66,14,68);ctx.fillRect(x+20,y-66,14,68);ctx.fillRect(x-34,y-76,68,14);ctx.fillStyle='#b8b6cc';ctx.fillRect(x-34,y-66,4,68);ctx.fillRect(x-34,y-76,68,4);ctx.fillStyle='#5a5870';ctx.fillRect(x+30,y-66,4,68);
@@ -355,11 +421,11 @@ drawFence(3,22,3);drawFence(41,22,3);drawFarm();
 drawFountainSprite();
 kTile('t',83,27*TILE-16,10*TILE);
 drawGates();
-for(const n of npcs){const a=cinematic&&cinematic.actors[n.name];drawPerson(a?a.x:n.x,a?a.y:n.y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55',n.name);}
-if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;drawPerson(a.x,a.y,'#d5b64e','#e8bd58');}
-drawPlayer(state.x,state.y);
+const ents=npcs.map(n=>{const a=cinematic&&cinematic.actors[n.name],x=a?a.x:n.x,y=a?a.y:n.y;return{y,f:()=>drawPerson(x,y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55',n.name)};});
+if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;ents.push({y:a.y,f:()=>drawPerson(a.x,a.y,'#d5b64e','#e8bd58')});}
+ents.push({y:state.y,f:()=>drawPlayer(state.x,state.y)});ents.sort((p,q)=>p.y-q.y).forEach(o=>o.f());
 let promptTarget=null,promptDist=Infinity,promptLabel='E · TALK';
-for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<104&&d<promptDist){promptTarget=n;promptDist=d;promptLabel='E · TALK';}}
+for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<((n.trainer&&n.trainer.bi!==undefined)?190:104)&&d<promptDist){promptTarget=n;promptDist=d;promptLabel='E · TALK';}}
 const doors=[{x:10.5,y:10.5},{x:34,y:10.5},{x:22,y:22.5},{x:5.5,y:29.5}];
 for(const d of doors){const wx=d.x*TILE,wy=d.y*TILE,dd=Math.hypot(state.x-wx,state.y-wy);if(dd<112&&dd<promptDist){promptTarget={x:wx,y:wy};promptDist=dd;promptLabel='E · ENTER';}}
 const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&signDist<promptDist){promptTarget={x:27*TILE,y:10*TILE};promptLabel='E · READ';}
@@ -532,7 +598,7 @@ async function pkSay(t,ms){$b('pk-t').textContent=t;await sleep(ms||800);}
 
 /* --- scene geometry shared by drawing and attack animations --- */
 function geo(){const W=innerWidth,H=innerHeight,PH=H-Math.max(H*.3,150),b=battle,e=b&&b.e,boss=!!(e&&e.boss),hk=Math.max(4,Math.floor(PH*.3/16));
-let fk,fh;if(boss){fk=Math.max(2,Math.min(Math.floor(PH*.62/64),Math.floor(W*.44/64)));fh=64*fk;}else if(e&&e.mi!==undefined){fk=Math.max(4,Math.floor(PH*.3/16));fh=16*fk;}else if(e&&e.an!==undefined){fk=Math.max(3,Math.floor(PH*.52/56));fh=56*fk;}else{fk=Math.max(5,Math.floor(PH*.3/16));fh=16*fk;}
+let fk,fh;if(boss){fk=Math.max(2,Math.min(Math.floor(PH*.62/64),Math.floor(W*.44/64)));fh=64*fk;}else if(e&&e.mi!==undefined){fk=Math.max(4,Math.floor(PH*.3/16));fh=16*fk;}else{fk=Math.max(5,Math.floor(PH*.3/16));fh=16*fk;}
 return{W,H,PH,hk,fk,fh,hx:W*.24,hy:PH*.96,fx:W*.7,fy:boss?PH*.72:PH*.56};}
 function tween(ms,fn){return new Promise(res=>{const t0=performance.now();(function f(now){const p=clamp01((now-t0)/ms);fn(p);if(p<1&&battle)requestAnimationFrame(f);else res();})(t0);});}
 function burst(x,y,n,cols,spd){const b=battle;if(!b)return;for(let i=0;i<n;i++){const a=Math.random()*6.283,v=(spd||160)*(.3+Math.random());b.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-40,g:260,life:.5+Math.random()*.4,max:.9,c:cols[rnd(cols.length)],s:3+rnd(4)});}}
@@ -542,7 +608,7 @@ function pop(txt,x,y,c,size){battle.pops.push({t:txt,x,y,c:c||'#fff',s:size||18,
 /* --- starting a battle: ! alert -> stripe wipe -> entrance -> fight --- */
 function startBattle(g){state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
 const B=g.bi!==undefined?BOSSES[g.bi]:null,hp=B?B.hp:g.hp,atk=B?B.atk:g.atk;
-battle={g,B,e:{name:g.name,hp,max:hp,atk,row:g.row,an:g.an,mi:g.mi,bi:g.bi,boss:!!B,status:{},turn:0,charging:false,enraged:false},ward:0,evade:false,guard:false,busy:true,sel:-1,phase:'alert',t0:performance.now(),last:performance.now(),
+battle={g,B,e:{name:g.name,hp,max:hp,atk,row:g.row,mi:g.mi,bi:g.bi,boss:!!B,status:{},turn:0,charging:false,enraged:false},ward:0,evade:false,guard:false,busy:true,sel:-1,phase:'alert',t0:performance.now(),last:performance.now(),
 hox:0,hoy:0,fox:0,foy:0,shake:0,flashF:0,flashH:0,flashR:0,flashW:0,shield:0,dead:0,hdead:0,parts:[],pops:[],proj:null};
 runIntro();}
 async function runIntro(){const b=battle,B=b.B;sfx(B?'warn':'alert');b.phase='alert';b.t0=performance.now();await sleep(B?1700:900);if(battle!==b)return;
@@ -622,7 +688,7 @@ b.dead=1;b.flashW=B?1:0;sfx('win');await pkSay(g.name+' was defeated!',1000);
 const reward=B?B.reward:g.reward,xp=B?B.xp:(g.xp||40);state.coins+=reward;state.xp+=xp;let up=0;
 while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=6;state.maxMp+=2;state.hp=state.maxHp;up++;}
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));state.potions=(state.potions||0)+2;}
-if(!g.wild)state.beaten[g.id]=true;const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
+if(!g.wild)state.beaten[g.id]=true;if(g.alpha){state.potions=(state.potions||0)+1;}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
 if(B){state.stage=Math.max(state.stage||0,g.bi+1);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);}else extra.push(['THE LAST HARVEST','The Everfeast burns bright again. Hearthvale is saved, thanks to you, '+state.name+'.']);spawnLair();}
 pkEnd();if(up){sfx('levelup');offerSkillsWhenReady();}
@@ -662,7 +728,7 @@ if(boss&&(b.phase==='enter'||b.phase==='fight')){const a=th[2],pulse=(e.charging
 if(b.phase!=='alert'&&b.phase!=='swirl'||b.phase==='enter'){
 withFlash(b.flashF+(e.charging?.18+.18*Math.sin(t*14):0),e.charging?'#ff5040':'#ffffff',()=>{ctx.globalAlpha=alpha;
 if(boss){ctx.save();ctx.beginPath();const rv=ease(clamp01(enterP*1.1));ctx.rect(0,fyp-G.fh*rv-10,W,G.fh*rv+30);ctx.clip();drawBossSprite(e.bi,fxp,fyp+bob*.6,G.fk,Math.floor(t*2)%2,false);ctx.restore();}
-else if(e.mi!==undefined)drawMon(e.mi,fxp,fyp+bob,G.fk);else if(e.an!==undefined)drawAnime(e.an,fxp,fyp+bob,G.fk);else drawSpriteK(e.row,0,0,fxp,fyp+bob,G.fk);
+else if(e.mi!==undefined)drawMon(e.mi,fxp,fyp+bob,G.fk);else drawSpriteK(e.row,0,0,fxp,fyp+bob,G.fk);
 ctx.globalAlpha=1;});}
 if(boss&&b.phase==='enter'&&enterP<.9&&Math.random()<.5)rise(G.fx,G.fy,2,['#c9a070','#8a6a3a'],G.fh*.7);
 if(e.charging&&b.phase==='fight'){const by=fyp-G.fh-10-Math.abs(Math.sin(t*8))*8;bubbleText('!',fxp,by,'#ff3b30',Math.max(28,G.fk*8));}
@@ -714,10 +780,6 @@ ctx.restore();}
 const NPC_ROW={'ELDER MAPLE':19,'ROWAN':1,'MILLIE':8,'GUS':12,'PIPER':4,'MARA THE NEIGHBOR':28,'JUNIPER':14,'INNKEEPER BRAM':13,'NELL THE TRAVELER':38,'SHOPKEEPER TILLY':24,'FINN':21,'OLD CRAFTSMAN ORIN':29,'WREN THE APPRENTICE':31,'GATEKEEPER BRAWN':6,'GATEKEEPER WINONA':23};
 /* characters.png: one row per character, 12 frames: down, up, left, right x (idle, step, step) */
 function drawSpriteK(row,face,step,x,fy,k){if(!CHARS.complete||!CHARS.naturalWidth)return;ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;const full=CHARS.naturalWidth>=192,col=full?face*3+(step||0):(face===1?1:0),m=(!full&&face===2)?-1:1;ctx.save();ctx.translate(Math.round(x),0);ctx.scale(m,1);ctx.drawImage(CHARS,col*16,row*16,16,16,-8*k,Math.round(fy-16*k),16*k,16*k);ctx.restore();}
-const AIMG=new Image();AIMG.src='/img/last-harvest/anime.png?v=10';
-/* anime.png: 16 anime busts 48x56: 0-2 heroes, 3 Rowan, 4 Rowan hollowed, 5 Brawn, 6 Winona, 7 Elder Maple, 8 Mara, 9 Thomas, 10 Instructor, 11 Millie, 12 Gus, 13 Piper, 14 Challenger, 15 Masked Merchant */
-const ANIME_ROW={0:5,1:7,2:0,3:1,4:31,5:6,6:23,7:19,8:28,9:17,10:10,11:8,12:12,13:4,14:36,15:25};
-function drawAnime(i,x,fy,k){if(!AIMG.naturalWidth){drawSpriteK(ANIME_ROW[i]??1,0,0,x,fy,k*3);return;}ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(Math.round(x),Math.round(fy),18*k,3*k,0,0,7);ctx.fill();ctx.imageSmoothingEnabled=false;ctx.drawImage(AIMG,(i%8)*48,((i/8)|0)*56,48,56,Math.round(x-24*k),Math.round(fy-56*k),48*k,56*k);}
 function drawSprite(row,face,step,x,y){drawSpriteK(row,face,step,x,y+8,2);}
 function drawPerson(x,y,shirt,hat,name=''){if(name.startsWith('ROAD')){drawPortal(x,y+8,name.includes('GOLDLEAF')?'rgba(255,200,80,.85)':null);return;}if(BOSS_NPC[name]!==undefined){drawBossSprite(BOSS_NPC[name],x,y+8,2,Math.floor(performance.now()/500)%2,true);return;}const row=NPC_ROW[name]??[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];const t=scene==='inside'?insidePlayer:state,dx=t.x-x,dy=t.y-y;let face=0;if(Math.hypot(dx,dy)<120)face=Math.abs(dx)>Math.abs(dy)?(dx<0?2:3):(dy<0?1:0);drawSprite(row,face,0,x,y);}
 const roomFurniture=[
@@ -801,9 +863,10 @@ function drawPlayer(x,y){drawSprite(heroRow(),facing,walking?1+alt:0,x,y);drawGe
 function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
 let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
+function portraitRow(name){if(name==='YOU')return(cinematic&&cinematic.phase!=='outside')?CIV:heroRow();if(NPC_ROW[name]!==undefined)return NPC_ROW[name];return[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];}
 function drawDialoguePortrait(name){
 const c=$('lh-portrait'),p=c.getContext('2d');p.clearRect(0,0,64,64);p.fillStyle='#26334a';p.fillRect(0,0,64,64);
-if(name==='JOURNAL'&&VIL.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(VIL,150,180,16,16,8,8,48,48);return;}if(BOSS_NPC[name]!==undefined&&BOS.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(BOS,BOSS_NPC[name]*64,0,64,64,0,0,64,64);return;}const AN=AN_MAP[name];if(AN!==undefined&&AIMG.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(AIMG,(AN%8)*48,((AN/8)|0)*56,48,56,8,6,48,56);return;}
+if(name==='JOURNAL'&&VIL.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(VIL,150,180,16,16,8,8,48,48);return;}if(BOSS_NPC[name]!==undefined&&BOS.naturalWidth){p.imageSmoothingEnabled=false;p.drawImage(BOS,BOSS_NPC[name]*64,0,64,64,0,0,64,64);return;}if(CHARS.naturalWidth){const pr=portraitRow(name);p.imageSmoothingEnabled=false;p.fillStyle='#2f4a5a';p.fillRect(0,0,64,64);p.fillStyle='rgba(0,0,0,.25)';p.fillRect(10,54,44,6);p.drawImage(CHARS,0,pr*16,16,16,0,-2,64,64);return;}
 let shirt='#b94b38',hair='#634b3a';
 const all=[...npcs,...roomNPCs.flat()];
 const npc=all.find(n=>n.name===name);
@@ -821,14 +884,28 @@ function finishType(){clearInterval(typer);typing=false;$('lh-dialogue-text').te
 function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer=roomStart(id);facing=1;updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
-function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){questStep=3;updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
-let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<64&&d<dist){found=n;dist=d;}}
+function turnInClues(){setQ(4);state.coins=(state.coins||0)+50;state.potions=(state.potions||0)+2;sfx('unlock');updateHud();updateQuest();
+setDialogue([['YOU','Elder Maple... I searched the village. Orin kept an old map safe for my parents.'],
+['ELDER MAPLE','*She unfolds the map slowly, her hands trembling.* This seal in the corner... it is the same one carved beneath the fountain.'],
+['YOU','There was a strange black feather at the store, and a torn royal banner near the fountain. Something is very wrong.'],
+['ELDER MAPLE','Then it is true. The Hollow King stirs, and the Everfeast is failing. Your parents went to find the First Keepers\u2019 road.'],
+['ELDER MAPLE','Take 50 coins and two potions. The north road leads to the Wildlands, where monsters roam. Train there before you face the guardians of the old roads.'],
+['QUEST UPDATED','Follow the golden leaves. Train in the Wildlands (north road) once Gatekeeper Brawn lets you pass.']]);}
+function elderChat(){const n=state.elderTalks=(state.elderTalks||0)+1,nm='ELDER MAPLE',b=state.beaten||{};
+const hint=questStep<2?'Rowan is waiting for you in the village square. Speak with him, then search the homes.':questStep<3?'Have you searched every building? Old Orin in the workshop keeps many secrets.':!b.north?'Gatekeeper Brawn guards the north road. Beat him and the Wildlands will open to you.':!b.south?'The Pumpkin Sentinel blocks the south road. Train in the Wildlands first, then face it.':(state.stage>=BOSSES.length?'You saved Hearthvale. I could not be prouder.':'Your next trial: '+chapters[Math.min(state.stage,9)].place+'. '+BOSSES[Math.min(state.stage,9)].name+' waits there.');
+const flavor=['Autumn always smelled of cinnamon here. Lately it smells of ash.','Keep your potions close and your guard closer.','Grass that sways against the wind hides monsters. The stone roads are safe if you need to rest.','Rest at the Ranger Camp in the Wildlands. Old Willow keeps the fire burning there.','Your mother used to hum the harvest song on that bench by the fountain.','Every zone has an Alpha. Defeat one and the wild folk will whisper your name.'];
+const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(state.elderKey!==key){state.elderKey=key;save();setDialogue([[nm,hint],[nm,flavor[n%flavor.length]]]);}else setDialogue([[nm,flavor[n%flavor.length]],[nm,flavor[(n+1)%flavor.length]]]);}
+function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:64;if(d<rc&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.region!==undefined){sfx('portal');enterRegion(found.region);return;}
+if(found.wilds){sfx('portal');enterWilds();return;}
 if(found.city){enterArea('city');return;}
 if(found.trainer&&!state.beaten[found.trainer.id]){setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
-if(found.name==='ELDER MAPLE'&&questStep===0){questStep=1;setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
-else if(found.name==='ROWAN'&&questStep===1){questStep=2;setDialogue([[found.name,'I will check the fountain. You should search the buildings.'],['QUEST UPDATED','Enter a building and look for clues.']]);}
+if(found.name==='ELDER MAPLE'&&questStep===0){setQ(1);setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
+else if(found.name==='ROWAN'&&questStep===1){setQ(2);setDialogue([[found.name,'I will check the fountain. You should search the buildings.'],['QUEST UPDATED','Enter a building and look for clues.']]);}
+else if(found.name==='ELDER MAPLE'&&questStep===3){turnInClues();}
+else if(found.name==='ELDER MAPLE'){elderChat();}
 else setDialogue(found.lines.map(t=>[found.name,t]));
 save();updateQuest();return;}
 const doors=[{x:10.5,y:10.5,id:0},{x:34,y:10.5,id:1},{x:22,y:22.5,id:2},{x:5.5,y:29.5,id:3}];for(const d of doors){if(Math.hypot(state.x-d.x*TILE,state.y-d.y*TILE)<82){enterBuilding(d.id);return;}}
@@ -864,7 +941,7 @@ await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
 await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.']]);
-const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',an:3,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
+const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
 await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]);
 cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};
 await say([['ROWAN','Come on, let’s walk home. Your parents promised a feast for tonight.']]);
@@ -883,12 +960,13 @@ const lore=[[['JOURNAL','THE LEGEND OF THE EVERFEAST, written by the First Keepe
 for(let a=0;a<lore.length;a++){if(a>0){cinematic.flash=1;cinematic.act=a;cinematic.t0=performance.now();}await say(lore[a]);}
 cinematic.flash=1;cinematic.phase='home';cinematic.sparkle=false;
 await say([['ROWAN','Your parents are Keepers… and the Hollow King’s seal is breaking!'],['YOU','Then we have to find them before the Everfeast fails.'],['ROWAN','Elder Maple knows the old stories. Let’s ask him first.']]);
-cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';state.x=10*TILE+16;state.y=12*TILE+24;state.seenIntro=true;questStep=0;updateQuest();save();
+cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';state.x=10*TILE+16;state.y=12*TILE+24;state.seenIntro=true;setQ(0);updateQuest();
 })();
 }
 
 function areaName(){if(scene==='area'&&AREA)return AREA.name;return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
-function updateQuest(){if(state.beaten&&state.beaten.south){const i=Math.min(state.stage||0,BOSSES.length-1);$('lh-quest-text').textContent=(state.beaten['boss'+i]||(state.stage||0)>=BOSSES.length)?'Hearthvale is saved!':'Defeat the '+BOSSES[i].name+(i>0?' in '+chapters[i].place:' on the south road');return;}const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
+function updateQuest(){if(state.beaten&&state.beaten.south){const i=Math.min(state.stage||0,BOSSES.length-1);$('lh-quest-text').textContent=(state.beaten['boss'+i]||(state.stage||0)>=BOSSES.length)?'Hearthvale is saved!':'Defeat the '+BOSSES[i].name+(i>0?' in '+chapters[i].place:' on the south road');return;}if((questStep||0)>=4&&!(state.beaten&&state.beaten.south)){$('lh-quest-text').textContent=state.beaten&&state.beaten.north?'Hunt monsters in the Wildlands (north road), then face the south road':'Defeat Gatekeeper Brawn to open the Wildlands (north road)';return;}
+const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function updateHud(){ $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-health').textContent=state.hp;$('lh-coins').textContent=state.coins;$('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:areaName().toUpperCase();updateQuest();}
 function move(dt){walking=false;const ins=scene==='inside',ar=scene==='area',P=ins?insidePlayer:ar?areaPlayer:state;
 if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(ar)areaStep();if(!ins&&!ar){const an=areaName();if(an!==lastArea){lastArea=an;updateHud();}}if(!ins&&!ar&&++stepCount%4===0)save();if(!ins&&!ar&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){startBattle(wildEncounter());}}
@@ -902,7 +980,7 @@ if(turnWait>0){turnWait-=dt;return;}
 const SS=ins?roomGeom(interiorId).U:TILE,nx=P.x+[0,0,-1,1][f]*SS,ny=P.y+[1,-1,0,0][f]*SS;
 const hit=ins?roomHit(nx,ny):ar?areaHit(nx,ny):(blocked(nx,ny)||npcs.some(n=>Math.floor(n.x/TILE)===Math.floor(nx/TILE)&&Math.floor(n.y/TILE)===Math.floor(ny/TILE)));
 if(hit){if(ins&&f===0&&P.y>roomGeom(interiorId).exitY)exitBuilding();return;}stepper={fx:P.x,fy:P.y,tx:nx,ty:ny,t:0};walking=true;}
-function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);areaTick();ensureCityGate();musicTick();lastCam=drawWorld();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
+function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);areaTick();ensureCityGate();ensureWildsGate();musicTick();lastCam=drawWorld();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
