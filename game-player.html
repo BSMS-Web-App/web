@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08080b">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Play a game in BSMS Web.">
+  <title>Loading game | BSMS Web</title>
+  <link rel="icon" href="/img/icon.png">
+  <link rel="stylesheet" href="/css/game-player.css">
+  <script src="/js/game-player.js" defer></script>
+</head>
+<body>
+  <header class="player-bar">
+    <a class="vault-back" id="vaultBack" href="/g" aria-label="Return to Game Vault">
+      <span aria-hidden="true">‹</span>
+      <span>Game Vault</span>
+    </a>
+    <div class="player-title" id="playerTitle">Loading game…</div>
+    <div class="player-brand">BSMS Web</div>
+  </header>
+  <main class="player-stage">
+    <div class="player-loading" id="playerLoading">Loading game…</div>
+    <iframe
+      id="gameFrame"
+      title="Game"
+      allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write"
+      allowfullscreen
+      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads">
+    </iframe>
+  </main>
+</body>
+</html>
