@@ -7,7 +7,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/nowgg/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-3",
@@ -17,7 +18,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=1on1soccer.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-4",
@@ -37,7 +39,8 @@
     "preview": "https://55gms.com/img/videos/preview/crazycars.mp4",
     "launchUrl": "https://55gms.com/misc/crazycars/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-6",
@@ -47,7 +50,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgiracers.mp4",
     "launchUrl": "https://55gms.com/misc/blumgiracers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-7",
@@ -57,7 +61,8 @@
     "preview": "https://55gms.com/img/videos/preview/2048.mp4",
     "launchUrl": "https://55gms.com/misc/2048/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-8",
@@ -67,7 +72,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/2drocketleague/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-9",
@@ -77,7 +83,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/60-sec-burger-run/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-10",
@@ -87,7 +94,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/a-dance-of-fire-and-ice/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-11",
@@ -97,7 +105,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/adventure-capitalist/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-12",
@@ -117,7 +126,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/spacebarclicker/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-14",
@@ -137,7 +147,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/amazing-rope-police/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-17",
@@ -147,7 +158,8 @@
     "preview": "https://55gms.com/img/videos/preview/superstarcar.mp4",
     "launchUrl": "https://55gms.com/misc/superstarcar/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-18",
@@ -157,7 +169,8 @@
     "preview": "https://55gms.com/img/videos/preview/asmallworldcup.mp4",
     "launchUrl": "https://55gms.com/misc/asmallworldcup/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-21",
@@ -167,7 +180,8 @@
     "preview": "https://55gms.com/img/videos/preview/baconmaydie.mp4",
     "launchUrl": "https://55gms.com/misc/bacon-may-die/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-22",
@@ -177,7 +191,8 @@
     "preview": "https://55gms.com/img/videos/preview/badicecream.mp4",
     "launchUrl": "https://55gms.com/misc/badicecream/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-23",
@@ -187,7 +202,8 @@
     "preview": "https://55gms.com/img/videos/preview/badicecream2.mp4",
     "launchUrl": "https://55gms.com/misc/badicecream2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-24",
@@ -197,7 +213,8 @@
     "preview": "https://55gms.com/img/videos/preview/badicecream3.mp4",
     "launchUrl": "https://55gms.com/misc/badicecream3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-25",
@@ -207,7 +224,8 @@
     "preview": "https://55gms.com/img/videos/preview/basketrandom.mp4",
     "launchUrl": "https://55gms.com/misc/basket-random/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-26",
@@ -217,7 +235,8 @@
     "preview": "https://55gms.com/img/videos/preview/basketballstars.mp4",
     "launchUrl": "https://55gms.com/misc/basketball-stars/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-27",
@@ -227,7 +246,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/basketbros-io/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-28",
@@ -247,7 +267,8 @@
     "preview": "https://55gms.com/img/videos/preview/bloonstd.mp4",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=bloonstd1.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-30",
@@ -257,7 +278,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=bloons-tower-defense-2.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-31",
@@ -267,7 +289,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=bloonstd3.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-32",
@@ -277,7 +300,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/gfiles/btd4/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-33",
@@ -287,7 +311,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bloxrz/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@ebf9186ef591082d1704bdb3a8a834263b164368/misc/misc/"
   },
   {
     "id": "55gms-34",
@@ -297,7 +322,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/BottleFlip/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@7e412f6101ae566968f32d97a48f44c09adae3e1/misc/misc/"
   },
   {
     "id": "55gms-35",
@@ -307,7 +333,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/BottleFlip3D/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-36",
@@ -317,7 +344,8 @@
     "preview": "https://55gms.com/img/videos/preview/boxingrandom.mp4",
     "launchUrl": "https://55gms.com/misc/boxing-random/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-37",
@@ -327,7 +355,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/cluster-rush/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-38",
@@ -337,7 +366,8 @@
     "preview": "https://55gms.com/img/videos/preview/cookieclicker.mp4",
     "launchUrl": "https://55gms.com/misc/cookieclicker/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-39",
@@ -347,7 +377,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=cubefield.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-40",
@@ -357,7 +388,8 @@
     "preview": "https://55gms.com/img/videos/preview/crossyroad.mp4",
     "launchUrl": "https://55gms.com/misc/crossy-road/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-41",
@@ -367,7 +399,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/csgo-clicker/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-42",
@@ -377,7 +410,8 @@
     "preview": "https://55gms.com/img/videos/preview/dadish.mp4",
     "launchUrl": "https://55gms.com/misc/dadish/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-43",
@@ -387,7 +421,8 @@
     "preview": "https://55gms.com/img/videos/preview/dadish2.mp4",
     "launchUrl": "https://55gms.com/misc/dadish2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-44",
@@ -397,7 +432,8 @@
     "preview": "https://55gms.com/img/videos/preview/dadish3.mp4",
     "launchUrl": "https://55gms.com/misc/dadish3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-45",
@@ -407,7 +443,8 @@
     "preview": "https://55gms.com/img/videos/preview/dadish3d.mp4",
     "launchUrl": "https://55gms.com/misc/dadish3d/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-46",
@@ -417,7 +454,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/gettingoverit/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-47",
@@ -427,7 +465,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/boomslingersreboom/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-48",
@@ -437,7 +476,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/pvz/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-50",
@@ -447,7 +487,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/hotlinemiami/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-51",
@@ -457,7 +498,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/jellydrift/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-52",
@@ -467,7 +509,8 @@
     "preview": "https://55gms.com/img/videos/preview/dailydadish.mp4",
     "launchUrl": "https://55gms.com/misc/dailydadish/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-53",
@@ -477,7 +520,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/deal-or-no-deal/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-54",
@@ -487,7 +531,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/redvsbluez/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-55",
@@ -497,7 +542,8 @@
     "preview": "",
     "launchUrl": "https://beta.deeeep.io/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@716465197e06bad67f8bbfb3194967cdebc5f697/misc/misc/"
   },
   {
     "id": "55gms-56",
@@ -507,7 +553,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/dogeminer/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-57",
@@ -517,7 +564,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/doodlejump/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-59",
@@ -527,7 +575,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/draw_the_hill/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-60",
@@ -537,7 +586,8 @@
     "preview": "https://55gms.com/img/videos/preview/dreadheadparkour.mp4",
     "launchUrl": "https://55gms.com/misc/dhp/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-61",
@@ -547,7 +597,8 @@
     "preview": "https://55gms.com/img/videos/preview/driftboss.mp4",
     "launchUrl": "https://55gms.com/misc/drift-boss/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-62",
@@ -567,7 +618,8 @@
     "preview": "https://55gms.com/img/videos/preview/drivemad.mp4",
     "launchUrl": "https://55gms.com/misc/drive-mad/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-64",
@@ -587,7 +639,8 @@
     "preview": "https://55gms.com/img/videos/preview/ducklife.mp4",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=duck-life.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-66",
@@ -597,7 +650,8 @@
     "preview": "https://55gms.com/img/videos/preview/ducklife2.mp4",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=duck-life-2.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-67",
@@ -607,7 +661,8 @@
     "preview": "https://55gms.com/img/videos/preview/ducklife3.mp4",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=duck-life-3.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-68",
@@ -617,7 +672,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=duck-life-4.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-69",
@@ -627,7 +683,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/misc/eloader/",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-70",
@@ -637,7 +694,8 @@
     "preview": "https://55gms.com/img/videos/preview/poorbunny.mp4",
     "launchUrl": "https://55gms.com/misc/poor-bunny/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-71",
@@ -647,7 +705,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/edgenotfound/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-72",
@@ -657,7 +716,8 @@
     "preview": "https://55gms.com/img/videos/preview/eggycar.mp4",
     "launchUrl": "https://55gms.com/misc/eggy-car/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-73",
@@ -667,7 +727,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/emulatorjs/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-74",
@@ -677,7 +738,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/eparkour/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@861ca05049786b98199e41369f4fc2dac1d0ece0/misc/misc/"
   },
   {
     "id": "55gms-75",
@@ -697,7 +759,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=fancypantsadventure.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-77",
@@ -707,7 +770,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=fancy-pants-adventure2.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-78",
@@ -717,7 +781,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fbwg/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-79",
@@ -727,7 +792,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flippyfish/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-80",
@@ -737,7 +803,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fnaf/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-81",
@@ -747,7 +814,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/googlebaseball/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-82",
@@ -757,7 +825,8 @@
     "preview": "https://55gms.com/img/videos/preview/fridaynightfunkin.mp4",
     "launchUrl": "https://55gms.com/misc/fnf/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-83",
@@ -767,7 +836,8 @@
     "preview": "https://55gms.com/img/videos/preview/fruitninja.mp4",
     "launchUrl": "https://55gms.com/misc/fruit-ninja/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-85",
@@ -787,7 +857,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/geometry-dash/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-87",
@@ -797,7 +868,8 @@
     "preview": "https://55gms.com/img/videos/preview/geometrydash.mp4",
     "launchUrl": "https://55gms.com/misc/geometry/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-88",
@@ -807,7 +879,8 @@
     "preview": "https://55gms.com/img/videos/preview/getawayshootout.mp4",
     "launchUrl": "https://55gms.com/misc/getaway-shootout/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-89",
@@ -817,7 +890,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/escaperoad/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-90",
@@ -827,7 +901,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/escaperoad2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-91",
@@ -837,7 +912,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/escaperoadcity2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-92",
@@ -847,7 +923,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/stateio/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-93",
@@ -857,7 +934,8 @@
     "preview": "https://55gms.com/img/videos/preview/lightthelamp.mp4",
     "launchUrl": "https://55gms.com/misc/lightthelamp/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-94",
@@ -877,7 +955,8 @@
     "preview": "https://55gms.com/img/videos/preview/gladihoppers.mp4",
     "launchUrl": "https://55gms.com/misc/gladihoppers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-96",
@@ -887,7 +966,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/google-snake/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-97",
@@ -907,7 +987,8 @@
     "preview": "https://55gms.com/img/videos/preview/grindcraft.mp4",
     "launchUrl": "https://55gms.com/misc/grindcraft/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-101",
@@ -917,7 +998,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=happywheels.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-102",
@@ -927,7 +1009,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/helixjump/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-103",
@@ -937,7 +1020,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fnae/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-104",
@@ -967,7 +1051,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/hexgl/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@9d2607b431b763a96672236bf9321a83abc7e181/misc/misc/"
   },
   {
     "id": "55gms-107",
@@ -977,7 +1062,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/hollow-night/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-108",
@@ -987,7 +1073,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/hollow-night-silksong/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-109",
@@ -997,7 +1084,8 @@
     "preview": "https://55gms.com/img/videos/preview/swingo.mp4",
     "launchUrl": "https://55gms.com/misc/swingo/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-110",
@@ -1007,7 +1095,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/hextris/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-111",
@@ -1017,7 +1106,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-112",
@@ -1027,7 +1117,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo-2.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-113",
@@ -1037,7 +1128,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo-3.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-114",
@@ -1047,7 +1139,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo-4.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-115",
@@ -1057,7 +1150,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo-5.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-116",
@@ -1067,7 +1161,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo-6.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-117",
@@ -1077,7 +1172,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=hobo-7.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-118",
@@ -1087,7 +1183,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/astrosurvivor/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-119",
@@ -1097,7 +1194,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/gunblood/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-120",
@@ -1107,7 +1205,8 @@
     "preview": "https://55gms.com/img/videos/preview/houseofhazards.mp4",
     "launchUrl": "https://55gms.com/misc/houseofhazards/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-121",
@@ -1117,7 +1216,8 @@
     "preview": "https://55gms.com/img/videos/preview/idledices.mp4",
     "launchUrl": "https://55gms.com/misc/idle_dice/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-122",
@@ -1127,7 +1227,8 @@
     "preview": "https://55gms.com/img/videos/preview/golforbit.mp4",
     "launchUrl": "https://55gms.com/misc/golforbit/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-123",
@@ -1137,7 +1238,8 @@
     "preview": "https://55gms.com/img/videos/preview/speedstars.mp4",
     "launchUrl": "https://55gms.com/misc/speed-stars/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-124",
@@ -1147,7 +1249,8 @@
     "preview": "https://55gms.com/img/videos/preview/idlebreakout.mp4",
     "launchUrl": "https://55gms.com/misc/idle-breakout/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-125",
@@ -1157,7 +1260,8 @@
     "preview": "https://55gms.com/img/videos/preview/idleminingempire.mp4",
     "launchUrl": "https://55gms.com/misc/idle-mining-empire/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-126",
@@ -1167,7 +1271,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/IdleRestaurants/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@7e412f6101ae566968f32d97a48f44c09adae3e1/misc/misc/"
   },
   {
     "id": "55gms-127",
@@ -1177,7 +1282,8 @@
     "preview": "https://55gms.com/img/videos/preview/impossiblequiz.mp4",
     "launchUrl": "https://55gms.com/misc/impossible-quiz/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-128",
@@ -1187,7 +1293,8 @@
     "preview": "https://55gms.com/img/videos/preview/theimpossiblequiz2.mp4",
     "launchUrl": "https://55gms.com/misc/impossible-quiz2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-129",
@@ -1197,7 +1304,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/karlsont/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-130",
@@ -1217,7 +1325,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/littlealchemy/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-133",
@@ -1227,7 +1336,8 @@
     "preview": "https://55gms.com/img/videos/preview/littlealc.mp4",
     "launchUrl": "https://littlealchemy2.com/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-134",
@@ -1257,7 +1367,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/learntofly/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-137",
@@ -1267,7 +1378,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=learn-to-fly-2.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@58a8abcbb34a8f5f220ee1fd564aa76ecf5a7917/misc/misc/"
   },
   {
     "id": "55gms-138",
@@ -1287,7 +1399,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/madstunt-cars/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-140",
@@ -1297,7 +1410,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/MarblesSorting/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@7e412f6101ae566968f32d97a48f44c09adae3e1/misc/misc/"
   },
   {
     "id": "55gms-141",
@@ -1307,7 +1421,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/choppyorc/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@bfb42a0a6f78e8a534c9bfaf3345b4107a507eb1/misc/misc/"
   },
   {
     "id": "55gms-142",
@@ -1317,7 +1432,8 @@
     "preview": "https://55gms.com/img/videos/preview/jumponly.mp4",
     "launchUrl": "https://55gms.com/misc/jumponly/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-143",
@@ -1327,7 +1443,8 @@
     "preview": "https://55gms.com/img/videos/preview/policechase.mp4",
     "launchUrl": "https://55gms.com/misc/policechase/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-144",
@@ -1337,7 +1454,8 @@
     "preview": "https://55gms.com/img/videos/preview/skyriders.mp4",
     "launchUrl": "https://55gms.com/misc/skyriders/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-145",
@@ -1347,7 +1465,8 @@
     "preview": "https://55gms.com/img/videos/preview/templeofboom.mp4",
     "launchUrl": "https://55gms.com/misc/templeofboom/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-146",
@@ -1357,7 +1476,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/crazy-cattle/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-147",
@@ -1367,7 +1487,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/misc/eloader/",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-148",
@@ -1377,7 +1498,8 @@
     "preview": "",
     "launchUrl": "https://mk48.io/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-149",
@@ -1387,7 +1509,8 @@
     "preview": "https://55gms.com/img/videos/preview/monkeymart.mp4",
     "launchUrl": "https://55gms.com/misc/monkey-mart/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-150",
@@ -1397,7 +1520,8 @@
     "preview": "https://55gms.com/img/videos/preview/monstertracks.mp4",
     "launchUrl": "https://55gms.com/misc/monster-track/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-151",
@@ -1407,7 +1531,8 @@
     "preview": "https://55gms.com/img/videos/preview/motox3m.mp4",
     "launchUrl": "https://55gms.com/misc/motox3m/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-152",
@@ -1417,7 +1542,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/motox3m2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-153",
@@ -1427,7 +1553,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/balatro/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-154",
@@ -1437,7 +1564,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/slimerancher/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-155",
@@ -1447,7 +1575,8 @@
     "preview": "https://55gms.com/img/videos/preview/bouncybasketball.mp4",
     "launchUrl": "https://55gms.com/misc/bouncybasketball/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-156",
@@ -1457,7 +1586,8 @@
     "preview": "https://55gms.com/img/videos/preview/motox3mpool.mp4",
     "launchUrl": "https://55gms.com/misc/motox3m-pool/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-157",
@@ -1467,7 +1597,8 @@
     "preview": "https://55gms.com/img/videos/preview/motox3mspooky.mp4",
     "launchUrl": "https://55gms.com/misc/motox3m-spooky/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-158",
@@ -1477,7 +1608,8 @@
     "preview": "https://55gms.com/img/videos/preview/motox3mwinter.mp4",
     "launchUrl": "https://55gms.com/misc/motox3m-winter/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-159",
@@ -1487,7 +1619,8 @@
     "preview": "https://55gms.com/img/videos/preview/pingponggo.mp4",
     "launchUrl": "https://55gms.com/misc/pingponggo/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-161",
@@ -1497,7 +1630,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/games/mortal/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-162",
@@ -1507,7 +1641,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/n-gon/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-163",
@@ -1517,7 +1652,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/ns/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-164",
@@ -1527,7 +1663,8 @@
     "preview": "https://55gms.com/img/videos/preview/ovo.mp4",
     "launchUrl": "https://55gms.com/misc/ovo/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-165",
@@ -1537,7 +1674,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/ovo2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-166",
@@ -1547,7 +1685,8 @@
     "preview": "https://55gms.com/img/videos/preview/ovodimensions.mp4",
     "launchUrl": "https://55gms.com/misc/ovo3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-167",
@@ -1557,7 +1696,8 @@
     "preview": "https://55gms.com/img/videos/preview/papasburgeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-burgeria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-168",
@@ -1567,7 +1707,8 @@
     "preview": "https://55gms.com/img/videos/preview/papascupcakeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-cupcakeria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-169",
@@ -1577,7 +1718,8 @@
     "preview": "https://55gms.com/img/videos/preview/papasdonuteria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-donuteria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-170",
@@ -1587,7 +1729,8 @@
     "preview": "https://55gms.com/img/videos/preview/papasfreezeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-freezeria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-171",
@@ -1597,7 +1740,8 @@
     "preview": "https://55gms.com/img/videos/preview/papashotdoggeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-hot-doggeria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-172",
@@ -1607,7 +1751,8 @@
     "preview": "https://55gms.com/img/videos/preview/papaspancakeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-pancakeria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-173",
@@ -1617,7 +1762,8 @@
     "preview": "https://55gms.com/img/videos/preview/papaspastaria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-pastaria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-174",
@@ -1627,7 +1773,8 @@
     "preview": "https://55gms.com/img/videos/preview/papaspizzeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-pizzaria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-175",
@@ -1637,7 +1784,8 @@
     "preview": "https://55gms.com/img/videos/preview/papasscooperia.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-scooperia/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-176",
@@ -1647,7 +1795,8 @@
     "preview": "https://55gms.com/img/videos/preview/papassushiria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-sushiria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-177",
@@ -1657,7 +1806,8 @@
     "preview": "https://55gms.com/img/videos/preview/papastacomia.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-taco-mia/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-178",
@@ -1667,7 +1817,8 @@
     "preview": "https://55gms.com/img/videos/preview/papaswingeria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-wingeria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-179",
@@ -1677,7 +1828,8 @@
     "preview": "https://55gms.com/img/videos/preview/papascheeseria.mp4",
     "launchUrl": "https://55gms.com/misc/papas/papas-cheeseria/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-180",
@@ -1687,7 +1839,8 @@
     "preview": "https://55gms.com/img/videos/preview/paperio2.mp4",
     "launchUrl": "https://55gms.com/misc/paperio2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-181",
@@ -1697,7 +1850,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/papery-planes/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-182",
@@ -1707,7 +1861,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/penalty-kick-online/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@7e412f6101ae566968f32d97a48f44c09adae3e1/misc/misc/"
   },
   {
     "id": "55gms-183",
@@ -1717,7 +1872,8 @@
     "preview": "https://55gms.com/img/videos/preview/superfowlst.mp4",
     "launchUrl": "https://55gms.com/misc/super-foulist/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-184",
@@ -1727,7 +1883,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/crystal/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-185",
@@ -1737,7 +1894,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/emerald/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-186",
@@ -1747,7 +1905,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/ruby/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-187",
@@ -1757,7 +1916,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/red/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-188",
@@ -1767,7 +1927,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/black/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-189",
@@ -1777,7 +1938,8 @@
     "preview": "https://55gms.com/img/videos/preview/steelhills.mp4",
     "launchUrl": "https://55gms.com/misc/steelhills/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-190",
@@ -1787,7 +1949,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/florasky/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-191",
@@ -1797,7 +1960,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/ultraviolent/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-192",
@@ -1807,7 +1971,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/ultrakill/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-193",
@@ -1817,7 +1982,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/nzp/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-194",
@@ -1827,7 +1993,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/brawl/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-195",
@@ -1837,7 +2004,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/pokemon/sapphire/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-196",
@@ -1857,7 +2025,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgislime.mp4",
     "launchUrl": "https://55gms.com/misc/blumgislime/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-199",
@@ -1867,7 +2036,8 @@
     "preview": "https://55gms.com/img/videos/preview/raftwars.mp4",
     "launchUrl": "https://55gms.com/misc/raft-wars/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-200",
@@ -1887,7 +2057,8 @@
     "preview": "https://55gms.com/img/videos/preview/catpizza.mp4",
     "launchUrl": "https://55gms.com/misc/catpizza/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-202",
@@ -1897,7 +2068,8 @@
     "preview": "https://55gms.com/img/videos/preview/tag.mp4",
     "launchUrl": "https://55gms.com/misc/tag/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-203",
@@ -1907,7 +2079,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fryingnemo/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-204",
@@ -1917,7 +2090,8 @@
     "preview": "https://55gms.com/img/videos/preview/spiralroll.mp4",
     "launchUrl": "https://55gms.com/misc/spiralroll/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-205",
@@ -1927,7 +2101,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bankrob2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-206",
@@ -1937,7 +2112,8 @@
     "preview": "https://55gms.com/img/videos/preview/raftwars2.mp4",
     "launchUrl": "https://55gms.com/misc/raft-wars-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-207",
@@ -1957,7 +2133,8 @@
     "preview": "https://55gms.com/img/videos/preview/bigtowertinysquare2.mp4",
     "launchUrl": "https://55gms.com/misc/big-tower-tiny-square/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-209",
@@ -1967,7 +2144,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/big-flappy-tower/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@861ca05049786b98199e41369f4fc2dac1d0ece0/misc/misc/"
   },
   {
     "id": "55gms-210",
@@ -1977,7 +2155,8 @@
     "preview": "https://55gms.com/img/videos/preview/retrobowl.mp4",
     "launchUrl": "https://55gms.com/misc/retro-bowl-game/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-211",
@@ -1987,7 +2166,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bendy/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-212",
@@ -2017,7 +2197,8 @@
     "preview": "https://55gms.com/img/videos/preview/retrobowlcollege.mp4",
     "launchUrl": "https://55gms.com/misc/retrobowlcollege/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-215",
@@ -2027,7 +2208,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddleschool/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-216",
@@ -2037,7 +2219,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddleschool2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-217",
@@ -2047,7 +2230,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/shellshock/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-218",
@@ -2057,7 +2241,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddleschool3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-219",
@@ -2067,7 +2252,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddleschool4/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-220",
@@ -2077,7 +2263,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddleschool5/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-221",
@@ -2087,7 +2274,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddletransfer/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-222",
@@ -2097,7 +2285,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/riddletransfer2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-223",
@@ -2107,7 +2296,8 @@
     "preview": "",
     "launchUrl": "https://www.mathplayground.com/rise-higher/index.html",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@6509ecb086316eadebe532fe5e3a3c76fb7d69fe/misc/misc/"
   },
   {
     "id": "55gms-224",
@@ -2117,7 +2307,8 @@
     "preview": "https://55gms.com/img/videos/preview/rooftopsnipers.mp4",
     "launchUrl": "https://55gms.com/misc/rooftop-snipers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-225",
@@ -2137,7 +2328,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/roblos/",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-227",
@@ -2147,7 +2339,8 @@
     "preview": "https://55gms.com/img/videos/preview/roper.mp4",
     "launchUrl": "https://55gms.com/misc/roper/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-228",
@@ -2157,7 +2350,8 @@
     "preview": "https://55gms.com/img/videos/preview/flickgoal.mp4",
     "launchUrl": "https://55gms.com/misc/flickgoal/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-229",
@@ -2167,7 +2361,8 @@
     "preview": "https://55gms.com/img/videos/preview/superliquidsoccer.mp4",
     "launchUrl": "https://55gms.com/misc/superliquidsoccor/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-230",
@@ -2177,7 +2372,8 @@
     "preview": "https://55gms.com/img/videos/preview/ragdollarchers.mp4",
     "launchUrl": "https://55gms.com/misc/ragdoll-archers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-231",
@@ -2187,7 +2383,8 @@
     "preview": "https://55gms.com/img/videos/preview/ragdollhit.mp4",
     "launchUrl": "https://55gms.com/misc/ragdoll-hit/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-232",
@@ -2197,7 +2394,8 @@
     "preview": "https://55gms.com/img/videos/preview/run3.mp4",
     "launchUrl": "https://55gms.com/misc/run3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-233",
@@ -2207,7 +2405,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/sandboxels/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-234",
@@ -2217,7 +2416,8 @@
     "preview": "https://55gms.com/img/videos/preview/gobble.mp4",
     "launchUrl": "https://55gms.com/misc/gobble/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-235",
@@ -2227,7 +2427,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/sandtrix/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-236",
@@ -2237,7 +2438,8 @@
     "preview": "",
     "launchUrl": "https://yp3d.com/ships3d/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-237",
@@ -2257,7 +2459,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/brotato/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-239",
@@ -2277,7 +2480,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bikeobby/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-241",
@@ -2287,7 +2491,8 @@
     "preview": "",
     "launchUrl": "https://slither.io/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-242",
@@ -2297,7 +2502,8 @@
     "preview": "https://55gms.com/img/videos/preview/leveldevil.mp4",
     "launchUrl": "https://55gms.com/misc/leveldevil/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-243",
@@ -2307,7 +2513,8 @@
     "preview": "https://55gms.com/img/videos/preview/slope.mp4",
     "launchUrl": "https://55gms.com/misc/slope/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-244",
@@ -2317,7 +2524,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/slowrds/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-245",
@@ -2327,7 +2535,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/sm64/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-246",
@@ -2337,7 +2546,8 @@
     "preview": "https://55gms.com/img/videos/preview/tombofthemask.mp4",
     "launchUrl": "https://55gms.com/misc/tombofthemask/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-247",
@@ -2347,7 +2557,8 @@
     "preview": "https://55gms.com/img/videos/preview/smashkarts.mp4",
     "launchUrl": "https://htmlxm.github.io/h/smash-karts/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-248",
@@ -2367,7 +2578,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/soccerbros/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-250",
@@ -2377,7 +2589,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/footballbros/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-251",
@@ -2387,7 +2600,8 @@
     "preview": "https://55gms.com/img/videos/preview/soccerrandom.mp4",
     "launchUrl": "https://55gms.com/misc/soccer-random/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-252",
@@ -2397,7 +2611,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/stickman-boost/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-253",
@@ -2407,7 +2622,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanhook.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-hook/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-254",
@@ -2417,7 +2633,8 @@
     "preview": "",
     "launchUrl": "https://www.stumbleguys.com/play",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-255",
@@ -2427,7 +2644,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/games/street/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-256",
@@ -2437,7 +2655,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/emulator/games/street/3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-257",
@@ -2447,7 +2666,8 @@
     "preview": "https://55gms.com/img/videos/preview/subwaysurfers.mp4",
     "launchUrl": "https://55gms.com/misc/subway-surfers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-258",
@@ -2467,7 +2687,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fruit-merge/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-260",
@@ -2477,7 +2698,8 @@
     "preview": "https://55gms.com/img/videos/preview/superhot.mp4",
     "launchUrl": "https://55gms.com/misc/superhot/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-261",
@@ -2487,7 +2709,8 @@
     "preview": "https://55gms.com/img/videos/preview/tabletennisworldtour.mp4",
     "launchUrl": "https://55gms.com/misc/tabletennisworldtour/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-262",
@@ -2497,7 +2720,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/solar-smash/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-263",
@@ -2507,7 +2731,8 @@
     "preview": "https://55gms.com/img/videos/preview/tanukisunset.mp4",
     "launchUrl": "https://55gms.com/misc/Tanuki-Sunset/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-264",
@@ -2517,7 +2742,8 @@
     "preview": "",
     "launchUrl": "https://territorial.io/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-265",
@@ -2537,7 +2763,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=thebindingofisaac.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-267",
@@ -2547,7 +2774,8 @@
     "preview": "https://55gms.com/img/videos/preview/thereisnog.mp4",
     "launchUrl": "https://55gms.com/misc/thereisnogame/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-270",
@@ -2557,7 +2785,8 @@
     "preview": "https://55gms.com/img/videos/preview/kiwiclicker.mp4",
     "launchUrl": "https://55gms.com/misc/kiwiclicker/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-271",
@@ -2567,7 +2796,8 @@
     "preview": "https://55gms.com/img/videos/preview/tinyfishing.mp4",
     "launchUrl": "https://55gms.com/misc/tiny-fishing/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-272",
@@ -2577,7 +2807,8 @@
     "preview": "https://55gms.com/img/videos/preview/tunnelrush.mp4",
     "launchUrl": "https://55gms.com/misc/tunnel-rush/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-273",
@@ -2587,7 +2818,8 @@
     "preview": "https://55gms.com/img/videos/preview/tunnelrush2.mp4",
     "launchUrl": "https://55gms.com/misc/tunnelrush2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-274",
@@ -2597,7 +2829,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/twitchtetris/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-275",
@@ -2607,7 +2840,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/unfair-mario/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-276",
@@ -2617,7 +2851,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/universal-paperclips/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-277",
@@ -2627,7 +2862,8 @@
     "preview": "https://55gms.com/img/videos/preview/vengeio.mp4",
     "launchUrl": "https://venge.io/",
     "usesProxy": true,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-278",
@@ -2637,7 +2873,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-279",
@@ -2647,7 +2884,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex4/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-280",
@@ -2657,7 +2895,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex5/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-281",
@@ -2667,7 +2906,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex6/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-282",
@@ -2677,7 +2917,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex7/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-283",
@@ -2687,7 +2928,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex8/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-284",
@@ -2697,7 +2939,8 @@
     "preview": "https://55gms.com/img/videos/preview/volleyrandom.mp4",
     "launchUrl": "https://55gms.com/misc/volley-random/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-285",
@@ -2707,7 +2950,8 @@
     "preview": "https://55gms.com/img/videos/preview/webecomewhatwebehold.mp4",
     "launchUrl": "https://55gms.com/misc/webecomewhatwebehold/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-286",
@@ -2717,7 +2961,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=whack-your-boss-24.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-287",
@@ -2727,7 +2972,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=whack_your_computer_12_ways.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-288",
@@ -2737,7 +2983,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=whack-your-ex.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-289",
@@ -2747,7 +2994,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/wordle/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-290",
@@ -2757,7 +3005,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/worldshardestgame/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-291",
@@ -2767,7 +3016,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/flash/index.html?swf=worlds-hardest-game-2.swf",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-292",
@@ -2777,7 +3027,8 @@
     "preview": "https://55gms.com/img/videos/preview/yohohoio.mp4",
     "launchUrl": "https://55gms.com/misc/yohoho/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-293",
@@ -2797,7 +3048,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/cuphead/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-296",
@@ -2807,7 +3059,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/tnmn/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-297",
@@ -2817,7 +3070,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/baseballbros-io/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-298",
@@ -2827,7 +3081,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/raft/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-299",
@@ -2837,7 +3092,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/peopleplayground/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-300",
@@ -2847,7 +3103,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/repo/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-301",
@@ -2857,7 +3114,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/karlson/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-302",
@@ -2867,7 +3125,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/webfishing/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-303",
@@ -2877,7 +3136,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/kindergarden/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-304",
@@ -2887,7 +3147,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/kindergarden2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@86dba3822eb145dd1780438a918249e111dc9cae/misc/misc/"
   },
   {
     "id": "55gms-305",
@@ -2907,7 +3168,8 @@
     "preview": "https://55gms.com/img/videos/preview/zombiederby.mp4",
     "launchUrl": "https://55gms.com/misc/zombiederby/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-308",
@@ -2927,7 +3189,8 @@
     "preview": "https://55gms.com/img/videos/preview/stacktris.mp4",
     "launchUrl": "https://55gms.com/misc/stacktris/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-310",
@@ -2937,7 +3200,8 @@
     "preview": "https://55gms.com/img/videos/preview/harvestsimulator.mp4",
     "launchUrl": "https://55gms.com/misc/harvestsimulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-311",
@@ -2957,7 +3221,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/60-seconds-reatomized/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-313",
@@ -2967,7 +3232,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/clover-pit/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-314",
@@ -2977,7 +3243,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/just-shapes-and-beats/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-315",
@@ -2987,7 +3254,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/stick-war-legacy/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-316",
@@ -2997,7 +3265,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/war-the-knights/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-317",
@@ -3007,7 +3276,8 @@
     "preview": "https://55gms.com/img/videos/preview/bouncemasters.mp4",
     "launchUrl": "https://55gms.com/misc/bouncemasters/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-318",
@@ -3017,7 +3287,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/spaceflight-simulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-319",
@@ -3027,7 +3298,8 @@
     "preview": "https://55gms.com/img/videos/preview/slimedunk.mp4",
     "launchUrl": "https://55gms.com/misc/slime-dunk/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-320",
@@ -3037,7 +3309,8 @@
     "preview": "https://55gms.com/img/videos/preview/dinofighter.mp4",
     "launchUrl": "https://55gms.com/misc/dino-fighter/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-321",
@@ -3047,7 +3320,8 @@
     "preview": "https://55gms.com/img/videos/preview/whois.mp4",
     "launchUrl": "https://55gms.com/misc/who-is/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-322",
@@ -3057,7 +3331,8 @@
     "preview": "https://55gms.com/img/videos/preview/aquaparkio.mp4",
     "launchUrl": "https://55gms.com/misc/aquapark-io/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-323",
@@ -3067,7 +3342,8 @@
     "preview": "https://55gms.com/img/videos/preview/rescuethefish.mp4",
     "launchUrl": "https://55gms.com/misc/rescue-the-fish/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-324",
@@ -3077,7 +3353,8 @@
     "preview": "https://55gms.com/img/videos/preview/fisheatfish.mp4",
     "launchUrl": "https://55gms.com/misc/fish-eat-fish/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-326",
@@ -3087,7 +3364,8 @@
     "preview": "https://55gms.com/img/videos/preview/dinosimulator.mp4",
     "launchUrl": "https://55gms.com/misc/dino-simulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-327",
@@ -3097,7 +3375,8 @@
     "preview": "https://55gms.com/img/videos/preview/fashionlegends.mp4",
     "launchUrl": "https://55gms.com/misc/fashion-legends/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-328",
@@ -3107,7 +3386,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgicastle.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-castle/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@f1027ba0445b825609a579e132b3ce6744e86a48/misc/misc/"
   },
   {
     "id": "55gms-329",
@@ -3117,7 +3397,8 @@
     "preview": "https://55gms.com/img/videos/preview/youmonster.mp4",
     "launchUrl": "https://55gms.com/misc/you-monster/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-330",
@@ -3127,7 +3408,8 @@
     "preview": "https://55gms.com/img/videos/preview/parkourrace.mp4",
     "launchUrl": "https://55gms.com/misc/parkour-race/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-331",
@@ -3137,7 +3419,8 @@
     "preview": "https://55gms.com/img/videos/preview/carmachines.mp4",
     "launchUrl": "https://55gms.com/misc/car-machines/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-332",
@@ -3147,7 +3430,8 @@
     "preview": "https://55gms.com/img/videos/preview/mototrap.mp4",
     "launchUrl": "https://55gms.com/misc/moto-trap/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-333",
@@ -3157,7 +3441,8 @@
     "preview": "https://55gms.com/img/videos/preview/baconsurvivor.mp4",
     "launchUrl": "https://55gms.com/misc/bacon-survivor/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-334",
@@ -3167,7 +3452,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgidragon.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-dragon/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-335",
@@ -3177,7 +3463,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgisoccer.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-soccer/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-336",
@@ -3187,7 +3474,8 @@
     "preview": "https://55gms.com/img/videos/preview/boxrob.mp4",
     "launchUrl": "https://55gms.com/misc/boxrob/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-337",
@@ -3197,7 +3485,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanmerge.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-merge/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-338",
@@ -3207,7 +3496,8 @@
     "preview": "https://55gms.com/img/videos/preview/perfectlandingplanepilot.mp4",
     "launchUrl": "https://55gms.com/misc/perfect-landing-plane-pilot/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-339",
@@ -3217,7 +3507,8 @@
     "preview": "https://55gms.com/img/videos/preview/unicyclelegend.mp4",
     "launchUrl": "https://55gms.com/misc/unicycle-legend/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-340",
@@ -3227,7 +3518,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgiball.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-ball/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-341",
@@ -3237,7 +3529,8 @@
     "preview": "https://55gms.com/img/videos/preview/nopainnogain.mp4",
     "launchUrl": "https://55gms.com/misc/no-pain-no-gain/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-342",
@@ -3247,7 +3540,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgibloom.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-bloom/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-343",
@@ -3257,7 +3551,8 @@
     "preview": "https://55gms.com/img/videos/preview/mergeroundracers.mp4",
     "launchUrl": "https://55gms.com/misc/merge-round-racers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-344",
@@ -3267,7 +3562,8 @@
     "preview": "https://55gms.com/img/videos/preview/adventureminer.mp4",
     "launchUrl": "https://55gms.com/misc/adventure-miner/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-345",
@@ -3277,7 +3573,8 @@
     "preview": "https://55gms.com/img/videos/preview/idlesuccess.mp4",
     "launchUrl": "https://55gms.com/misc/idle-success/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-346",
@@ -3287,7 +3584,8 @@
     "preview": "https://55gms.com/img/videos/preview/airplanemanager.mp4",
     "launchUrl": "https://55gms.com/misc/airplane-manager/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-347",
@@ -3297,7 +3595,8 @@
     "preview": "https://55gms.com/img/videos/preview/johnnytrigger.mp4",
     "launchUrl": "https://55gms.com/misc/johnny-trigger/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-349",
@@ -3307,7 +3606,8 @@
     "preview": "https://55gms.com/img/videos/preview/roller.mp4",
     "launchUrl": "https://55gms.com/misc/roller/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-350",
@@ -3317,7 +3617,8 @@
     "preview": "https://55gms.com/img/videos/preview/magicbattleground.mp4",
     "launchUrl": "https://55gms.com/misc/magic-battleground/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-351",
@@ -3327,7 +3628,8 @@
     "preview": "https://55gms.com/img/videos/preview/backroomsrecovery.mp4",
     "launchUrl": "https://55gms.com/misc/backrooms-recovery/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-352",
@@ -3337,7 +3639,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/santy-is-home/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-353",
@@ -3347,7 +3650,8 @@
     "preview": "https://55gms.com/img/videos/preview/perfectshape.mp4",
     "launchUrl": "https://55gms.com/misc/perfect-shape/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-354",
@@ -3357,7 +3661,8 @@
     "preview": "https://55gms.com/img/videos/preview/punchyguy.mp4",
     "launchUrl": "https://55gms.com/misc/punchy-guy/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-355",
@@ -3367,7 +3672,8 @@
     "preview": "https://55gms.com/img/videos/preview/worldofscrew.mp4",
     "launchUrl": "https://55gms.com/misc/world-of-screw/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-357",
@@ -3377,7 +3683,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickrush.mp4",
     "launchUrl": "https://55gms.com/misc/stick-rush/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-358",
@@ -3387,7 +3694,8 @@
     "preview": "https://55gms.com/img/videos/preview/supercarlegends.mp4",
     "launchUrl": "https://55gms.com/misc/supercar-legends/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-359",
@@ -3397,7 +3705,8 @@
     "preview": "https://55gms.com/img/videos/preview/goodsmaster.mp4",
     "launchUrl": "https://55gms.com/misc/goods-master/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-360",
@@ -3407,7 +3716,8 @@
     "preview": "https://55gms.com/img/videos/preview/masterchess.mp4",
     "launchUrl": "https://55gms.com/misc/master-chess/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-361",
@@ -3417,7 +3727,8 @@
     "preview": "https://55gms.com/img/videos/preview/hexellent.mp4",
     "launchUrl": "https://55gms.com/misc/hexellent/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-362",
@@ -3427,7 +3738,8 @@
     "preview": "https://55gms.com/img/videos/preview/marblerun3d.mp4",
     "launchUrl": "https://55gms.com/misc/marble-run-3d/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-363",
@@ -3437,7 +3749,8 @@
     "preview": "https://55gms.com/img/videos/preview/ragdollchaos.mp4",
     "launchUrl": "https://55gms.com/misc/ragdoll-chaos/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-364",
@@ -3447,7 +3760,8 @@
     "preview": "https://55gms.com/img/videos/preview/gasstation.mp4",
     "launchUrl": "https://55gms.com/misc/gas-station/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-365",
@@ -3457,7 +3771,8 @@
     "preview": "https://55gms.com/img/videos/preview/rodeostampede.mp4",
     "launchUrl": "https://55gms.com/misc/rodeo-stampede/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-366",
@@ -3467,7 +3782,8 @@
     "preview": "https://55gms.com/img/videos/preview/carnadostuntcar.mp4",
     "launchUrl": "https://55gms.com/misc/carnado-stunt-car/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-367",
@@ -3477,7 +3793,8 @@
     "preview": "https://55gms.com/img/videos/preview/carcircle.mp4",
     "launchUrl": "https://55gms.com/misc/car-circle/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-368",
@@ -3487,7 +3804,8 @@
     "preview": "https://55gms.com/img/videos/preview/capitalistbusdriver.mp4",
     "launchUrl": "https://55gms.com/misc/capitalist-bus-driver/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-369",
@@ -3497,7 +3815,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgimerge.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-merge/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-370",
@@ -3507,7 +3826,8 @@
     "preview": "https://55gms.com/img/videos/preview/basketballsuperstars.mp4",
     "launchUrl": "https://55gms.com/misc/basketball-superstars/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-371",
@@ -3517,7 +3837,8 @@
     "preview": "https://55gms.com/img/videos/preview/basketballreal.mp4",
     "launchUrl": "https://55gms.com/misc/basketball-real/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-372",
@@ -3527,7 +3848,8 @@
     "preview": "https://55gms.com/img/videos/preview/asmallworldcup2.mp4",
     "launchUrl": "https://55gms.com/misc/a-small-world-cup-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-373",
@@ -3537,7 +3859,8 @@
     "preview": "https://55gms.com/img/videos/preview/americanfootballreal.mp4",
     "launchUrl": "https://55gms.com/misc/american-football-real/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-374",
@@ -3547,7 +3870,8 @@
     "preview": "https://55gms.com/img/videos/preview/holeio.mp4",
     "launchUrl": "https://55gms.com/misc/hole-io/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-375",
@@ -3557,7 +3881,8 @@
     "preview": "https://55gms.com/img/videos/preview/dinobros.mp4",
     "launchUrl": "https://55gms.com/misc/dino-bros/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-376",
@@ -3567,7 +3892,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickdefenders.mp4",
     "launchUrl": "https://55gms.com/misc/stick-defenders/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-377",
@@ -3577,7 +3903,8 @@
     "preview": "https://55gms.com/img/videos/preview/mopheaddash.mp4",
     "launchUrl": "https://55gms.com/misc/mophead-dash/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-378",
@@ -3587,7 +3914,8 @@
     "preview": "https://55gms.com/img/videos/preview/harvestloop.mp4",
     "launchUrl": "https://55gms.com/misc/harvest-loop/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-379",
@@ -3597,7 +3925,8 @@
     "preview": "https://55gms.com/img/videos/preview/fruitsoffury.mp4",
     "launchUrl": "https://55gms.com/misc/fruits-of-fury/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-380",
@@ -3607,7 +3936,8 @@
     "preview": "https://55gms.com/img/videos/preview/snowtrainodyssey.mp4",
     "launchUrl": "https://55gms.com/misc/snow-train-odyssey/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-381",
@@ -3617,7 +3947,8 @@
     "preview": "https://55gms.com/img/videos/preview/slicemaster.mp4",
     "launchUrl": "https://55gms.com/misc/slice-master/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-382",
@@ -3627,7 +3958,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanbattle.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-battle/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-383",
@@ -3637,7 +3969,8 @@
     "preview": "https://55gms.com/img/videos/preview/flipbros.mp4",
     "launchUrl": "https://55gms.com/misc/flip-bros/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-384",
@@ -3647,7 +3980,8 @@
     "preview": "https://55gms.com/img/videos/preview/eagleride.mp4",
     "launchUrl": "https://55gms.com/misc/eagle-ride/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-385",
@@ -3657,7 +3991,8 @@
     "preview": "https://55gms.com/img/videos/preview/colorpencilrun.mp4",
     "launchUrl": "https://55gms.com/misc/color-pencil-run/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-386",
@@ -3667,7 +4002,8 @@
     "preview": "https://55gms.com/img/videos/preview/duckmerge.mp4",
     "launchUrl": "https://55gms.com/misc/duck-merge/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-387",
@@ -3677,7 +4013,8 @@
     "preview": "https://55gms.com/img/videos/preview/perfectpeel.mp4",
     "launchUrl": "https://55gms.com/misc/perfect-peel/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-388",
@@ -3687,7 +4024,8 @@
     "preview": "https://55gms.com/img/videos/preview/waverider.mp4",
     "launchUrl": "https://55gms.com/misc/wave-rider/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-389",
@@ -3697,7 +4035,8 @@
     "preview": "https://55gms.com/img/videos/preview/retrohighway.mp4",
     "launchUrl": "https://55gms.com/misc/retro-highway/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-390",
@@ -3707,7 +4046,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickfighter.mp4",
     "launchUrl": "https://55gms.com/misc/stick-fighter/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-391",
@@ -3717,7 +4057,8 @@
     "preview": "https://55gms.com/img/videos/preview/kickthebuddy.mp4",
     "launchUrl": "https://55gms.com/misc/kick-the-buddy/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-392",
@@ -3727,7 +4068,8 @@
     "preview": "https://55gms.com/img/videos/preview/slimejourney.mp4",
     "launchUrl": "https://55gms.com/misc/slime-journey/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-393",
@@ -3737,7 +4079,8 @@
     "preview": "https://55gms.com/img/videos/preview/soccerreal.mp4",
     "launchUrl": "https://55gms.com/misc/soccer-real/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-394",
@@ -3747,7 +4090,8 @@
     "preview": "https://55gms.com/img/videos/preview/appleworm.mp4",
     "launchUrl": "https://55gms.com/misc/apple-worm/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-395",
@@ -3757,7 +4101,8 @@
     "preview": "https://55gms.com/img/videos/preview/buckbounce.mp4",
     "launchUrl": "https://55gms.com/misc/buck-bounce/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-396",
@@ -3767,7 +4112,8 @@
     "preview": "https://55gms.com/img/videos/preview/longcat.mp4",
     "launchUrl": "https://55gms.com/misc/longcat/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-397",
@@ -3777,7 +4123,8 @@
     "preview": "https://55gms.com/img/videos/preview/monstermatch.mp4",
     "launchUrl": "https://55gms.com/misc/monster-match/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-398",
@@ -3787,7 +4134,8 @@
     "preview": "https://55gms.com/img/videos/preview/myperfecthotel.mp4",
     "launchUrl": "https://55gms.com/misc/my-perfect-hotel/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-399",
@@ -3797,7 +4145,8 @@
     "preview": "https://55gms.com/img/videos/preview/plonky.mp4",
     "launchUrl": "https://55gms.com/misc/plonky/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-400",
@@ -3807,7 +4156,8 @@
     "preview": "https://55gms.com/img/videos/preview/sandtris.mp4",
     "launchUrl": "https://55gms.com/misc/sandtris/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-401",
@@ -3817,7 +4167,8 @@
     "preview": "https://55gms.com/img/videos/preview/escaperoad3.mp4",
     "launchUrl": "https://55gms.com/misc/escape-road-3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-402",
@@ -3827,7 +4178,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/gym-stack/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-403",
@@ -3837,7 +4189,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgisplash.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-splash/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-404",
@@ -3847,7 +4200,8 @@
     "preview": "https://55gms.com/img/videos/preview/spacewaves.mp4",
     "launchUrl": "https://55gms.com/misc/space-waves/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-405",
@@ -3857,7 +4211,8 @@
     "preview": "https://55gms.com/img/videos/preview/madskillsmotocross2.mp4",
     "launchUrl": "https://55gms.com/misc/mad-skills-motocross-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@986005e191dc455b97b71ed6fcf180748c7f7dc1/misc/misc/"
   },
   {
     "id": "55gms-406",
@@ -3867,7 +4222,8 @@
     "preview": "https://55gms.com/img/videos/preview/stuntbikeextreme.mp4",
     "launchUrl": "https://55gms.com/misc/stunt-bike-extreme/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-407",
@@ -3877,7 +4233,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/geometry-dash-subzero/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-408",
@@ -3887,7 +4244,8 @@
     "preview": "https://55gms.com/img/videos/preview/ragdollfall.mp4",
     "launchUrl": "https://55gms.com/misc/ragdoll-fall/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-409",
@@ -3897,7 +4255,8 @@
     "preview": "https://55gms.com/img/videos/preview/tinytowers.mp4",
     "launchUrl": "https://55gms.com/misc/tiny-towers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-410",
@@ -3907,7 +4266,8 @@
     "preview": "https://55gms.com/img/videos/preview/fullspeedracing.mp4",
     "launchUrl": "https://55gms.com/misc/full-speed-racing/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-411",
@@ -3917,7 +4277,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanclimb3d.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-climb-3d/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-412",
@@ -3927,7 +4288,8 @@
     "preview": "https://55gms.com/img/videos/preview/deadlydecent.mp4",
     "launchUrl": "https://55gms.com/misc/deadly-descent/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-413",
@@ -3937,7 +4299,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgibounce.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-bounce/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-414",
@@ -3947,7 +4310,8 @@
     "preview": "https://55gms.com/img/videos/preview/hillclimbracing.mp4",
     "launchUrl": "https://55gms.com/misc/hill-climb-racing/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-415",
@@ -3957,7 +4321,8 @@
     "preview": "https://55gms.com/img/videos/preview/snakepivot.mp4",
     "launchUrl": "https://55gms.com/misc/snake-pivot/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-416",
@@ -3967,7 +4332,8 @@
     "preview": "https://55gms.com/img/videos/preview/stuntcarextreme.mp4",
     "launchUrl": "https://55gms.com/misc/stunt-car-extreme/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-417",
@@ -3977,7 +4343,8 @@
     "preview": "https://55gms.com/img/videos/preview/sausageflip.mp4",
     "launchUrl": "https://55gms.com/misc/sausage-flip/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-418",
@@ -3987,7 +4354,8 @@
     "preview": "https://55gms.com/img/videos/preview/mineline.mp4",
     "launchUrl": "https://55gms.com/misc/mine-line/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-419",
@@ -3997,7 +4365,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanrun.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-run/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-420",
@@ -4007,7 +4376,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bee-swarm-simulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-421",
@@ -4017,7 +4387,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/dune/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-422",
@@ -4027,7 +4398,8 @@
     "preview": "https://55gms.com/img/videos/preview/jumpingshell.mp4",
     "launchUrl": "https://55gms.com/misc/jumping-shell/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-423",
@@ -4037,7 +4409,8 @@
     "preview": "https://55gms.com/img/videos/preview/braintest.mp4",
     "launchUrl": "https://55gms.com/misc/brain-test/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-424",
@@ -4047,7 +4420,8 @@
     "preview": "https://55gms.com/img/videos/preview/rocketsoccerderby.mp4",
     "launchUrl": "https://55gms.com/misc/rocket-soccer-derby/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-425",
@@ -4057,7 +4431,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/turbo-moto-racer/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-426",
@@ -4067,7 +4442,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fnaf2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-427",
@@ -4077,7 +4453,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/going-balls/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-428",
@@ -4087,7 +4464,8 @@
     "preview": "https://55gms.com/img/videos/preview/idleants.mp4",
     "launchUrl": "https://55gms.com/misc/idle-ants/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-429",
@@ -4097,7 +4475,8 @@
     "preview": "https://55gms.com/img/videos/preview/idlediggingtycoon.mp4",
     "launchUrl": "https://55gms.com/misc/idle-digging-tycoon/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-430",
@@ -4107,7 +4486,8 @@
     "preview": "https://55gms.com/img/videos/preview/idlelumberinc.mp4",
     "launchUrl": "https://55gms.com/misc/idle-lumber-inc/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-431",
@@ -4117,7 +4497,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/stack-bounce/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-432",
@@ -4127,7 +4508,8 @@
     "preview": "https://55gms.com/img/videos/preview/freeriderjumps.mp4",
     "launchUrl": "https://55gms.com/misc/free-rider-jumps/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-433",
@@ -4137,7 +4519,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/idle-revolution/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-434",
@@ -4147,7 +4530,8 @@
     "preview": "https://55gms.com/img/videos/preview/smashit.mp4",
     "launchUrl": "https://55gms.com/misc/smash-it/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-435",
@@ -4157,7 +4541,8 @@
     "preview": "https://55gms.com/img/videos/preview/pooreddie.mp4",
     "launchUrl": "https://55gms.com/misc/poor-eddie/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-436",
@@ -4167,7 +4552,8 @@
     "preview": "https://55gms.com/img/videos/preview/stealabrainrot.mp4",
     "launchUrl": "https://55gms.com/misc/steal-a-brainrot/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-437",
@@ -4177,7 +4563,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanbike.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-bike/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-438",
@@ -4187,7 +4574,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/baldis-basics/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-439",
@@ -4197,7 +4585,8 @@
     "preview": "https://55gms.com/img/videos/preview/crazybikes.mp4",
     "launchUrl": "https://55gms.com/misc/crazy-bikes/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-440",
@@ -4207,7 +4596,8 @@
     "preview": "https://55gms.com/img/videos/preview/googlefeud.mp4",
     "launchUrl": "https://55gms.com/misc/google-feud/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-441",
@@ -4217,7 +4607,8 @@
     "preview": "https://55gms.com/img/videos/preview/dayofmeatradiation.mp4",
     "launchUrl": "https://55gms.com/misc/day-of-meat-radiation/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-442",
@@ -4227,7 +4618,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmerge.mp4",
     "launchUrl": "https://55gms.com/misc/stickmerge/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-443",
@@ -4237,7 +4629,8 @@
     "preview": "https://55gms.com/img/videos/preview/penaltyshooters2.mp4",
     "launchUrl": "https://55gms.com/misc/penalty-shooters-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-444",
@@ -4247,7 +4640,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/stack/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-445",
@@ -4257,7 +4651,8 @@
     "preview": "https://55gms.com/img/videos/preview/murder.mp4",
     "launchUrl": "https://55gms.com/misc/murder/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-446",
@@ -4267,7 +4662,8 @@
     "preview": "https://55gms.com/img/videos/preview/blumgipaintball.mp4",
     "launchUrl": "https://55gms.com/misc/blumgi-paintball/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e899179b25ba3966a87383c0e4092168d9513472/misc/misc/"
   },
   {
     "id": "55gms-447",
@@ -4277,7 +4673,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/backrooms/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-448",
@@ -4287,7 +4684,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bad-time-simulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-449",
@@ -4297,7 +4695,8 @@
     "preview": "https://55gms.com/img/videos/preview/diggingmaster.mp4",
     "launchUrl": "https://55gms.com/misc/digging-master/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-450",
@@ -4307,7 +4706,8 @@
     "preview": "https://55gms.com/img/videos/preview/happyglass.mp4",
     "launchUrl": "https://55gms.com/misc/happy-glass/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@8c89e0016e7d61f82bc2674662454c8c72d9cf6b/misc/misc/"
   },
   {
     "id": "55gms-451",
@@ -4317,7 +4717,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/10-minutes-til-dawn/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-452",
@@ -4327,7 +4728,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/arcade-car-drift/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-453",
@@ -4337,7 +4739,8 @@
     "preview": "https://55gms.com/img/videos/preview/circloo.mp4",
     "launchUrl": "https://55gms.com/misc/circloo/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-454",
@@ -4347,7 +4750,8 @@
     "preview": "https://55gms.com/img/videos/preview/ducklingsio.mp4",
     "launchUrl": "https://55gms.com/misc/ducklings-io/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-455",
@@ -4357,7 +4761,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/webgl-fluid/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-456",
@@ -4367,7 +4772,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fnaf3/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-457",
@@ -4377,7 +4783,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/bob-the-robber-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-458",
@@ -4387,7 +4794,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/sketchbook/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-460",
@@ -4397,7 +4805,8 @@
     "preview": "https://55gms.com/img/videos/preview/hordekilleryouvs100.mp4",
     "launchUrl": "https://55gms.com/misc/horde-killer-you-vs-100/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-461",
@@ -4407,7 +4816,8 @@
     "preview": "https://55gms.com/img/videos/preview/fearresponse.mp4",
     "launchUrl": "https://55gms.com/misc/fear-response/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-462",
@@ -4417,7 +4827,8 @@
     "preview": "https://55gms.com/img/videos/preview/redball4.mp4",
     "launchUrl": "https://55gms.com/misc/redball-4/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-463",
@@ -4427,7 +4838,8 @@
     "preview": "https://55gms.com/img/videos/preview/templerun2.mp4",
     "launchUrl": "https://55gms.com/misc/temple-run-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-464",
@@ -4437,7 +4849,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/vex-3m/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-465",
@@ -4447,7 +4860,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/dante/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-466",
@@ -4457,7 +4871,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/neon-swing/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-467",
@@ -4467,7 +4882,8 @@
     "preview": "https://55gms.com/img/videos/preview/henrystealingthediamond.mp4",
     "launchUrl": "https://55gms.com/misc/henry-stickmin-stealing-the-diamond/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-468",
@@ -4477,7 +4893,8 @@
     "preview": "https://55gms.com/img/videos/preview/ironsnout.mp4",
     "launchUrl": "https://55gms.com/misc/iron-snout/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-469",
@@ -4487,7 +4904,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/the-baby-in-yellow/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-470",
@@ -4497,7 +4915,8 @@
     "preview": "https://55gms.com/img/videos/preview/jetpackjoyride.mp4",
     "launchUrl": "https://55gms.com/misc/jetpack-joyride/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-471",
@@ -4507,7 +4926,8 @@
     "preview": "https://55gms.com/img/videos/preview/pathtoglory.mp4",
     "launchUrl": "https://55gms.com/misc/path-to-glory/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-472",
@@ -4517,7 +4937,8 @@
     "preview": "https://55gms.com/img/videos/preview/cuttherope.mp4",
     "launchUrl": "https://55gms.com/misc/cut-the-rope/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-473",
@@ -4527,7 +4948,8 @@
     "preview": "https://55gms.com/img/videos/preview/henryfleeingthecomplex.mp4",
     "launchUrl": "https://55gms.com/misc/henry-stickmin-fleeing-the-complex/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-474",
@@ -4537,7 +4959,8 @@
     "preview": "https://55gms.com/img/videos/preview/henryescapingtheprison.mp4",
     "launchUrl": "https://55gms.com/misc/henry-stickmin-escaping-the-prison/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-475",
@@ -4547,7 +4970,8 @@
     "preview": "https://55gms.com/img/videos/preview/henryinfiltratingtheairship.mp4",
     "launchUrl": "https://55gms.com/misc/henry-stickmin-infiltrating-the-airship/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-476",
@@ -4557,7 +4981,8 @@
     "preview": "https://55gms.com/img/videos/preview/tubejumpers.mp4",
     "launchUrl": "https://55gms.com/misc/tube-jumpers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-477",
@@ -4567,7 +4992,8 @@
     "preview": "https://55gms.com/img/videos/preview/thefinalearth2.mp4",
     "launchUrl": "https://55gms.com/misc/the-final-earth-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-478",
@@ -4577,7 +5003,8 @@
     "preview": "https://55gms.com/img/videos/preview/adventuredrivers.mp4",
     "launchUrl": "https://55gms.com/misc/adventure-drivers/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-479",
@@ -4587,7 +5014,8 @@
     "preview": "https://55gms.com/img/videos/preview/henrybreakingthebank.mp4",
     "launchUrl": "https://55gms.com/misc/henry-stickmin-breaking-the-bank/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-480",
@@ -4597,7 +5025,8 @@
     "preview": "https://55gms.com/img/videos/preview/mrracer.mp4",
     "launchUrl": "https://55gms.com/misc/mrracer/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-481",
@@ -4607,7 +5036,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fnaf4/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-482",
@@ -4617,7 +5047,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/fnaf5/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-483",
@@ -4627,7 +5058,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/dogeminer-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-484",
@@ -4637,7 +5069,8 @@
     "preview": "https://55gms.com/img/videos/preview/stickmanclimb2.mp4",
     "launchUrl": "https://55gms.com/misc/stickman-climb-2/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-485",
@@ -4647,7 +5080,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/ragdoll-fight/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-486",
@@ -4657,7 +5091,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/reel-tycoon/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-487",
@@ -4667,7 +5102,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/core-ball/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-488",
@@ -4677,7 +5113,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/paper-plane/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-489",
@@ -4687,7 +5124,8 @@
     "preview": "",
     "launchUrl": "https://55gms.com/misc/granny/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-490",
@@ -4697,7 +5135,8 @@
     "preview": "https://55gms.com/img/videos/preview/schoolcleaning.mp4",
     "launchUrl": "https://55gms.com/misc/school-cleaning/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-491",
@@ -4707,7 +5146,8 @@
     "preview": "https://55gms.com/img/videos/preview/robocleanersimulator.mp4",
     "launchUrl": "https://55gms.com/misc/robo-cleaner-simulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-492",
@@ -4717,7 +5157,8 @@
     "preview": "https://55gms.com/img/videos/preview/undertheredsky.mp4",
     "launchUrl": "https://55gms.com/misc/under-the-red-sky/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-493",
@@ -4727,7 +5168,8 @@
     "preview": "https://55gms.com/img/videos/preview/diggerescape.mp4",
     "launchUrl": "https://55gms.com/misc/digger-escape/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-494",
@@ -4737,7 +5179,8 @@
     "preview": "https://55gms.com/img/videos/preview/idlecowshed.mp4",
     "launchUrl": "https://55gms.com/misc/idle-cowshed/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-495",
@@ -4747,7 +5190,8 @@
     "preview": "https://55gms.com/img/videos/preview/pilotlife.mp4",
     "launchUrl": "https://55gms.com/misc/pilot-life/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@284f8e96e592a97bac95a26e3676be7f8dd277f2/misc/misc/"
   },
   {
     "id": "55gms-496",
@@ -4757,7 +5201,8 @@
     "preview": "https://55gms.com/img/videos/preview/nsrstreetcarracing.mp4",
     "launchUrl": "https://55gms.com/misc/nsr-street-car-racing/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@e6dafba78d77deea9bf03d88e4d94efec394ef58/misc/misc/"
   },
   {
     "id": "55gms-497",
@@ -4767,7 +5212,8 @@
     "preview": "https://55gms.com/img/videos/preview/flyingcarsimulator.mp4",
     "launchUrl": "https://55gms.com/misc/flying-car-simulator/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@2d038ea02d40ef5b69327c5df82282d2d6c88dde/misc/misc/"
   },
   {
     "id": "55gms-498",
@@ -4777,7 +5223,8 @@
     "preview": "https://55gms.com/img/videos/preview/beautysalon.mp4",
     "launchUrl": "https://55gms.com/misc/beauty-salon/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@349c81bdc5d3cce0505f7952a6261996409809f2/misc/misc/"
   },
   {
     "id": "55gms-499",
@@ -4787,7 +5234,8 @@
     "preview": "https://55gms.com/img/videos/preview/countcontrollegends.mp4",
     "launchUrl": "https://55gms.com/misc/count-control-legends/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@349c81bdc5d3cce0505f7952a6261996409809f2/misc/misc/"
   },
   {
     "id": "55gms-500",
@@ -4797,7 +5245,8 @@
     "preview": "https://55gms.com/img/videos/preview/scaryteacher3d.mp4",
     "launchUrl": "https://55gms.com/misc/scary-teacher-3d/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@349c81bdc5d3cce0505f7952a6261996409809f2/misc/misc/"
   },
   {
     "id": "55gms-501",
@@ -4807,6 +5256,7 @@
     "preview": "https://55gms.com/img/videos/preview/brainrotminer.mp4",
     "launchUrl": "https://55gms.com/misc/brainrot-miner/index.html",
     "usesProxy": false,
-    "source": "55gms"
+    "source": "55gms",
+    "assetBase": "https://cdn.jsdelivr.net/gh/55gms/assets@349c81bdc5d3cce0505f7952a6261996409809f2/misc/misc/"
   }
 ]
