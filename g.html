@@ -98,7 +98,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <!-- Game Container (Iframe Wrapper) -->
 <div id="gameContainer">
-  <iframe id="gameIframe" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock"></iframe>
+  <iframe id="gameIframe" allowfullscreen sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe>
+  <button id="exitGameBtn" type="button" aria-label="Exit game" title="Exit game">×</button>
 </div>
 
 <!-- In-Game Menu -->
