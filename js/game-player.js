@@ -122,8 +122,14 @@ function saveBridge() {
 
 function rewriteGameHtml(html, base) {
   html = html
-    .replace(/<script\b[^>]*src=["'][^"']*save-agent\.js[^"']*["'][^>]*>\s*<\/script>/gi, "")
-    .replace(/<script\b[^>]*src=["'][^"']*(?:gms-ads|poki-sdk)[^"']*["'][^>]*>\s*<\/script>/gi, "");
+    .replace(/<script\\b[^>]*src=["'][^"']*save-agent\\.js[^"']*["'][^>]*>\\s*<\\/script>/gi, "")
+    .replace(/<script\\b[^>]*src=["'][^"']*gms-ads[^"']*["'][^>]*>\\s*<\\/script>/gi, "");
+
+  // Drive Mad expects PokiSDK even when hosted outside Poki. Supply a no-ad
+  // compatibility layer so its gameplay code can initialize without ad scripts.
+  const pokiShim = '<script>(function(){var noop=function(){};var done=function(v){return Promise.resolve(v)};window.PokiSDK={init:function(){return done()},initWithVideoHB:function(){return done()},gameLoadingStart:noop,gameLoadingFinished:noop,gameInteractive:noop,gameplayStart:noop,gameplayStop:noop,roundStart:noop,roundEnd:noop,muteAd:noop,disableProgrammatic:noop,customEvent:noop,destroyAd:noop,commercialBreak:function(){return done()},rewardedBreak:function(){return done(false)},getLeaderboard:function(){return done([])},setDebug:noop,gameLoadingProgress:noop,happyTime:noop,setPlayerAge:noop,togglePlayerAdvertisingConsent:noop,toggleNonPersonalized:noop,setConsentString:noop,logError:noop,sendHighscore:noop};})();<\\/script>';
+  if (/<head\\b[^>]*>/i.test(html)) html = html.replace(/<head\\b[^>]*>/i, head => head + pokiShim);
+  else html = pokiShim + html;
 
   // Route raw GitHub files from the two approved 55GMS repositories through BSMS Web.
   html = html.replace(
