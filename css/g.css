@@ -184,3 +184,45 @@ html, body {
   #goHomeBtn { top: 10px; left: 14px; padding: 6px 14px; font-size: 17px; }
   .az-btn { padding: 6px 10px; font-size: 17px; }
 }
+
+
+/* 55GMS catalog cards */
+.game-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.game-thumb.image-failed {
+  display: none;
+}
+.game-source {
+  display: block;
+  color: var(--fg2);
+  font-size: 15px;
+  margin: -8px 0 12px;
+  letter-spacing: .04em;
+}
+#exitGameBtn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 2600;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 50%;
+  background: rgba(15,15,18,.82);
+  color: #fff;
+  font: 30px/1 Arial, sans-serif;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 5px 20px rgba(0,0,0,.35);
+}
+#exitGameBtn:hover {
+  background: var(--red);
+  border-color: var(--red);
+}
