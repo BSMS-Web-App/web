@@ -12,6 +12,12 @@
       "permanent": true
     }
   ],
+  "rewrites": [
+    {
+      "source": "/g/:gameSlug",
+      "destination": "/game-player.html?slug=:gameSlug"
+    }
+  ],
   "git": {
     "deploymentEnabled": false
   },
