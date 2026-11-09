@@ -183,6 +183,7 @@ syncAuthSession();
 
 // === Game Launcher Logic ===
 const GITHUB_API_URL = "https://api.github.com/repos/JellyfishJelly13/HTML5-Games/contents/offline";
+const FIVE5_GMS_CATALOG_URL = "/data/55gms-games.json";
 let allGamesList = [];
 let currentGameBlobUrl = null;
 let currentFetchController = null;
@@ -221,17 +222,35 @@ function initFilters() {
 initFilters();
 
 async function fetchGames() {
-    try {
-        const response = await fetch(GITHUB_API_URL);
-        if (!response.ok) throw new Error("Failed to fetch games list.");
-        const data = await response.json();
-        
-        allGamesList = data.filter(item => item.type === 'file' && item.name.endsWith('.html'));
-        filterAndRenderGames();
-        handleHashChange();
-    } catch (err) {
-        console.error(err);
-        gamesGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--red);">Failed to load games list. Please try again later.</div>`;
+    const results = await Promise.allSettled([
+        fetch(GITHUB_API_URL).then(response => {
+            if (!response.ok) throw new Error("Failed to fetch the existing BSMS games list.");
+            return response.json();
+        }),
+        fetch(FIVE5_GMS_CATALOG_URL).then(response => {
+            if (!response.ok) throw new Error("Failed to fetch the 55GMS catalog.");
+            return response.json();
+        })
+    ]);
+
+    const legacyResult = results[0];
+    const five5Result = results[1];
+    const legacyGames = legacyResult.status === "fulfilled"
+        ? legacyResult.value.filter(item => item.type === "file" && item.name.endsWith(".html"))
+            .map(item => ({ ...item, source: "bsms" }))
+        : [];
+    const five5Games = five5Result.status === "fulfilled" && Array.isArray(five5Result.value)
+        ? five5Result.value
+        : [];
+
+    allGamesList = [...legacyGames, ...five5Games];
+    filterAndRenderGames();
+    handleHashChange();
+
+    if (!allGamesList.length) {
+        gamesGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--red);">The game library could not be loaded. Please try again later.</div>`;
+    } else if (legacyResult.status === "rejected" || five5Result.status === "rejected") {
+        console.warn("[BSMS Web :: Games] One game catalog could not be loaded.", results);
     }
 }
 
@@ -265,15 +284,36 @@ function renderGamesGrid(listToRender) {
         card.className = 'app-card';
         card.style.animationDelay = `${(index % 20) * 0.03}s`; 
         
-        card.innerHTML = `
-            <svg class="app-icon" viewBox="0 0 24 24">
-                <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 6.5 18.5 6.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-            </svg>
-            <h3 class="app-title">${displayName}</h3>
-            <button class="btn">Play</button>
-        `;
-        
-        card.querySelector('.btn').addEventListener('click', () => {
+        const thumbnail = document.createElement("img");
+        thumbnail.className = "game-thumb";
+        thumbnail.alt = "";
+        thumbnail.loading = "lazy";
+        thumbnail.decoding = "async";
+        if (game.image) {
+            thumbnail.src = game.image;
+            thumbnail.addEventListener("error", () => {
+                thumbnail.classList.add("image-failed");
+            }, { once: true });
+        } else {
+            thumbnail.classList.add("image-failed");
+        }
+
+        const title = document.createElement("h3");
+        title.className = "app-title";
+        title.textContent = displayName;
+
+        const sourceLabel = document.createElement("span");
+        sourceLabel.className = "game-source";
+        sourceLabel.textContent = game.source === "55gms" ? "55GMS" : "BSMS Web";
+
+        const playButton = document.createElement("button");
+        playButton.className = "btn";
+        playButton.type = "button";
+        playButton.textContent = "Play";
+
+        card.append(thumbnail, title, sourceLabel, playButton);
+
+        card.querySelector(".btn").addEventListener("click", () => {
             history.pushState(null, null, `#${game.name}`);
             triggerLoadGame(game);
         });
@@ -289,8 +329,20 @@ async function triggerLoadGame(game) {
     loadingText.textContent = `Loading ${game.name}...`;
     openPopup('loadingOverlay');
     
+    if (game.source === "55gms") {
+        closePopup("loadingOverlay");
+        isGameRunning = true;
+        gameIframe.src = game.launchUrl;
+        gameContainer.style.display = "block";
+        setTimeout(() => {
+            gameIframe.focus();
+            showToast();
+        }, 250);
+        return;
+    }
+
     currentFetchController = new AbortController();
-    
+
     try {
         const delayPromise = new Promise(resolve => setTimeout(resolve, 2000));
         const fetchPromise = fetch(game.download_url, { signal: currentFetchController.signal });
@@ -372,6 +424,8 @@ async function triggerLoadGame(game) {
         }
     }
 }
+
+document.getElementById("exitGameBtn")?.addEventListener("click", () => quitGame(false));
 
 cancelLoadBtn.addEventListener('click', () => {
     if (currentFetchController) currentFetchController.abort();
