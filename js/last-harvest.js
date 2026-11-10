@@ -63,7 +63,7 @@ const BOSS_NPC={};BOSSES.forEach((b,i)=>{if(b.name!=='ROWAN')BOSS_NPC[b.name]=i;
 
 
 state.beaten=state.beaten||{};
-GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win});
+if(state.beaten.north&&!state.beaten.south)GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win});
 GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
 const POS={'ELDER MAPLE':[12,12],'ROWAN':[21,12],'MILLIE':[16,20],'GUS':[17,26],'PIPER':[30,13]};npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
 npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
@@ -71,7 +71,7 @@ function spawnLair(){if(!state.beaten.south)return;const i=Math.min(state.stage|
 if(state.beaten.south&&!(state.stage>0))state.stage=1;spawnLair();
 /* ================= v10 SYSTEMS: art loading, audio, title, skills, regions, city, tower, leaderboard ================= */
 function loadImg(list){const im=new Image();let i=0;im.onerror=()=>{if(++i<list.length)im.src=list[i];};im.src=list[0];return im;}
-const VIL=loadImg(['/img/last-harvest/village.png?v=10']);
+const VIL=loadImg(['/img/last-harvest/village.png?v=11']);
 const VR={cottage:[0,0,112,80],inn:[120,0,128,80],store:[256,0,128,80],workshop:[0,90,80,64],house1:[100,90,80,64],house2:[190,90,80,64],house3:[280,90,96,64],tower:[380,0,96,144],fountain0:[0,180,64,40],fountain1:[70,180,64,40],journal:[150,180,16,16]};
 function drawFountainSprite(){if(!VIL.naturalWidth)return;const r=VR['fountain'+(Math.floor(performance.now()/380)%2)];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*TILE-16,14*TILE-r[3]*2+4,r[2]*2,r[3]*2);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);}
@@ -81,7 +81,7 @@ function whenIdle(fn){const iv=setInterval(()=>{if(!dialogue&&!battle&&!cinemati
 var muted=false;try{muted=localStorage.getItem('lh_mute')==='1';}catch(e){}
 function setMuted(v){muted=v;try{localStorage.setItem('lh_mute',v?'1':'0');}catch(e){}if(v)stopMusic();}
 const TALK={buf:null,tried:0};
-function talkBlip(){if(muted)return;const a=audio();if(!a)return;if(!TALK.buf&&!TALK.tried){TALK.tried=1;(async()=>{for(const u of['/audio/last-harvest/talk.mp3?v=10','/img/last-harvest/talk.mp3?v=10']){try{const r=await fetch(u);if(!r.ok)continue;TALK.buf=await a.decodeAudioData(await r.arrayBuffer());return;}catch(e){}}})();}
+function talkBlip(){if(muted)return;const a=audio();if(!a)return;if(!TALK.buf&&!TALK.tried){TALK.tried=1;(async()=>{for(const u of['/audio/last-harvest/talk.mp3?v=11','/img/last-harvest/talk.mp3?v=11']){try{const r=await fetch(u);if(!r.ok)continue;TALK.buf=await a.decodeAudioData(await r.arrayBuffer());return;}catch(e){}}})();}
 if(TALK.buf){const s=a.createBufferSource(),g=a.createGain();s.buffer=TALK.buf;s.playbackRate.value=.85+Math.random()*.55;g.gain.value=.55;s.connect(g);g.connect(a.destination);s.start();}else tone(260+rnd(180),.045,'square',.025);}
 function initSfx(){Object.assign(SFX,{door(){tone(180,.08,'square',.05,-60);tone(120,.12,'triangle',.05,-40,.06);},menu(){tone(660,.05,'square',.04);},select(){tone(880,.06,'square',.05);tone(1320,.08,'square',.05,0,.06);},coin(){tone(988,.06,'square',.05);tone(1319,.12,'square',.05,0,.07);},levelup(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.14,'square',.05,0,i*.08));},portal(){tone(200,.6,'sine',.06,800);tone(400,.5,'triangle',.04,600,.1);},unlock(){[392,523,659,784].forEach((f,i)=>tone(f,.18,'triangle',.06,0,i*.12));}});}
 const MUS={
@@ -140,7 +140,7 @@ async function towerEnd(f){AREA=getCity();scene='area';stepper=null;areaPlayer={
  el.querySelector('#tr-x').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tr-b').onclick=()=>{el.close();showLeaderboard();};}
 /* ---------- title screen ---------- */
 let titleOpen=false;
-function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press';el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div>';document.body.appendChild(el);
+function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro';setTimeout(()=>el.classList.remove('intro'),1700);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div>';document.body.appendChild(el);
  const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
  let sel=0;const menu=$b('lh-title-menu');const render=()=>{menu.innerHTML=items.map((it,i)=>'<button class="lh-tbtn'+(i===sel?' sel':'')+'" data-i="'+i+'">'+it[0]+'</button>').join('');};render();
  function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();}
@@ -165,7 +165,7 @@ function animateTitle(cv){const g=cv.getContext('2d'),t0=performance.now(),el=cv
    g.drawImage(BOS,0,(Math.floor(t*2)%2)*64,64,64,Math.round(cx-bw/2),Math.round(fy-bw),bw,bw);
    for(let i=0;i<16;i++){const ph=(t*.5+i*.137)%1,x=cx-bw*.3+((i*53)%60)/60*bw*.6+Math.sin(t*3+i)*ks*2,y=fy-bw*.75-ph*bw*.55;g.fillStyle=['#ffd84a','#ff9a2e','#ff5a2e'][i%3];g.globalAlpha=1-ph;g.fillRect(Math.round(x),Math.round(y),ks,ks);}g.globalAlpha=1;}
   leaves.forEach(l=>{l.y+=l.v*.016;l.x+=Math.sin(t*1.5+l.ph)*.0004;if(l.y>1.05){l.y=-.05;l.x=Math.random();}g.save();g.translate(l.x*W,l.y*H);g.rotate(t*1.2+l.ph);g.fillStyle=l.c;g.fillRect(-l.s*2,-l.s,l.s*4,l.s*2);g.restore();});
-  const fs=Math.max(18,Math.min(W*.05,H*.085)),lx=W*.29,by=H*.27+Math.sin(t*2)*3;g.textAlign='center';g.lineJoin='round';
+  const fs=Math.max(18,Math.min(W*.05,H*.085)),lx=W<600?W*.5:W*.29,by=H*.27+Math.sin(t*2)*3;g.textAlign='center';g.lineJoin='round';
   g.font='bold '+Math.round(fs*.8)+'px "Press Start 2P",monospace';g.lineWidth=fs*.3;g.strokeStyle='#2a2a8a';g.strokeText('THE LAST',lx,by);g.fillStyle='#ffd23c';g.fillText('THE LAST',lx,by);
   g.font='bold '+Math.round(fs*1.15)+'px "Press Start 2P",monospace';g.lineWidth=fs*.34;g.strokeStyle='#15151a';g.strokeText('HARVEST',lx,by+fs*1.45);g.fillStyle='#ffffff';g.fillText('HARVEST',lx,by+fs*1.45);
   const rw=fs*7.4,ry=by+fs*1.95;g.fillStyle='#15151a';g.fillRect(lx-rw/2-3,ry-3,rw+6,fs*.8+6);g.fillStyle='#d8362e';g.fillRect(lx-rw/2,ry,rw,fs*.8);g.fillStyle='#fff';g.font=Math.round(fs*.34)+'px "Press Start 2P",monospace';g.fillText('AUTUMN  ADVENTURE',lx,ry+fs*.54);
@@ -262,7 +262,7 @@ function genRegion(c){const B=BIO[c],S=STORY[c],w=44,h=26,rng=mulberry(c*7919+13
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(!open[i]){if(x===0||y===0||x===w-1||y===h-1||rng()<.8){solid[i]=1;ob[i]=1+Math.floor(rng()*B.ob.length);}}else if(x>6&&x<bx-5&&Math.abs(y-pathY[x])>2&&rng()<.5)enc[i]=1;}
  const dec=[];if(B.dec)for(let k=0;k<70;k++){const x=1+Math.floor(rng()*(w-2)),y=1+Math.floor(rng()*(h-2));if(open[T(x,y)]&&!solid[T(x,y)])dec.push({x,y,d:B.dec[Math.floor(rng()*B.dec.length)]});}
  solid[T(0,pathY[1])]=0;ob[T(0,pathY[1])]=0;
- const npcs=S.npcs.map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));
+ const npcs=S.npcs.map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));if(c===1)npcs.push({x:8,y:pathY[8],name:'ROWAN',lines:['I caught up with you! I was not going to let you walk into these woods alone.','Look at the leaves. They are drifting toward that old stone arch. I think your parents left us a trail.','I found this little ribbon caught on a branch. It has your mother’s initials. We are getting closer.'],friend:true});
  const g={id:'boss'+c,name:BOSSES[c].name,bi:c,lines:BOSSES[c].lines,win:BOSSES[c].win};
  npcs.push({x:bx+1,y:by,name:BOSSES[c].name,trainer:g,boss:true,bi:c});
  for(let dy=-1;dy<=1;dy++)for(let dx=0;dx<=2;dx++){solid[T(bx+dx,by+dy)]=1;ob[T(bx+dx,by+dy)]=0;}
@@ -282,7 +282,7 @@ function genCity(){const w=40,h=26,solid=new Uint8Array(w*h),ground=new Uint8Arr
  {x:26,y:17,name:'WREN THE APPRENTICE',lines:['I\u2019m training to climb the Tower someday. Floor ten is my dream!','Tip: keep a few potions for the guardian floors.']},
  {x:9,y:20,name:'GUS',lines:['Goldleaf\u2019s bread is the best. Don\u2019t tell the village I said that.']}];
  return{id:'city',chapter:0,city:true,name:'Goldleaf City',w,h,solid,ob,ground,enc:null,dec:[],npcs,spawn:{x:1,y:13},exits:[{x:0,y:12,to:'village'},{x:0,y:13,to:'village'},{x:0,y:14,to:'village'}],bio:B,bld,mus:'village'};}
-function enterRegion(c){const A=getRegion(c);startArea(A,A.spawn.x,A.spawn.y);setDialogue(STORY[c].intro.map(t=>['JOURNAL',t]));}
+function enterRegion(c){const A=getRegion(c);startArea(A,A.spawn.x,A.spawn.y);playRegionIntro(c);}
 function startArea(A,tx,ty){AREA=A;A.leaving=false;A.bossTalk=0;scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
 function enterArea(id){if(id==='city'){startArea(getCity(),1,13);setDialogue([['GOLDLEAF MAYOR','Welcome to Goldleaf City, traveler! The Tower stands to the north.']]);}}
 function leaveArea(to){sfx('portal');const c=AREA&&AREA.chapter;const city=AREA&&AREA.city;const ret=AREA&&AREA.ret;AREA=null;scene='outside';stepper=null;if(city){state.x=44*TILE+16;state.y=12*TILE+24;}else if(ret){state.x=ret.x;state.y=ret.y;}else{state.x=16*TILE+16;state.y=32*TILE+24;}updateHud();save();}
@@ -310,10 +310,10 @@ function areaGround(A,x,y){if(A.wilds){wildGround(A,x,y);return;}const U=32,B=A.
  else if(A.pathY&&Math.abs(y-A.pathY[x])<=1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}
  const g=B.g[Math.floor(rand(x+11,y+7)*B.g.length)%B.g.length];kTile(g[0],g[1],x*U,y*U);}
 function areaObstacle(A,x,y,k){const U=32,o=A.bio.ob[k];if(!o)return;if(o.i){kBlock(o.i[0],o.i[1],o.i[2],o.i[3],x*U,y*U,2);return;}const sh=o.sh||'t';if(o.two){kTile(sh,o.a,x*U,(y-1)*U);kTile(sh,o.b,x*U,y*U);}else kTile(sh,o.a,x*U,y*U);}
-function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000;
- const cx=A.w*U<=W?-(W-A.w*U)/2:Math.max(0,Math.min(A.w*U-W,areaPlayer.x-W/2)),cy=A.h*U<=H?-(H-A.h*U)/2:Math.max(0,Math.min(A.h*U-H,areaPlayer.y-H/2));
- ctx.clearRect(0,0,W,H);px(0,0,W,H,'#0d0a14');ctx.save();ctx.translate(-Math.floor(cx),-Math.floor(cy));
- const x0=Math.max(0,Math.floor(cx/U)-1),y0=Math.max(0,Math.floor(cy/U)-1),x1=Math.min(A.w-1,Math.ceil((cx+W)/U)),y1=Math.min(A.h-1,Math.ceil((cy+H)/U)+1);
+function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000,zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;
+const cx=A.w*U<=vw?-(vw-A.w*U)/2:Math.max(0,Math.min(A.w*U-vw,areaPlayer.x-vw/2)),cy=A.h*U<=vh?-(vh-A.h*U)/2:Math.max(0,Math.min(A.h*U-vh,areaPlayer.y-vh/2));
+ctx.clearRect(0,0,W,H);px(0,0,W,H,'#0d0a14');ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(cx),-Math.floor(cy));
+ const x0=Math.max(0,Math.floor(cx/U)-1),y0=Math.max(0,Math.floor(cy/U)-1),x1=Math.min(A.w-1,Math.ceil((cx+vw)/U)),y1=Math.min(A.h-1,Math.ceil((cy+vh)/U)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)areaGround(A,x,y);
  for(const d of A.dec){if(d.x>=x0&&d.x<=x1&&d.y>=y0&&d.y<=y1)kTile(d.d[0],d.d[1],d.x*U,d.y*U);}
  if(A.wilds){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(A.enc[y*A.w+x]&&!A.solid[y*A.w+x])tallGrass(A,x,y,t);wildCamp(A,t);}
@@ -437,9 +437,9 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
-const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const camX=Math.max(0,Math.min(MAP_W*TILE-W,focus.x-W/2)),camY=Math.max(0,Math.min(MAP_H*TILE-H,focus.y-H/2));
-ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-Math.floor(camX),-Math.floor(camY));
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
+ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
 const tileRoll=rand(x+41,y+17);const tileIndex=tileRoll<.43?0:tileRoll<.62?1:tileRoll<.77?2:tileRoll<.88?3:tileRoll<.96?4:5;kTile('t',[0,0,0,1,1,2][tileIndex],x*TILE,y*TILE);}
 /* Broad stone paths with alternating diamond-like paving and dark grout */
@@ -499,7 +499,8 @@ sceneTitle(['THE HUNGRY WINTERS','THE FIRST FEAST','THE HOLLOW KING','THE FIRST 
 function sceneTitle(t,W,y){ctx.font='13px "Press Start 2P",monospace';ctx.textAlign='center';ctx.fillStyle='#000';ctx.fillText(t,W/2+2,y+2);ctx.fillStyle='#f8f8f8';ctx.fillText(t,W/2,y);}
 function kPlank(x,y,u,i){if(KN.naturalWidth)ctx.drawImage(KN,200+(23+i%3)*17,0,16,16,Math.round(x),Math.round(y),u,u);}
 function winFrame(x,y,w,h){x=Math.round(x);y=Math.round(y);w=Math.round(w);h=Math.round(h);const o='#3f2631';px(x-5,y-5,w+10,h+10,o);px(x-3,y-3,w+6,h+6,'#a9683f');px(x-1,y-1,w+2,h+2,o);px(x,y,w,h,'#9fd8f0');px(x,y,w,Math.round(h*.4),'#c8ecf8');px(x+3,y+3,Math.max(3,Math.round(w*.14)),4,'#ffffff');px(x+w/2-2,y,4,h,'#8f5a37');px(x,y+h/2-2,w,4,'#8f5a37');px(x-7,y+h+3,w+14,7,o);px(x-6,y+h+4,w+12,4,'#d9a066');}
-function drawDreamScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/160)),u=16*s,k=Math.max(3,Math.round(H/170));
+function drawRegionScene(W,H){const c=cinematic.chapter||1,t=performance.now()/1000,pal=[['#172e25','#526b3b'],['#4b3b20','#a17a36'],['#102f38','#34727a'],['#21182e','#59416b'],['#2b171d','#70404a'],['#1e3042','#8ab6d1'],['#171b2c','#46536d'],['#21142d','#59336b'],['#351522','#9a3b50']],p=pal[Math.max(0,Math.min(c-1,8))];const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,p[0]);gr.addColorStop(1,p[1]);ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);for(let i=0;i<18;i++){const x=((i*173+t*12)%(W+120))-60,y=H*(.18+(i%5)*.13);ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(x,y,28+(i%3)*8,52,0,0,Math.PI*2);ctx.fill();}ctx.fillStyle='rgba(12,12,18,.38)';ctx.fillRect(0,H*.76,W,H*.24);const a=cinematic.actors,scale=Math.max(3,Math.min(6,Math.floor(H/150)));if(a.ROWAN)drawSpriteK(2,a.ROWAN.face||0,a.ROWAN.step||0,a.ROWAN.x,a.ROWAN.y,scale);if(a.HERO)drawSpriteK(heroRow(),a.HERO.face||0,a.HERO.step||0,a.HERO.x,a.HERO.y,scale);ctx.textAlign='center';ctx.font='bold '+Math.max(12,Math.min(22,W/28))+'px "Press Start 2P",monospace';ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillText(chapters[c].place.toUpperCase(),W/2+2,H*.14+2);ctx.fillStyle='#fff0c8';ctx.fillText(chapters[c].place.toUpperCase(),W/2,H*.14);}
+function playRegionIntro(c){const first=c===1&&!state.rowanWoodsScene,guide=STORY[c].npcs[0][0];cinematic={phase:'region',chapter:c,actors:{HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0},ROWAN:{x:innerWidth*.72,y:innerHeight*.78,face:2,step:0}}};document.body.classList.add('lh-cinematic');const say=items=>new Promise(resolve=>setDialogue(items,resolve));const walk=(name,to,duration=720)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.face=Math.abs(to.x-from.x)>Math.abs(to.y-from.y)?(to.x<from.x?2:3):(to.y<from.y?1:0);const step=now=>{if(!cinematic)return resolve();const q=Math.min(1,(now-start)/duration),e=q*q*(3-2*q);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.step=q<1?1+(Math.floor(now/130)%2):0;if(q<1)requestAnimationFrame(step);else resolve();};requestAnimationFrame(step);});(async()=>{if(first){await say([['ROWAN','Wait up! I knew you would take the trail into Autumnwood. I was not going to let you go alone.']]);await walk('ROWAN',{x:innerWidth*.58,y:innerHeight*.78});await say([['YOU','Rowan? How did you get here so quickly?'],['ROWAN','Shortcut. Also, I found something caught on a branch. It has your mother’s initials.']]);await walk('HERO',{x:innerWidth*.43,y:innerHeight*.78});await say([['ROWAN','The leaves are moving toward that arch. It has to be the First Seal. Stay close.']]);state.rowanWoodsScene=true;save();}else{await say(STORY[c].intro.map(t=>['JOURNAL',t]));await say([[guide,'I have been waiting for someone who could follow the Keepers’ trail. The path ahead will not be easy.']]);}cinematic=null;document.body.classList.remove('lh-cinematic');})();}function drawDreamScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/160)),u=16*s,k=Math.max(3,Math.round(H/170));
 const sky=ctx.createLinearGradient(0,0,0,H*.4);sky.addColorStop(0,'#2a1f3d');sky.addColorStop(1,'#7a5a88');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
 for(let i=0;i<W/u+1;i++)kTile('b',[34,52,70,88][i%4],i*u,H*.09,s);
 for(let r=0;r<3;r++){const y=H*.2+r*u*.8;for(let x=0;x<W;x+=u)kPlank(x,y,u,Math.floor(x/u)+r);px(0,y+u*.8,W,4,'#4a2e1e');for(let x=u/2;x<W;x+=u*1.1){const row=10+((Math.floor(x/u)*7+r*13)%40);drawSpriteK(row,0,0,x,y+u*.8,Math.max(2,s-1));}}
@@ -544,15 +545,15 @@ if(who==='HERO')actor(x,fy,CIV,0,k);else if(who==='ROWAN')actor(x,fy,1,0,k);else
 for(let r=0;r<2;r++)for(let c=0;c<4;c++)seat(c,r,r===1&&c===1?'HERO':r===1&&c===2?'ROWAN':'',0);
 sceneTitle('HEARTHVALE SCHOOL',W,H*.05);bars(W,H);}
 let lastArea='',stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
-const BOS=loadImg(['/img/last-harvest/bosses.png?v=10','/img/bosses.png?v=10']);
-const INT=loadImg(['/img/interior.png?v=10','/img/last-harvest/interior.png?v=10']);
+const BOS=loadImg(['/img/last-harvest/bosses.png?v=11','/img/bosses.png?v=11']);
+const INT=loadImg(['/img/interior.png?v=11','/img/last-harvest/interior.png?v=11']);
 let CIV=4;function applyGender(){CIV=state.gender==='girl'?8:4;}
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
 const BR={cottage:[0,0,97,92],inn:[101,0,96,106],store:[201,0,88,106],workshop:[293,0,66,81],tree:[530,0,58,76],pine:[592,0,54,72]},HOUSES=['cottage','inn','store','workshop'];
-const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=10';
-const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=10';
+const CHARS=new Image();CHARS.src='/img/last-harvest/people.png?v=11';
+const KN=new Image();KN.src='/img/last-harvest/kenney.png?v=11';
 const NPC_MON={'PUMPKIN SENTINEL':9};
-const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=10';
+const MON=new Image();MON.src='/img/last-harvest/monsters.png?v=11';
 const GENS=['Meadow','Orchard','Marsh','Cavern','Frostfall','Emberwood','Tempest','Crypt','Clockwork','Eclipse'],ARCH=['Slime','Bat','Beetle','Hound','Sprout','Wisp','Golem','Serpent','Crow'],BOSS=['Pumpkin Sentinel','Orchard Tyrant','Marsh Matriarch','Cavern Colossus','Frostfall Wyrm','Emberwood Behemoth','Tempest Roc','Crypt Lich King','Clockwork Titan','Eclipse Devourer'];
 /* monsters.png: 10 generations (rows) x 10 (9 monsters + 1 boss). index = gen*10+slot. Higher generations are stronger. */
 function monInfo(i){const g=(i/10)|0,a=i%10,boss=a===9;return{name:(boss?BOSS[g]:GENS[g]+' '+ARCH[a]).toUpperCase(),hp:Math.round((16+g*10+(boss?0:a))*(boss?2.4:1)),atk:Math.round((4+g*2)*(boss?1.5:1)),reward:Math.round((10+g*12)*(boss?4:1)),boss};}
