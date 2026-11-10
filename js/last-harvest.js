@@ -937,8 +937,8 @@ if(name==='MARA')shirt='#b86c78';
 if(name==='THOMAS')shirt='#577f9b';
 p.fillStyle='#172a3a';p.fillRect(17,45,30,8);p.fillStyle=shirt;p.fillRect(15,26,34,23);p.fillStyle='#f1b58c';p.fillRect(21,11,22,20);p.fillStyle=hair;p.fillRect(19,8,26,9);p.fillRect(17,13,5,8);p.fillRect(42,13,5,8);p.fillStyle='#26334a';p.fillRect(25,21,4,4);p.fillRect(36,21,4,4);p.fillStyle='#f3e6bf';p.fillRect(23,29,18,3);
 }
-function positionSpeechBubble(){}
-function closeDialogue(){ $('lh-dialogue').hidden=true;dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
+function positionSpeechBubble(){const box=$('lh-dialogue');if(!box)return;box.classList.add('lh-dialogue-top');}
+function closeDialogue(){ $('lh-dialogue').hidden=true;$('lh-dialogue').classList.remove('lh-dialogue-top');dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
 function typeText(t){clearInterval(typer);fullText=t;typing=true;const el=$('lh-dialogue-text');let i=0;el.textContent='';typer=setInterval(()=>{el.textContent=t.slice(0,++i);if(i%2===0&&t[i-1]!==' ')talkBlip();if(i>=t.length)finishType();},24);}
 function finishType(){clearInterval(typer);typing=false;$('lh-dialogue-text').textContent=fullText;}
 function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
