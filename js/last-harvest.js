@@ -1,6 +1,6 @@
 /* THE LAST HARVEST — full-screen top-down pixel adventure */
 (()=>{'use strict';
-const $=id=>document.getElementById(id),canvas=$('lh-world'),mainCtx=canvas.getContext('2d'),SAVE='last_harvest_adventure_v4';
+const $=id=>document.getElementById(id),canvas=$('lh-world'),mainCtx=canvas.getContext('2d'),SAVE='last_harvest_adventure_v4',BACKUP='last_harvest_adventure_v4_backup';
 let ctx=mainCtx;
 const TILE=32,MAP_W=48,MAP_H=36;
 const story=[
@@ -27,7 +27,7 @@ let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalke
 questStep=state.questStep!==undefined?state.questStep:((state.cityUnlocked||(state.beaten&&(state.beaten.north||state.beaten.east||state.beaten.south)))?4:0);
 function setQ(n){questStep=n;state.questStep=n;try{save();}catch(e){}}
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
-const BACKUP=SAVE+'_backup';let saveWarning=false;function save(){state.saveVersion=2;state.savedAt=Date.now();try{const previous=localStorage.getItem(SAVE);if(previous&&previous.length>20)localStorage.setItem(BACKUP,previous);localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){try{const raw=localStorage.getItem(SAVE)||localStorage.getItem(BACKUP),data=raw&&JSON.parse(raw);if(data&&data.name)return data;}catch(e){}return null;}
+let saveWarning=false;function save(){state.saveVersion=2;state.savedAt=Date.now();try{const previous=localStorage.getItem(SAVE);if(previous&&previous.length>20)localStorage.setItem(BACKUP,previous);localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){try{const raw=localStorage.getItem(SAVE)||localStorage.getItem(BACKUP),data=raw&&JSON.parse(raw);if(data&&data.name)return data;}catch(e){}return null;}
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
@@ -1057,7 +1057,7 @@ function renderRpgMenu(tab='status'){
     const cells=rows.map((line,y)=>Array.from(line).map((cell,x)=>'<span class="lh-map-cell '+({F:'forest',H:'building',p:'path','.':'grass'}[cell]||'grass')+(x===mx&&y===my?' player':'')+'"'+(x===mx&&y===my?' aria-label="Your location" title="You are here"':'')+'></span>').join('')).join('');
     panel.innerHTML='<h3>HEARTHVALE VILLAGE MAP</h3><div class="lh-map-grid" role="img" aria-label="Map of Hearthvale Village. Your position is marked in gold.">'+cells+'</div><div class="lh-map-legend"><span><i class="forest"></i> Woods</span><span><i class="building"></i> Buildings</span><span><i class="path"></i> Roads</span><span><i class="player"></i> You</span></div><p class="lh-map-note">A field sketch of the village. Explore the roads to find homes, shops, and familiar faces.</p>';
   }else{
-    panel.innerHTML='<h3>JOURNAL · '+escapeMenuText(chapter.title.toUpperCase())+'</h3><p><b>Current objective:</b> '+escapeMenuText(chapter.quest)+'</p><p><b>Region:</b> '+escapeMenuText(chapter.place)+'</p><p><b>Story progress:</b> Chapter '+(Number(state.stage)+1)+' of 10</p><p>Revisit Hearthvale’s people and places to uncover clues about the Everfeast.</p>';
+    panel.innerHTML='<h3>JOURNAL · '+escapeMenuText(chapter.title.toUpperCase())+'</h3><p><b>Current objective:</b> '+escapeMenuText(chapter.quest)+'</p><p><b>Region:</b> '+escapeMenuText(chapter.place)+'</p><p><b>Story progress:</b> Chapter '+(Number(state.stage)+1)+' of 10</p><p>Revisit Hearthvale’s people and places to uncover clues about the Everfeast.</p><h3>SIDE QUESTS</h3>'+Object.entries(state.sideQuests||{}).map(([id,q])=>'<p><b>'+({woodland:'A Hunter’s Request',orchard:'The Last Good Apples',pantry:'A Light Below'}[id]||id)+'</b> — '+(q.done?'COMPLETE':q.accepted?((q.kills||0)+'/3 creatures'):'Not started')+'</p>').join('')+'<p class="lh-save-status">LOCAL SAVE · '+(state.savedAt?new Date(state.savedAt).toLocaleString():'Autosaving')+'</p>';
   }
 }
 function escapeMenuText(value){return String(value??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
