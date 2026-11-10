@@ -689,14 +689,16 @@ if(kind==='melee'){await sleep(130);await tween(190,p=>{b.hox=dx*(1-ease(p));b.h
 function healFx(n,color){const b=battle,G=geo(),cx=G.hx,cy=G.hy-G.hk*8;sfx('heal');rise(cx,cy+G.hk*6,24,[color||'#7bf08a','#ffffff','#d8ffd8'],G.hk*10);pop('+'+n,cx,cy-G.hk*4,color||'#7bf08a',22);}
 function shieldFx(){battle.shield=1;sfx('guard');}
 function rageFx(){const b=battle;b.shake=18;b.flashR=1;sfx('boom');const G=geo();rise(G.fx,G.fy,30,['#ff3b30','#ffd84a','#ff9a2e'],G.fh*.7);}
+async function scriptedRowanLoss(){const b=battle;if(!b||b.busy)return;b.busy=true;await pkSay('Rowan studies your stance and waits for the perfect opening...',900);if(battle!==b)return;const G=geo(),dx=-(G.fx-G.hx)*.65;await tween(280,p=>{b.fox=dx*ease(p);b.foy=10*Math.sin(p*Math.PI);});hitHero(Math.max(1,state.hp)+state.maxHp,true);await sleep(420);await tween(220,p=>{b.fox=dx*(1-ease(p));b.foy=0;});b.fox=0;await pkSay('Rowan wins the friendly duel. The instructor calls the match!',850);pkEnd(true);}
 async function pkAct(a){const b=battle;if(!b||b.busy)return;
+if(b.g.scriptedLoss){scriptedRowanLoss();return;}
 if(a==='skill'){pkMenu('skills');return;}
 b.busy=true;const e=b.e;
 if(a==='run'){if(b.g.wild&&!b.g.tower){await pkSay('You got away safely!');pkEnd();return;}await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
 if(a==='item'){if(!state.potions){await pkSay('No potions left!',800);pkMenu('main');b.busy=false;return;}state.potions--;state.hp=Math.min(state.maxHp,state.hp+28);healFx(28);pkPanel();await pkSay('A potion restores 28 HP!',900);await endRound();return;}
 await heroAttack(null);}
-async function pkSkill(i){const b=battle;if(!b||b.busy)return;const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
+async function pkSkill(i){const b=battle;if(!b||b.busy)return;if(b.g.scriptedLoss){scriptedRowanLoss();return;}const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
 async function heroAttack(sk){const b=battle,e=b.e,cls=state.heroClass,lv=state.level;
 if(!sk){const kind=cls==='Scout'?'arrow':cls==='Mage'?'magic':'melee';const crit=Math.random()<.1;let d=8+lv*2+(cls==='Guardian'?3:0)+rnd(4);if(crit)d=Math.round(d*1.6);
 await pkSay(crit?'A critical strike!':'You attack!',420);await heroStrike(kind,d,crit,cls==='Mage'?'#d29bff':'#e8d890');await pkSay('It deals '+d+' damage!',650);}
@@ -999,7 +1001,7 @@ await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
 await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.']]);
-const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
+const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,scriptedLoss:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
 await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]);
 cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};
 await say([['ROWAN','Come on, let’s walk home. Your parents promised a feast for tonight.']]);
