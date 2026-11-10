@@ -163,6 +163,100 @@ app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.joi
 // Rate-limit routes that read and serve individual page files.
 app.use(pageFileLimiter);
 
+// Same-origin proxy for the approved 55GMS game repositories.
+// Only the two known repositories are accessible; this is not an open proxy.
+app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
+    try {
+        const parts = String(req.params[0] || '').split('/');
+        const [owner, repository, ref, ...fileParts] = parts;
+        const filePath = fileParts.join('/');
+
+        if (
+            owner !== '55gms' ||
+            !['55GMS', 'assets'].includes(repository) ||
+            !ref || !/^[A-Za-z0-9._-]+$/.test(ref) ||
+            !filePath || fileParts.some((part) => !part || part === '.' || part === '..' || part.includes('\\'))
+        ) {
+            return res.status(400).send('Invalid game asset path.');
+        }
+
+        const upstreamUrl = 'https://raw.githubusercontent.com/' +
+            [owner, repository, ref, filePath].join('/');
+        const upstream = await fetch(upstreamUrl, {
+            redirect: 'follow',
+            signal: AbortSignal.timeout(12000),
+            headers: { 'User-Agent': 'BSMS-Web-Game-Asset-Proxy' }
+        });
+
+        if (!upstream.ok) {
+            return res.status(upstream.status).send('Game asset unavailable.');
+        }
+
+        const declaredLength = Number(upstream.headers.get('content-length') || 0);
+        if (declaredLength > 50 * 1024 * 1024) {
+            return res.status(413).send('Game asset is too large.');
+        }
+
+        let bytes = Buffer.from(await upstream.arrayBuffer());
+        if (bytes.length > 50 * 1024 * 1024) {
+            return res.status(413).send('Game asset is too large.');
+        }
+
+        const extension = filePath.split('.').pop().toLowerCase();
+        const mimeTypes = {
+            html: 'text/html; charset=utf-8',
+            htm: 'text/html; charset=utf-8',
+            js: 'text/javascript; charset=utf-8',
+            mjs: 'text/javascript; charset=utf-8',
+            cjs: 'text/javascript; charset=utf-8',
+            css: 'text/css; charset=utf-8',
+            json: 'application/json; charset=utf-8',
+            svg: 'image/svg+xml',
+            png: 'image/png',
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            avif: 'image/avif',
+            ico: 'image/x-icon',
+            mp3: 'audio/mpeg',
+            mp4: 'video/mp4',
+            webm: 'video/webm',
+            wasm: 'application/wasm',
+            woff: 'font/woff',
+            woff2: 'font/woff2',
+            ttf: 'font/ttf',
+            otf: 'font/otf',
+            xml: 'application/xml',
+            txt: 'text/plain; charset=utf-8'
+        };
+        const contentType = mimeTypes[extension] || upstream.headers.get('content-type') || 'application/octet-stream';
+        if (/^(text\/|application\/(?:javascript|json|xml)|image\/svg\+xml)/i.test(contentType)) {
+            let source = bytes.toString('utf8');
+            source = source
+                .replace(/https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi, '/game-assets/$1/$2/$3/$4')
+                .replace(/https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi, '/game-assets/55gms/$1/$2/$3')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, '/game-assets/55gms/55GMS/main/static/assets/')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, '/game-assets/55gms/55GMS/main/static/img/')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, '/game-assets/55gms/55GMS/main/static/misc/')
+                .replace(/(["'(=])\/assets\//g, '$1/game-assets/55gms/55GMS/main/static/assets/')
+                .replace(/(["'(=])\/img\//g, '$1/game-assets/55gms/55GMS/main/static/img/')
+                .replace(/(["'(=])\/misc\//g, '$1/game-assets/55gms/55GMS/main/static/misc/');
+            bytes = Buffer.from(source);
+        }
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Length', String(bytes.length));
+        return res.status(200).send(bytes);
+    } catch (error) {
+        console.error('[BSMS Web :: Game Asset Proxy]', error);
+        return res.status(502).send('Unable to retrieve game asset.');
+    }
+});
+
+
 // Clean URLs
 // Serve the original homepage at the root path.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -170,6 +264,7 @@ app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.h
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
+app.get('/g/:gameSlug', (req, res) => res.sendFile(path.join(__dirname, 'game-player.html')));
 app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
 app.get('/contact', (req, res) => res.redirect(301, '/support'));
 app.get('/bug-report', (req, res) => res.redirect(302, '/support?type=bug'));
