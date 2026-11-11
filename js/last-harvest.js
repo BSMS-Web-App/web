@@ -1021,6 +1021,27 @@ save();updateQuest();return;}
 const doors=[{x:10.5,y:10.5,id:0},{x:34,y:10.5,id:1},{x:22,y:22.5,id:2},{x:5.5,y:29.5,id:3}];for(const d of doors){if(Math.hypot(state.x-d.x*TILE,state.y-d.y*TILE)<82){enterBuilding(d.id);return;}}
 const sx=27*TILE,sy=10*TILE;if(Math.hypot(state.x-sx,state.y-sy)<75){setDialogue([['OLD SIGN','AUTUMNWOOD — follow the golden leaves beyond the village.'],['QUEST','Explore Hearthvale and speak with the villagers. The road north-east leads to your first chapter.']]);return;}
 setDialogue([['ROWAN','The wind smells like cinnamon and fallen leaves. Maybe there is something nearby.']]);}
+function showBeginnerTutorial(){
+ if(state.tutorialDone)return;
+ const steps=[
+  ['WELCOME TO HEARTHVALE','Your adventure is just beginning. This quick guide shows you the basics.'],
+  ['MOVE AROUND','Keyboard: use W A S D or the arrow keys. On phones and tablets, use the joystick in the lower-left corner.'],
+  ['TALK & EXPLORE','Walk close to a character and press E or SPACE. On touch screens, use the on-screen interact control. Tap the MENU button to open your Field Journal.'],
+  ['QUESTS & BATTLES','Follow CURRENT QUEST near the top-left. Explore tall grass to meet wild creatures, then choose FIGHT, SKILL, GUARD, or ITEMS.'],
+  ['USE YOUR ITEMS','ITEMS can restore HP or MP, protect you, or damage an opponent. Using an item takes your turn. Check BAG in the Field Journal to see what you carry.'],
+  ['YOU ARE READY!','Talk to Elder Maple first. Take your time, explore every building, and keep an eye out for side quests and secrets.']
+ ];
+ let index=0;
+ const el=document.createElement('div');el.className='lh-tutorial';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Beginner tutorial');
+ el.innerHTML='<section class="lh-tutorial-card"><div class="lh-tutorial-kicker">THE LAST HARVEST · FIELD GUIDE</div><div class="lh-tutorial-count"></div><h2 class="lh-tutorial-title"></h2><p class="lh-tutorial-copy"></p><div class="lh-tutorial-progress"></div><div class="lh-tutorial-actions"><button type="button" class="lh-tutorial-skip">SKIP GUIDE</button><button type="button" class="lh-tutorial-next">NEXT →</button></div></section>';
+ document.getElementById('lh-game').appendChild(el);
+ const title=el.querySelector('.lh-tutorial-title'),copy=el.querySelector('.lh-tutorial-copy'),count=el.querySelector('.lh-tutorial-count'),progress=el.querySelector('.lh-tutorial-progress'),next=el.querySelector('.lh-tutorial-next');
+ function finish(){state.tutorialDone=true;save();el.remove();}
+ function render(){const step=steps[index];count.textContent='LESSON '+(index+1)+' / '+steps.length;title.textContent=step[0];copy.textContent=step[1];progress.innerHTML=steps.map((_,i)=>'<i class="'+(i<=index?'done':'')+'"></i>').join('');next.textContent=index===steps.length-1?'START ADVENTURE ✓':'NEXT →';}
+ next.addEventListener('click',()=>{if(index<steps.length-1){index++;render();}else finish();});
+ el.querySelector('.lh-tutorial-skip').addEventListener('click',finish);
+ render();
+}
 function startIntro(){
 document.body.classList.add('lh-cinematic');
 state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';
@@ -1070,7 +1091,7 @@ const lore=[[['JOURNAL','THE LEGEND OF THE EVERFEAST, written by the First Keepe
 for(let a=0;a<lore.length;a++){if(a>0){cinematic.flash=1;cinematic.act=a;cinematic.t0=performance.now();}await say(lore[a]);}
 cinematic.flash=1;cinematic.phase='home';cinematic.sparkle=false;
 await say([['ROWAN','Your parents are Keepers… and the Hollow King’s seal is breaking!'],['YOU','Then we have to find them before the Everfeast fails.'],['ROWAN','Elder Maple knows the old stories. Let’s ask him first.']]);
-cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';state.x=10*TILE+16;state.y=12*TILE+24;state.seenIntro=true;setQ(0);updateQuest();
+cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';state.x=10*TILE+16;state.y=12*TILE+24;state.seenIntro=true;setQ(0);updateQuest();showBeginnerTutorial();
 })();
 }
 
