@@ -270,3 +270,8 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
   .lh-dialogue.lh-dialogue-top #lh-portrait{width:44px!important;height:44px!important;flex-basis:44px!important}
   .lh-dialogue.lh-dialogue-top .lh-dialogue-speaker{gap:8px!important}
 }
+
+
+/* Dialogue is the focus: hide the HUD while a conversation is open, then restore it. */
+.lh-game.lh-dialogue-open .lh-hud{display:none!important}
+.lh-dialogue.lh-dialogue-top{top:calc(12px + env(safe-area-inset-top))!important}
