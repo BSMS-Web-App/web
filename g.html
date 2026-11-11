@@ -42,6 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/g.css">
+<link rel="stylesheet" href="/css/g-notice.css">
 <script src="/js/legal-updates.js" defer></script>
 </head>
 <body>
@@ -64,9 +65,19 @@ SPDX-License-Identifier: AGPL-3.0-only
   </div>
 </div>
 
+<!-- Game Vault Known Issue Notice -->
+<div id="gameNoticePopup" class="overlay" role="dialog" aria-modal="true" aria-labelledby="gameNoticeTitle" aria-describedby="gameNoticeMessage">
+  <div class="popup game-notice-popup">
+    <h2 id="gameNoticeTitle">Known Game Loading Issue</h2>
+    <p id="gameNoticeMessage">We are aware of a bug affecting many games in the Game Vault. Some games rely on additional files that are currently loading from the wrong origin, which prevents those games from working correctly. We are working hard to fix these issues. Thank you for your patience.</p>
+    <button id="gameNoticeGotIt" class="btn" type="button">Got it</button>
+  </div>
+</div>
+
 <main id="mainContent"><div class="hero"><h1>Game <span>Vault</span></h1><p>Browse the 55GMS collection and launch games directly from the Game Vault.</p></div><div class="search-container"><input type="search" id="gameSearch" class="search-bar" placeholder="Search games..." autocomplete="off"><div class="az-filters" id="azFilters"></div></div><div class="launcher-container"><div class="launcher-grid" id="gamesGrid"><div class="games-empty">Loading game library…</div></div></div></main>
 <script>function closePopup(id){const p=document.getElementById(id);if(p)p.classList.remove("show");}</script>
 <!-- Core Application Script -->
-<script src="/js/g.js"></script>    
+<script src="/js/g.js"></script>
+<script src="/js/g-notice.js"></script>    
 </body>
 </html>
