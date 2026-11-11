@@ -540,22 +540,8 @@ wss.on('connection', (ws) => {
             } else if (msg.type === 'game:move') {
                 const roomId = cleanRoomCode(msg.roomId);
                 const room = rooms.get(roomId);
-                if (!room || room.status === 'finished') return;
-                const isWhite = room.whitePlayer?.clientId === currentClientId;
-                const isBlack = room.blackPlayer?.clientId === currentClientId;
-                if (!isWhite && !isBlack) return;
+                if (!room) return;
                 if (!Array.isArray(room.moves)) room.moves = [];
-
-                const expectedColor = room.moves.length % 2 === 0 ? 'w' : 'b';
-                const playerColor = isWhite ? 'w' : 'b';
-                if (playerColor !== expectedColor || room.lastMoverClientId === currentClientId) {
-                    sendToClient(currentClientId, {
-                        type: 'game:error',
-                        message: 'Not your turn or move already processed.'
-                    });
-                    return;
-                }
-
                 const moveIndex = typeof msg.moveIndex === 'number' ? msg.moveIndex : room.moves.length;
                 const moveEntry = {
                     ...msg.move,
@@ -566,83 +552,17 @@ wss.on('connection', (ws) => {
                 if (!room.moves.some((m) => m.moveIndex === moveIndex && m.san === msg.move?.san)) {
                     room.moves.push(moveEntry);
                 }
-                room.lastMoverClientId = currentClientId;
                 room.updatedAt = Date.now();
-                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer.clientId;
+                const targetId =
+                    room.whitePlayer.clientId === currentClientId
+                        ? room.blackPlayer?.clientId
+                        : room.whitePlayer.clientId;
                 if (targetId) {
                     sendToClient(targetId, { type: 'game:opponent_move', roomId: room.roomId, move: moveEntry });
                 }
                 if (room.spectators) {
                     room.spectators.forEach((specId) => {
                         sendToClient(specId, { type: 'game:opponent_move', roomId: room.roomId, move: moveEntry });
-                    });
-                }
-            } else if (msg.type === 'game:draw_offer') {
-                const roomId = cleanRoomCode(msg.roomId);
-                const room = rooms.get(roomId);
-                if (!room || room.status === 'finished') return;
-                const isWhite = room.whitePlayer?.clientId === currentClientId;
-                const isBlack = room.blackPlayer?.clientId === currentClientId;
-                if (!isWhite && !isBlack) return;
-                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
-                const senderEntry = clients.get(currentClientId);
-                if (targetId) {
-                    sendToClient(targetId, {
-                        type: 'game:draw_offered',
-                        roomId: room.roomId,
-                        fromUser: senderEntry?.user || { username: 'Opponent' }
-                    });
-                }
-            } else if (msg.type === 'game:draw_accept') {
-                const roomId = cleanRoomCode(msg.roomId);
-                const room = rooms.get(roomId);
-                if (!room || room.status === 'finished') return;
-                room.status = 'finished';
-                room.reason = 'agreement';
-                room.winner = 'draw';
-                room.updatedAt = Date.now();
-                const notifyIds = [room.whitePlayer?.clientId, room.blackPlayer?.clientId].filter(Boolean);
-                notifyIds.forEach((pid) => {
-                    sendToClient(pid, {
-                        type: 'game:ended',
-                        roomId: room.roomId,
-                        reason: 'agreement',
-                        winner: 'draw'
-                    });
-                });
-                if (room.spectators) {
-                    room.spectators.forEach((specId) => {
-                        sendToClient(specId, {
-                            type: 'game:ended',
-                            roomId: room.roomId,
-                            reason: 'agreement',
-                            winner: 'draw'
-                        });
-                    });
-                }
-                const wEntry = clients.get(room.whitePlayer?.clientId);
-                if (wEntry) {
-                    wEntry.user.status = 'online';
-                    upsertMemberFromUser(wEntry.user);
-                }
-                if (room.blackPlayer) {
-                    const bEntry = clients.get(room.blackPlayer.clientId);
-                    if (bEntry) {
-                        bEntry.user.status = 'online';
-                        upsertMemberFromUser(bEntry.user);
-                    }
-                }
-                broadcastPresence();
-            } else if (msg.type === 'game:draw_decline') {
-                const roomId = cleanRoomCode(msg.roomId);
-                const room = rooms.get(roomId);
-                if (!room || room.status === 'finished') return;
-                const isWhite = room.whitePlayer?.clientId === currentClientId;
-                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
-                if (targetId) {
-                    sendToClient(targetId, {
-                        type: 'game:draw_declined',
-                        roomId: room.roomId
                     });
                 }
             } else if (msg.type === 'game:end') {
