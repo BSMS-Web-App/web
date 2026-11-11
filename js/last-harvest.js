@@ -1026,7 +1026,7 @@ function showBeginnerTutorial(){
  const steps=[
   ['WELCOME TO HEARTHVALE','Your adventure is just beginning. This quick guide shows you the basics.'],
   ['MOVE AROUND','Keyboard: use W A S D or the arrow keys. On phones and tablets, use the joystick in the lower-left corner.'],
-  ['TALK & EXPLORE','Walk close to a character and press E or SPACE. On touch screens, use the on-screen interact control. Tap the MENU button to open your Field Journal.'],
+  ['TALK & EXPLORE','Walk close to a character and press E or SPACE. On touch screens, use the TALK button beside the joystick. Tap the MENU button to open your Field Journal.'],
   ['QUESTS & BATTLES','Follow CURRENT QUEST near the top-left. Explore tall grass to meet wild creatures, then choose FIGHT, SKILL, GUARD, or ITEMS.'],
   ['USE YOUR ITEMS','ITEMS can restore HP or MP, protect you, or damage an opponent. Using an item takes your turn. Check BAG in the Field Journal to see what you carry.'],
   ['YOU ARE READY!','Talk to Elder Maple first. Take your time, explore every building, and keep an eye out for side quests and secrets.']
@@ -1116,6 +1116,7 @@ requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
 const joy=$('lh-joystick'),stick=$('lh-stick');let joyPointer=null;
+$('lh-interact').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();interact();});
 function setJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.34,len=Math.hypot(dx,dy),scale=len>max?max/len:1;joystick.x=(dx*scale)/max;joystick.y=(dy*scale)/max;stick.style.transform='translate('+joystick.x*34+'px,'+joystick.y*34+'px)';}
 joy.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e);});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e);});
