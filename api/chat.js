@@ -82,9 +82,8 @@ export default async function handler(req, res) {
 
         switch (action) {
             case 'sync': {
-                await db.ref(`/chat/users/${uid}/status`).set('online');
-                await db.ref(`/chat/users/${uid}/lastSeen`).set(admin.database.ServerValue.TIMESTAMP);
-
+                // Presence is updated only by the explicit status heartbeat. Do not
+                // mark hidden tabs online just because background chat polling runs.
                 const chatData = await requestMacApi('GET', '/v1/chat/sync?uid=' + encodeURIComponent(uid));
 
                 const hiddenDms = account.hidden_dms ? Object.keys(account.hidden_dms) : [];
