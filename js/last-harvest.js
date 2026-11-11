@@ -1113,7 +1113,7 @@ const hit=ins?roomHit(nx,ny):ar?areaHit(nx,ny):(blocked(nx,ny)||npcs.some(n=>Mat
 if(hit){if(ins&&f===0&&P.y>roomGeom(interiorId).exitY)exitBuilding();return;}stepper={fx:P.x,fy:P.y,tx:nx,ty:ny,t:0};walking=true;}
 function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);areaTick();ensureSouthBossGate();ensureCityGate();ensureWildsGate();musicTick();lastCam=drawWorld();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
-addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
+addEventListener('keydown',e=>{if(dialogue&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(!e.repeat)advanceDialogue();return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
 const joy=$('lh-joystick'),stick=$('lh-stick');let joyPointer=null;
 $('lh-interact').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();interact();});
@@ -1123,6 +1123,7 @@ joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e);});
 function releaseJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;joystick.x=joystick.y=0;stick.style.transform='translate(0,0)';}
 joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
 // Deliberately no canvas tap-to-interact handler: conversations start only with the explicit interact control (E/Space).
+$('lh-dialogue').addEventListener('pointerup',e=>{if(e.target.closest('button'))return;e.preventDefault();advanceDialogue();});
 $('lh-next').addEventListener('click',advanceDialogue);
 document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
 $('lh-school-confirm').addEventListener('click',()=>{const selected=$('lh-school-class').querySelector('.lh-class.selected');state.heroClass=selected.dataset.class;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;$('lh-school-class').hidden=true;updateHud();save();if(window.__lhClassChosen){const done=window.__lhClassChosen;window.__lhClassChosen=null;done();}});
