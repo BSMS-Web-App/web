@@ -323,3 +323,30 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 #lh-interact{position:absolute;left:140px;bottom:28px;min-width:76px;min-height:58px;border:3px solid #f2d18a;border-radius:12px;background:#75462c;color:#fff0c8;font:10px "Press Start 2P",monospace;box-shadow:0 4px 0 #3c281d;touch-action:none}
 #lh-interact:active{transform:translateY(3px);box-shadow:0 1px 0 #3c281d}
 @media(max-width:700px){#lh-interact{left:128px;bottom:calc(28px + env(safe-area-inset-bottom));min-width:70px;min-height:54px;font-size:9px}}
+
+
+/* Dialogue belongs at the bottom of the game screen, like a classic RPG. */
+.lh-dialogue.lh-dialogue-top{
+  top:auto!important;
+  bottom:calc(18px + env(safe-area-inset-bottom))!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  width:min(920px,calc(100% - 40px))!important;
+  padding:16px 20px!important;
+  z-index:20!important;
+  background:#fff0ce!important;
+  color:#382b25!important;
+  border:5px solid #80502f!important;
+  box-shadow:0 0 0 4px #d59b52,0 8px 0 #4d3024!important;
+}
+.lh-dialogue.lh-dialogue-top:after{display:block!important}
+.lh-dialogue.lh-dialogue-top #lh-portrait{width:68px!important;height:68px!important;flex-basis:68px!important}
+@media(max-width:700px){
+  .lh-dialogue.lh-dialogue-top{
+    top:auto!important;
+    bottom:calc(10px + env(safe-area-inset-bottom))!important;
+    width:calc(100% - 16px)!important;
+    padding:10px 12px!important;
+  }
+  .lh-dialogue.lh-dialogue-top #lh-portrait{width:48px!important;height:48px!important;flex-basis:48px!important}
+}
