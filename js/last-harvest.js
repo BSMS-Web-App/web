@@ -666,13 +666,33 @@ Mage:[
 function pkUI(){let el=$b('pk-ui');if(el)return el;el=document.createElement('div');el.id='pk-ui';el.hidden=true;
 el.innerHTML='<div class="pk-box pk-foe" id="pk-foe"><b id="pk-fn"></b><small id="pk-fl"></small><i><u id="pk-fh"></u></i></div><div class="pk-box pk-me"><b id="pk-mn"></b><small id="pk-mh"></small><i><u id="pk-mhb"></u></i><i class="mp"><u id="pk-mmb"></u></i></div><div class="pk-bottom" id="pk-bottom"><p id="pk-t"></p><div class="pk-menu" id="pk-menu"></div></div>';
 document.body.appendChild(el);
-el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.a)pkAct(b.dataset.a);else if(b.dataset.s!==undefined)pkSkillPick(+b.dataset.s);else if(b.dataset.m)pkMenu(b.dataset.m);});
+el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.a)pkAct(b.dataset.a);else if(b.dataset.s!==undefined)pkSkillPick(+b.dataset.s);else if(b.dataset.i)useBattleItem(b.dataset.i);else if(b.dataset.m)pkMenu(b.dataset.m);});
 return el;}
+const BATTLE_ITEMS=[
+{id:'potion',name:'Harvest Potion',desc:'Restore 35 HP.',count:3},
+{id:'ether',name:'Moonmint Tea',desc:'Restore 8 MP.',count:2},
+{id:'cider',name:'Golden Cider',desc:'Restore 20% of your maximum HP.',count:1},
+{id:'charm',name:'Oakguard Charm',desc:'Reduce the next 2 turns of damage.',count:1},
+{id:'ember',name:'Ember Seed',desc:'Deal 28 damage to the opponent.',count:1}
+];
+function ensureBattleItems(){state.battleItems=state.battleItems||{};BATTLE_ITEMS.forEach(it=>{if(!Number.isFinite(state.battleItems[it.id]))state.battleItems[it.id]=it.count;});}
+function battleItemCount(id){ensureBattleItems();return Math.max(0,Number(state.battleItems[id])||0);}
+function useBattleItem(id){const b=battle;if(!b||b.busy)return;ensureBattleItems();const it=BATTLE_ITEMS.find(x=>x.id===id);if(!it||!battleItemCount(id))return;
+if(id==='potion'&&state.hp>=state.maxHp){pkSay('Your health is already full.',650);b.busy=false;pkMenu('items');return;}
+if(id==='ether'&&state.mp>=state.maxMp){pkSay('Your MP is already full.',650);b.busy=false;pkMenu('items');return;}
+if(id==='cider'&&state.hp>=state.maxHp){pkSay('Your health is already full.',650);b.busy=false;pkMenu('items');return;}
+state.battleItems[id]--;
+if(id==='potion'){const n=Math.min(35,state.maxHp-state.hp);state.hp+=n;healFx(n);pkSay('Harvest Potion restores '+n+' HP!',750);}
+else if(id==='ether'){const n=Math.min(8,state.maxMp-state.mp);state.mp+=n;rise(geo().hx,geo().hy,18,['#8fd8ff','#ffffff','#b06aff'],50);pkSay('Moonmint Tea restores '+n+' MP!',750);}
+else if(id==='cider'){const n=Math.min(Math.ceil(state.maxHp*.2),state.maxHp-state.hp);state.hp+=n;healFx(n,'#ffd66b');pkSay('Golden Cider restores '+n+' HP!',750);}
+else if(id==='charm'){b.ward=Math.max(b.ward,2);shieldFx();pkSay('Oakguard Charm protects you for 2 turns!',750);}
+else if(id==='ember'){const n=28;hitFoe(n,'magic',false);pkSay('The Ember Seed bursts for '+n+' damage!',750);}
+pkPanel();save();updateHud();if(!b.e.hp){pkWin();return;}endRound();
+}
 function pkMenu(kind){const m=$b('pk-menu');if(!m||!battle)return;battle.sel=-1;
-if(kind==='skills'){const list=knownSkills();m.className='pk-menu sk';
-m.innerHTML=list.map((s,i)=>'<button data-s="'+i+'"'+(state.mp<s.mp?' disabled':'')+'><b>'+s.n+'</b><em>'+s.mp+' MP</em></button>').join('')+'<button data-m="main" class="back">\u25C0 BACK</button>';
-$b('pk-t').textContent='Choose a skill. You have '+state.mp+' / '+state.maxMp+' MP.';}
-else{m.className='pk-menu';m.innerHTML='<button data-a="attack">FIGHT</button><button data-a="skill">SKILL</button><button data-a="guard">GUARD</button><button data-a="item">POTION \u00D7'+(state.potions||0)+'</button><button data-a="run">RUN</button>';$b('pk-t').textContent='What will you do?';}}
+if(kind==='skills'){const list=knownSkills();m.className='pk-menu sk';m.innerHTML=list.map((s,i)=>'<button data-s="'+i+'"'+(state.mp<s.mp?' disabled':'')+'><b>'+s.n+'</b><em>'+s.mp+' MP</em></button>').join('')+'<button data-m="main" class="back">\u25C0 BACK</button>';$b('pk-t').textContent='Choose a skill. You have '+state.mp+' / '+state.maxMp+' MP.';}
+else if(kind==='items'){ensureBattleItems();m.className='pk-menu sk';m.innerHTML=BATTLE_ITEMS.map(it=>'<button data-i="'+it.id+'"'+(!battleItemCount(it.id)?' disabled':'')+'><b>'+it.name+'</b><em>×'+battleItemCount(it.id)+'</em></button>').join('')+'<button data-m="main" class="back">\u25C0 BACK</button>';$b('pk-t').textContent='Choose an item. Using one takes your turn.';}
+else{m.className='pk-menu';m.innerHTML='<button data-a="attack">FIGHT</button><button data-a="skill">SKILL</button><button data-a="guard">GUARD</button><button data-a="items">ITEMS</button><button data-a="run">RUN</button>';$b('pk-t').textContent='What will you do?';}}
 function pkSkillPick(i){if(!battle||battle.busy)return;const sk=knownSkills()[i];if(!sk)return;
 if(battle.sel===i){pkSkill(i);return;}
 battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
@@ -693,7 +713,7 @@ function rise(x,y,n,cols,w){const b=battle;if(!b)return;for(let i=0;i<n;i++)b.pa
 function pop(txt,x,y,c,size){battle.pops.push({t:txt,x,y,c:c||'#fff',s:size||18,age:0});}
 
 /* --- starting a battle: ! alert -> stripe wipe -> entrance -> fight --- */
-function startBattle(g){state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
+function startBattle(g){ensureBattleItems();state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
 const B=g.bi!==undefined?BOSSES[g.bi]:null,hp=B?B.hp:g.hp,atk=B?B.atk:g.atk;
 battle={g,B,e:{name:g.name,hp,max:hp,atk,row:g.row,mi:g.mi,bi:g.bi,boss:!!B,status:{},turn:0,charging:false,enraged:false},ward:0,evade:false,guard:false,busy:true,sel:-1,phase:'alert',t0:performance.now(),last:performance.now(),
 hox:0,hoy:0,fox:0,foy:0,shake:0,flashF:0,flashH:0,flashR:0,flashW:0,shield:0,dead:0,hdead:0,parts:[],pops:[],proj:null};
@@ -722,10 +742,11 @@ async function scriptedRowanLoss(){const b=battle;if(!b||b.busy)return;b.busy=tr
 async function pkAct(a){const b=battle;if(!b||b.busy)return;
 if(b.g.scriptedLoss){scriptedRowanLoss();return;}
 if(a==='skill'){pkMenu('skills');return;}
+if(a==='items'){pkMenu('items');return;}
 b.busy=true;const e=b.e;
 if(a==='run'){if(b.g.wild&&!b.g.tower){await pkSay('You got away safely!');pkEnd();return;}await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
-if(a==='item'){if(!state.potions){await pkSay('No potions left!',800);pkMenu('main');b.busy=false;return;}state.potions--;state.hp=Math.min(state.maxHp,state.hp+28);healFx(28);pkPanel();await pkSay('A potion restores 28 HP!',900);await endRound();return;}
+if(a==='item'){b.busy=false;pkMenu('items');return;}
 await heroAttack(null);}
 async function pkSkill(i){const b=battle;if(!b||b.busy)return;if(b.g.scriptedLoss){scriptedRowanLoss();return;}const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
 async function heroAttack(sk){const b=battle,e=b.e,cls=state.heroClass,lv=state.level;
@@ -1097,8 +1118,8 @@ function renderRpgMenu(tab='status'){
       '<div class="lh-rpg-stat"><b>CHAPTER</b>'+(Number(state.stage)+1)+' / 10</div>'+
       '<div class="lh-rpg-stat"><b>LOCATION</b>'+escapeMenuText(chapter.place)+'</div></div>';
   }else if(tab==='bag'){
-    const kit={Guardian:['Harvest Longsword — weapon','Oak Kite Shield — offhand','Steel Plate Armor — armor'],Scout:['Hunter’s Longbow — weapon','Leaf-Stitched Quiver — offhand','Ranger Leather Armor — armor'],Mage:['Amber Orb Staff — weapon','Spellbound Mantle — armor']}[state.heroClass]||[];const items=[...kit,...(Array.isArray(state.inventory)?state.inventory:[])];
-    panel.innerHTML='<h3>ADVENTURER’S BAG</h3>'+(items.length?items.map(item=>'<p>• '+escapeMenuText(typeof item==='string'?item:(item.name||'Unknown item'))+'</p>').join(''):'<div class="lh-rpg-empty">Your bag is empty for now.<br>Supplies and treasures you discover will appear here.</div>');
+    const kit={Guardian:['Harvest Longsword — weapon','Oak Kite Shield — offhand','Steel Plate Armor — armor'],Scout:['Hunter’s Longbow — weapon','Leaf-Stitched Quiver — offhand','Ranger Leather Armor — armor'],Mage:['Amber Orb Staff — weapon','Spellbound Mantle — armor']}[state.heroClass]||[];ensureBattleItems();const items=[...kit,...(Array.isArray(state.inventory)?state.inventory:[])];
+    panel.innerHTML='<h3>ADVENTURER’S BAG</h3><h4>BATTLE ITEMS</h4>'+BATTLE_ITEMS.map(it=>'<p>• <b>'+it.name+'</b> ×'+battleItemCount(it.id)+' — '+it.desc+'</p>').join('')+(items.length?'<h4>GEAR</h4>'+items.map(item=>'<p>• '+escapeMenuText(typeof item==='string'?item:(item.name||'Unknown item'))+'</p>').join(''):'');
   }else if(tab==='map'){
     const rows=['FFFFFFFFFFFF','FHH...F...HF','FHH...F...HF','pppppppppppp','...ppp......','...ppp......','HHH.ppp.....','HHH.ppp.....','FFFFFFFFFFFF'];
     const mx=Math.max(0,Math.min(11,Math.floor(state.x/TILE/4))),my=Math.max(0,Math.min(8,Math.floor(state.y/TILE/4)));
