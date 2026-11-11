@@ -275,3 +275,45 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
 /* Dialogue is the focus: hide the HUD while a conversation is open, then restore it. */
 .lh-game.lh-dialogue-open .lh-hud{display:none!important}
 .lh-dialogue.lh-dialogue-top{top:calc(12px + env(safe-area-inset-top))!important}
+
+
+/* Clean, readable HUD: a real header rather than text floating over the scenery. */
+.lh-hud{
+  min-height:76px!important;
+  display:grid!important;
+  grid-template-columns:minmax(180px,1fr) auto minmax(110px,1fr)!important;
+  align-items:center!important;
+  gap:18px!important;
+  padding:calc(12px + env(safe-area-inset-top)) 24px 12px!important;
+  background:linear-gradient(180deg,#172a25 0%,#20382e 100%)!important;
+  border-bottom:4px solid #b77a43!important;
+  box-shadow:0 4px 0 #15251f,0 8px 18px #0005!important;
+  pointer-events:none!important;
+}
+.lh-brand{font-size:clamp(10px,1.25vw,16px)!important;letter-spacing:.12em!important;white-space:nowrap!important;color:#ffe0a0!important}
+.lh-stats{justify-content:center!important;gap:clamp(8px,1.4vw,20px)!important;white-space:nowrap!important;font-size:clamp(9px,1vw,13px)!important}
+.lh-menu-button{justify-self:end!important;pointer-events:auto!important;min-width:104px!important}
+.lh-location{top:92px!important;z-index:2!important}
+.lh-quest{top:92px!important;z-index:2!important}
+.lh-tutorial{position:absolute;inset:0;z-index:30;display:grid;place-items:center;padding:18px;background:#09140edb;backdrop-filter:blur(5px);font-family:"Press Start 2P",ui-monospace,monospace}
+.lh-tutorial-card{width:min(620px,94vw);padding:clamp(20px,4vw,34px);background:linear-gradient(145deg,#f9edce,#ead5a8);color:#3c3028;border:5px solid #75472c;box-shadow:0 0 0 5px #d49a50,0 14px 40px #0009}
+.lh-tutorial-kicker{font-size:9px;letter-spacing:.12em;color:#9a5b31}
+.lh-tutorial-count{margin-top:22px;font-size:9px;color:#98764d}
+.lh-tutorial-title{margin:12px 0;font-size:clamp(17px,3vw,25px);line-height:1.5;color:#4b3427}
+.lh-tutorial-copy{min-height:90px;margin:0;font:clamp(12px,1.6vw,15px)/1.9 ui-monospace,monospace;color:#514338}
+.lh-tutorial-progress{display:flex;gap:7px;margin:20px 0}
+.lh-tutorial-progress i{height:6px;flex:1;background:#c5b18d}
+.lh-tutorial-progress i.done{background:#b96e37}
+.lh-tutorial-actions{display:flex;justify-content:space-between;gap:12px}
+.lh-tutorial-actions button{font:10px "Press Start 2P",monospace;padding:12px 14px;border:3px solid #6b442d;background:#fff4d8;color:#553927;cursor:pointer}
+.lh-tutorial-actions .lh-tutorial-next{background:#b96e37;color:#fff4d8}
+@media(max-width:700px){
+ .lh-hud{min-height:68px!important;grid-template-columns:1fr auto!important;padding:calc(8px + env(safe-area-inset-top)) 10px 8px!important;gap:5px 8px!important}
+ .lh-brand{font-size:9px!important;grid-column:1!important;grid-row:1!important}
+ .lh-stats{grid-column:1!important;grid-row:2!important;justify-content:flex-start!important;font-size:8px!important;gap:8px!important}
+ .lh-menu-button{grid-column:2!important;grid-row:1/3!important;min-width:76px!important;font-size:9px!important;padding:8px!important}
+ .lh-location,.lh-quest{top:82px!important}
+ .lh-tutorial-card{padding:18px!important}
+ .lh-tutorial-copy{min-height:110px!important;font-size:12px!important}
+ .lh-tutorial-actions button{font-size:8px!important;padding:10px 8px!important}
+}
