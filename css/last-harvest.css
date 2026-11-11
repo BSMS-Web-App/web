@@ -317,3 +317,9 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
  .lh-tutorial-copy{min-height:110px!important;font-size:12px!important}
  .lh-tutorial-actions button{font-size:8px!important;padding:10px 8px!important}
 }
+
+
+/* Dedicated touch interaction button, separated from movement input. */
+#lh-interact{position:absolute;left:140px;bottom:28px;min-width:76px;min-height:58px;border:3px solid #f2d18a;border-radius:12px;background:#75462c;color:#fff0c8;font:10px "Press Start 2P",monospace;box-shadow:0 4px 0 #3c281d;touch-action:none}
+#lh-interact:active{transform:translateY(3px);box-shadow:0 1px 0 #3c281d}
+@media(max-width:700px){#lh-interact{left:128px;bottom:calc(28px + env(safe-area-inset-bottom));min-width:70px;min-height:54px;font-size:9px}}
