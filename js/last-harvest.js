@@ -255,7 +255,7 @@ function getRegion(c){return AREAS['r'+c]||(AREAS['r'+c]=genRegion(c));}
 function getCity(){return AREAS.city||(AREAS.city=genCity());}
 function genRegion(c){const B=BIO[c],S=STORY[c],w=44,h=26,rng=mulberry(c*7919+13),T=(x,y)=>y*w+x;
  const open=new Uint8Array(w*h),solid=new Uint8Array(w*h),ob=new Uint8Array(w*h),enc=new Uint8Array(w*h),pathY=[];
- let py=13;for(let x=0;x<w;x++){if(x>6&&x<w-10&&rng()<.3)py+=rng()<.5?-1:1;py=Math.max(6,Math.min(h-7,py));pathY[x]=py;}
+ const routeShapes={1:[13,12,10,9,11,14,16,15,12,10,8],2:[17,17,16,13,10,8,9,12,15,17,17],3:[8,8,10,14,18,19,16,12,9,8,8],4:[18,16,12,9,8,10,14,18,19,16,12],5:[13,13,13,13,13,13,13,13,13,13,13],6:[20,18,15,12,9,7,8,10,13,16,19],7:[7,10,14,18,20,18,14,10,7,8,11],8:[19,16,12,8,7,10,14,18,20,17,13],9:[13,9,7,9,13,17,19,17,13,9,7]},shape=routeShapes[c]||routeShapes[1],interp=x=>{const q=x/((w-1)/10),i=Math.min(9,Math.floor(q)),f=q-i;return shape[i]+(shape[i+1]-shape[i])*f;};let py=13;for(let x=0;x<w;x++){const base=interp(x);py=Math.round(base+(x>3&&x<w-8?(rng()-.5)*(c===5?.8:1.6):0));py=Math.max(5,Math.min(h-6,py));pathY[x]=py;}
  const carve=(x,y)=>{if(x>0&&y>0&&x<w-1&&y<h-1)open[T(x,y)]=1;};
  for(let x=0;x<w-1;x++)for(let dy=-1;dy<=1;dy++)carve(x,pathY[x]+dy);
  const npcPos=[];[[10,-4],[22,4],[33,-4]].forEach(([cx,off])=>{const cy=pathY[cx]+off;for(let y=cy-3;y<=cy+3;y++)for(let x=cx-4;x<=cx+4;x++)if(((x-cx)/4.4)**2+((y-cy)/3.4)**2<=1)carve(x,y);for(let y=Math.min(cy,pathY[cx]);y<=Math.max(cy,pathY[cx]);y++)for(let dx=0;dx<2;dx++)carve(cx+dx,y);npcPos.push([cx,cy]);});
@@ -583,7 +583,25 @@ sceneTitle(['THE HUNGRY WINTERS','THE FIRST FEAST','THE HOLLOW KING','THE FIRST 
 function sceneTitle(t,W,y){ctx.font='13px "Press Start 2P",monospace';ctx.textAlign='center';ctx.fillStyle='#000';ctx.fillText(t,W/2+2,y+2);ctx.fillStyle='#f8f8f8';ctx.fillText(t,W/2,y);}
 function kPlank(x,y,u,i){if(KN.naturalWidth)ctx.drawImage(KN,200+(23+i%3)*17,0,16,16,Math.round(x),Math.round(y),u,u);}
 function winFrame(x,y,w,h){x=Math.round(x);y=Math.round(y);w=Math.round(w);h=Math.round(h);const o='#3f2631';px(x-5,y-5,w+10,h+10,o);px(x-3,y-3,w+6,h+6,'#a9683f');px(x-1,y-1,w+2,h+2,o);px(x,y,w,h,'#9fd8f0');px(x,y,w,Math.round(h*.4),'#c8ecf8');px(x+3,y+3,Math.max(3,Math.round(w*.14)),4,'#ffffff');px(x+w/2-2,y,4,h,'#8f5a37');px(x,y+h/2-2,w,4,'#8f5a37');px(x-7,y+h+3,w+14,7,o);px(x-6,y+h+4,w+12,4,'#d9a066');}
-function drawRegionScene(W,H){const c=cinematic.chapter||1,t=performance.now()/1000,pal=[['#172e25','#526b3b'],['#4b3b20','#a17a36'],['#102f38','#34727a'],['#21182e','#59416b'],['#2b171d','#70404a'],['#1e3042','#8ab6d1'],['#171b2c','#46536d'],['#21142d','#59336b'],['#351522','#9a3b50']],p=pal[Math.max(0,Math.min(c-1,8))];const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,p[0]);gr.addColorStop(1,p[1]);ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);for(let i=0;i<18;i++){const x=((i*173+t*12)%(W+120))-60,y=H*(.18+(i%5)*.13);ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(x,y,28+(i%3)*8,52,0,0,Math.PI*2);ctx.fill();}ctx.fillStyle='rgba(12,12,18,.38)';ctx.fillRect(0,H*.76,W,H*.24);const a=cinematic.actors,scale=Math.max(3,Math.min(6,Math.floor(H/150)));if(a.ROWAN)drawSpriteK(2,a.ROWAN.face||0,a.ROWAN.step||0,a.ROWAN.x,a.ROWAN.y,scale);if(a.HERO)drawSpriteK(heroRow(),a.HERO.face||0,a.HERO.step||0,a.HERO.x,a.HERO.y,scale);ctx.textAlign='center';ctx.font='bold '+Math.max(12,Math.min(22,W/28))+'px "Press Start 2P",monospace';ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillText(chapters[c].place.toUpperCase(),W/2+2,H*.14+2);ctx.fillStyle='#fff0c8';ctx.fillText(chapters[c].place.toUpperCase(),W/2,H*.14);}
+function drawRegionScene(W,H){
+ const c=cinematic.chapter||1,t=performance.now()/1000,pal=[['#172e25','#526b3b','#b6c86a'],['#4b3b20','#a17a36','#f5c85c'],['#102f38','#34727a','#8ee5d7'],['#21182e','#59416b','#c7a2f0'],['#2b171d','#70404a','#ef9a70'],['#1e3042','#8ab6d1','#e5f4ff'],['#171b2c','#46536d','#9da8ff'],['#21142d','#59336b','#db8bdb'],['#351522','#9a3b50','#ffc477']][Math.max(0,Math.min(c-1,8))];
+ const zoom=1.025+Math.min(.045,(cinematic.zoom||0)*.045)+Math.sin(t*.45)*.006;
+ ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2+(cinematic.panX||0),-H/2);
+ const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,pal[0]);gr.addColorStop(.68,pal[1]);gr.addColorStop(1,'#11121b');ctx.fillStyle=gr;ctx.fillRect(-W*.1,-H*.1,W*1.2,H*1.2);
+ for(let layer=0;layer<3;layer++){ctx.fillStyle=['rgba(5,12,18,.16)','rgba(5,10,16,.27)','rgba(5,8,14,.42)'][layer];ctx.beginPath();ctx.moveTo(0,H*.65+layer*H*.06);for(let x=0;x<=W+40;x+=40)ctx.lineTo(x,H*(.35+layer*.11)+Math.sin(x*.012+c*1.7+layer)*H*.045);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();}
+ if(c===1||c===2){for(let i=0;i<12;i++){const x=(i*137)%W,y=H*(.4+(i%3)*.06);ctx.fillStyle=c===1?'#182c20':'#49331e';ctx.fillRect(x-5,y,10,H*.32);for(let q=0;q<3;q++){ctx.fillStyle=(c===1?['#31583b','#6d873e','#a66b32']:['#7b4d24','#b47a32','#d7a44b'])[(i+q)%3];ctx.fillRect(x-24+q*5,y-34-q*7,18,18);}}}
+ else if(c===3){ctx.fillStyle='rgba(75,180,190,.24)';ctx.fillRect(0,H*.66,W,H*.2);for(let i=0;i<9;i++){ctx.fillStyle='#243b46';ctx.fillRect(i*W/8,H*.53+(i%2)*8,Math.max(10,W/14),H*.15);}}
+ else if(c===4||c===8){for(let i=0;i<7;i++){const x=i*W/6;ctx.fillStyle=c===4?'#241725':'#421d2a';ctx.fillRect(x,H*.36,Math.max(10,W*.035),H*.4);ctx.fillStyle=pal[2];ctx.fillRect(x+3,H*.43,4,6);}}
+ else if(c===5||c===7){for(let i=0;i<6;i++){const x=i*W/5;ctx.fillStyle=c===5?'#34404c':'#251a31';ctx.fillRect(x,H*.28+(i%2)*12,Math.max(12,W*.06),H*.42);ctx.fillStyle=pal[2];ctx.fillRect(x+5,H*.32+(i%2)*12,4,14);}}
+ else if(c===6){for(let i=0;i<8;i++){const x=i*W/7;ctx.fillStyle='#a8c8d8';ctx.fillRect(x,H*.48+(i%3)*8,Math.max(8,W*.025),H*.18);}}
+ else {for(let i=0;i<12;i++){ctx.fillStyle='rgba(255,218,125,.75)';ctx.fillRect((i*97)%W,H*(.28+(i%4)*.08),3,3);}}
+ ctx.fillStyle='rgba(8,10,16,.35)';ctx.fillRect(0,H*.76,W,H*.24);
+ const a=cinematic.actors,scale=Math.max(3,Math.min(6,Math.floor(H/150)));if(a.ROWAN)drawSpriteK(2,a.ROWAN.face||0,a.ROWAN.step||0,a.ROWAN.x,a.ROWAN.y,scale);if(a.HERO)drawSpriteK(heroRow(),a.HERO.face||0,a.HERO.step||0,a.HERO.x,a.HERO.y,scale);
+ for(let i=0;i<22;i++){const x=(i*83+t*(8+i%4)*((i%2)?1:-1)+W*2)%W,y=(i*47+Math.sin(t*1.4+i)*12)%(H*.78);ctx.fillStyle=pal[2];ctx.globalAlpha=.18+.28*Math.abs(Math.sin(t*1.2+i));ctx.fillRect(Math.round(x),Math.round(y),i%5===0?4:2,i%5===0?4:2);}ctx.globalAlpha=1;
+ const v=ctx.createRadialGradient(W/2,H*.52,H*.18,W/2,H*.52,Math.max(W,H)*.68);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.58)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);ctx.restore();
+ ctx.fillStyle='#08080c';ctx.fillRect(0,0,W,H*.085);ctx.fillRect(0,H*.915,W,H*.085);ctx.textAlign='center';ctx.font='bold '+Math.max(12,Math.min(22,W/28))+'px "Press Start 2P",monospace';ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillText(chapters[c].place.toUpperCase(),W/2+2,H*.145+2);ctx.fillStyle=pal[2];ctx.fillText(chapters[c].place.toUpperCase(),W/2,H*.145);
+ if(cinematic.flash>0){ctx.fillStyle='rgba(255,245,210,'+cinematic.flash+')';ctx.fillRect(0,0,W,H);cinematic.flash=Math.max(0,cinematic.flash-.045);}
+}
 const REGION_CUTSCENES = {
 2: {title:'THE ORCHARD REMEMBERS', lines:[['ROWAN','This place used to smell like cinnamon and apples. Your mother brought us here every autumn.'],['YOU','I remember. She said every tree had a story.'],['ROWAN','Then look. That tree has the same golden mark as her journal.']], after:[['JOURNAL','A warm light gathers beneath the oldest tree.'],['MARA','If you are seeing this, do not mistake a broken harvest for a broken home.'],['THOMAS','The people who care for one another are the roots.'],['YOU','They left this for me.'],['ROWAN','Then we keep following. Together.']]},
 3: {title:'THE PANTRY OF MEMORIES', lines:[['ROWAN','These jars are labeled with dates. One has the day we first met.'],['YOU','We hid here during the thunderstorm.'],['ROWAN','You said we should leave a lantern for anyone who was scared.']], after:[['JOURNAL','A jar glows blue. Inside is a tiny lantern and a note.'],['THOMAS','A promise is not a chain. It is a light we choose to carry.'],['ROWAN','I wish I could ask my mother what she would have done.'],['YOU','We will find the answers.']]},
@@ -599,11 +617,11 @@ function playRegionIntro(c){
  state.regionScenes=state.regionScenes||{};
  if(state.regionScenes[c])return;
  const first=c===1&&!state.rowanWoodsScene,sceneData=REGION_CUTSCENES[c],guide=data.npcs.length?data.npcs[0][0]:'JOURNAL';
- cinematic={phase:'region',chapter:c,actors:{HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0},ROWAN:{x:innerWidth*.72,y:innerHeight*.78,face:2,step:0}}};
+ cinematic={phase:'region',chapter:c,zoom:0,panX:0,flash:.85,actors:{HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0},ROWAN:{x:innerWidth*.72,y:innerHeight*.78,face:2,step:0}}};
  document.body.classList.add('lh-cinematic');
  const say=items=>new Promise(resolve=>setDialogue(items,resolve));
  const walk=(name,to,duration=720)=>new Promise(resolve=>{
-  const a=cinematic.actors[name],from={x:a.x,y:a.y},target={x:innerWidth*to.x,y:innerHeight*to.y},start=performance.now();
+  const a=cinematic.actors[name],from={x:a.x,y:a.y},target={x:innerWidth*to.x,y:innerHeight*to.y},start=performance.now();cinematic.zoom=.65;cinematic.panX=(name==='HERO'?-1:1)*innerWidth*.012;
   a.face=Math.abs(target.x-from.x)>Math.abs(target.y-from.y)?(target.x<from.x?2:3):(target.y<from.y?1:0);
   const step=now=>{if(!cinematic)return resolve();const q=Math.min(1,(now-start)/duration),e=q*q*(3-2*q);a.x=from.x+(target.x-from.x)*e;a.y=from.y+(target.y-from.y)*e;a.step=q<1?1+(Math.floor(now/130)%2):0;if(q<1)requestAnimationFrame(step);else{a.step=0;resolve();}};
   requestAnimationFrame(step);
