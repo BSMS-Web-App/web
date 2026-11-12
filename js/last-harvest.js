@@ -549,7 +549,51 @@ function sceneTitle(t,W,y){ctx.font='13px "Press Start 2P",monospace';ctx.textAl
 function kPlank(x,y,u,i){if(KN.naturalWidth)ctx.drawImage(KN,200+(23+i%3)*17,0,16,16,Math.round(x),Math.round(y),u,u);}
 function winFrame(x,y,w,h){x=Math.round(x);y=Math.round(y);w=Math.round(w);h=Math.round(h);const o='#3f2631';px(x-5,y-5,w+10,h+10,o);px(x-3,y-3,w+6,h+6,'#a9683f');px(x-1,y-1,w+2,h+2,o);px(x,y,w,h,'#9fd8f0');px(x,y,w,Math.round(h*.4),'#c8ecf8');px(x+3,y+3,Math.max(3,Math.round(w*.14)),4,'#ffffff');px(x+w/2-2,y,4,h,'#8f5a37');px(x,y+h/2-2,w,4,'#8f5a37');px(x-7,y+h+3,w+14,7,o);px(x-6,y+h+4,w+12,4,'#d9a066');}
 function drawRegionScene(W,H){const c=cinematic.chapter||1,t=performance.now()/1000,pal=[['#172e25','#526b3b'],['#4b3b20','#a17a36'],['#102f38','#34727a'],['#21182e','#59416b'],['#2b171d','#70404a'],['#1e3042','#8ab6d1'],['#171b2c','#46536d'],['#21142d','#59336b'],['#351522','#9a3b50']],p=pal[Math.max(0,Math.min(c-1,8))];const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,p[0]);gr.addColorStop(1,p[1]);ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);for(let i=0;i<18;i++){const x=((i*173+t*12)%(W+120))-60,y=H*(.18+(i%5)*.13);ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(x,y,28+(i%3)*8,52,0,0,Math.PI*2);ctx.fill();}ctx.fillStyle='rgba(12,12,18,.38)';ctx.fillRect(0,H*.76,W,H*.24);const a=cinematic.actors,scale=Math.max(3,Math.min(6,Math.floor(H/150)));if(a.ROWAN)drawSpriteK(2,a.ROWAN.face||0,a.ROWAN.step||0,a.ROWAN.x,a.ROWAN.y,scale);if(a.HERO)drawSpriteK(heroRow(),a.HERO.face||0,a.HERO.step||0,a.HERO.x,a.HERO.y,scale);ctx.textAlign='center';ctx.font='bold '+Math.max(12,Math.min(22,W/28))+'px "Press Start 2P",monospace';ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillText(chapters[c].place.toUpperCase(),W/2+2,H*.14+2);ctx.fillStyle='#fff0c8';ctx.fillText(chapters[c].place.toUpperCase(),W/2,H*.14);}
-function playRegionIntro(c){const data=STORY[c]||{intro:[],npcs:[]},first=c===1&&!state.rowanWoodsScene,guide=data.npcs.length?data.npcs[0][0]:'JOURNAL';cinematic={phase:'region',chapter:c,actors:{HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0},ROWAN:{x:innerWidth*.72,y:innerHeight*.78,face:2,step:0}}};document.body.classList.add('lh-cinematic');const say=items=>new Promise(resolve=>setDialogue(items,resolve));const walk=(name,to,duration=720)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.face=Math.abs(to.x-from.x)>Math.abs(to.y-from.y)?(to.x<from.x?2:3):(to.y<from.y?1:0);const step=now=>{if(!cinematic)return resolve();const q=Math.min(1,(now-start)/duration),e=q*q*(3-2*q);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.step=q<1?1+(Math.floor(now/130)%2):0;if(q<1)requestAnimationFrame(step);else resolve();};requestAnimationFrame(step);});(async()=>{if(first){await say([['ROWAN','Wait up! I knew you would take the trail into Autumnwood. I was not going to let you go alone.']]);await walk('ROWAN',{x:innerWidth*.58,y:innerHeight*.78});await say([['YOU','Rowan? How did you get here so quickly?'],['ROWAN','Shortcut. Also, I found something caught on a branch. It has your mother’s initials.']]);await walk('HERO',{x:innerWidth*.43,y:innerHeight*.78});await say([['ROWAN','The leaves are moving toward that arch. It has to be the First Seal. Stay close.']]);state.rowanWoodsScene=true;save();}else{await say(data.intro.map(t=>['JOURNAL',t]));await say([[guide,'I have been waiting for someone who could follow the Keepers’ trail. The path ahead will not be easy.']]);}cinematic=null;document.body.classList.remove('lh-cinematic');})();}function drawDreamScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/160)),u=16*s,k=Math.max(3,Math.round(H/170));
+const REGION_CUTSCENES = {
+2: {title:'THE ORCHARD REMEMBERS', lines:[['ROWAN','This place used to smell like cinnamon and apples. Your mother brought us here every autumn.'],['YOU','I remember. She said every tree had a story.'],['ROWAN','Then look. That tree has the same golden mark as her journal.']], after:[['JOURNAL','A warm light gathers beneath the oldest tree.'],['MARA','If you are seeing this, do not mistake a broken harvest for a broken home.'],['THOMAS','The people who care for one another are the roots.'],['YOU','They left this for me.'],['ROWAN','Then we keep following. Together.']]},
+3: {title:'THE PANTRY OF MEMORIES', lines:[['ROWAN','These jars are labeled with dates. One has the day we first met.'],['YOU','We hid here during the thunderstorm.'],['ROWAN','You said we should leave a lantern for anyone who was scared.']], after:[['JOURNAL','A jar glows blue. Inside is a tiny lantern and a note.'],['THOMAS','A promise is not a chain. It is a light we choose to carry.'],['ROWAN','I wish I could ask my mother what she would have done.'],['YOU','We will find the answers.']]},
+4: {title:'SHADOWMARKET AFTER DARK', lines:[['ROWAN','Stay close. People here trade secrets as easily as apples.'],['YOU','You sound like you have been here before.'],['ROWAN','I… heard rumors.']], after:[['JOURNAL','A masked figure watches from a balcony. A coin rolls to your feet.'],['SHADOW BROKER','The market remembers every bargain.'],['YOU','Why do you recognize that coin, Rowan?'],['ROWAN','Because I do.']]},
+5: {title:'THE EMPTY BANQUET', lines:[['ROWAN','I can hear the old festival music.'],['YOU','The tables are set for a hundred people. Why is every chair empty?'],['ROWAN','Maybe everyone is waiting for someone to invite them.']], after:[['JOURNAL','A little wooden bird rests beside one untouched plate.'],['YOU','Rowan made this for me when we were kids.'],['ROWAN','That part of him is still here.']]},
+6: {title:'THE FROSTBOUND SIGNAL', lines:[['ROWAN','The snow is swallowing our footprints.'],['YOU','You always hated the cold.'],['ROWAN','I hate the silence more.']], after:[['JOURNAL','A lantern flashes from the watchtower. Three short lights, then one long.'],['FROST RANGER ILSA','That is the call for shelter.'],['YOU','Then we answer.']]},
+7: {title:'THE FORTRESS OATH', lines:[['ROWAN','The banners show the old Keepers.'],['YOU','They never told me they were part of something this big.'],['ROWAN','Maybe they wanted you to have an ordinary childhood.']], after:[['JOURNAL','A stone panel opens beneath the banner.'],['SISTER MIRELLE','No table shall stand empty. The words were meant for one another.'],['YOU','The Hollow King was left outside.'],['ROWAN','We have to end this.']]},
+8: {title:'THE VOICES BEYOND THE DOOR', lines:[['YOU','That golden door… I can hear them. Mom? Dad?'],['ROWAN','Whatever is behind it, we face it together.']], after:[['MARA','We are here, sweetheart. We have been keeping the light alive.'],['THOMAS','You do not have to carry everything alone.'],['YOU','I am coming to bring you home.'],['ROWAN','And I am coming with you. No more secrets.']]},
+9: {title:'THE LAST LIGHT', lines:[['ROWAN','Beyond this path is the Heart of Hearthvale.'],['YOU','Then let us give it a reason to breathe again.']], after:[['JOURNAL','Ten tiny lights glow—one for every promise kept.'],['MARA','Remember the people who helped you reach this place.'],['THOMAS','A harvest belongs to everyone who shares it.'],['YOU','Then we finish this together.']]}
+};
+function playRegionIntro(c){
+ const data=STORY[c]||{intro:[],npcs:[]};
+ state.regionScenes=state.regionScenes||{};
+ if(state.regionScenes[c])return;
+ const first=c===1&&!state.rowanWoodsScene,sceneData=REGION_CUTSCENES[c],guide=data.npcs.length?data.npcs[0][0]:'JOURNAL';
+ cinematic={phase:'region',chapter:c,actors:{HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0},ROWAN:{x:innerWidth*.72,y:innerHeight*.78,face:2,step:0}}};
+ document.body.classList.add('lh-cinematic');
+ const say=items=>new Promise(resolve=>setDialogue(items,resolve));
+ const walk=(name,to,duration=720)=>new Promise(resolve=>{
+  const a=cinematic.actors[name],from={x:a.x,y:a.y},target={x:innerWidth*to.x,y:innerHeight*to.y},start=performance.now();
+  a.face=Math.abs(target.x-from.x)>Math.abs(target.y-from.y)?(target.x<from.x?2:3):(target.y<from.y?1:0);
+  const step=now=>{if(!cinematic)return resolve();const q=Math.min(1,(now-start)/duration),e=q*q*(3-2*q);a.x=from.x+(target.x-from.x)*e;a.y=from.y+(target.y-from.y)*e;a.step=q<1?1+(Math.floor(now/130)%2):0;if(q<1)requestAnimationFrame(step);else{a.step=0;resolve();}};
+  requestAnimationFrame(step);
+ });
+ (async()=>{
+  if(first){
+   await say([['ROWAN','Wait up! I knew you would take the trail into Autumnwood. I was not going to let you go alone.']]);
+   await walk('ROWAN',{x:.58,y:.78});
+   await say([['YOU','Rowan? How did you get here so quickly?'],['ROWAN','Shortcut. I found something caught on a branch. It has your mother’s initials.']]);
+   await walk('HERO',{x:.43,y:.78});
+   await say([['ROWAN','The leaves are moving toward that arch. It has to be the First Seal. Stay close.']]);
+   state.rowanWoodsScene=true;
+  } else if(sceneData) {
+   await say([['JOURNAL',sceneData.title],...sceneData.lines]);
+   await Promise.all([walk('HERO',{x:.43,y:.73},850),walk('ROWAN',{x:.57,y:.73},850)]);
+   await say(sceneData.after);
+  } else {
+   await say(data.intro.map(t=>['JOURNAL',t]));
+   await walk('ROWAN',{x:.59,y:.74},620);
+   await say([[guide,'I have been waiting for someone who could follow the Keepers’ trail. The path ahead will not be easy.'],['YOU','We did not come this far to turn back. Tell us what happened here.']]);
+  }
+  state.regionScenes[c]=true;save();cinematic=null;document.body.classList.remove('lh-cinematic');
+ })();
+}
+function drawDreamScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/160)),u=16*s,k=Math.max(3,Math.round(H/170));
 const sky=ctx.createLinearGradient(0,0,0,H*.4);sky.addColorStop(0,'#2a1f3d');sky.addColorStop(1,'#7a5a88');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
 for(let i=0;i<W/u+1;i++)kTile('b',[34,52,70,88][i%4],i*u,H*.09,s);
 for(let r=0;r<3;r++){const y=H*.2+r*u*.8;for(let x=0;x<W;x+=u)kPlank(x,y,u,Math.floor(x/u)+r);px(0,y+u*.8,W,4,'#4a2e1e');for(let x=u/2;x<W;x+=u*1.1){const row=10+((Math.floor(x/u)*7+r*13)%40);drawSpriteK(row,0,0,x,y+u*.8,Math.max(2,s-1));}}
