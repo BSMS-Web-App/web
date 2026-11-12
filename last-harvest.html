@@ -6,7 +6,7 @@
 <title>The Last Harvest — Adventure</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=18">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=19">
 </head>
 <body class="lh-body">
 <main id="lh-game" class="lh-game">
@@ -18,7 +18,7 @@
   </div>
   <div id="lh-location" class="lh-location">HEARTHVALE VILLAGE</div>
   <aside id="lh-quest" class="lh-quest"><b>✦ CURRENT QUEST</b><span id="lh-quest-text">Speak with Elder Maple</span></aside>
-  <div class="lh-controls-hint">WASD / ARROWS TO MOVE · E / SPACE / INTERACT</div>
+  <div class="lh-controls-hint">WASD / ARROWS TO MOVE · TAP TO INTERACT</div>
   <div id="lh-dialogue" class="lh-dialogue" hidden>
     <div class="lh-dialogue-speaker"><canvas id="lh-portrait" width="64" height="64" aria-hidden="true"></canvas><div><div class="lh-speaker" id="lh-speaker">ELDER MAPLE</div><p id="lh-dialogue-text"></p></div></div>
     <button id="lh-next" class="lh-gold-button">CONTINUE ▶</button>
@@ -47,7 +47,6 @@
   <div id="lh-touch" class="lh-touch" aria-label="Touch movement controls">
     <div id="lh-joystick" class="lh-joystick" role="application" aria-label="Virtual movement joystick"><div id="lh-stick" class="lh-stick"></div></div>
 
-    <button id="lh-interact" type="button" aria-label="Interact with nearby character or object">TALK</button>
   </div>
   <div id="lh-game-menu" class="lh-overlay" hidden>
     <section class="lh-modal lh-menu-modal lh-rpg-modal">
@@ -61,5 +60,5 @@
     </section>
   </div>
 </main>
-<script src="/js/last-harvest.js?v=26" defer></script>
+<script src="/js/last-harvest.js?v=27" defer></script>
 </body></html>
