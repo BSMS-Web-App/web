@@ -6,15 +6,16 @@
 <title>The Last Harvest — Adventure</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=19">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=30">
 </head>
 <body class="lh-body">
 <main id="lh-game" class="lh-game">
   <canvas id="lh-world" aria-label="The Last Harvest pixel-art game world"></canvas>
   <div class="lh-hud">
-    <div class="lh-brand">✦ THE LAST HARVEST</div>
-    <div class="lh-stats"><span id="lh-name-hud">ADVENTURER</span><span id="lh-class-hud">CLASS</span><span>♥ <b id="lh-health">40</b></span><span>✦ <b id="lh-coins">100</b></span></div>
-    <button id="lh-menu" class="lh-menu-button">MENU</button>
+    <div class="lh-hud-hero"><div class="lh-hud-avatar"><canvas id="lh-hud-avatar" width="16" height="16" aria-hidden="true"></canvas></div><div class="lh-hud-id"><b id="lh-name-hud">ADVENTURER</b><span><i id="lh-class-hud">CLASS</i> · LV <em id="lh-level-hud">1</em></span></div></div>
+    <div class="lh-hud-bars"><div class="lh-bar hp"><label>HP</label><div class="lh-bar-track"><div id="lh-hp-fill" class="lh-bar-fill"></div></div><b id="lh-health">40</b></div><div class="lh-bar mp"><label>MP</label><div class="lh-bar-track"><div id="lh-mp-fill" class="lh-bar-fill"></div></div><b id="lh-mp-hud">20</b></div></div>
+    <div class="lh-hud-coins"><i class="lh-coin"></i><b id="lh-coins">100</b></div>
+    <button id="lh-menu" class="lh-menu-button" aria-label="Open field journal">MENU</button>
   </div>
   <div id="lh-location" class="lh-location">HEARTHVALE VILLAGE</div>
   <aside id="lh-quest" class="lh-quest"><b>✦ CURRENT QUEST</b><span id="lh-quest-text">Speak with Elder Maple</span></aside>
@@ -49,16 +50,14 @@
 
   </div>
   <div id="lh-game-menu" class="lh-overlay" hidden>
-    <section class="lh-modal lh-menu-modal lh-rpg-modal">
-      <div class="lh-rpg-heading"><div><div class="lh-eyebrow">HEARTHVALE ADVENTURE</div><h2>FIELD JOURNAL</h2></div><button id="lh-resume" class="lh-close-button" aria-label="Close menu">✕</button></div>
-      <nav class="lh-rpg-tabs" aria-label="Adventure menu">
-        <button class="active" data-rpg-tab="status">STATUS</button><button data-rpg-tab="bag">BAG</button><button data-rpg-tab="map">MAP</button><button data-rpg-tab="journal">JOURNAL</button>
-      </nav>
-      <div id="lh-rpg-content" class="lh-rpg-content" aria-live="polite"></div>
-      <button id="lh-reset" class="lh-secondary-button">START A NEW ADVENTURE</button>
-      <p class="lh-footnote">Your progress is saved on this device.</p>
+    <section class="lh-journal" aria-label="Field journal">
+      <header class="lh-j-head"><div class="lh-j-title"><h2>FIELD JOURNAL</h2></div><button id="lh-resume" class="lh-j-close" aria-label="Close menu"></button></header>
+      <nav class="lh-j-tabs" aria-label="Adventure menu"><button class="active" data-rpg-tab="status">STATUS</button><button data-rpg-tab="bag">BAG</button><button data-rpg-tab="map">MAP</button><button data-rpg-tab="journal">QUESTS</button></nav>
+      <div id="lh-rpg-content" class="lh-j-body" aria-live="polite"></div>
+      <footer class="lh-j-foot"><button id="lh-resume2" class="lh-j-btn gold">RESUME</button><button id="lh-reset" class="lh-j-btn red">NEW GAME</button></footer>
+      <p class="lh-j-foot-note">Progress is saved on this device.</p>
     </section>
   </div>
 </main>
-<script src="/js/last-harvest.js?v=29" defer></script>
+<script src="/js/last-harvest.js?v=30" defer></script>
 </body></html>
