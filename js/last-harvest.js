@@ -345,30 +345,25 @@ function playRowanConfrontation(done){cinematic={phase:'region',chapter:5,actors
 function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});return;}sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{A.bossTalk=0;startBattle(g);});}
 function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
 function chapterEpilogue(c,n){
- const lines={
- 1:['The First Seal is glowing again. The forest feels warmer, and the villagers have started leaving lanterns along the trail.','The road east is open now. Maplebrook has been waiting for someone to bring back the light.'],
- 2:['The orchard trees have begun to bloom again. For the first time in years, the fruit is sweet instead of bitter.','A path beneath the old roots has appeared. The Keepers used it to carry messages between the towns.'],
- 3:['The pantry lanterns are burning again. People have started bringing food down here to share.','The restored signal has reached the mountain pass. Someone up there has answered.'],
- 4:['The mountain paths are calmer now. Travelers have started returning to the pass.','The market has opened its eastern gate. The old banquet road lies beyond it.'],
- 5:['The empty banquet hall is no longer silent. You can hear music from the village again.','The frost lanterns have awakened. A safe trail now winds toward the northern ridge.'],
- 6:['The watchtower signal is clear. Supplies are moving safely through the snow again.','The old fortress gate has opened. The Keepers’ oath is waiting inside.'],
- 7:['The fortress banners have been raised again. Its people are beginning to return.','A golden doorway has appeared beyond the ruins. It leads toward the place where your parents were taken.'],
- 8:['The voices beyond the door are no longer distant. The sanctuary has begun to awaken.','The final road is open. The Heart of Hearthvale is waiting.'],
- 9:['The last light has reached every corner of the valley. People are gathering for the Everfeast again.','Whatever happens next, Hearthvale will remember what you did here.']
- };
+ const lines={1:['The First Seal is glowing again. The forest feels warmer, and villagers are leaving lanterns along the trail.','The road east is open now. Maplebrook has been waiting for someone to bring back the light.'],2:['The orchard trees have begun to bloom again. The fruit is sweet instead of bitter.','A path beneath the old roots has appeared.'],3:['The pantry lanterns are burning again. People have started bringing food to share.','The restored signal has reached the mountain pass.'],4:['The mountain paths are calmer now. Travelers are returning.','The market has opened its eastern gate.'],5:['The empty banquet hall is no longer silent. Music has returned to the village.','The frost lanterns have awakened.'],6:['The watchtower signal is clear. Supplies are moving safely through the snow.','The old fortress gate has opened.'],7:['The fortress banners have been raised again. Its people are returning.','A golden doorway has appeared beyond the ruins.'],8:['The voices beyond the door are no longer distant. The sanctuary is awake.','The final road is open.'],9:['The last light has reached every corner of the valley.','Hearthvale will remember what you did here.']};
  const list=lines[c];if(!list||!state.beaten['boss'+c])return false;
- const key='epilogue_'+c+'_'+n.name;if(state.storyReactions&&state.storyReactions[key]){setDialogue([[n.name,'The road is open, and the lights are still shining. Keep going.']]);return true;}
+ const key='epilogue_'+c+'_'+n.name;if(state.storyReactions&&state.storyReactions[key]){setDialogue([[n.name,'The road is open, and the lights are still shining.']]);return true;}
  state.storyReactions=state.storyReactions||{};state.storyReactions[key]=true;save();
- setDialogue([[n.name,list[0]],['JOURNAL',list[1]]]);return true;
+ const endings={together:'The Everfeast is now a place where nobody is turned away. Rowan is helping the Hollow King learn how to live among the people he once feared.',guardian:'The First Seal shines above the valley. Rowan is helping the Keepers restore the roads, and the people have promised to guard one another.',unfinished:'The valley has welcomed the Hollow King to begin again, but Rowan knows your friendship will need time. The towns are learning that healing can take patience.',steadfast:'The First Seal protects Hearthvale once more. Rowan is working quietly to make amends, and the people respect the boundaries you chose.'};
+ const rowanLine=state.rowanChoice==='forgive'?'Rowan has been helping every town rebuild. He says he will never take your friendship for granted.':'Rowan is still earning the trust he lost. The people have noticed that he keeps showing up to help.';
+ const extra=state.ending?[['JOURNAL',endings[state.ending]],[n.name,rowanLine]]:[];
+ setDialogue([[n.name,list[0]],['JOURNAL',list[1]],...extra]);return true;
 }
 function drawRestoredRoute(A,t){
  if(!A.chapter||!state.beaten['boss'+A.chapter])return;
  const U=32,points=[10,22,34],pulse=.45+.25*Math.sin(t*3);
+ const palettes={together:{glow:'rgba(255,224,130,',core:'#fff0b0',base:'#b86b37'},guardian:{glow:'rgba(140,205,255,',core:'#d9f2ff',base:'#527f9c'},unfinished:{glow:'rgba(210,165,255,',core:'#f0d9ff',base:'#805b9a'},steadfast:{glow:'rgba(135,225,190,',core:'#d5ffed',base:'#477d68'}};
+ const palette=palettes[state.ending]||{glow:'rgba(255,224,130,',core:'#ffe6a0',base:'#b86b37'};
  ctx.save();ctx.globalAlpha=.8;
  for(const x of points){const y=(A.pathY&&A.pathY[x]||13)-3,px=x*U+16,py=y*U+16;
-  const g=ctx.createRadialGradient(px,py,2,px,py,24);g.addColorStop(0,'rgba(255,224,130,'+pulse+')');g.addColorStop(1,'rgba(255,190,80,0)');
+  const g=ctx.createRadialGradient(px,py,2,px,py,24);g.addColorStop(0,palette.glow+(.25+pulse*.5)+')');g.addColorStop(1,palette.glow+'0)');
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,24,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#ffe6a0';ctx.fillRect(px-2,py-7,4,9);ctx.fillStyle='#b86b37';ctx.fillRect(px-3,py+2,6,5);
+  ctx.fillStyle=palette.core;ctx.fillRect(px-2,py-7,4,9);ctx.fillStyle=palette.base;ctx.fillRect(px-3,py+2,6,5);
  }
  ctx.restore();
 }
