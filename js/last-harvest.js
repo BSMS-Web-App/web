@@ -764,7 +764,7 @@ function useBattleItem(id){const b=battle;if(!b||b.busy)return;ensureBattleItems
 if(id==='potion'&&state.hp>=state.maxHp){pkSay('Your health is already full.',650);b.busy=false;pkMenu('items');return;}
 if(id==='ether'&&state.mp>=state.maxMp){pkSay('Your MP is already full.',650);b.busy=false;pkMenu('items');return;}
 if(id==='cider'&&state.hp>=state.maxHp){pkSay('Your health is already full.',650);b.busy=false;pkMenu('items');return;}
-state.battleItems[id]--;
+state.battleItems[id]--;if(id==='potion')state.potions=state.battleItems.potion;
 if(id==='potion'){const n=Math.min(35,state.maxHp-state.hp);state.hp+=n;healFx(n);pkSay('Harvest Potion restores '+n+' HP!',750);}
 else if(id==='ether'){const n=Math.min(8,state.maxMp-state.mp);state.mp+=n;rise(geo().hx,geo().hy,18,['#8fd8ff','#ffffff','#b06aff'],50);pkSay('Moonmint Tea restores '+n+' MP!',750);}
 else if(id==='cider'){const n=Math.min(Math.ceil(state.maxHp*.2),state.maxHp-state.hp);state.hp+=n;healFx(n,'#ffd66b');pkSay('Golden Cider restores '+n+' HP!',750);}
@@ -1097,7 +1097,7 @@ function finishType(){clearInterval(typer);typing=false;$('lh-dialogue-text').te
 function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer=roomStart(id);facing=1;updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
-function turnInClues(){setQ(4);state.coins=(state.coins||0)+50;state.potions=(state.potions||0)+2;sfx('unlock');updateHud();updateQuest();
+function turnInClues(){setQ(4);state.coins=(state.coins||0)+50;addPotions(2);sfx('unlock');updateHud();updateQuest();
 setDialogue([['YOU','Elder Maple... I searched the village. Orin kept an old map safe for my parents.'],
 ['ELDER MAPLE','*She unfolds the map slowly, her hands trembling.* This seal in the corner... it is the same one carved beneath the fountain.'],
 ['YOU','There was a strange black feather at the store, and a torn royal banner near the fountain. Something is very wrong.'],
@@ -1111,7 +1111,8 @@ const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(stat
 function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:64;if(d<rc&&d<dist){found=n;dist=d;}}
 if(found){
-if(found.region!==undefined){sfx('portal');enterRegion(found.region);return;}
+if(found.act==='teleporter'){openTeleporter();return;}
+ if(found.region!==undefined){enterRegion(found.region);return;}
 if(found.wilds){sfx('portal');enterWilds();return;}
 if(found.city){enterArea('city');return;}
 if(found.trainer&&!state.beaten[found.trainer.id]){setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
