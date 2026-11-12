@@ -455,30 +455,37 @@ export function processOnlineAction(action, body) {
     } else if (action === 'game:move') {
         const roomId = cleanRoomCode(body.roomId || client.roomId);
         const room = chessOnlineState.rooms.get(roomId);
-        if (room && body.move) {
+        if (room && room.status === 'playing' && body.move) {
             if (!Array.isArray(room.moves)) room.moves = [];
-            const moveIndex = typeof body.moveIndex === 'number' ? body.moveIndex : room.moves.length;
-            const moveEntry = {
-                ...body.move,
-                moveIndex,
-                byClientId: clientId,
-                timestamp: now
-            };
-            // Avoid duplicate append of the exact same moveIndex
-            if (!room.moves.some((m) => m.moveIndex === moveIndex && m.san === body.move.san)) {
-                room.moves.push(moveEntry);
-            }
-            room.updatedAt = now;
-            const targetId =
-                room.whitePlayer?.clientId === clientId
-                    ? room.blackPlayer?.clientId
-                    : room.whitePlayer?.clientId;
-            if (targetId) {
-                pushClientEvent(targetId, {
-                    type: 'game:opponent_move',
-                    roomId: room.roomId,
-                    move: moveEntry
-                });
+            const isWhite = room.whitePlayer?.clientId === clientId;
+            const isBlack = room.blackPlayer?.clientId === clientId;
+            if (isWhite || isBlack) {
+                const expectedTurnColor = room.moves.length % 2 === 0 ? 'w' : 'b';
+                const playerColor = isWhite ? 'w' : 'b';
+                if (playerColor === expectedTurnColor) {
+                    const moveIndex = room.moves.length;
+                    const moveEntry = {
+                        ...body.move,
+                        moveIndex,
+                        byClientId: clientId,
+                        timestamp: now
+                    };
+                    room.moves.push(moveEntry);
+                    if (body.board) {
+                        room.lastBoard = body.board;
+                    }
+                    room.updatedAt = now;
+                    const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
+                    if (targetId) {
+                        pushClientEvent(targetId, {
+                            type: 'game:opponent_move',
+                            roomId: room.roomId,
+                            move: moveEntry,
+                            board: body.board || null,
+                            turn: room.moves.length % 2 === 0 ? 'w' : 'b'
+                        });
+                    }
+                }
             }
         }
     } else if (action === 'game:end') {
