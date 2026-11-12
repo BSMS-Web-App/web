@@ -850,7 +850,7 @@ if(b.evade){pop('MISS',G.hx,G.hy-G.hk*12,'#d8d8e0',20);sfx('swirl');b.evade=h===
 let d=Math.max(2,Math.round(e.atk*(e.status.weaken>0?.7:1)*mv.m-Math.floor(lv/2)+rnd(3)));
 if(b.ward>0)d=Math.ceil(d*.3);else if(b.guard)d=Math.ceil(d*.35);
 // Rowan's duel is a skill check, not a surprise one-shot: cap each hit and his total turn damage.
-if(e.name==='ROWAN'){const perHitCap=Math.max(4,Math.ceil((state.maxHp||state.hp)*(b.g.friendly?.12:.22)));const turnCap=Math.max(8,Math.ceil((state.maxHp||state.hp)*(b.g.friendly?.2:.35)));d=Math.min(d,perHitCap,Math.max(0,turnCap-total));if(d<=0)break;}
+if(e.name==='ROWAN'){const perHitCap=Math.max(4,Math.ceil((state.maxHp||state.hp)*(b.g.friendly ? 0.12 : 0.22)));const turnCap=Math.max(8,Math.ceil((state.maxHp||state.hp)*(b.g.friendly ? 0.20 : 0.35)));d=Math.min(d,perHitCap,Math.max(0,turnCap-total));if(d<=0)break;}
 if(b.ward>0||b.guard){b.shield=1;}
 total+=d;hitHero(d,mv.m>=1.6);await sleep(mv.hits>1?260:120);}
 await tween(240,p=>{b.fox=dx*(1-ease(p));b.foy=0;});b.fox=0;
