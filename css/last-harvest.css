@@ -362,3 +362,7 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,
  .lh-dialogue.lh-dialogue-top #lh-portrait{top:-48px!important;width:52px!important;height:52px!important}
  .lh-dialogue.lh-dialogue-top .lh-dialogue-speaker>div{margin-left:62px!important}
 }
+
+.lh-story-choices{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 2px 78px;position:relative;z-index:4}
+.lh-story-choices .lh-gold-button{white-space:normal;text-align:left;min-height:42px;padding:8px 12px;cursor:pointer}
+@media(max-width:700px){.lh-story-choices{margin-left:0;display:grid;grid-template-columns:1fr}.lh-story-choices .lh-gold-button{width:100%}}
