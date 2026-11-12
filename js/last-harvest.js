@@ -533,8 +533,8 @@ drawGates();
 const ents=npcs.map(n=>{const a=cinematic&&cinematic.actors[n.name],x=a?a.x:n.x,y=a?a.y:n.y;return{y,f:()=>drawPerson(x,y,n.color,n.name==='ROWAN'?'#9b4a36':'#637b55',n.name)};});
 if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;ents.push({y:a.y,f:()=>drawPerson(a.x,a.y,'#d5b64e','#e8bd58')});}
 ents.push({y:state.y,f:()=>drawPlayer(state.x,state.y)});ents.sort((p,q)=>p.y-q.y).forEach(o=>o.f());
-let promptTarget=null,promptDist=Infinity,promptLabel='E · TALK';
-for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<((n.trainer&&n.trainer.bi!==undefined)?190:104)&&d<promptDist){promptTarget=n;promptDist=d;promptLabel='E · TALK';}}
+let promptTarget=null,promptDist=Infinity,promptLabel='TAP / E · TALK';
+for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<((n.trainer&&n.trainer.bi!==undefined)?190:104)&&d<promptDist){promptTarget=n;promptDist=d;promptLabel='TAP / E · TALK';}}
 const doors=[{x:10.5,y:10.5},{x:34,y:10.5},{x:22,y:22.5},{x:5.5,y:29.5}];
 for(const d of doors){const wx=d.x*TILE,wy=d.y*TILE,dd=Math.hypot(state.x-wx,state.y-wy);if(dd<112&&dd<promptDist){promptTarget={x:wx,y:wy};promptDist=dd;promptLabel='E · ENTER';}}
 const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&signDist<promptDist){promptTarget={x:27*TILE,y:10*TILE};promptLabel='E · READ';}
@@ -805,9 +805,8 @@ if(kind==='melee'){await sleep(130);await tween(190,p=>{b.hox=dx*(1-ease(p));b.h
 function healFx(n,color){const b=battle,G=geo(),cx=G.hx,cy=G.hy-G.hk*8;sfx('heal');rise(cx,cy+G.hk*6,24,[color||'#7bf08a','#ffffff','#d8ffd8'],G.hk*10);pop('+'+n,cx,cy-G.hk*4,color||'#7bf08a',22);}
 function shieldFx(){battle.shield=1;sfx('guard');}
 function rageFx(){const b=battle;b.shake=18;b.flashR=1;sfx('boom');const G=geo();rise(G.fx,G.fy,30,['#ff3b30','#ffd84a','#ff9a2e'],G.fh*.7);}
-async function scriptedRowanLoss(){const b=battle;if(!b||b.busy)return;b.busy=true;await pkSay('Rowan steadies himself. When you make one last move, he reads it perfectly...',1050);if(battle!==b)return;const G=geo(),dx=-(G.fx-G.hx)*.55;await tween(280,p=>{b.fox=dx*ease(p);b.foy=8*Math.sin(p*Math.PI);});await pkSay('Rowan gently redirects your final strike. The instructor steps between you and calls the match!',1200);if(battle!==b)return;await tween(220,p=>{b.fox=dx*(1-ease(p));b.foy=0;});b.fox=0;pkEnd(true);}
 async function pkAct(a){const b=battle;if(!b||b.busy)return;
-if(b.g.scriptedLoss&&b.e.hp<=b.e.max*.25){scriptedRowanLoss();return;}
+
 if(a==='skill'){pkMenu('skills');return;}
 if(a==='items'){pkMenu('items');return;}
 b.busy=true;const e=b.e;
@@ -815,7 +814,7 @@ if(a==='run'){if(b.g.wild&&!b.g.tower){await pkSay('You got away safely!');pkEnd
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
 if(a==='item'){b.busy=false;pkMenu('items');return;}
 await heroAttack(null);}
-async function pkSkill(i){const b=battle;if(!b||b.busy)return;if(b.g.scriptedLoss&&b.e.hp<=b.e.max*.25){scriptedRowanLoss();return;}const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
+async function pkSkill(i){const b=battle;if(!b||b.busy)return;const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
 async function heroAttack(sk){const b=battle,e=b.e,cls=state.heroClass,lv=state.level;
 if(!sk){const kind=cls==='Scout'?'arrow':cls==='Mage'?'magic':'melee';const crit=Math.random()<.1;let d=8+lv*2+(cls==='Guardian'?3:0)+rnd(4);if(crit)d=Math.round(d*1.6);
 await pkSay(crit?'A critical strike!':'You attack!',420);await heroStrike(kind,d,crit,cls==='Mage'?'#d29bff':'#e8d890');await pkSay('It deals '+d+' damage!',650);}
@@ -850,6 +849,8 @@ for(let h=0;h<mv.hits&&state.hp>0;h++){
 if(b.evade){pop('MISS',G.hx,G.hy-G.hk*12,'#d8d8e0',20);sfx('swirl');b.evade=h===mv.hits-1?b.evade:true;await sleep(260);continue;}
 let d=Math.max(2,Math.round(e.atk*(e.status.weaken>0?.7:1)*mv.m-Math.floor(lv/2)+rnd(3)));
 if(b.ward>0)d=Math.ceil(d*.3);else if(b.guard)d=Math.ceil(d*.35);
+// Rowan's duel is a skill check, not a surprise one-shot: cap each hit and his total turn damage.
+if(e.name==='ROWAN'){const perHitCap=Math.max(4,Math.ceil((state.maxHp||state.hp)*(b.g.friendly?.12:.22)));const turnCap=Math.max(8,Math.ceil((state.maxHp||state.hp)*(b.g.friendly?.2:.35)));d=Math.min(d,perHitCap,Math.max(0,turnCap-total));if(d<=0)break;}
 if(b.ward>0||b.guard){b.shield=1;}
 total+=d;hitHero(d,mv.m>=1.6);await sleep(mv.hits>1?260:120);}
 await tween(240,p=>{b.fox=dx*(1-ease(p));b.foy=0;});b.fox=0;
@@ -1045,7 +1046,7 @@ const vg=ctx.createRadialGradient(W/2,H*.55,H*.25,W/2,H*.55,Math.max(W,H)*.7);vg
 if(window.LH_GRID||/[?&]grid\b/.test(location.search)){ctx.font='10px monospace';ctx.textAlign='left';R.it.filter(i=>i[7]).forEach(i=>{ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(g.ox+i[5]*U,g.oy+i[6]*U,i[3]*U,i[4]*U);});R.npc.forEach(n=>{ctx.fillStyle='rgba(0,120,255,.35)';ctx.fillRect(g.ox+n[0]*U,g.oy+n[1]*U,U,U);});ctx.strokeStyle='rgba(255,255,255,.35)';ctx.fillStyle='#ffe066';for(let c=0;c<R.c;c++)for(let r=0;r<R.r;r++){const x=g.ox+c*U,y=g.oy+r*U;ctx.strokeRect(x,y,U,U);ctx.fillText(c+','+r,x+3,y+11);}}
 ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(R.t,W/2,g.oy-16);
 let tg=-1,dist=Infinity;R.npc.forEach((n,i)=>{const d=Math.hypot(insidePlayer.x-rcx(g,n[0]),insidePlayer.y-rcy(g,n[1]));if(d<U*3.3&&d<dist){tg=i;dist=d;}});
-if(tg>=0)drawWorldPrompt(rcx(g,R.npc[tg][0]),rcy(g,R.npc[tg][1])-U*1.05,'E · TALK');else if(insidePlayer.y>g.exitY)drawWorldPrompt(rcx(g,R.d),g.oy+(R.r-1)*U-6,'E · EXIT');}
+if(tg>=0)drawWorldPrompt(rcx(g,R.npc[tg][0]),rcy(g,R.npc[tg][1])-U*1.05,'TAP / E · TALK');else if(insidePlayer.y>g.exitY)drawWorldPrompt(rcx(g,R.d),g.oy+(R.r-1)*U-6,'E · EXIT');}
 function drawWorldPrompt(x,y,label){const w=Math.max(66,label.length*7+22),h=22;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(x-w/2-2),Math.round(y-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(x-w/2),Math.round(y-h),w,h);ctx.fillStyle='#26334a';ctx.font='bold 10px ui-monospace';ctx.textAlign='center';ctx.fillText(label,x,y-7);}
 function drawPlayer(x,y){drawSprite(heroRow(),facing,walking?1+alt:0,x,y);drawGear(x,y+8,2,facing,state.heroClass);}
 function askStoryChoice(speaker,prompt,options,onPick){
@@ -1091,7 +1092,7 @@ function elderChat(){const n=state.elderTalks=(state.elderTalks||0)+1,nm='ELDER 
 const hint=questStep<2?'Rowan is waiting for you in the village square. Speak with him, then search the homes.':questStep<3?'Have you searched every building? Old Orin in the workshop keeps many secrets.':!b.north?'Gatekeeper Brawn guards the north road. Beat him and the Wildlands will open to you.':!b.south?'The Pumpkin Sentinel blocks the south road. Train in the Wildlands first, then face it.':(state.stage>=BOSSES.length?'You saved Hearthvale. I could not be prouder.':'Your next trial: '+chapters[Math.min(state.stage,9)].place+'. '+BOSSES[Math.min(state.stage,9)].name+' waits there.');
 const flavor=['Autumn always smelled of cinnamon here. Lately it smells of ash.','Keep your potions close and your guard closer.','Grass that sways against the wind hides monsters. The stone roads are safe if you need to rest.','Rest at the Ranger Camp in the Wildlands. Old Willow keeps the fire burning there.','Your mother used to hum the harvest song on that bench by the fountain.','Every zone has an Alpha. Defeat one and the wild folk will whisper your name.'];
 const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(state.elderKey!==key){state.elderKey=key;save();setDialogue([[nm,hint],[nm,flavor[n%flavor.length]]]);}else setDialogue([[nm,flavor[n%flavor.length]],[nm,flavor[(n+1)%flavor.length]]]);}
-function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk up to someone and press INTERACT.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:64;if(d<rc&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.region!==undefined){sfx('portal');enterRegion(found.region);return;}
@@ -1112,7 +1113,7 @@ function showBeginnerTutorial(){
  const steps=[
   ['WELCOME TO HEARTHVALE','Your adventure is just beginning. This quick guide shows you the basics.'],
   ['MOVE AROUND','Keyboard: use W A S D or the arrow keys. On phones and tablets, use the joystick in the lower-left corner.'],
-  ['TALK & EXPLORE','Walk close to a character and press E or SPACE. On touch screens, use the TALK button beside the joystick. Tap the MENU button to open your Field Journal.'],
+  ['TAP TO INTERACT','Walk close to a character, then click or tap anywhere on the game world. Keyboard players can press E or SPACE. Tap MENU to open your Field Journal.'],
   ['QUESTS & BATTLES','Follow CURRENT QUEST near the top-left. Explore tall grass to meet wild creatures, then choose FIGHT, SKILL, GUARD, or ITEMS.'],
   ['USE YOUR ITEMS','ITEMS can restore HP or MP, protect you, or damage an opponent. Using an item takes your turn. Check BAG in the Field Journal to see what you carry.'],
   ['YOU ARE READY!','Talk to Elder Maple first. Take your time, explore every building, and keep an eye out for side quests and secrets.']
@@ -1158,7 +1159,7 @@ await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
 await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.']]);
-const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,scriptedLoss:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
+const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
 await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]);
 cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};
 await say([['ROWAN','Come on, let’s walk home. Your parents promised a feast for tonight.']]);
@@ -1202,7 +1203,7 @@ requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(dialogue&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(!e.repeat)advanceDialogue();return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
 const joy=$('lh-joystick'),stick=$('lh-stick');let joyPointer=null;
-const worldCanvas=$('lh-world');worldCanvas.addEventListener('pointerup',e=>{if(e.button!==0||dialogue||battle||cinematic||titleOpen||!$('lh-game-menu').hidden)return;if(e.target!==worldCanvas)return;e.preventDefault();interact();});
+const worldCanvas=$('lh-world');worldCanvas.addEventListener('click',e=>{if(e.button!==0||dialogue||battle||cinematic||titleOpen||!$('lh-game-menu').hidden)return;if(e.target!==worldCanvas)return;e.preventDefault();interact();});
 function setJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.34,len=Math.hypot(dx,dy),scale=len>max?max/len:1;joystick.x=(dx*scale)/max;joystick.y=(dy*scale)/max;stick.style.transform='translate('+joystick.x*34+'px,'+joystick.y*34+'px)';}
 joy.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e);});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e);});
