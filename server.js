@@ -540,29 +540,59 @@ wss.on('connection', (ws) => {
             } else if (msg.type === 'game:move') {
                 const roomId = cleanRoomCode(msg.roomId);
                 const room = rooms.get(roomId);
-                if (!room) return;
+                if (!room || room.status !== 'playing') return;
                 if (!Array.isArray(room.moves)) room.moves = [];
-                const moveIndex = typeof msg.moveIndex === 'number' ? msg.moveIndex : room.moves.length;
+
+                const isWhite = room.whitePlayer?.clientId === currentClientId;
+                const isBlack = room.blackPlayer?.clientId === currentClientId;
+                if (!isWhite && !isBlack) return;
+
+                const expectedTurnColor = room.moves.length % 2 === 0 ? 'w' : 'b';
+                const playerColor = isWhite ? 'w' : 'b';
+
+                // Prevent moving twice or out of turn
+                if (playerColor !== expectedTurnColor) {
+                    sendToClient(currentClientId, {
+                        type: 'game:sync_state',
+                        roomId: room.roomId,
+                        moves: room.moves,
+                        turn: expectedTurnColor,
+                        board: room.lastBoard || null
+                    });
+                    return;
+                }
+
+                const moveIndex = room.moves.length;
                 const moveEntry = {
                     ...msg.move,
                     moveIndex,
                     byClientId: currentClientId,
                     timestamp: Date.now()
                 };
-                if (!room.moves.some((m) => m.moveIndex === moveIndex && m.san === msg.move?.san)) {
-                    room.moves.push(moveEntry);
+                room.moves.push(moveEntry);
+                if (msg.board) {
+                    room.lastBoard = msg.board;
                 }
                 room.updatedAt = Date.now();
-                const targetId =
-                    room.whitePlayer.clientId === currentClientId
-                        ? room.blackPlayer?.clientId
-                        : room.whitePlayer.clientId;
+                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer.clientId;
                 if (targetId) {
-                    sendToClient(targetId, { type: 'game:opponent_move', roomId: room.roomId, move: moveEntry });
+                    sendToClient(targetId, {
+                        type: 'game:opponent_move',
+                        roomId: room.roomId,
+                        move: moveEntry,
+                        board: msg.board || null,
+                        turn: room.moves.length % 2 === 0 ? 'w' : 'b'
+                    });
                 }
                 if (room.spectators) {
                     room.spectators.forEach((specId) => {
-                        sendToClient(specId, { type: 'game:opponent_move', roomId: room.roomId, move: moveEntry });
+                        sendToClient(specId, {
+                            type: 'game:opponent_move',
+                            roomId: room.roomId,
+                            move: moveEntry,
+                            board: msg.board || null,
+                            turn: room.moves.length % 2 === 0 ? 'w' : 'b'
+                        });
                     });
                 }
             } else if (msg.type === 'game:end') {
