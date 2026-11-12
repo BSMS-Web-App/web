@@ -805,9 +805,9 @@ if(kind==='melee'){await sleep(130);await tween(190,p=>{b.hox=dx*(1-ease(p));b.h
 function healFx(n,color){const b=battle,G=geo(),cx=G.hx,cy=G.hy-G.hk*8;sfx('heal');rise(cx,cy+G.hk*6,24,[color||'#7bf08a','#ffffff','#d8ffd8'],G.hk*10);pop('+'+n,cx,cy-G.hk*4,color||'#7bf08a',22);}
 function shieldFx(){battle.shield=1;sfx('guard');}
 function rageFx(){const b=battle;b.shake=18;b.flashR=1;sfx('boom');const G=geo();rise(G.fx,G.fy,30,['#ff3b30','#ffd84a','#ff9a2e'],G.fh*.7);}
-async function scriptedRowanLoss(){const b=battle;if(!b||b.busy)return;b.busy=true;await pkSay('Rowan studies your stance and waits for the perfect opening...',900);if(battle!==b)return;const G=geo(),dx=-(G.fx-G.hx)*.65;await tween(280,p=>{b.fox=dx*ease(p);b.foy=10*Math.sin(p*Math.PI);});hitHero(Math.max(1,state.hp)+state.maxHp,true);await sleep(420);await tween(220,p=>{b.fox=dx*(1-ease(p));b.foy=0;});b.fox=0;await pkSay('Rowan wins the friendly duel. The instructor calls the match!',850);pkEnd(true);}
+async function scriptedRowanLoss(){const b=battle;if(!b||b.busy)return;b.busy=true;await pkSay('Rowan steadies himself. When you make one last move, he reads it perfectly...',1050);if(battle!==b)return;const G=geo(),dx=-(G.fx-G.hx)*.55;await tween(280,p=>{b.fox=dx*ease(p);b.foy=8*Math.sin(p*Math.PI);});await pkSay('Rowan gently redirects your final strike. The instructor steps between you and calls the match!',1200);if(battle!==b)return;await tween(220,p=>{b.fox=dx*(1-ease(p));b.foy=0;});b.fox=0;pkEnd(true);}
 async function pkAct(a){const b=battle;if(!b||b.busy)return;
-if(b.g.scriptedLoss){scriptedRowanLoss();return;}
+if(b.g.scriptedLoss&&b.e.hp<=b.e.max*.25){scriptedRowanLoss();return;}
 if(a==='skill'){pkMenu('skills');return;}
 if(a==='items'){pkMenu('items');return;}
 b.busy=true;const e=b.e;
@@ -815,7 +815,7 @@ if(a==='run'){if(b.g.wild&&!b.g.tower){await pkSay('You got away safely!');pkEnd
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
 if(a==='item'){b.busy=false;pkMenu('items');return;}
 await heroAttack(null);}
-async function pkSkill(i){const b=battle;if(!b||b.busy)return;if(b.g.scriptedLoss){scriptedRowanLoss();return;}const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
+async function pkSkill(i){const b=battle;if(!b||b.busy)return;if(b.g.scriptedLoss&&b.e.hp<=b.e.max*.25){scriptedRowanLoss();return;}const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
 async function heroAttack(sk){const b=battle,e=b.e,cls=state.heroClass,lv=state.level;
 if(!sk){const kind=cls==='Scout'?'arrow':cls==='Mage'?'magic':'melee';const crit=Math.random()<.1;let d=8+lv*2+(cls==='Guardian'?3:0)+rnd(4);if(crit)d=Math.round(d*1.6);
 await pkSay(crit?'A critical strike!':'You attack!',420);await heroStrike(kind,d,crit,cls==='Mage'?'#d29bff':'#e8d890');await pkSay('It deals '+d+' damage!',650);}
@@ -1202,13 +1202,13 @@ requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(dialogue&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(!e.repeat)advanceDialogue();return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
 const joy=$('lh-joystick'),stick=$('lh-stick');let joyPointer=null;
-$('lh-interact').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();interact();});
+const worldCanvas=$('lh-world');worldCanvas.addEventListener('pointerup',e=>{if(e.button!==0||dialogue||battle||cinematic||titleOpen||!$('lh-game-menu').hidden)return;if(e.target!==worldCanvas)return;e.preventDefault();interact();});
 function setJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.34,len=Math.hypot(dx,dy),scale=len>max?max/len:1;joystick.x=(dx*scale)/max;joystick.y=(dy*scale)/max;stick.style.transform='translate('+joystick.x*34+'px,'+joystick.y*34+'px)';}
 joy.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e);});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e);});
 function releaseJoy(e){if(e.pointerId!==joyPointer)return;joyPointer=null;joystick.x=joystick.y=0;stick.style.transform='translate(0,0)';}
 joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel',releaseJoy);
-// Deliberately no canvas tap-to-interact handler: conversations start only with the explicit interact control (E/Space).
+// Tap the game world to interact; keyboard E/Space remains available.
 $('lh-dialogue').addEventListener('pointerup',e=>{if(e.target.closest('button'))return;e.preventDefault();advanceDialogue();});
 $('lh-next').addEventListener('click',advanceDialogue);
 document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
