@@ -928,33 +928,113 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
+function raidFlame(x,y,k,t,seed){
+ const fl=Math.sin(t*8.5+seed)*.5+Math.sin(t*21+seed*3)*.28,hh=(30+fl*13)*k,ww=(13+fl*4)*k;
+ ctx.globalAlpha=.92;
+ ctx.fillStyle='#c83a1c';ctx.beginPath();ctx.moveTo(x-ww,y);ctx.quadraticCurveTo(x-ww*.5,y-hh*.62,x+Math.sin(t*6+seed)*3*k,y-hh);ctx.quadraticCurveTo(x+ww*.5,y-hh*.62,x+ww,y);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#ff7a2a';ctx.beginPath();ctx.moveTo(x-ww*.66,y);ctx.quadraticCurveTo(x-ww*.3,y-hh*.55,x,y-hh*.78);ctx.quadraticCurveTo(x+ww*.3,y-hh*.55,x+ww*.66,y);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#ffcf63';ctx.beginPath();ctx.moveTo(x-ww*.32,y);ctx.quadraticCurveTo(x-ww*.12,y-hh*.3,x,y-hh*.46);ctx.quadraticCurveTo(x+ww*.12,y-hh*.3,x+ww*.32,y);ctx.closePath();ctx.fill();
+ ctx.globalAlpha=1;}
+function raidSmoke(x,y,k,t,seed){
+ for(let i=0;i<4;i++){
+  const p=(t*.16+i*.25+seed)%1,rr=(10+p*26)*k,a=.18*(1-p);
+  ctx.globalAlpha=a;ctx.fillStyle=i%2?'#241a22':'#332530';
+  ctx.beginPath();ctx.arc(x+Math.sin(p*6+seed+i)*10*k,y-p*110*k,rr,0,7);ctx.fill();}
+ ctx.globalAlpha=1;}
 function drawSentinelRaid(W,H){
  const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
+ const horizon=H*.72,k=Math.max(3,Math.round(Math.min(W,H)/170));
+ const quake=(Math.sin(t*11)>0?1:0)*Math.min(1,t/2)*2.2+((t*2.1)%1<.06?5:0);
  ctx.save();ctx.imageSmoothingEnabled=false;
- const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#151326');sky.addColorStop(.58,'#542d35');sky.addColorStop(1,'#17151d');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
- // Hearthvale rooftops and warm windows, now under a smoky orange sky.
- for(let i=0;i<9;i++){const x=i*W/8-20,bh=H*(.2+(i%3)*.055);ctx.fillStyle=i%2?'#302a3b':'#49303a';ctx.fillRect(x,H*.68-bh,W/9,bh);ctx.fillStyle='#1b1928';ctx.beginPath();ctx.moveTo(x-5,H*.68-bh);ctx.lineTo(x+W/18,H*.68-bh-H*.09);ctx.lineTo(x+W/9+5,H*.68-bh);ctx.fill();for(let q=0;q<3;q++){ctx.fillStyle='#f7b65c';ctx.fillRect(x+10+q*18,H*.68-bh+18,7,11);}}
- ctx.fillStyle='#211b28';ctx.fillRect(0,H*.68,W,H*.32);
- // Citizens flee in both directions; no one is harmed on screen.
- for(let i=0;i<8;i++){const speed=65+i*12,x=((i*W/7+(t*speed*(i%2?1:-1))+W*4)%(W+60))-30,y=H*(.72+(i%3)*.045),sc=Math.max(2,Math.floor(H/220));ctx.fillStyle=i%2?'#d69a68':'#8cb1a3';ctx.fillRect(x,y-18*sc,8*sc,12*sc);ctx.fillStyle='#d8b18b';ctx.fillRect(x+2*sc,y-25*sc,5*sc,6*sc);ctx.fillStyle='#262438';ctx.fillRect(x,y-7*sc,3*sc,8*sc);ctx.fillRect(x+5*sc,y-7*sc,3*sc,8*sc);}
- // Rowan hesitates for a beat, then runs toward the edge of the square.
- const rx=W*.66-Math.min(W*.5,t*95),ry=H*.7,sc=Math.max(3,Math.floor(H/150));
- if(CHARS.naturalWidth){const frame=Math.floor(t*9)%4;ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,rx,ry-48*sc,16*sc,16*sc);}
- // The Pumpkin Sentinel looms beyond the rooftops.
- const sx=W*.82-Math.min(W*.18,t*5),sy=H*.31+Math.sin(t*1.8)*4;
- if(BOS.naturalWidth){const bi=BOSS_NPC['PUMPKIN SENTINEL']||0;ctx.drawImage(BOS,bi*64,0,64,64,sx-48*sc,sy,96*sc,96*sc);}
- else{ctx.fillStyle='#e07832';ctx.beginPath();ctx.arc(sx,sy+35*sc,34*sc,0,Math.PI*2);ctx.fill();}
- // Dust, falling leaves, and cinematic letterbox.
- for(let i=0;i<24;i++){const x=(i*79+t*(i%2?18:-12)+W*2)%(W+10),y=(i*43+t*(12+i%5))%(H*.7);ctx.fillStyle=i%2?'#f1a34e':'#d6b86b';ctx.globalAlpha=.35;ctx.fillRect(x,y,3,3);}ctx.globalAlpha=1;
+ ctx.translate((Math.random()-.5)*quake,(Math.random()-.5)*quake);
+ // night sky burning at the horizon
+ const sky=ctx.createLinearGradient(0,0,0,horizon);
+ sky.addColorStop(0,'#0a0712');sky.addColorStop(.36,'#281020');sky.addColorStop(.66,'#6a2a21');sky.addColorStop(1,'#c85a2a');
+ ctx.fillStyle=sky;ctx.fillRect(-20,-20,W+40,horizon+20);
+ for(let i=0;i<7;i++){const p=((t*.03+i*.14)%1),x=((i*W/6+p*40)%(W+140))-70,y=H*(.10+(i%4)*.065);
+  ctx.globalAlpha=.15;ctx.fillStyle=i%2?'#150e19':'#22141a';ctx.beginPath();ctx.ellipse(x,y,(80+i*26)*(W/900),H*.045,0,0,7);ctx.fill();}
+ ctx.globalAlpha=1;
+ const glow=ctx.createRadialGradient(W*.6,horizon,10,W*.6,horizon,W*.7);
+ glow.addColorStop(0,'rgba(255,140,60,'+(.32+.07*Math.sin(t*5))+')');glow.addColorStop(1,'rgba(255,120,40,0)');
+ ctx.fillStyle=glow;ctx.fillRect(0,0,W,horizon+10);
+ // the Sentinel, drawn behind the rooftops so it towers over them
+ const prog=Math.min(1,t/5),sx=W*.74-Math.min(W*.14,prog*W*.14),sy=horizon-H*.30+Math.sin(t*1.9)*5;
+ const pulse=1+Math.sin(t*2.4)*.022;
+ ctx.save();ctx.translate(sx,sy);ctx.scale(pulse,pulse);
+ if(BOS.naturalWidth){const bi=BOSS_NPC['PUMPKIN SENTINEL']||0;ctx.drawImage(BOS,bi*64,0,64,64,-38*k,-34*k,76*k,76*k);}
+ else{ctx.fillStyle='#e07832';ctx.beginPath();ctx.arc(0,12*k,16*k,0,7);ctx.fill();}
+ ctx.globalAlpha=.30;ctx.fillStyle='#ffb347';ctx.beginPath();ctx.arc(0,-2*k,34*k,0,7);ctx.fill();ctx.globalAlpha=1;
+ for(let e=0;e<10;e++){const p=((t*1.3+e*.13)%1);ctx.globalAlpha=(1-p)*.8;ctx.fillStyle=e%2?'#ff9a3c':'#ffd06a';ctx.fillRect((-8+(e*5)%18)*k+p*4*k,(10+p*24)*k,2,2);}
+ ctx.globalAlpha=1;ctx.restore();
+ // rooftops; three of them burning
+ for(let i=0;i<9;i++){
+  const x=i*W/8-20,bw=W/9,bh=H*(.17+(i%3)*.045),top=horizon-bh,burning=i===2||i===5||i===7;
+  ctx.fillStyle=burning?'#221a23':(i%2?'#2a2333':'#3d2a34');ctx.fillRect(x,top,bw,bh);
+  ctx.fillStyle='#161320';ctx.beginPath();ctx.moveTo(x-6,top);ctx.lineTo(x+bw/2,top-H*.08);ctx.lineTo(x+bw+6,top);ctx.fill();
+  for(let q=0;q<3;q++){const flick=.55+.45*Math.sin(t*7+i*2+q);ctx.globalAlpha=burning?flick*.85:.45+flick*.3;ctx.fillStyle=burning?'#ffb057':'#f7b65c';ctx.fillRect(x+10+q*(bw/4),top+bh*.3,7,10);}
+  ctx.globalAlpha=1;
+  if(burning){
+   const peak=top-H*.075;
+   raidSmoke(x+bw*.42,peak,Math.max(1,k*.6),t,i);
+   raidFlame(x+bw*.28,peak+9,k*.3,t,i*3+1);
+   raidFlame(x+bw*.46,peak+11,k*.42,t,i*5+2);
+   raidFlame(x+bw*.62,peak+9,k*.34,t,i*7+4);
+   raidFlame(x+bw*.78,peak+8,k*.24,t,i*9+5);
+   const fg=ctx.createRadialGradient(x+bw*.5,top,4,x+bw*.5,top,bw*.95);
+   fg.addColorStop(0,'rgba(255,150,60,'+(.28+.10*Math.sin(t*9+i))+')');fg.addColorStop(1,'rgba(255,120,40,0)');
+   ctx.fillStyle=fg;ctx.fillRect(x-20,top-40,bw+40,bh+60);}
+  ctx.fillStyle='rgba(10,8,14,.45)';ctx.fillRect(x,top+bh-9,bw,9);
+ }
+ // dusty square, lit by the fires
+ const gd=ctx.createLinearGradient(0,horizon,0,H);
+ gd.addColorStop(0,'#3a2320');gd.addColorStop(.35,'#2a1a1b');gd.addColorStop(1,'#140e13');
+ ctx.fillStyle=gd;ctx.fillRect(0,horizon,W,H-horizon);
+ for(let i=0;i<24;i++){const gx=(i*97)%W,gy=horizon+((i*53)%Math.max(1,H-horizon));ctx.globalAlpha=.05+.05*Math.sin(t*4+i);ctx.fillStyle='#ffb060';ctx.fillRect(gx,gy,W/16,3);}
+ ctx.globalAlpha=1;
+ // footfall shockwave rolling across the square
+ const fs=((t*2.1)%1);if(fs<.3){ctx.globalAlpha=(1-fs/.3)*.45;ctx.strokeStyle='#e2b78d';ctx.lineWidth=3;
+  ctx.beginPath();ctx.ellipse(sx+4*k,horizon+4,16*k+fs*70*k,4*k+fs*14*k,0,0,7);ctx.stroke();ctx.globalAlpha=1;}
+ // villagers running with dust at their heels
+ for(let i=0;i<9;i++){
+  const dir=i%2?1:-1,speed=70+i*14,x=((i*W/8+(t*speed*dir)+W*4)%(W+80))-40;
+  const y=horizon+H*(.03+(i%3)*.038),vk=Math.max(2,Math.floor(H/230)),bob=Math.abs(Math.sin(t*9+i))*2*vk;
+  ctx.fillStyle='rgba(255,150,70,.16)';ctx.beginPath();ctx.ellipse(x+4*vk,y+2*vk,10*vk,3*vk,0,0,7);ctx.fill();
+  ctx.fillStyle=i%2?'#c98f61':'#7fa294';ctx.fillRect(x,y-18*vk-bob,8*vk,12*vk);
+  ctx.fillStyle='#d8b18b';ctx.fillRect(x+2*vk,y-25*vk-bob,5*vk,6*vk);
+  ctx.fillStyle='#221f31';ctx.fillRect(x,y-7*vk,3*vk,8*vk);ctx.fillRect(x+5*vk,y-7*vk,3*vk,8*vk);
+  for(let d=0;d<3;d++){const dp=((t*2.4+d*.3+i*.11)%1);ctx.globalAlpha=.2*(1-dp);ctx.fillStyle='#d9b58c';ctx.beginPath();ctx.arc(x-dir*dp*12*vk,y-2*vk-dp*5*vk,(1.5+dp*3.5)*vk,0,7);ctx.fill();}
+  ctx.globalAlpha=1;
+ }
+ // Rowan freezes, then bolts
+ const rRun=t>2.2,rx=rRun?W*.64-Math.min(W*.5,(t-2.2)*150):W*.64,ry=horizon+H*.012,rs=Math.max(3,Math.floor(H/140));
+ ctx.fillStyle='rgba(255,140,70,.18)';ctx.beginPath();ctx.ellipse(rx+6*rs,ry+2*rs,10*rs,3.5*rs,0,0,7);ctx.fill();
+ if(CHARS.naturalWidth){const fr=rRun?Math.floor(t*12)%4:0;ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,rx,ry-15*rs,16*rs,16*rs);}
+ if(rRun)for(let d=0;d<4;d++){const dp=((t*3+d*.25)%1);ctx.globalAlpha=.22*(1-dp);ctx.fillStyle='#e0bb8e';ctx.beginPath();ctx.arc(rx+dp*14*rs,ry-3*rs-dp*6*rs,(1.5+dp*4)*rs,0,7);ctx.fill();ctx.globalAlpha=1;}
+ // embers rising, heat shimmer, vignette, letterbox
+ for(let i=0;i<70;i++){
+  const sp=26+(i%7)*9,x0=(i*137)%W,p=((t*sp/H)+i*.037)%1;
+  const x=x0+Math.sin(p*7+i)*14*p,y=horizon-p*(horizon*.9);
+  ctx.globalAlpha=Math.max(0,.95-p)*.9;ctx.fillStyle=i%3?'#ffb257':'#ffe1a0';
+  ctx.fillRect(x,y,i%11===0?3:2,i%11===0?3:2);
+ }
+ ctx.globalAlpha=1;
+ for(let i=0;i<3;i++){const y=horizon-18-i*24+Math.sin(t*3+i)*4;ctx.globalAlpha=.045;ctx.fillStyle='#ffd9a0';ctx.fillRect(0,y,W,5);}
+ ctx.globalAlpha=1;
+ const vg=ctx.createRadialGradient(W/2,H*.55,H*.28,W/2,H*.55,Math.max(W,H)*.78);
+ vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(26,3,5,.6)');
+ ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
  ctx.fillStyle='#08080d';ctx.fillRect(0,0,W,H*.09);ctx.fillRect(0,H*.91,W,H*.09);
+ ctx.textAlign='center';
+ ctx.font='bold '+Math.max(11,Math.min(21,W/34))+'px monospace';
  const lines=t<2.8?'THE SENTINEL HAS REACHED HEARTHVALE':t<5.5?'GET EVERYONE TO SAFETY!':t<8?'ROWAN! WAIT!':'YOU CANNOT RUN FROM THIS.';
- ctx.textAlign='center';ctx.font='bold '+Math.max(11,Math.min(20,W/34))+'px monospace';ctx.fillStyle='#fff0c2';ctx.fillText(lines,W/2,H*.15);
+ ctx.shadowColor='#ff7a2a';ctx.shadowBlur=16;ctx.fillStyle='#fff0c2';ctx.fillText(lines,W/2,H*.152);
+ ctx.shadowBlur=0;
  ctx.restore();
 }
 async function playSentinelRaid(done){
- cinematic={phase:'sentinelRaid',t0:performance.now()};sfx('warn');
+ cinematic={phase:'sentinelRaid',t0:performance.now()};document.body.classList.add('lh-cinematic');sfx('warn');
  await sleep(2600);if(!cinematic||cinematic.phase!=='sentinelRaid')return;
- setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{cinematic=null;done();});
+ setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{document.body.classList.remove('lh-cinematic');cinematic=null;done();});
 }
 function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
@@ -1296,10 +1376,10 @@ function pkEnd(lost){const gg=battle&&battle.g,fr=gg&&gg.friendly,won=!!(battle&
 /* --- animated actions --- */
 function hitFoe(dmg,kind,crit){const b=battle,e=b.e,G=geo();e.hp=Math.max(0,e.hp-dmg);b.flashF=1;b.shake=Math.max(b.shake,crit?16:e.boss?10:8);b.kf=16;const cx=G.fx,cy=G.fy-G.fh*.5;
 const cols=kind==='magic'?['#ffffff','#d29bff','#8fd8ff']:kind==='arrow'?['#ffffff','#e8d890','#c9a032']:['#ffffff','#ffd84a','#ff9a2e'];burst(cx,cy,crit?22:14,cols,crit?260:190);
-b.slash={x:cx,y:cy,t:0,k:kind};pop(String(dmg)+(crit?'!':''),cx,cy-G.fh*.25,crit?'#ffd84a':'#ffffff',crit?26:20);sfx(crit?'crit':'hit');pkPanel();}
-function hitHero(dmg,heavy){const b=battle,G=geo();state.hp=Math.max(0,state.hp-dmg);b.flashH=1;b.shake=Math.max(b.shake,heavy?18:10);b.flashR=heavy?.9:.35;b.kh=-14;const cx=G.hx,cy=G.hy-G.hk*8;burst(cx,cy,heavy?20:12,['#ffffff','#ff6a5a','#ffd84a'],200);pop(String(dmg),cx,cy-G.hk*5,'#ff6a5a',heavy?26:20);sfx('foe');pkPanel();}
+b.slash={x:cx,y:cy,t:0,k:kind};b.rings=b.rings||[];b.rings.push({x:cx,y:cy,age:0,r:8,max:crit?96:62,c:crit?'#ffd84a':(kind==='magic'?'#d29bff':kind==='arrow'?'#e8d890':'#ff9a2e')});if(crit)b.white=1;pop(String(dmg)+(crit?'!':''),cx,cy-G.fh*.25,crit?'#ffd84a':'#ffffff',crit?26:20);sfx(crit?'crit':'hit');pkPanel();}
+function hitHero(dmg,heavy){const b=battle,G=geo();state.hp=Math.max(0,state.hp-dmg);b.flashH=1;b.shake=Math.max(b.shake,heavy?18:10);b.flashR=heavy?.9:.35;b.kh=-14;b.rings=b.rings||[];b.rings.push({x:G.hx,y:G.hy-G.hk*8,age:0,r:8,max:heavy?92:58,c:'#ff6a5a'});if(heavy)b.white=.7;const cx=G.hx,cy=G.hy-G.hk*8;burst(cx,cy,heavy?20:12,['#ffffff','#ff6a5a','#ffd84a'],200);pop(String(dmg),cx,cy-G.hk*5,'#ff6a5a',heavy?26:20);sfx('foe');pkPanel();}
 async function heroStrike(kind,dmg,crit,color){const b=battle,G=geo();let dx=0;
-if(kind==='melee'){dx=(G.fx-G.hx)*.68;await tween(210,p=>{b.hox=dx*ease(p);b.hoy=-10*Math.sin(p*Math.PI);});}
+if(kind==='melee'){dx=(G.fx-G.hx)*.68;burst(G.hx,G.hy,7,['#d9c9a8','#bda882','#efe3c8'],70);await tween(210,p=>{b.hox=dx*ease(p);b.hoy=-10*Math.sin(p*Math.PI);});}
 else{sfx(kind==='arrow'?'arrow':'magic');const sy=G.hy-G.hk*9,ty=G.fy-G.fh*.5;await tween(kind==='arrow'?250:360,p=>{const q=ease(p);b.proj={k:kind,c:color||'#d29bff',p,x:G.hx+G.hk*8+(G.fx-G.hx-G.hk*8)*q,y:sy+(ty-sy)*q-Math.sin(p*Math.PI)*28};if(kind==='magic'&&Math.random()<.8)b.parts.push({x:b.proj.x,y:b.proj.y,vx:(Math.random()-.5)*50,vy:(Math.random()-.5)*50,g:0,life:.3,max:.3,c:color||'#d29bff',s:4+rnd(3)});});b.proj=null;}
 hitFoe(dmg,kind,crit);
 if(kind==='melee'){await sleep(130);await tween(190,p=>{b.hox=dx*(1-ease(p));b.hoy=0;});b.hox=0;}else await sleep(200);}
@@ -1493,9 +1573,13 @@ else{const g=ctx.createRadialGradient(p.x,p.y,2,p.x,p.y,G.hk*5);g.addColorStop(0
 /* particles */
 for(let i=b.parts.length-1;i>=0;i--){const q=b.parts[i];q.life-=dt;if(q.life<=0){b.parts.splice(i,1);continue;}q.vy+=q.g*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;ctx.globalAlpha=clamp01(q.life/q.max*1.4);ctx.fillStyle=q.c;ctx.fillRect(Math.round(q.x),Math.round(q.y),q.s,q.s);}
 ctx.globalAlpha=1;
+/* impact shockwaves */
+if(b.rings&&b.rings.length)for(let i=b.rings.length-1;i>=0;i--){const q=b.rings[i];q.age+=dt;if(q.age>.42){b.rings.splice(i,1);continue;}const rp=q.age/.42;ctx.globalAlpha=(1-rp)*.85;ctx.strokeStyle=q.c;ctx.lineWidth=Math.max(2,5-rp*4);ctx.beginPath();ctx.arc(q.x,q.y,q.r+rp*q.max,0,7);ctx.stroke();}
+ctx.globalAlpha=1;
 /* damage / heal numbers */
 for(let i=b.pops.length-1;i>=0;i--){const q=b.pops[i];q.age+=dt;if(q.age>1.1){b.pops.splice(i,1);continue;}const up=Math.min(1,q.age*3.5),sc=q.age<.12?1+q.age*5:1;ctx.globalAlpha=q.age>.8?1-(q.age-.8)/.3:1;bubbleText(q.t,q.x,q.y-up*34-q.age*22,q.c,Math.round(q.s*sc));}
 ctx.globalAlpha=1;
+if(b.white>0){ctx.fillStyle='rgba(255,244,214,'+(b.white*.4)+')';ctx.fillRect(0,0,W,H);b.white=Math.max(0,b.white-dt*3.2);}
 /* red vignette when low HP / boss enraged */
 if(state.hp<state.maxHp*.25||e.enraged){const v=ctx.createRadialGradient(W/2,PH/2,PH*.35,W/2,PH/2,Math.max(W,PH)*.75);v.addColorStop(0,'rgba(200,0,20,0)');v.addColorStop(1,'rgba(200,0,20,'+(.25+.1*Math.sin(t*6))+')');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);}
 ctx.restore();}
