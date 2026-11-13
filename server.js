@@ -179,23 +179,44 @@ function getSortedMembersList() {
     return list;
 }
 
+function ensureSpectatorSet(room) {
+    if (!room) return new Set();
+    if (room.spectators instanceof Set) return room.spectators;
+    if (Array.isArray(room.spectators)) {
+        room.spectators = new Set(room.spectators.filter(Boolean));
+    } else if (room.spectators && typeof room.spectators === 'object') {
+        room.spectators = new Set(Object.values(room.spectators).filter(Boolean));
+    } else {
+        room.spectators = new Set();
+    }
+    return room.spectators;
+}
+
 function broadcastPresence() {
     const users = getAllActiveUsers();
     const members = getSortedMembersList();
     const activeRooms = Array.from(rooms.values())
-        .filter((r) => r.status === 'playing' && r.blackPlayer)
-        .map((r) => ({
-            roomId: r.roomId,
-            mode: r.mode,
-            timeControlLabel: `${r.baseMinutes} | ${r.incrementSeconds}`,
-            whitePlayer: r.whitePlayer.username,
-            whiteElo: r.whitePlayer.elo,
-            whiteAvatar: r.whitePlayer.avatar,
-            blackPlayer: r.blackPlayer.username,
-            blackElo: r.blackPlayer.elo,
-            blackAvatar: r.blackPlayer.avatar,
-            spectators: r.spectators ? r.spectators.size : 0
-        }));
+        .filter((r) => r.status === 'playing' && (r.blackPlayer || r.isBotMatch))
+        .map((r) => {
+            const specCount = ensureSpectatorSet(r).size;
+            return {
+                roomId: r.roomId,
+                mode: r.mode,
+                isBotMatch: Boolean(r.isBotMatch),
+                botId: r.botInfo?.id || null,
+                timeControlLabel: r.isBotMatch
+                    ? `${r.baseMinutes || 10} | ${r.incrementSeconds || 0} • Bot`
+                    : `${r.baseMinutes} | ${r.incrementSeconds}`,
+                whitePlayer: r.whitePlayer?.username || 'Member',
+                whiteElo: r.whitePlayer?.elo || 0,
+                whiteAvatar: r.whitePlayer?.avatar || '/img/pfp.png',
+                blackPlayer: r.blackPlayer?.username || r.botInfo?.name || 'Bot',
+                blackElo: r.blackPlayer?.elo ?? (r.botInfo?.elo || 0),
+                blackAvatar: r.blackPlayer?.avatar || r.botInfo?.avatar || '/img/pfp.png',
+                moveCount: Array.isArray(r.moves) ? r.moves.length : 0,
+                spectators: specCount
+            };
+        });
 
     const payload = JSON.stringify({
         type: 'presence:update',
@@ -255,12 +276,6 @@ registerWsSender((clientId, data) => {
 });
 
 function sendToClient(clientId, data) {
-    const entry = clients.get(clientId);
-    if (entry && entry.ws && entry.ws.readyState === WebSocket.OPEN) {
-        try {
-            entry.ws.send(JSON.stringify(data));
-        } catch {}
-    }
     pushClientEvent(clientId, data);
 }
 
@@ -584,17 +599,15 @@ wss.on('connection', (ws) => {
                         turn: room.moves.length % 2 === 0 ? 'w' : 'b'
                     });
                 }
-                if (room.spectators) {
-                    room.spectators.forEach((specId) => {
-                        sendToClient(specId, {
-                            type: 'game:opponent_move',
-                            roomId: room.roomId,
-                            move: moveEntry,
-                            board: msg.board || null,
-                            turn: room.moves.length % 2 === 0 ? 'w' : 'b'
-                        });
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'game:opponent_move',
+                        roomId: room.roomId,
+                        move: moveEntry,
+                        board: msg.board || null,
+                        turn: room.moves.length % 2 === 0 ? 'w' : 'b'
                     });
-                }
+                });
             } else if (msg.type === 'game:end') {
                 const roomId = cleanRoomCode(msg.roomId);
                 const room = rooms.get(roomId);
@@ -615,16 +628,184 @@ wss.on('connection', (ws) => {
                         winner: msg.winner
                     });
                 }
+                const specs = ensureSpectatorSet(room);
+                specs.forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'game:ended',
+                        roomId: room.roomId,
+                        reason: msg.reason,
+                        winner: msg.winner
+                    });
+                });
+                specs.clear();
                 const wEntry = clients.get(room.whitePlayer.clientId);
                 if (wEntry) {
                     wEntry.user.status = 'online';
+                    wEntry.user.roomId = null;
                     upsertMemberFromUser(wEntry.user);
                 }
                 if (room.blackPlayer) {
                     const bEntry = clients.get(room.blackPlayer.clientId);
                     if (bEntry) {
                         bEntry.user.status = 'online';
+                        bEntry.user.roomId = null;
                         upsertMemberFromUser(bEntry.user);
+                    }
+                }
+                broadcastPresence();
+            } else if (msg.type === 'bot_match:start') {
+                const entry = clients.get(currentClientId);
+                if (!entry) return;
+                for (const [rid, r] of rooms.entries()) {
+                    if (r.isBotMatch && r.whitePlayer?.clientId === currentClientId) {
+                        rooms.delete(rid);
+                    }
+                }
+                const roomId = cleanRoomCode(msg.roomId || `BOT${Math.random().toString(36).substring(2, 6)}`);
+                const botInfo = msg.bot || {};
+                const room = {
+                    roomId,
+                    isBotMatch: true,
+                    botInfo,
+                    mode: msg.mode || 'classic',
+                    baseMinutes: Number(msg.mins) || 10,
+                    incrementSeconds: Number(msg.inc) || 0,
+                    whitePlayer: { ...entry.user },
+                    blackPlayer: {
+                        clientId: `bot_${botInfo.id || 'ai'}`,
+                        username: botInfo.name || 'Chess Bot',
+                        elo: Number(botInfo.elo) || 0,
+                        avatar: botInfo.avatar || '/img/pfp.png',
+                        title: botInfo.title || 'BOT'
+                    },
+                    status: 'playing',
+                    moves: [],
+                    lastBoard: msg.board || null,
+                    lastMissile: null,
+                    updatedAt: Date.now(),
+                    spectators: new Set()
+                };
+                rooms.set(roomId, room);
+                entry.user.status = 'in_game';
+                entry.user.roomId = roomId;
+                upsertMemberFromUser(entry.user);
+                sendToClient(currentClientId, { type: 'bot_match:started', roomId });
+                broadcastPresence();
+            } else if (msg.type === 'bot_match:move') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (!room || !room.isBotMatch || room.status !== 'playing' || !msg.move) return;
+                if (!Array.isArray(room.moves)) room.moves = [];
+                const moveIndex = typeof msg.move.moveIndex === 'number' ? msg.move.moveIndex : room.moves.length;
+                if (moveIndex >= room.moves.length) {
+                    room.moves.push(msg.move);
+                }
+                if (msg.board) room.lastBoard = msg.board;
+                room.updatedAt = Date.now();
+                const nextTurn = msg.turn || (room.moves.length % 2 === 0 ? 'w' : 'b');
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'game:opponent_move',
+                        roomId: room.roomId,
+                        move: msg.move,
+                        board: msg.board || null,
+                        turn: nextTurn
+                    });
+                });
+            } else if (msg.type === 'bot_match:missile') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (!room || !room.isBotMatch || room.status !== 'playing') return;
+                room.lastMissile = msg.missileStrike || null;
+                if (msg.board) room.lastBoard = msg.board;
+                room.updatedAt = Date.now();
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'spectate:missile',
+                        roomId: room.roomId,
+                        missileStrike: msg.missileStrike || null,
+                        missileDetonation: msg.missileDetonation || null,
+                        board: msg.board || null
+                    });
+                });
+            } else if (msg.type === 'bot_match:end') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (room && room.isBotMatch) {
+                    room.status = 'finished';
+                    room.reason = msg.reason || 'ended';
+                    room.winner = msg.winner || 'draw';
+                    room.updatedAt = Date.now();
+                    ensureSpectatorSet(room).forEach((specId) => {
+                        sendToClient(specId, {
+                            type: 'game:ended',
+                            roomId: room.roomId,
+                            reason: room.reason,
+                            winner: room.winner
+                        });
+                    });
+                    rooms.delete(roomId);
+                }
+                if (entry) {
+                    entry.user.status = 'online';
+                    entry.user.roomId = null;
+                    upsertMemberFromUser(entry.user);
+                }
+                broadcastPresence();
+            } else if (msg.type === 'spectate:join') {
+                const roomId = cleanRoomCode(msg.roomId);
+                const room = rooms.get(roomId);
+                if (!room || room.status === 'finished') {
+                    sendToClient(currentClientId, {
+                        type: 'room:error',
+                        message: 'That match has already finished or is unavailable to spectate.'
+                    });
+                    return;
+                }
+                for (const r of rooms.values()) {
+                    ensureSpectatorSet(r).delete(currentClientId);
+                }
+                const specs = ensureSpectatorSet(room);
+                specs.add(currentClientId);
+                const specCount = specs.size;
+                sendToClient(currentClientId, {
+                    type: 'spectate:state',
+                    roomId: room.roomId,
+                    isBotMatch: Boolean(room.isBotMatch),
+                    mode: room.mode,
+                    mins: room.baseMinutes,
+                    inc: room.incrementSeconds,
+                    whitePlayer: room.whitePlayer,
+                    blackPlayer: room.blackPlayer,
+                    botInfo: room.botInfo || null,
+                    board: room.lastBoard || null,
+                    moves: room.moves || [],
+                    turn: (room.moves?.length || 0) % 2 === 0 ? 'w' : 'b',
+                    missileStrike: room.lastMissile || null,
+                    spectatorCount: specCount
+                });
+                if (room.whitePlayer?.clientId) {
+                    sendToClient(room.whitePlayer.clientId, { type: 'spectate:count', roomId: room.roomId, spectatorCount: specCount });
+                }
+                if (!room.isBotMatch && room.blackPlayer?.clientId) {
+                    sendToClient(room.blackPlayer.clientId, { type: 'spectate:count', roomId: room.roomId, spectatorCount: specCount });
+                }
+                broadcastPresence();
+            } else if (msg.type === 'spectate:leave') {
+                const roomId = msg.roomId ? cleanRoomCode(msg.roomId) : null;
+                for (const r of rooms.values()) {
+                    const specs = ensureSpectatorSet(r);
+                    if ((!roomId || r.roomId === roomId) && specs.delete(currentClientId)) {
+                        const specCount = specs.size;
+                        if (r.whitePlayer?.clientId) {
+                            sendToClient(r.whitePlayer.clientId, { type: 'spectate:count', roomId: r.roomId, spectatorCount: specCount });
+                        }
+                        if (!r.isBotMatch && r.blackPlayer?.clientId) {
+                            sendToClient(r.blackPlayer.clientId, { type: 'spectate:count', roomId: r.roomId, spectatorCount: specCount });
+                        }
                     }
                 }
                 broadcastPresence();
@@ -645,6 +826,20 @@ wss.on('connection', (ws) => {
                     rec.lastSeen = Date.now();
                     membersRegistry.set(rec.memberId, rec);
                     saveStoredMembers(membersRegistry);
+                }
+            }
+            for (const [rid, r] of rooms.entries()) {
+                ensureSpectatorSet(r).delete(currentClientId);
+                if (r.isBotMatch && r.whitePlayer?.clientId === currentClientId) {
+                    ensureSpectatorSet(r).forEach((specId) => {
+                        sendToClient(specId, {
+                            type: 'game:ended',
+                            roomId: r.roomId,
+                            reason: 'disconnected',
+                            winner: 'draw'
+                        });
+                    });
+                    rooms.delete(rid);
                 }
             }
             chessOnlineState.queue = chessOnlineState.queue.filter((q) => q.clientId !== currentClientId);

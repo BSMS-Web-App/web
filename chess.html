@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   <meta name="description" content="BSMS Chess Arena — Play Online Ranked Chess vs BSMS Website Members, battle Famous Personalities & Grandmaster Bots, or build Custom Variants." />
   <meta name="category" content="Education" />
   <meta name="author" content="BSMS Web" />
-  <meta name="theme-color" content="#81b64c" />
+  <meta name="theme-color" content="#BB001E" />
   <meta name="color-scheme" content="dark" />
   <meta name="application-name" content="BSMS Chess Arena" />
   <meta property="og:title" content="BSMS Chess Arena" />
@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   <meta property="og:type" content="website" />
   <title>BSMS Web :: Chess Arena</title>
 
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='36' fill='%23161512' stroke='%2381b64c' stroke-width='6'/%3E%3Cpolygon points='56,136 184,136 232,204 8,204' fill='%23739552'/%3E%3Cpolygon points='56,136 120,136 120,168 35,168' fill='%23ebecd0'/%3E%3Cpolygon points='120,168 205,168 232,204 120,204' fill='%23ebecd0'/%3E%3Cline x1='42' y1='180' x2='188' y2='54' stroke='%23ebecd0' stroke-width='8' stroke-linecap='round'/%3E%3Cg transform='translate(120,132) rotate(11)'%3E%3Crect x='-22' y='8' width='44' height='8' rx='3' fill='%23211f1c' stroke='%2381b64c' stroke-width='3'/%3E%3Cpath d='M-15,8 L-12,-14 L-3,-8 L5,-17 L13,-10 L15,8 Z' fill='%23211f1c' stroke='%23ebecd0' stroke-width='2.5'/%3E%3C/g%3E%3Cg transform='translate(94,74) rotate(-24)'%3E%3Cpath d='M-14,14 L14,14 L19,-10 L9,-2 L0,-14 L-9,-2 L-19,-10 Z' fill='%23211f1c' stroke='%23ebecd0' stroke-width='2.5'/%3E%3C/g%3E%3Cg transform='translate(166,68) rotate(50)'%3E%3Crect x='-14' y='14' width='28' height='6' rx='3' fill='%23fff' stroke='%23161512' stroke-width='3'/%3E%3Cpath d='M-9,14 L-4,-8 L4,-8 L9,14 Z' fill='%23fff' stroke='%23161512' stroke-width='3'/%3E%3Ccircle cx='0' cy='-16' r='9' fill='%23fff' stroke='%23161512' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='36' fill='%23050507' stroke='%23BB001E' stroke-width='6'/%3E%3Cpolygon points='56,136 184,136 232,204 8,204' fill='%23BB001E'/%3E%3Cpolygon points='56,136 120,136 120,168 35,168' fill='%23ffffff'/%3E%3Cpolygon points='120,168 205,168 232,204 120,204' fill='%23ffffff'/%3E%3Cline x1='42' y1='180' x2='188' y2='54' stroke='%23ffffff' stroke-width='8' stroke-linecap='round'/%3E%3Cg transform='translate(120,132) rotate(11)'%3E%3Crect x='-22' y='8' width='44' height='8' rx='3' fill='%230a0a0c' stroke='%23BB001E' stroke-width='3'/%3E%3Cpath d='M-15,8 L-12,-14 L-3,-8 L5,-17 L13,-10 L15,8 Z' fill='%230a0a0c' stroke='%23ffffff' stroke-width='2.5'/%3E%3C/g%3E%3Cg transform='translate(94,74) rotate(-24)'%3E%3Cpath d='M-14,14 L14,14 L19,-10 L9,-2 L0,-14 L-9,-2 L-19,-10 Z' fill='%230a0a0c' stroke='%23ffffff' stroke-width='2.5'/%3E%3C/g%3E%3Cg transform='translate(166,68) rotate(50)'%3E%3Crect x='-14' y='14' width='28' height='6' rx='3' fill='%23fff' stroke='%23050507' stroke-width='3'/%3E%3Cpath d='M-9,14 L-4,-8 L4,-8 L9,14 Z' fill='%23fff' stroke='%23050507' stroke-width='3'/%3E%3Ccircle cx='0' cy='-16' r='9' fill='%23fff' stroke='%23050707' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="apple-touch-icon" href="/img/icon.png" />
 
   <!-- Ban Check & Account Sync -->
@@ -41,20 +41,20 @@ SPDX-License-Identifier: AGPL-3.0-only
       console.warn('[BSMS Chess] Caught top-level script event:', e.message);
       var root = document.getElementById('root');
       if (root && (!root.firstElementChild || root.querySelector('.chess-loading-skeleton'))) {
-        root.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#302e2b;color:#dbd9d6;font-family:sans-serif;text-align:center;"><div style="width:64px;height:64px;border-radius:16px;background:rgba(129,182,76,0.2);color:#81b64c;border:2px solid rgba(129,182,76,0.5);display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;">♟️</div><h2 style="font-size:22px;font-weight:900;color:#fff;margin:0 0 8px 0;">BSMS Chess Arena</h2><p style="font-size:13px;color:#a1a1aa;max-width:380px;margin:0 0 20px 0;">Click below to launch the Chess Arena.</p><button onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;background:#81b64c;color:#fff;font-weight:bold;font-size:13px;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);">Launch Arena</button></div>';
+        root.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#050507;color:#ffffff;font-family:\'Patrick Hand\',cursive,sans-serif;text-align:center;"><div style="width:64px;height:64px;border-radius:16px;background:rgba(187,0,30,0.2);color:#BB001E;border:2px solid rgba(187,0,30,0.6);display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;">♟️</div><h2 style="font-size:24px;font-weight:900;color:#fff;margin:0 0 8px 0;">BSMS Chess Arena</h2><p style="font-size:14px;color:#a1a1aa;max-width:380px;margin:0 0 20px 0;">Click below to launch the Chess Arena.</p><button onclick="window.location.reload()" style="padding:10px 24px;border-radius:12px;background:#BB001E;color:#fff;font-weight:bold;font-size:14px;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(187,0,30,0.4);">Launch Arena</button></div>';
       }
     });
   </script>
 </head>
-<body class="bg-[#302e2b] text-[#dbd9d6] m-0 p-0">
+<body class="bg-[#050507] text-white m-0 p-0">
     <div id="root">
-    <div class="chess-loading-skeleton min-h-screen bg-[#302e2b] flex flex-col items-center justify-center p-6 text-center select-none font-sans">
-      <div class="w-16 h-16 rounded-2xl bg-[#1c1b18] border border-white/10 flex items-center justify-center text-3xl mb-4 shadow-xl animate-pulse">
+    <div class="chess-loading-skeleton min-h-screen bg-[#050507] flex flex-col items-center justify-center p-6 text-center select-none">
+      <div class="w-16 h-16 rounded-2xl bg-[#0e0e12] border border-[#BB001E]/60 flex items-center justify-center text-3xl mb-4 shadow-xl animate-pulse">
         ♟️
       </div>
-      <div class="text-lg font-black text-white tracking-wide">BSMS Chess Arena</div>
-      <div class="text-xs text-zinc-400 mt-1 flex items-center gap-1.5">
-        <span class="inline-block w-2 h-2 rounded-full bg-[#81b64c] animate-ping"></span>
+      <div class="text-xl font-black text-white tracking-wide">BSMS Chess Arena</div>
+      <div class="text-sm text-zinc-400 mt-1 flex items-center gap-1.5">
+        <span class="inline-block w-2 h-2 rounded-full bg-[#BB001E] animate-ping"></span>
         Loading grandmaster bots & member arena...
       </div>
     </div>
