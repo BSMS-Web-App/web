@@ -686,7 +686,7 @@ function storyArcTalk(n){
 function sideQuestTalk(n){if(storyArcTalk(n))return true;const defs={'HAZEL THE HUNTER':{id:'woodland',title:'A Hunter’s Request',ask:'The forest creatures have been restless since the First Seal dimmed. Could you calm three wild creatures along the trail? I will share my best supplies.',thanks:'You helped restore a little peace to the woods. Take these trail supplies.'},'ORCHARD KEEPER DAHLIA':{id:'orchard',title:'The Last Good Apples',ask:'Three corrupted creatures are roaming the orchard. Clear them out and I can save the last healthy apple trees. Will you help?',thanks:'The orchard can breathe again. Please take these coins.'},'FISHER MARLO':{id:'pantry',title:'A Light Below',ask:'The flooded pantry is full of restless things. Defeat three of them and I can relight the lanterns along the lower shelves.',thanks:'The lower pantry is safe enough to search again. Take this tonic.'}};const d=defs[n.name];if(!d)return false;state.sideQuests=state.sideQuests||{};const q=state.sideQuests[d.id];if(q&&q.done){setDialogue([[n.name,d.thanks],['JOURNAL','Side quest complete: '+d.title+'.']]);return true;}if(!q||!q.accepted){setDialogue([[n.name,d.ask],['JOURNAL','I’ll take care of that.']],()=>{state.sideQuests[d.id]={accepted:true,kills:0,done:false};save();updateQuest();setDialogue([['QUEST ACCEPTED',d.title+' — defeat three wild creatures in this region.']]);});return true;}setDialogue([[n.name,'You have cleared '+q.kills+' of 3 creatures. Keep to the trail and watch the tall grass.']]);return true;}
 function progressSideQuests(g){if(!g.wild||!AREA||!AREA.chapter)return[];const mq=mainQuestData(AREA.chapter);mq.kills=Math.min(3,(mq.kills||0)+1);const mainLines=mq.kills===3?[['MAIN QUEST UPDATED','The trail is clear. Return to the chapter guardian!']]:[['JOURNAL','Chapter trial: '+mq.kills+' / 3 wild creatures defeated.']];const defs=[{id:'woodland',chapter:1,title:'A Hunter’s Request',reward:70,potion:1},{id:'orchard',chapter:2,title:'The Last Good Apples',reward:95,potion:0},{id:'pantry',chapter:3,title:'A Light Below',reward:120,potion:1}],out=[];state.sideQuests=state.sideQuests||{};for(const d of defs){const q=state.sideQuests[d.id];if(!q||!q.accepted||q.done||AREA.chapter!==d.chapter)continue;q.kills=Math.min(3,(q.kills||0)+1);out.push(['JOURNAL',d.title+': '+q.kills+' / 3 wild creatures cleared.']);if(q.kills>=3){q.done=true;state.coins=(state.coins||0)+d.reward;if(d.potion)addPotions(d.potion);out.push(['QUEST COMPLETE',d.title+'! You earned '+d.reward+' coins'+(d.potion?' and a potion.':'.')]);}}if(out.length){save();updateHud();}save();updateHud();return [...mainLines,...out];}
 function playRowanConfrontation(done){cinematic={phase:'region',chapter:5,actors:{HERO:{x:innerWidth*.27,y:innerHeight*.77,face:3,step:0},ROWAN:{x:innerWidth*.73,y:innerHeight*.77,face:2,step:0}}};document.body.classList.add('lh-cinematic');const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));const walk=(name,to,duration=850)=>new Promise(resolve=>{if(!cinematic||!cinematic.actors||!cinematic.actors[name])return resolve();const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.face=Math.abs(to.x-from.x)>Math.abs(to.y-from.y)?(to.x<from.x?2:3):(to.y<from.y?1:0);const step=now=>{if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.step=p<1?1+(Math.floor(now/120)%2):0;if(p<1)requestAnimationFrame(step);else resolve();};requestAnimationFrame(step);});(async()=>{try{sfx('warn');await say([['ROWAN','Stop there. I hoped you would turn back before reaching this hall.'],['YOU','You left clues for me. You wanted me to follow you. Why?']]);await walk('ROWAN',{x:innerWidth*.58,y:innerHeight*.77});await say([['ROWAN','The Hollow King promised to bring my mother back. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);await walk('HERO',{x:innerWidth*.43,y:innerHeight*.77});await say([['ROWAN','I was ashamed. Every step made it harder to turn around. I am sorry. But he is listening. He knows you are here.'],['YOU','Your mother traded one season for you. He is your father. You never chose that.'],['ROWAN','No. But I chose everything after I found out. So hear me: when he asks, I will tell him where you are.'],['JOURNAL','The candles gutter out one by one. Something enormous stirs beneath the banquet table.']]);}catch(err){console.error('[LH] Rowan cutscene failed:',err);}cinematic=null;document.body.classList.remove('lh-cinematic');done();})();}
-function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});return;}sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{A.bossTalk=0;startBattle(g);});}
+function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});});return;}playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();A.bossTalk=0;startBattle(g);});});}
 function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
 function chapterEpilogue(c,n){
  const lines={1:['The First Seal is glowing again. The forest feels warmer, and villagers are leaving lanterns along the trail.','The road east is open now. Maplebrook has been waiting for someone to bring back the light.'],2:['The orchard trees have begun to bloom again. The fruit is sweet instead of bitter.','A path beneath the old roots has appeared.'],3:['The pantry lanterns are burning again. People have started bringing food to share.','The restored signal has reached the mountain pass.'],4:['The mountain paths are calmer now. Travelers are returning.','The market has opened its eastern gate.'],5:['The empty banquet hall is no longer silent. Music has returned to the village.','The frost lanterns have awakened.'],6:['The watchtower signal is clear. Supplies are moving safely through the snow.','The old fortress gate has opened.'],7:['The fortress banners have been raised again. Its people are returning.','A golden doorway has appeared beyond the ruins.'],8:['The voices beyond the door are no longer distant. The sanctuary is awake.','The final road is open.'],9:['The last light has reached every corner of the valley.','Hearthvale will remember what you did here.']};
@@ -944,7 +944,7 @@ function raidSmoke(x,y,k,t,seed){
 function drawSentinelRaid(W,H){
  const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
  const horizon=H*.72,k=Math.max(3,Math.round(Math.min(W,H)/170));
- const quake=(Math.sin(t*11)>0?1:0)*Math.min(1,t/2)*2.2+((t*2.1)%1<.06?5:0);
+ const quake=(Math.sin(t*11)>0?1:0)*Math.min(1,t/2)*2.2+((t*2.1)%1<.06?5:0)+(t>3.4&&t<4.2?(1-(t-3.4)/.8)*9:0);
  ctx.save();ctx.imageSmoothingEnabled=false;
  ctx.translate((Math.random()-.5)*quake,(Math.random()-.5)*quake);
  // night sky burning at the horizon
@@ -985,37 +985,90 @@ function drawSentinelRaid(W,H){
    ctx.fillStyle=fg;ctx.fillRect(x-20,top-40,bw+40,bh+60);}
   ctx.fillStyle='rgba(10,8,14,.45)';ctx.fillRect(x,top+bh-9,bw,9);
  }
- // Hearthvale itself: the village's own cottages, three of them alight
- const vs=Math.max(1.15,(W/540)*1.9),plots=[['cottage',.02],['house1',.21],['store',.40],['inn',.60],['workshop',.78]];
- plots.forEach(([bn,px],pi)=>{
-  const r=VR[bn];if(!r||!VIL.naturalWidth)return;
-  const bw=r[2]*vs,bh=r[3]*vs,bx=W*px,by=horizon+H*.015-bh,burning=pi===1||pi===3||pi===4;
-  ctx.drawImage(VIL,r[0],r[1],r[2],r[3],bx,by,bw,bh);
-  if(burning){
-   const rx=bx+bw*.5,ry=by+bh*.16;
-   const fgl=ctx.createRadialGradient(rx,ry,4,rx,ry,bw*.85);
-   fgl.addColorStop(0,'rgba(255,150,60,'+(.30+.10*Math.sin(t*8+pi))+')');fgl.addColorStop(1,'rgba(255,120,40,0)');
-   ctx.fillStyle=fgl;ctx.fillRect(bx-bw*.3,by-bh*.5,bw*1.6,bh*1.3);
-   raidSmoke(rx,ry,Math.max(1,k*.6),t,pi*2);
-   raidFlame(bx+bw*.3,ry+6,k*.28,t,pi*3+1);
-   raidFlame(bx+bw*.46,ry+8,k*.38,t,pi*5+2);
-   raidFlame(bx+bw*.63,ry+5,k*.3,t,pi*7+3);
-   ctx.globalAlpha=.35;ctx.fillStyle='#160c10';ctx.fillRect(bx+bw*.18,by+bh*.42,bw*.64,bh*.3);ctx.globalAlpha=1;
-  }
- });
- // dusty square, lit by the fires
+ // cobbled square first, so the cottages stand on it instead of being cut off by it
  const gd=ctx.createLinearGradient(0,horizon,0,H);
  gd.addColorStop(0,'#3a2320');gd.addColorStop(.35,'#2a1a1b');gd.addColorStop(1,'#140e13');
  ctx.fillStyle=gd;ctx.fillRect(0,horizon,W,H-horizon);
  for(let i=0;i<24;i++){const gx=(i*97)%W,gy=horizon+((i*53)%Math.max(1,H-horizon));ctx.globalAlpha=.05+.05*Math.sin(t*4+i);ctx.fillStyle='#ffb060';ctx.fillRect(gx,gy,W/16,3);}
  ctx.globalAlpha=1;
+ // Hearthvale's own cottages, spaced along the street; two alight, one about to give way
+ const vs=Math.max(1.05,(W/540)*1.35),order=['cottage','house1','inn','workshop'];
+ const hw=order.map(b=>VR[b]?VR[b][2]*vs:0),hgap=Math.max(7,(W-hw.reduce((a,b)=>a+b,0))/5);
+ let hx=hgap;
+ order.forEach((bn,pi)=>{
+  const r=VR[bn];if(!r||!VIL.naturalWidth){hx+=hgap;return;}
+  const bw=r[2]*vs,bh=r[3]*vs,bx=hx,by=horizon+H*.012-bh,burning=pi===1||pi===2;
+  hx+=bw+hgap;
+  ctx.globalAlpha=.3;ctx.fillStyle='#0d0910';
+  ctx.beginPath();ctx.ellipse(bx+bw*.5,by+bh-2,bw*.5,bh*.05,0,0,7);ctx.fill();ctx.globalAlpha=1;
+  const ctj=t-3.4,jolt=(pi===1&&ctj>0&&ctj<.45)?Math.sin(ctj*80)*(1-ctj/.45)*5:0;
+  ctx.drawImage(VIL,r[0],r[1],r[2],r[3],bx+jolt,by,bw,bh);
+  if(burning){
+   const rx=bx+bw*.5,ry=by+bh*.16;
+   const fgl=ctx.createRadialGradient(rx,ry,4,rx,ry,bw*.8);
+   fgl.addColorStop(0,'rgba(255,150,60,'+(.26+.09*Math.sin(t*8+pi))+')');fgl.addColorStop(1,'rgba(255,120,40,0)');
+   ctx.fillStyle=fgl;ctx.fillRect(bx-bw*.25,by-bh*.45,bw*1.5,bh*1.25);
+   raidSmoke(rx,ry,Math.max(1,k*.55),t,pi*2);
+   raidFlame(bx+bw*.32,ry+6,k*.24,t,pi*3+1);
+   raidFlame(bx+bw*.5,ry+8,k*.32,t,pi*5+2);
+   raidFlame(bx+bw*.68,ry+5,k*.26,t,pi*7+3);
+   ctx.globalAlpha=.3;ctx.fillStyle='#160c10';ctx.fillRect(bx+bw*.2,by+bh*.34,bw*.6,bh*.3);ctx.globalAlpha=1;
+  }
+  // ---- the roof gives way ----
+  const ct=t-3.4;
+  if(pi===1&&ct>0){
+   const rfx=bx+jolt+bw*.5,rfy=by+bh*.22,rw=bw*.68,rh=bh*.3;
+   // a jagged tear ripped across the roof
+   ctx.fillStyle='#150c10';ctx.beginPath();
+   ctx.moveTo(rfx-rw*.56,rfy-rh*.14);ctx.lineTo(rfx-rw*.22,rfy-rh*.24);ctx.lineTo(rfx-rw*.04,rfy-rh*.08);
+   ctx.lineTo(rfx+rw*.18,rfy-rh*.22);ctx.lineTo(rfx+rw*.5,rfy-rh*.06);ctx.lineTo(rfx+rw*.57,rfy+rh*.2);
+   ctx.lineTo(rfx+rw*.12,rfy+rh*.32);ctx.lineTo(rfx-rw*.3,rfy+rh*.26);ctx.lineTo(rfx-rw*.58,rfy+rh*.08);
+   ctx.closePath();ctx.fill();
+   // flames and smoke pouring out of the gap once it opens
+   if(ct>.3){raidFlame(rfx-rw*.16,rfy+bh*.06,k*.28,t,7);raidFlame(rfx+rw*.12,rfy+bh*.09,k*.24,t,11);
+    raidFlame(rfx+rw*.34,rfy+bh*.04,k*.18,t,4);raidSmoke(rfx,rfy,Math.max(1,k*.7),t,9);}
+   // the slab of roof drops away and tilts
+   const drop=Math.min(bh*.46,ct*ct*90);
+   ctx.save();ctx.translate(rfx,rfy+drop);ctx.rotate(Math.min(.3,ct*.42));ctx.globalAlpha=Math.max(0,1-ct*.4);
+   ctx.fillStyle='#9a4c37';ctx.fillRect(-rw*.46,-rh*.22,rw*.92,rh*.46);
+   ctx.fillStyle='#63302a';ctx.fillRect(-rw*.46,-rh*.22,rw*.92,rh*.14);
+   ctx.fillStyle='#2a1417';ctx.fillRect(-rw*.46,rh*.18,rw*.92,rh*.06);
+   ctx.restore();ctx.globalAlpha=1;
+   // beams and tiles tumbling to the street
+   for(let q=0;q<12;q++){
+    const qt=ct-q*.022;if(qt<0)continue;
+    const qx=rfx+(q-6)*rw*.09+Math.sin(qt*8+q)*6,qy=rfy-10+Math.min(bh*1.0,qt*qt*320);
+    if(qy>by+bh*.95)continue;
+    const w2=Math.max(4,rw*.11),h2=Math.max(4,rh*.2);
+    ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(qx+2,qy+2,w2,h2);
+    ctx.fillStyle=q%3?'#c29263':(q%3===1?'#8f5334':'#e3d2ac');ctx.fillRect(qx,qy,w2,h2);
+   }
+   // a burst of sparks out of the break
+   for(let q=0;q<18;q++){
+    const sp=ct*2.4-q*.045;if(sp<0||sp>1)continue;
+    const ang=-1.5+(q%9)*.34,dist=sp*rw*1.3;
+    ctx.globalAlpha=(1-sp)*.95;ctx.fillStyle=q%2?'#ffe9b0':'#ffab3a';
+    ctx.fillRect(rfx+Math.cos(ang)*dist,rfy+Math.sin(ang)*dist+sp*sp*bh*.5,4,4);
+   }
+   // dust rolling out along the street
+   if(ct<1.9){const dp=Math.min(1,ct/1.9);for(let q=0;q<6;q++){
+    ctx.globalAlpha=.22*(1-dp);ctx.fillStyle='#cbab8c';
+    ctx.beginPath();ctx.arc(bx+bw*(.16+q*.14),by+bh*(.78+dp*.18),bw*.12*(1+dp*1.8),0,7);ctx.fill();}}
+   ctx.globalAlpha=1;
+   // rubble left in the road
+   if(ct>1.0){ctx.fillStyle='#43282a';ctx.beginPath();ctx.ellipse(rfx,by+bh*.98,rw*.5,bh*.09,0,0,7);ctx.fill();
+    ctx.fillStyle='#7a4a3a';ctx.fillRect(rfx-rw*.34,by+bh*.9,rw*.2,bh*.06);
+    ctx.fillStyle='#c29263';ctx.fillRect(rfx+rw*.04,by+bh*.93,rw*.16,bh*.05);
+    ctx.fillStyle='#8f5334';ctx.fillRect(rfx+rw*.28,by+bh*.95,rw*.12,bh*.04);}
+  }
+ });
  // footfall shockwave rolling across the square
  const fs=((t*2.1)%1);if(fs<.3){ctx.globalAlpha=(1-fs/.3)*.45;ctx.strokeStyle='#e2b78d';ctx.lineWidth=3;
   ctx.beginPath();ctx.ellipse(sx+4*k,horizon+4,16*k+fs*70*k,4*k+fs*14*k,0,0,7);ctx.stroke();ctx.globalAlpha=1;}
  // villagers running with dust at their heels
  for(let i=0;i<9;i++){
   const dir=i%2?1:-1,speed=70+i*14,x=((i*W/8+(t*speed*dir)+W*4)%(W+80))-40;
-  const y=horizon+H*(.03+(i%3)*.038),vk=Math.max(2,Math.floor(H/230)),bob=Math.abs(Math.sin(t*9+i))*2*vk;
+  const y=horizon+H*(.03+(i%3)*.038),vk=Math.max(2,Math.round(H/300)),bob=Math.abs(Math.sin(t*9+i))*2*vk;
   ctx.fillStyle='rgba(255,150,70,.16)';ctx.beginPath();ctx.ellipse(x+4*vk,y+2*vk,10*vk,3*vk,0,0,7);ctx.fill();
   if(CHARS.naturalWidth){const vr=[8,12,14,19,21,24,28,29,31][i%9];ctx.drawImage(CHARS,0,vr*16,16,16,x,y-16*vk-bob,16*vk,16*vk);}
   else{ctx.fillStyle=i%2?'#c98f61':'#7fa294';ctx.fillRect(x,y-18*vk-bob,8*vk,12*vk);}
@@ -1023,7 +1076,7 @@ function drawSentinelRaid(W,H){
   ctx.globalAlpha=1;
  }
  // Rowan freezes, then bolts
- const rRun=t>2.2,rx=rRun?W*.64-Math.min(W*.5,(t-2.2)*150):W*.64,ry=horizon+H*.012,rs=Math.max(3,Math.floor(H/140));
+ const rRun=t>2.2,rx=rRun?W*.64-Math.min(W*.5,(t-2.2)*150):W*.64,ry=horizon+H*.012,rs=Math.max(2,Math.round(H/185));
  ctx.fillStyle='rgba(255,140,70,.18)';ctx.beginPath();ctx.ellipse(rx+6*rs,ry+2*rs,10*rs,3.5*rs,0,0,7);ctx.fill();
  if(CHARS.naturalWidth){const fr=rRun?Math.floor(t*12)%4:0;ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,rx,ry-15*rs,16*rs,16*rs);}
  if(rRun)for(let d=0;d<4;d++){const dp=((t*3+d*.25)%1);ctx.globalAlpha=.22*(1-dp);ctx.fillStyle='#e0bb8e';ctx.beginPath();ctx.arc(rx+dp*14*rs,ry-3*rs-dp*6*rs,(1.5+dp*4)*rs,0,7);ctx.fill();ctx.globalAlpha=1;}
@@ -1043,7 +1096,7 @@ function drawSentinelRaid(W,H){
  ctx.fillStyle='#08080d';ctx.fillRect(0,0,W,H*.09);ctx.fillRect(0,H*.91,W,H*.09);
  ctx.textAlign='center';
  ctx.font='bold '+Math.max(11,Math.min(21,W/34))+'px monospace';
- const lines=t<2.8?'THE SENTINEL HAS REACHED HEARTHVALE':t<5.5?'GET EVERYONE TO SAFETY!':t<8?'ROWAN! WAIT!':'YOU CANNOT RUN FROM THIS.';
+ const lines=t<2.8?'THE SENTINEL HAS REACHED HEARTHVALE':t<3.3?'GET EVERYONE TO SAFETY!':t<5.8?'THE ROOF GIVES WAY!':t<8.2?'ROWAN! WAIT!':'YOU CANNOT RUN FROM THIS.';
  ctx.shadowColor='#ff7a2a';ctx.shadowBlur=16;ctx.fillStyle='#fff0c2';ctx.fillText(lines,W/2,H*.152);
  ctx.shadowBlur=0;
  ctx.restore();
@@ -1053,7 +1106,59 @@ async function playSentinelRaid(done){
  await sleep(6200);if(!cinematic||cinematic.phase!=='sentinelRaid')return;
  setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{document.body.classList.remove('lh-cinematic');cinematic=null;done();});
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawBossScene(W,H){
+ const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
+ const horizon=H*.71,k=Math.max(3,Math.round(Math.min(W,H)/175));
+ const pal={1:['#0a1810','#1d3a26','#4d7a3c'],2:['#1a1208','#3a2414','#7a4a20'],3:['#0e0e18','#28203a','#5e3f5c'],4:['#0b1219','#1d2a38','#476a80'],5:['#170c11','#331e2a','#8a4438'],6:['#091221','#182c42','#3f6288'],7:['#131019','#2a2130','#63456a'],8:['#0a0a15','#20182e','#4a3a6e'],9:['#120a14','#2e1a24','#8a3a2a']}[cinematic.ch||1]||['#101018','#2a2030','#6a4a3a'];
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ const sky=ctx.createLinearGradient(0,0,0,horizon);
+ sky.addColorStop(0,pal[0]);sky.addColorStop(.55,pal[1]);sky.addColorStop(1,pal[2]);
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizon);
+ for(let i=0;i<6;i++){const p=((t*.02+i*.17)%1);ctx.globalAlpha=.16;ctx.fillStyle='#0a0a12';
+  ctx.beginPath();ctx.ellipse(((i*W/5+p*30)%(W+160))-80,H*(.12+(i%3)*.07),(70+i*22)*(W/900),H*.04,0,0,7);ctx.fill();}
+ ctx.globalAlpha=1;
+ ctx.fillStyle='rgba(0,0,0,.32)';
+ for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(W*(.2+i*.32),horizon+8,W*.3,H*(.08+i*.02),0,Math.PI,0);ctx.fill();}
+ // the treeline it came out of
+ for(let i=0;i<16;i++){const tx=i*W/14-6,tw=W/13,th=H*(.07+((i*7)%3)*.02);
+  ctx.fillStyle='#0b0f0c';ctx.beginPath();ctx.moveTo(tx,horizon+2);ctx.lineTo(tx+tw/2,horizon-th);ctx.lineTo(tx+tw,horizon+2);ctx.fill();}
+ const gd=ctx.createLinearGradient(0,horizon,0,H);
+ gd.addColorStop(0,pal[2]);gd.addColorStop(.4,'#241a1c');gd.addColorStop(1,'#100c12');
+ ctx.fillStyle=gd;ctx.fillRect(0,horizon,W,H-horizon);
+ // the road it walked in on, and grass either side
+ ctx.fillStyle='rgba(58,42,32,.85)';ctx.beginPath();ctx.moveTo(W*.43,horizon);ctx.lineTo(W*.57,horizon);ctx.lineTo(W*.8,H);ctx.lineTo(W*.18,H);ctx.fill();
+ for(let i=0;i<46;i++){const gx=(i*137)%W,gy=horizon+18+((i*89)%Math.max(20,H-horizon-18));
+  ctx.globalAlpha=.35+.25*Math.sin(i);ctx.fillStyle=i%3?'#1d3a26':'#2f5433';ctx.fillRect(gx,gy,3,5);}
+ ctx.globalAlpha=1;
+ // the guardian standing at the treeline
+ const gi=BOSS_NPC[cinematic.boss],gx=W*.5+Math.sin(t*.8)*W*.015,gy=horizon-H*.16+Math.sin(t*1.6)*5;
+ const pulse=1+Math.sin(t*2.2)*.02;
+ ctx.save();ctx.translate(gx,gy);ctx.scale(pulse,pulse);
+ const halo=ctx.createRadialGradient(0,0,6*k,0,0,34*k);
+ halo.addColorStop(0,'rgba(255,170,90,.26)');halo.addColorStop(1,'rgba(255,140,60,0)');
+ ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,34*k,0,7);ctx.fill();
+ if(BOS.naturalWidth&&gi!==undefined)ctx.drawImage(BOS,gi*64,0,64,64,-30*k,-28*k,60*k,60*k);
+ ctx.restore();
+ for(let i=0;i<50;i++){const sp=20+(i%6)*8,x0=(i*151)%W,p=((t*sp/H)+i*.041)%1;
+  ctx.globalAlpha=Math.max(0,.8-p)*.7;ctx.fillStyle=i%3?'#e8c9a0':'#ffb257';
+  ctx.fillRect(x0+Math.sin(p*6+i)*10*p,horizon-p*(horizon*.8),2,2);}
+ ctx.globalAlpha=1;
+ const vg=ctx.createRadialGradient(W/2,H*.55,H*.3,W/2,H*.55,Math.max(W,H)*.8);
+ vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(4,4,8,.66)');
+ ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#08080d';ctx.fillRect(0,0,W,H*.09);ctx.fillRect(0,H*.91,W,H*.09);
+ ctx.textAlign='center';ctx.font='bold '+Math.max(11,Math.min(21,W/34))+'px monospace';
+ ctx.shadowColor='#ff9a4a';ctx.shadowBlur=16;ctx.fillStyle='#fff0c2';
+ ctx.fillText(cinematic.title||'',W/2,H*.152);
+ ctx.shadowBlur=0;ctx.restore();
+}
+function playBossScene(g,next){
+ cinematic={phase:'bossScene',boss:g.name,ch:(AREA&&AREA.chapter)||1,title:String(g.title||g.name||'GUARDIAN').toUpperCase()+' DRAWS NEAR',t0:performance.now()};
+ document.body.classList.add('lh-cinematic');sfx('warn');
+ setTimeout(()=>{if(!cinematic||cinematic.phase!=='bossScene')return;
+  next(()=>{document.body.classList.remove('lh-cinematic');cinematic=null;});},4300);
+}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='bossScene'){drawBossScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
@@ -1881,6 +1986,9 @@ joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel
 // Tap the game world to interact; keyboard E/Space remains available.
 $('lh-dialogue').addEventListener('pointerup',e=>{if(e.target.closest('button'))return;e.preventDefault();advanceDialogue();});
 $('lh-next').addEventListener('click',advanceDialogue);
+addEventListener('pointerup',e=>{if(!dialogue||battle||titleOpen)return;const t=e.target;
+ if(t.closest&&(t.closest('#lh-dialogue')||t.closest('button')||t.closest('#lh-joystick')||t.closest('#lh-game-menu')||t.closest('.lh-story-choices')))return;
+ advanceDialogue();});
 document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{sfx('menu');$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
 $('lh-school-confirm').addEventListener('click',()=>{sfx('confirm');const selected=$('lh-school-class').querySelector('.lh-class.selected');state.heroClass=selected.dataset.class;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;state.maxHp=state.hp;state.maxMp=state.maxMp||20;state.mp=state.maxMp;state.level=state.level||1;state.xp=state.xp||0;$('lh-school-class').hidden=true;updateHud();save();if(window.__lhClassChosen){const done=window.__lhClassChosen;window.__lhClassChosen=null;done();}});
 $('lh-begin').addEventListener('click',()=>{sfx('confirm');startIntro();});
