@@ -298,9 +298,10 @@ function genCity(){const w=40,h=26,solid=new Uint8Array(w*h),ground=new Uint8Arr
  {x:9,y:20,name:'GUS',lines:['Goldleaf\u2019s bread is the best. Don\u2019t tell the village I said that.']}];
  return{id:'city',chapter:0,city:true,name:'Goldleaf City',w,h,solid,ob,ground,enc:null,dec:[],npcs,spawn:{x:1,y:13},exits:[{x:0,y:12,to:'village'},{x:0,y:13,to:'village'},{x:0,y:14,to:'village'}],bio:B,bld,mus:'village'};}
 function enterRegion(c){const A=getRegion(c);startArea(A,A.spawn.x,A.spawn.y);playRegionIntro(c);}
- function sentinelTrainingReady(){return (Number(state.level)||1)>=3&&(Number(state.armorTier)||0)>=1;}
+ function sentinelTrainingReady(){return !!state.firstWildDefeated&&(Number(state.level)||1)>=3&&(Number(state.armorTier)||0)>=1;}
 function trainingHint(){
  if(!state.beaten.north)return 'Defeat Gatekeeper Brawn first to prove yourself.';
+ if(!state.firstWildDefeated)return 'Travel to the Wildlands and defeat your first wild creature.';
  if((Number(state.level)||1)<3)return 'Train in the Wildlands until you reach level 3. Current level: '+(state.level||1)+'.';
  if((Number(state.armorTier)||0)<1)return 'Visit Old Orin in the village workshop and buy your first armor upgrade.';
  return 'You are ready. Return to the south road and challenge the Pumpkin Sentinel!';
