@@ -16,6 +16,7 @@ import exportDataHandler from './api/export-data.js';
 import profanityFilterHandler from './api/profanity-filter.js';
 import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
+import legalHandler from './api/legal.js';
 import versionHandler from './api/version.js';
 import halloweenHauntHandler from './api/halloween-haunt.js';
 import lastHarvestHandler from './api/last-harvest.js';
@@ -53,6 +54,7 @@ app.use('/api/halloween-haunt', (req, res) => halloweenHauntHandler(req, res));
 app.use('/api/last-harvest', (req, res) => lastHarvestHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
+app.use('/api/legal', (req, res) => legalHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
