@@ -1312,7 +1312,7 @@ if(a==='skill'){sfx('menu');pkMenu('skills');return;}
 if(a==='items'){sfx('menu');pkMenu('items');return;}
 if(a==='ult'){if(state.level<10||b.ultUsed)return;b.ultUsed=true;b.busy=true;await pkUlt();return;}
 b.busy=true;const e=b.e;
-if(a==='run'){if(b.g.wild&&!b.g.tower){sfx('run');await pkSay('You got away safely!');pkEnd();return;}sfx('menu');await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
+if(a==='run'){if(b.g.wild&&!b.g.tower){if(Math.random()<.6){sfx('hit');await pkSay('You tripped on the roots \u2014 it caught you!',900);await endRound();return;}sfx('run');await pkSay('You got away safely!');pkEnd();return;}sfx('menu');await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
 if(a==='item'){b.busy=false;pkMenu('items');return;}
 await heroAttack(null);}
@@ -1412,27 +1412,14 @@ function spawnRoamer(){const A=AREA;if(!A||!A.enc)return;
 function roamerTick(){if(scene!=='area'||!AREA||battle||dialogue||cinematic||transitioning||titleOpen)return;const A=AREA;if(!A.enc||A.city||A.wilds||A.trap||!A.chapter)return;const now=performance.now();
  if(now>ROAM_T.cool&&now-ROAM_T.last>2200&&ROAM.length<4){ROAM_T.last=now;spawnRoamer();}
  for(let i=ROAM.length-1;i>=0;i--){const r=ROAM[i];
-  if(now>r.wander){r.wander=now+1400+Math.random()*1600;const d=[[1,0],[-1,0],[0,1],[0,-1]][rnd(4)],nx=r.tx+d[0],ny=r.ty+d[1];
-   if(nx>0&&ny>0&&nx<A.w-1&&ny<A.h-1&&roamerGrass(A,nx,ny)&&!ROAM.some(o=>o!==r&&o.tx===nx&&o.ty===ny)){r.tx=nx;r.ty=ny;r.x=nx*32+16;r.y=ny*32+24;}}
-  if(Math.hypot(r.x-areaPlayer.x,r.y-areaPlayer.y)<26){ROAM.splice(i,1);ROAM_T.cool=now+1500;
+  if(Math.hypot(r.x-areaPlayer.x,r.y-areaPlayer.y)<40){ROAM.splice(i,1);ROAM_T.cool=now+1500;
    startBattle({id:'wild',wild:true,name:monInfo(r.mi).name,mi:r.mi,hp:r.hp,atk:r.atk,reward:r.reward,xp:r.xp,win:[]});return;}}}
 function drawPetWorld(){if(battle||dialogue||cinematic||!state.pet)return;const P=PETS[state.pet.id];if(!P)return;const W=innerWidth,H=innerHeight;let sx,sy,k=2;
  if(scene==='area'&&AREA){const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1;sx=W/2-24*zoom;sy=H*.55+16*zoom;k=Math.max(2,Math.round(2*zoom));}
  else if(scene==='outside'){sx=state.x-18-lastCam.camX;sy=state.y+4-lastCam.camY;}
  else{sx=insidePlayer.x-26;sy=insidePlayer.y+6;}
  drawMon(P.mi,sx,sy+Math.sin(performance.now()/400)*1.5,k);}
-function drawRoamers(){if(battle||dialogue||cinematic||scene!=='area'||!AREA)return;const W=innerWidth,H=innerHeight,A=AREA,zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,ax=W/2,ay=H*.55;
- for(const r of ROAM){
-  const sx=ax+(r.x-areaPlayer.x)*zoom,sy=ay+(r.y-areaPlayer.y)*zoom;
-  if(sx<-60||sy<-60||sx>W+60||sy>H+80)continue;
-  const k=Math.max(2,Math.round(2*zoom)),bob=Math.sin(performance.now()/320+r.tx)*2;
-  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(sx,sy+6,12*k,4*k,0,0,7);ctx.fill();
-  drawMon(r.mi,sx,sy+bob,k);
-  const by=sy-17*k-10;bubbleText('!',sx,by,'#ffd84a',Math.max(16,6*k));
-  const pc=Math.max(0,Math.min(1,r.hp/r.max));
-  ctx.fillStyle='#2a1a22';ctx.fillRect(sx-14*k,by+6,28*k,4);
-  ctx.fillStyle=pc>.5?'#6fd06f':pc>.25?'#e8c14a':'#e04a4a';ctx.fillRect(sx-14*k,by+6,28*k*pc,4);}}
-function drawOverworldActors(){drawPetWorld();drawRoamers();}
+function drawOverworldActors(){drawPetWorld();}
 async function petTurn(){const b=battle;if(!b||!state.pet)return 'ok';const P=PETS[state.pet.id];if(!P)return 'ok';const lv=Math.max(1,Number(state.pet.level)||1),e=b.e,G=geo();
  if(P.kind==='heal'){const h=Math.round(4+lv*2+(Number(state.level)||1)*.6);state.hp=Math.min(state.maxHp,state.hp+h);healFx(h,'#8fd8ff');await pkSay(P.name+' restores '+h+' HP!',700);return 'ok';}
  const d=Math.round(3+lv*2+(Number(state.level)||1)*1.1+rnd(3));
