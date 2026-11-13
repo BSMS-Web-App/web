@@ -689,6 +689,9 @@ function drawRowanScene(W,H){
  const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
  const horizon=H*.7,k=Math.max(3,Math.round(Math.min(W,H)/170));
  ctx.save();ctx.imageSmoothingEnabled=false;
+ const stg=cinematic.stage||'wait',st=(performance.now()-(cinematic.stageStart||cinematic.t0||performance.now()))/1000;
+ const sq=stg==='shove'?Math.max(0,7-st*9):stg==='transform'?Math.max(0,6-st*5):0;
+ if(sq>0)ctx.translate((Math.random()-.5)*sq,(Math.random()-.5)*sq);
  const sky=ctx.createLinearGradient(0,0,0,horizon);
  sky.addColorStop(0,'#0a0712');sky.addColorStop(.36,'#281020');sky.addColorStop(.66,'#6a2a21');sky.addColorStop(1,'#c85a2a');
  ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizon);
@@ -731,15 +734,53 @@ function drawRowanScene(W,H){
   const vx=((i*W/2+(t*(60+i*10)*dir)+W*3)%(W+60))-30;
   if(CHARS.naturalWidth)ctx.drawImage(CHARS,0,[8,12,21,28][i]*16,16,16,vx,vy-16*vk-Math.abs(Math.sin(t*9+i))*2*vk,16*vk,16*vk);
  }
- const face=t<2.2?-1:1,turned=Math.min(1,Math.max(0,(t-2.2)/.35));
- ctx.fillStyle='rgba(255,140,70,.2)';ctx.beginPath();ctx.ellipse(rx,ry+2,11*rs,3.5*rs,0,0,7);ctx.fill();
- const rg=ctx.createRadialGradient(rx,ry-8*rs,4,rx,ry-8*rs,15*rs);
- rg.addColorStop(0,'rgba(255,168,90,'+(.16+.06*Math.sin(t*3))+')');rg.addColorStop(1,'rgba(255,140,60,0)');
- ctx.fillStyle=rg;ctx.beginPath();ctx.arc(rx,ry-8*rs,15*rs,0,7);ctx.fill();
- if(CHARS.naturalWidth){
-  ctx.save();ctx.translate(rx,0);ctx.scale(face,1);
-  ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,-8*rs,ry-15*rs,16*rs,16*rs);
+ const face=(t<2.2&&stg==='wait')?-1:1;
+ const lunge=stg==='shove'?Math.min(1,st/.5):0,sink=stg==='shove'?lunge*22:0;
+ const rsc=1+lunge*.6;
+ const vanished=stg==='transform'||stg==='monster';
+ if(!vanished){
+  ctx.fillStyle='rgba(255,140,70,.2)';ctx.beginPath();ctx.ellipse(rx,ry+2,11*rs*(1+lunge*.4),3.5*rs,0,0,7);ctx.fill();
+  const rg=ctx.createRadialGradient(rx,ry-8*rs,4,rx,ry-8*rs,15*rs);
+  rg.addColorStop(0,'rgba(255,168,90,'+(.16+.06*Math.sin(t*3))+')');rg.addColorStop(1,'rgba(255,140,60,0)');
+  ctx.fillStyle=rg;ctx.beginPath();ctx.arc(rx,ry-8*rs,15*rs,0,7);ctx.fill();
+  if(CHARS.naturalWidth){
+   ctx.save();ctx.translate(rx,ry+sink);ctx.scale(face*rsc,rsc);
+   ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,-8*rs,-15*rs,16*rs,16*rs);
+   ctx.restore();
+  }
+ }
+ // the shove: a hard red flash and the street lurching back
+ if(stg==='shove'&&st<.45){
+  ctx.fillStyle='rgba(255,60,40,'+(.45*(1-st/.45))+')';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,220,180,'+(.7*(1-st/.45))+')';ctx.lineWidth=5;
+  ctx.beginPath();ctx.arc(rx,ry-9*rs,20*rs*(1+st*6),0,7);ctx.stroke();
+ }
+ // the change: he splits open and something with a scythe steps out
+ if(vanished){
+  const bi=BOSSES.findIndex(x=>x.name==='ROWAN');
+  const bp=stg==='monster'?1:Math.min(1,st/1.15);
+  if(stg==='transform'){
+   const ring=ctx.createRadialGradient(rx,ry-9*rs,4,rx,ry-9*rs,26*rs*(.3+bp));
+   ring.addColorStop(0,'rgba(255,60,50,'+(.55*(1-bp*.6))+')');ring.addColorStop(1,'rgba(160,0,20,0)');
+   ctx.fillStyle=ring;ctx.beginPath();ctx.arc(rx,ry-9*rs,26*rs*(.3+bp),0,7);ctx.fill();
+   for(let q=0;q<18;q++){const a=q*.349,rr=bp*20*rs;
+    ctx.globalAlpha=(1-bp*.5)*.8;ctx.fillStyle=q%2?'#ff3b30':'#ffb0a0';
+    ctx.fillRect(rx+Math.cos(a)*rr,ry-9*rs+Math.sin(a)*rr*.8,3,3);}
+   ctx.globalAlpha=1;
+  }
+  const grow=.45+bp*1.05,alpha=Math.min(1,bp*1.5);
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(rx,ry+8);
+  if(BOS.naturalWidth&&bi>=0)ctx.drawImage(BOS,bi*64,0,64,64,-16*rs*grow,-26*rs*grow,32*rs*grow,32*rs*grow);
   ctx.restore();
+  if(stg==='monster'){
+   const rg2=ctx.createRadialGradient(rx,ry-16*rs,6,rx,ry-16*rs,26*rs);
+   rg2.addColorStop(0,'rgba(255,50,40,'+(.22+.08*Math.sin(t*6))+')');rg2.addColorStop(1,'rgba(255,40,30,0)');
+   ctx.fillStyle=rg2;ctx.beginPath();ctx.arc(rx,ry-16*rs,26*rs,0,7);ctx.fill();
+   for(let q=0;q<14;q++){const p=((t*.9+q*.07)%1);
+    ctx.globalAlpha=(1-p)*.85;ctx.fillStyle=q%2?'#ff3b30':'#ffd0a0';
+    ctx.fillRect(rx+Math.sin(p*8+q)*16*rs,ry-8*rs-p*18*rs,3,3);}
+   ctx.globalAlpha=1;
+  }
  }
  // embers, heat shimmer, vignette, letterbox
  for(let i=0;i<60;i++){
@@ -756,18 +797,27 @@ function drawRowanScene(W,H){
  ctx.fillStyle='#08080d';ctx.fillRect(0,0,W,H*.09);ctx.fillRect(0,H*.91,W,H*.09);
  ctx.textAlign='center';ctx.font='bold '+Math.max(11,Math.min(21,W/34))+'px monospace';
  ctx.shadowColor='#ff7a2a';ctx.shadowBlur=16;ctx.fillStyle='#fff0c2';
- ctx.fillText('HEARTHVALE \u00b7 STILL BURNING',W/2,H*.152);
+ ctx.fillText(stg==='monster'?'ROWAN IS GONE':stg==='transform'?'SOMETHING ANSWERS':stg==='shove'?'GET BACK!':'HEARTHVALE \u00b7 STILL BURNING',W/2,H*.152);
  ctx.shadowBlur=0;ctx.restore();
 }
 function playRowanConfrontation(done){
- cinematic={phase:'rowanScene',t0:performance.now()};document.body.classList.add('lh-cinematic');
+ const stage=name=>{cinematic.stage=name;cinematic.stageStart=performance.now();};
+ cinematic={phase:'rowanScene',stage:'wait',stageStart:performance.now(),t0:performance.now()};
+ document.body.classList.add('lh-cinematic');
  const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
  (async()=>{try{
   sfx('warn');
   await say([['ROWAN','Stop there. I hoped you would turn back before reaching this hall.'],['YOU','You left clues for me. You wanted me to follow you. Why?']]);
-  await sleep(300);
   await say([['ROWAN','The Hollow King promised to bring my mother back. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);
-  await say([['ROWAN','I was ashamed. Every step made it harder to turn around. I am sorry. But he is listening. He knows you are here.'],['YOU','Your mother traded one season for you. He is your father. You never chose that.'],['ROWAN','No. But I chose everything after I found out. So hear me: when he asks, I will tell him where you are.'],['JOURNAL','The candles gutter out one by one. Something enormous stirs beneath the banquet table.']]);
+  // he shoves you back
+  stage('shove');sfx('hit');await sleep(900);
+  await say([['ROWAN','STOP. DO NOT COME ANY CLOSER.','red'],['YOU','Rowan, what are you doing?']]);
+  // and then he is not Rowan any more
+  stage('transform');sfx('warn');await sleep(1500);stage('monster');sfx('crit');
+  await say([['ROWAN','I AM DONE BEING THE ONE WHO LOSES EVERYTHING.','red'],
+   ['ROWAN','MY MOTHER TRADED HER SEASON FOR ME AND THE VILLAGE CALLED IT A BLESSING. YOUR PARENTS LEFT AND THEY CALLED IT COURAGE.','red'],
+   ['ROWAN','NOBODY EVER ASKED WHAT IT COST ME. SO I WILL TAKE WHAT I AM OWED.','red'],
+   ['JOURNAL','What stands in the street is wearing Rowan\u2019s voice. It lifts a blade of dark harvest light.']]);
  }catch(err){console.error('[LH] Rowan cutscene failed:',err);}
   cinematic=null;document.body.classList.remove('lh-cinematic');done();})();
 }
@@ -1552,6 +1602,19 @@ function pkSkillPick(i){if(!battle||battle.busy)return;const sk=knownSkills()[i]
 if(battle.sel===i){pkSkill(i);return;}
 sfx('menu');battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
 $b('pk-t').textContent=sk.n+' \u2014 '+sk.d+' (Tap again to cast)';}
+async function rowanBeat(b,n){
+ if(!battle||battle!==b)return;
+ b.busy=true;b.story=n;sfx('warn');const ui=$('pk-ui');if(ui)ui.hidden=true;
+ const one1=[['ROWAN','YOU NEVER ASKED WHY I WAS ALWAYS HUNGRY.','red'],
+  ['ROWAN','MY MOTHER GAVE HER LAST SEASON SO I COULD EAT THROUGH THE WINTER.','red'],
+  ['ROWAN','SHE FROZE IN THE DARK AND THE VILLAGE SANG ABOUT IT LIKE IT WAS NOBLE.','red'],
+  ['YOU','Rowan\u2026 I did not know.']];
+ const two2=[['ROWAN','THE HOLLOW KING WAS THE ONLY ONE WHO EVER SAID HE COULD BRING HER BACK.','red'],
+  ['ROWAN','I KNEW HE WAS LYING. I STILL SAID YES. THAT IS THE PART I CANNOT FORGIVE MYSELF FOR.','red'],
+  ['JOURNAL','The dark blade shakes in its hands. Underneath all that anger, something is still your friend.']];
+ await new Promise(res=>setDialogue(n===1?one1:two2,res));
+ b.story=0;b.busy=false;const ui2=$('pk-ui');if(ui2&&battle===b)ui2.hidden=false;
+}
 function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;$b('pk-fl').textContent=e.boss?'BOSS \u00B7 CHAPTER '+(e.bi+1)+(e.enraged?' \u00B7 ENRAGED':''):'';
 const fh=$b('pk-fh');fh.style.width=(pc*100)+'%';fh.className=pc<.25?'low':pc<.5?'mid':'';$b('pk-foe').classList.toggle('boss',!!e.boss);
 $b('pk-mn').textContent=(state.name||'HERO').toUpperCase()+'  Lv'+state.level+(state.pet&&PETS[state.pet.id]?'  · '+PETS[state.pet.id].name:'');$b('pk-mh').textContent=state.hp+' / '+state.maxHp+'  MP '+state.mp;
@@ -1577,7 +1640,13 @@ async function runIntro(){const b=battle,B=b.B;sfx(B?'warn':'alert');b.phase='al
 b.phase='swirl';b.t0=performance.now();sfx('swirl');await sleep(650);if(battle!==b)return;
 b.phase='enter';b.t0=performance.now();document.body.classList.add('lh-battling');pkUI().hidden=false;$b('pk-ui').classList.add('intro');pkMenu('main');pkPanel();if(B)sfx('boom');
 $b('pk-t').textContent=b.g.wild?'A wild '+b.g.name+' appeared!':B?b.g.name+' awakens!':b.g.name+' wants to battle!';
-await sleep(B?2600:1150);if(battle!==b)return;$b('pk-ui').classList.remove('intro');b.phase='fight';pkMenu('main');b.busy=false;}
+await sleep(B?2600:1150);if(battle!==b)return;$b('pk-ui').classList.remove('intro');b.phase='fight';pkMenu('main');
+ if(b.e&&b.e.name==='ROWAN'&&!b.sw){const e=b.e;let told=0;
+  b.sw=setInterval(()=>{if(battle!==b){clearInterval(b.sw);return;}if(b.phase!=='fight'||b.busy)return;
+   const full=e.maxHp||e.max||1;
+   if(told===0&&e.hp<=full*.66){told=1;rowanBeat(b,1);return;}
+   if(told===1&&e.hp<=full*.33){told=2;clearInterval(b.sw);rowanBeat(b,2);}
+  },220);}b.busy=false;}
 function pkEnd(lost){const gg=battle&&battle.g,fr=gg&&gg.friendly,won=!!(battle&&battle.e&&battle.e.hp<=0),cbk=gg&&gg.onEnd;battle=null;document.body.classList.remove('lh-battling');const u=pkUI();u.hidden=true;u.classList.remove('intro');if(fr){state.hp=Math.max(1,Math.ceil(state.maxHp*.6));}else if(lost){state.hp=Math.ceil(state.maxHp*.6);scene='outside';state.x=20*TILE+16;state.y=15*TILE+24;}save();updateHud();if(cbk)cbk(won);}
 
 /* --- animated actions --- */
@@ -1786,6 +1855,10 @@ ctx.globalAlpha=1;
 /* damage / heal numbers */
 for(let i=b.pops.length-1;i>=0;i--){const q=b.pops[i];q.age+=dt;if(q.age>1.1){b.pops.splice(i,1);continue;}const up=Math.min(1,q.age*3.5),sc=q.age<.12?1+q.age*5:1;ctx.globalAlpha=q.age>.8?1-(q.age-.8)/.3:1;bubbleText(q.t,q.x,q.y-up*34-q.age*22,q.c,Math.round(q.s*sc));}
 ctx.globalAlpha=1;
+if(b.story){ctx.fillStyle='rgba(18,0,6,.45)';ctx.fillRect(0,0,W,H);
+ const sg=ctx.createRadialGradient(W/2,H*.5,H*.2,W/2,H*.5,Math.max(W,H)*.72);
+ sg.addColorStop(0,'rgba(255,40,30,0)');sg.addColorStop(1,'rgba(255,30,20,'+(.28+.12*Math.sin(t*5))+')');
+ ctx.fillStyle=sg;ctx.fillRect(0,0,W,H);}
 if(b.white>0){ctx.fillStyle='rgba(255,244,214,'+(b.white*.4)+')';ctx.fillRect(0,0,W,H);b.white=Math.max(0,b.white-dt*3.2);}
 /* red vignette when low HP / boss enraged */
 if(state.hp<state.maxHp*.25||e.enraged){const v=ctx.createRadialGradient(W/2,PH/2,PH*.35,W/2,PH/2,Math.max(W,PH)*.75);v.addColorStop(0,'rgba(200,0,20,0)');v.addColorStop(1,'rgba(200,0,20,'+(.25+.1*Math.sin(t*6))+')');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);}
@@ -1904,7 +1977,8 @@ function askStoryChoice(speaker,prompt,options,onPick){
 }
 function setDialogue(lines,done){const opening=!dialogue;dialogue=lines;dialogueIndex=0;dialogueDone=done||null;if(opening)sfx('talkOpen');showLine();}
 let dialogueDone=null;
-function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
+function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];
+ {const el=$('lh-dialogue-text');if(el){if(line[2]==='red'){el.style.setProperty('color','#ff3b30','important');el.style.setProperty('text-shadow','0 0 12px rgba(255,50,35,.9)','important');el.style.setProperty('font-weight','700','important');}else{el.style.removeProperty('color');el.style.removeProperty('text-shadow');el.style.removeProperty('font-weight');}}}const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
 function portraitRow(name){if(name==='YOU')return(cinematic&&cinematic.phase!=='outside')?CIV:heroRow();if(NPC_ROW[name]!==undefined)return NPC_ROW[name];return[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];}
 function drawDialoguePortrait(name){
 const c=$('lh-portrait'),p=c.getContext('2d');p.clearRect(0,0,64,64);p.fillStyle='#26334a';p.fillRect(0,0,64,64);
