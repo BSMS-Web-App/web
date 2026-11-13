@@ -1,5 +1,5 @@
 /* BSMS Chess Arena Stylesheet */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&family=JetBrains+Mono:wght@500;700;800&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -8,10 +8,19 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #302e2b;
-  color: #dbd9d6;
+  font-family: 'Patrick Hand', cursive, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: #050507;
+  color: #ffffff;
   overflow-x: hidden;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-sans {
+  font-family: 'Patrick Hand', cursive, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
 }
 
 /* Base Chessboard Grid */
@@ -153,17 +162,30 @@ body {
 .bg-\[\#f3e5e8\] { background-color: #f3e5e8 !important; }
 .text-\[\#f3e5e8\] { color: #8b1e2f !important; }
 
-/* UI Dark Backgrounds */
-.bg-\[\#141310\] { background-color: #141310 !important; }
-.bg-\[\#161512\] { background-color: #161512 !important; }
-.bg-\[\#1c1b18\] { background-color: #1c1b18 !important; }
-.bg-\[\#1b1a17\] { background-color: #1b1a17 !important; }
-.bg-\[\#21201d\] { background-color: #21201d !important; }
-.bg-\[\#262522\] { background-color: #262522 !important; }
-.bg-\[\#302e2b\] { background-color: #302e2b !important; }
-.bg-\[\#403d39\] { background-color: #403d39 !important; }
-.bg-\[\#81b64c\] { background-color: #81b64c !important; }
-.text-\[\#81b64c\] { color: #81b64c !important; }
+/* UI Dark Backgrounds (BSMS Black / Red / White) */
+.bg-\[\#050507\] { background-color: #050507 !important; }
+.bg-\[\#0a0a0d\] { background-color: #0a0a0d !important; }
+.bg-\[\#0e0e12\] { background-color: #0e0e12 !important; }
+.bg-\[\#111115\] { background-color: #111115 !important; }
+.bg-\[\#141310\] { background-color: #111115 !important; }
+.bg-\[\#161512\] { background-color: #0a0a0d !important; }
+.bg-\[\#1c1b18\] { background-color: #121216 !important; }
+.bg-\[\#1b1a17\] { background-color: #0e0e12 !important; }
+.bg-\[\#21201d\] { background-color: #18181d !important; }
+.bg-\[\#262522\] { background-color: #17171c !important; }
+.bg-\[\#302e2b\] { background-color: #050507 !important; }
+.bg-\[\#403d39\] { background-color: #24242a !important; }
+.bg-\[\#81b64c\] { background-color: #BB001E !important; }
+.text-\[\#81b64c\] { color: #BB001E !important; }
+.bg-\[\#BB001E\] { background-color: #BB001E !important; }
+.text-\[\#BB001E\] { color: #BB001E !important; }
+.bg-\[\#d10022\] { background-color: #d10022 !important; }
+.bg-\[\#7f1d1d\] { background-color: #7f1d1d !important; }
+.text-\[\#fed7aa\] { color: #fed7aa !important; }
+.text-\[\#bef264\] { color: #bef264 !important; }
+.text-\[\#ffedd5\] { color: #ffedd5 !important; }
+.bg-\[\#ffedd5\] { background-color: #ffedd5 !important; }
+.text-\[\#fff\] { color: #ffffff !important; }
 
 /* Piece and Board Interactions */
 .select-none { user-select: none !important; }
@@ -357,3 +379,38 @@ body {
   animation: explosionFlash 0.85s ease-out forwards;
 }
 
+/* Home & Arena UI Polish */
+.text-balance {
+  text-wrap: balance;
+}
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+.chess-card-interactive {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+.chess-card-interactive:hover {
+  transform: translateY(-2px);
+}
+.hero-tactical-grid {
+  background-image:
+    radial-gradient(circle at 82% 22%, rgba(187, 0, 30, 0.22), transparent 52%),
+    radial-gradient(circle at 15% 85%, rgba(187, 0, 30, 0.12), transparent 45%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chess-card-interactive,
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin,
+  .alien-float-anim,
+  .drone-radar-ping,
+  .missile-danger-zone {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
