@@ -1396,21 +1396,24 @@ const PETS={
 let ROAM=[],ROAM_T={last:0,cool:0};
 function resetRoamers(){ROAM=[];ROAM_T={last:0,cool:0};}
 function roamerZone(){const A=AREA;if(!A||!A.enc)return 0;const tx=Math.floor(areaPlayer.x/32),ty=Math.floor(areaPlayer.y/32);if(tx<0||ty<0||tx>=A.w||ty>=A.h)return 0;return A.zone?A.zone[ty*A.w+tx]:0;}
+function roamerGrass(A,tx,ty){const i=ty*A.w+tx;if(A.solid[i])return false;if(A.ground&&A.ground[i]===3)return false;if(A.pathY&&Math.abs(ty-A.pathY[tx])<=1)return false;return true;}
 function spawnRoamer(){const A=AREA;if(!A||!A.enc)return;
- for(let tries=0;tries<24;tries++){
-  const ang=Math.random()*6.283,dist=2+Math.random()*4;
-  const tx=Math.floor(areaPlayer.x/32+Math.cos(ang)*dist),ty=Math.floor(areaPlayer.y/32+Math.sin(ang)*dist);
+ const px=Math.floor(areaPlayer.x/32),py=Math.floor(areaPlayer.y/32),cand=[];
+ for(let ty=py-7;ty<=py+7;ty++)for(let tx=px-7;tx<=px+7;tx++){
   if(tx<1||ty<1||tx>=A.w-1||ty>=A.h-1)continue;
-  if(A.solid[ty*A.w+tx]||(A.ground&&A.ground[ty*A.w+tx]===3))continue;
+  if(!roamerGrass(A,tx,ty))continue;
+  const d=Math.hypot(tx-px,ty-py);if(d<1.5||d>7)continue;
   if(ROAM.some(r=>Math.abs(r.tx-tx)<2&&Math.abs(r.ty-ty)<2))continue;
-  const g=A.zone?A.zone[ty*A.w+tx]:roamerZone(),mi=g*10+rnd(9),m=monInfo(mi),sc=1+(Number(state.level)||1)*.02;
-  ROAM.push({mi,tx,ty,x:tx*32+16,y:ty*32+24,hp:Math.round(m.hp*sc),max:Math.round(m.hp*sc),atk:m.atk,reward:m.reward,xp:12+g*14,wander:performance.now()+1200+Math.random()*1400});
-  return;}}
-function roamerTick(){if(scene!=='area'||!AREA||battle||dialogue||cinematic||transitioning||titleOpen)return;const A=AREA;if(!A.enc||A.city)return;const now=performance.now();
+  cand.push([tx,ty]);}
+ if(!cand.length)return;
+ const pick=cand[rnd(cand.length)],tx=pick[0],ty=pick[1];
+ const g=A.zone?A.zone[ty*A.w+tx]:roamerZone(),mi=g*10+rnd(9),m=monInfo(mi),sc=1+(Number(state.level)||1)*.02;
+ ROAM.push({mi,tx,ty,x:tx*32+16,y:ty*32+24,hp:Math.round(m.hp*sc),max:Math.round(m.hp*sc),atk:m.atk,reward:m.reward,xp:12+g*14,wander:performance.now()+1200+Math.random()*1400});}
+function roamerTick(){if(scene!=='area'||!AREA||battle||dialogue||cinematic||transitioning||titleOpen)return;const A=AREA;if(!A.enc||A.city||A.wilds||A.trap||!A.chapter)return;const now=performance.now();
  if(now>ROAM_T.cool&&now-ROAM_T.last>2200&&ROAM.length<4){ROAM_T.last=now;spawnRoamer();}
  for(let i=ROAM.length-1;i>=0;i--){const r=ROAM[i];
   if(now>r.wander){r.wander=now+1400+Math.random()*1600;const d=[[1,0],[-1,0],[0,1],[0,-1]][rnd(4)],nx=r.tx+d[0],ny=r.ty+d[1];
-   if(nx>0&&ny>0&&nx<A.w-1&&ny<A.h-1&&!A.solid[ny*A.w+nx]&&!(A.ground&&A.ground[ny*A.w+nx]===3)&&!ROAM.some(o=>o!==r&&o.tx===nx&&o.ty===ny)){r.tx=nx;r.ty=ny;r.x=nx*32+16;r.y=ny*32+24;}}
+   if(nx>0&&ny>0&&nx<A.w-1&&ny<A.h-1&&roamerGrass(A,nx,ny)&&!ROAM.some(o=>o!==r&&o.tx===nx&&o.ty===ny)){r.tx=nx;r.ty=ny;r.x=nx*32+16;r.y=ny*32+24;}}
   if(Math.hypot(r.x-areaPlayer.x,r.y-areaPlayer.y)<26){ROAM.splice(i,1);ROAM_T.cool=now+1500;
    startBattle({id:'wild',wild:true,name:monInfo(r.mi).name,mi:r.mi,hp:r.hp,atk:r.atk,reward:r.reward,xp:r.xp,win:[]});return;}}}
 function drawPetWorld(){if(battle||dialogue||cinematic||!state.pet)return;const P=PETS[state.pet.id];if(!P)return;const W=innerWidth,H=innerHeight;let sx,sy,k=2;
