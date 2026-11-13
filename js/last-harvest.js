@@ -21,13 +21,35 @@ const chapters=[
 {place:'Everfeast Sanctuary',title:'The Final Harvest',quest:'Face the Hollow King',enemy:'Hollow King'},
 {place:'Heart of Hearthvale',title:'The Last Harvest',quest:'Restore the Everfeast',enemy:'Heart Guardian'}
 ];
-let state={name:'',heroClass:'Guardian',x:MAP_W*TILE/2,y:MAP_H*TILE/2,stage:0,coins:100,hp:40,cutscene:0,seenIntro:false};
+function createFreshState(name='',heroClass='Guardian',gender){
+ return{
+  name,heroClass,gender,
+  x:20*TILE,y:15*TILE,
+  stage:0,coins:100,
+  level:1,xp:0,
+  hp:40,maxHp:40,mp:20,maxMp:20,
+  potions:3,battleItems:null,potionInventoryMigrated:false,
+  weaponTier:0,armorTier:0,skillTier:0,
+  skills:[0],skipped:[],inventory:[],
+  beaten:{},questStep:0,
+  cityUnlocked:false,firstWildDefeated:false,
+  sentinelTrainingStarted:false,firstArmorUpgrade:false,sentinelRaidSeen:false,
+  regionScenes:{},mainQuests:{},sideQuests:{},storyArcs:{},storyReactions:{},chests:{},
+  rowanChoice:null,rowanTrust:0,finalChoice:null,ending:null,
+  elderKey:'',elderTalks:0,rowanWoodsScene:false,tutorialDone:false,
+  cutscene:0,seenIntro:false
+ };
+}
+let resetting=false;
+let state=createFreshState('','Guardian');
+state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;
 try{const old=restoreLocalSave();if(old&&old.name)state={...state,...old};}catch(e){}
 let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalked=false,questStep=0,dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13,cinematic=null;
 questStep=state.questStep!==undefined?state.questStep:((state.cityUnlocked||(state.beaten&&(state.beaten.north||state.beaten.east||state.beaten.south)))?4:0);
-function setQ(n){questStep=n;state.questStep=n;try{save();}catch(e){}}
+function setQ(n){const prev=questStep;questStep=n;state.questStep=n;if(n>prev)sfx('quest');try{save();}catch(e){}}
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
-let saveWarning=false;function save(){state.saveVersion=2;state.savedAt=Date.now();try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name)localStorage.setItem(BACKUP,previous);}catch(e){}}localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(data&&data.name)return data;}catch(e){}}return null;}
+function resetLocalSave(skipTitle){resetting=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}try{if(skipTitle)sessionStorage.setItem('lh_skip_title','1');else sessionStorage.removeItem('lh_skip_title');}catch(e){}state=createFreshState('','Guardian');state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;}
+let saveWarning=false;function save(){if(resetting)return false;state.saveVersion=2;state.savedAt=Date.now();try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name)localStorage.setItem(BACKUP,previous);}catch(e){}}localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(data&&data.name)return data;}catch(e){}}return null;}
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
@@ -35,17 +57,19 @@ const solids=[{x:7,y:5,w:7,h:5},{x:30,y:5,w:8,h:5},{x:18,y:17,w:8,h:5},{x:3,y:25
 function gateBlocked(tx,ty){return GUARDS.some(g=>{if(state.beaten[g.id])return false;const b=g.block||g.gate;return tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h;});}
 function blocked(x,y){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);if(gateBlocked(tx,ty))return true;if(tileAt(tx,ty))return true;for(const b of solids)if(tx>=b.x&&tx<b.x+b.w&&ty>=b.y&&ty<b.y+b.h)return true;for(const t of trees)if(Math.hypot(x-(t.x*TILE+16),y-(t.y*TILE+18))<20)return true;return false;}
 const trees=[];for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++){const edge=x<4||y<3||x>MAP_W-5||y>MAP_H-5;const inBuilding=solids.some(b=>x>=b.x-1&&x<b.x+b.w+1&&y>=b.y-1&&y<b.y+b.h+1);const onRoad=(y>=11&&y<15)||(x>=15&&x<19);if(edge&&!inBuilding&&!onRoad&&rand(x,y)>.18)trees.push({x,y});}
-const npcs=[{x:8*TILE,y:28*TILE,name:'MASTER ORIN',act:'blacksmith',color:'#8a9ab4',lines:[]},{x:16*TILE,y:12*TILE,name:'ELDER MAPLE',color:'#b8c7a1',lines:['The village square feels colder today. Your parents were last seen near the fountain.','The Everfeast is older than Hearthvale. Find the truth, not just the missing keepers.']},{x:22*TILE,y:13*TILE,name:'ROWAN',color:'#bb6542',lines:['I will come with you. We have been friends forever—trust me.','The woods are full of strange creatures. Keep your guard up.']},{x:14*TILE,y:16*TILE,name:'MILLIE',color:'#d9a0a5',lines:['I run the village flower stall. The golden leaves have been falling the wrong way today.','Your mother used to buy marigolds every Harvest Eve.']},{x:25*TILE,y:16*TILE,name:'GUS',color:'#668db4',lines:['I keep the village well clean. Last night, I heard footsteps by the north road.','Someone dropped a torn piece of a royal-looking banner near the fountain.']},{x:29*TILE,y:12*TILE,name:'PIPER',color:'#d1ad53',lines:['I saw Rowan speaking to a cloaked stranger. Maybe it was nothing…','Please be careful out there, okay?']}];
+const BASE_NPCS=[{x:8*TILE,y:28*TILE,name:'MASTER ORIN',act:'blacksmith',color:'#8a9ab4',lines:[]},{x:16*TILE,y:12*TILE,name:'ELDER MAPLE',color:'#b8c7a1',lines:['The village square feels colder today. Your parents were last seen near the fountain.','The Everfeast is older than Hearthvale. Find the truth, not just the missing keepers.']},{x:22*TILE,y:13*TILE,name:'ROWAN',color:'#bb6542',lines:['I will come with you. We have been friends forever—trust me.','The woods are full of strange creatures. Keep your guard up.']},{x:14*TILE,y:16*TILE,name:'MILLIE',color:'#d9a0a5',lines:['I run the village flower stall. The golden leaves have been falling the wrong way today.','Your mother used to buy marigolds every Harvest Eve.']},{x:25*TILE,y:16*TILE,name:'GUS',color:'#668db4',lines:['I keep the village well clean. Last night, I heard footsteps by the north road.','Someone dropped a torn piece of a royal-looking banner near the fountain.']},{x:29*TILE,y:12*TILE,name:'PIPER',color:'#d1ad53',lines:['I saw Rowan speaking to a cloaked stranger. Maybe it was nothing…','Please be careful out there, okay?']}];
+let npcs=[];
 const roomNPCs=[
 [{x:.35,y:.57,name:'MARA THE NEIGHBOR',color:'#bd6f68',lines:['I heard a commotion near the fountain before sunrise.','Your parents always helped everyone in Hearthvale. We will find them.']},{x:.68,y:.48,name:'JUNIPER',color:'#658b65',lines:['I brought Elder Maple some fresh bread.','There were muddy footprints on the cottage step this morning.']}],
 [{x:.34,y:.56,name:'INNKEEPER BRAM',color:'#b47a45',lines:['Welcome, traveler. The inn is usually full this time of year.','A hooded guest checked out before dawn and left this behind.']},{x:.68,y:.48,name:'NELL THE TRAVELER',color:'#6589a9',lines:['I came from the eastern road. Something is stirring in Autumnwood.','Keep to the stone path if you leave town.']}],
 [{x:.34,y:.56,name:'SHOPKEEPER TILLY',color:'#b95c49',lines:['Welcome to Tilly’s General Store! I sell supplies for the road.','Your parents bought a healing tonic here yesterday. They seemed worried.']},{x:.68,y:.48,name:'FINN',color:'#5d8b63',lines:['I help stock the shelves. Someone took all the lantern oil last night.','I found a strange black feather by the back door.']}],
 [{x:.34,y:.56,name:'OLD CRAFTSMAN ORIN',color:'#7885a7',lines:['Your parents asked me to keep this old map safe.','The symbol on it matches the seal beneath the village fountain.']},{x:.68,y:.48,name:'WREN THE APPRENTICE',color:'#bd8c53',lines:['I am learning to repair tools. The workshop has been busy lately.','Orin knows more about the Everfeast than he lets on.']}]
 ];
-const GUARDS=[
+const BASE_GUARDS=[
 {id:'north',name:'GATEKEEPER BRAWN',tx:16,ty:5,gate:{x:15,y:5,w:4,h:1},row:6,hp:34,atk:6,reward:60,lines:['Halt! The north road is closed until the harvest bell rings.','If you want to pass, prove you can protect Hearthvale!'],win:['Hmph... you fight like a true keeper. The north road is open.']},
 {id:'east',name:'GATEKEEPER WINONA',tx:40,ty:12,gate:{x:40,y:11,w:1,h:4},row:23,hp:40,atk:7,reward:75,lines:['The east road is closed. Too many strangers lately.','Show me your strength and I will let you through!'],win:['Impressive! Go on — the east road is yours.']}
 ];
+let GUARDS=[];
 /* --- chapter bosses: one per storyline, painted from the Kenney palette (bosses.png, 64x64 each) --- */
 const BOSSES=[
 {name:'PUMPKIN SENTINEL',hp:90,atk:9,reward:120,xp:150,theme:['#1d1230','#7a3b1a','#ff9a2e'],sig:{n:'HARVEST SMASH',k:'heavy',t:'raises its giant scythe...'},lines:['*The ground shakes. The old Pumpkin Sentinel tears free from the soil and bars the south road.*','Its carved grin glows brighter with every step.'],win:['The Sentinel crumbles into harvest dust. The south road is clear.']},
@@ -62,15 +86,34 @@ const BOSSES=[
 const BOSS_NPC={};BOSSES.forEach((b,i)=>{if(b.name!=='ROWAN')BOSS_NPC[b.name]=i;});
 
 
-state.beaten=state.beaten||{};
-if(state.beaten.north&&!state.beaten.south)GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win});
-GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
-function ensureSouthBossGate(){if(!state.beaten.north||state.beaten.south||GUARDS.some(g=>g.id==='south'))return;const g={id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win};GUARDS.push(g);npcs.push({x:g.tx*TILE+16,y:g.ty*TILE+24,name:g.name,color:'#000',lines:g.lines,trainer:g});}
 const POS={'ELDER MAPLE':[12,12],'ROWAN':[21,12],'MILLIE':[16,20],'GUS':[17,26],'PIPER':[30,13]};
-npcs.push({x:25*TILE+16,y:15*TILE+24,name:'TELEPORTER STATION',act:'teleporter',lines:[]});npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
-npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
-function spawnLair(){if(!state.beaten.south)return;const i=Math.min(state.stage||0,BOSSES.length-1);if(i<1||state.beaten['boss'+i]||GUARDS.some(g=>g.id==='boss'+i))return;const B=BOSSES[i],g={id:'boss'+i,name:B.name,tx:16,ty:33,gate:{x:15,y:33,w:4,h:1},bi:i,lines:B.lines,win:B.win};GUARDS.push(g); }
-if(state.beaten.south&&!(state.stage>0))state.stage=1;spawnLair();
+function rebuildVillageEntities(){
+ state.beaten=state.beaten||{};
+ GUARDS=BASE_GUARDS.map(g=>({...g,gate:{...g.gate}}));
+ if(state.beaten.north&&!state.beaten.south)GUARDS.push({id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win});
+ npcs=BASE_NPCS.map(n=>({...n,lines:[...n.lines]}));
+ GUARDS.forEach(g=>{if(!state.beaten[g.id])npcs.push({x:g.tx*TILE,y:g.ty*TILE,name:g.name,color:'#000',lines:g.lines,trainer:g});});
+ npcs.push({x:25*TILE+16,y:15*TILE+24,name:'TELEPORTER STATION',act:'teleporter',lines:[]});
+ npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
+ npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});
+}
+function ensureSouthBossGate(){if(!state.beaten.north||state.beaten.south||GUARDS.some(g=>g.id==='south'))return;const g={id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win};GUARDS.push(g);npcs.push({x:g.tx*TILE+16,y:g.ty*TILE+24,name:g.name,color:'#000',lines:g.lines,trainer:g});}
+function syncStageFromBeaten(){
+ state.beaten=state.beaten||{};
+ if(!state.beaten.south)return;
+ let next=1;
+ while(next<BOSSES.length&&state.beaten['boss'+next])next++;
+ if((Number(state.stage)||0)<next)state.stage=next;
+}
+function currentTargetChapter(){
+ if(!state.beaten||!state.beaten.south)return 0;
+ for(let c=1;c<BOSSES.length;c++)if(!state.beaten['boss'+c])return c;
+ return BOSSES.length;
+}
+function spawnLair(){syncStageFromBeaten();}
+rebuildVillageEntities();
+state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
+spawnLair();
 /* ================= v10 SYSTEMS: art loading, audio, title, skills, regions, city, tower, leaderboard ================= */
 function loadImg(list){const im=new Image();let i=0;im.onerror=()=>{if(++i<list.length)im.src=list[i];};im.src=list[0];return im;}
 const VIL=loadImg(['/img/last-harvest/village.png?v=11']);
@@ -79,24 +122,301 @@ function drawFountainSprite(){if(!VIL.naturalWidth)return;const r=VR['fountain'+
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);}
 function ov(html,cls){const el=document.createElement('div');el.className='lh-ov '+(cls||'');el.innerHTML='<div class="pn">'+html+'</div>';document.body.appendChild(el);el.close=()=>el.remove();return el;}
 function whenIdle(fn){const iv=setInterval(()=>{if(!dialogue&&!battle&&!cinematic&&!transitioning&&!titleOpen&&$('lh-create').hidden){clearInterval(iv);fn();}},300);}
-/* ---------- sound: effects, talking blip (your recording), music ---------- */
+/* ---------- sound: CC0-1.0 original chiptune music (30 tracks) + WebAudio SFX ---------- */
 var muted=false;try{muted=localStorage.getItem('lh_mute')==='1';}catch(e){}
-function setMuted(v){muted=v;try{localStorage.setItem('lh_mute',v?'1':'0');}catch(e){}if(v)stopMusic();}
+function setMuted(v){muted=v;try{localStorage.setItem('lh_mute',v?'1':'0');}catch(e){}if(AUDIO_BUS.master&&AC)try{AUDIO_BUS.master.gain.setTargetAtTime(v?0:1,AC.currentTime,.015);}catch(e){}if(v)stopMusic();else musicTick(true);}
 const TALK={buf:null,tried:0};
 function talkBlip(){if(muted)return;const a=audio();if(!a)return;if(!TALK.buf&&!TALK.tried){TALK.tried=1;(async()=>{for(const u of['/audio/last-harvest/talk.mp3?v=11','/img/last-harvest/talk.mp3?v=11']){try{const r=await fetch(u);if(!r.ok)continue;TALK.buf=await a.decodeAudioData(await r.arrayBuffer());return;}catch(e){}}})();}
-if(TALK.buf){const s=a.createBufferSource(),g=a.createGain();s.buffer=TALK.buf;s.playbackRate.value=.85+Math.random()*.55;g.gain.value=.55;s.connect(g);g.connect(a.destination);s.start();}else tone(260+rnd(180),.045,'square',.025);}
-function initSfx(){Object.assign(SFX,{door(){tone(180,.08,'square',.05,-60);tone(120,.12,'triangle',.05,-40,.06);},menu(){tone(660,.05,'square',.04);},select(){tone(880,.06,'square',.05);tone(1320,.08,'square',.05,0,.06);},coin(){tone(988,.06,'square',.05);tone(1319,.12,'square',.05,0,.07);},levelup(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.14,'square',.05,0,i*.08));},portal(){tone(200,.6,'sine',.06,800);tone(400,.5,'triangle',.04,600,.1);},unlock(){[392,523,659,784].forEach((f,i)=>tone(f,.18,'triangle',.06,0,i*.12));}});}
+if(TALK.buf){const s=a.createBufferSource(),g=a.createGain();s.buffer=TALK.buf;s.playbackRate.value=.85+Math.random()*.55;g.gain.value=.55;s.connect(g);g.connect(AUDIO_BUS.sfx||a.destination);s.start();}else tone(260+rnd(180),.045,'square',.025);}
+function initSfx(){Object.assign(SFX,{
+ door(){tone(210,.07,'square',.045,-75);tone(140,.11,'triangle',.055,-45,.05);sfxNoise(.06,700,.025,.01);},
+ menu(){tone(680,.045,'square',.035,60);},
+ select(){tone(880,.055,'square',.045);tone(1319,.085,'square',.045,0,.055);},
+ confirm(){tone(659,.06,'triangle',.05);tone(880,.06,'triangle',.05,0,.055);tone(1319,.12,'square',.045,0,.11);},
+ coin(){tone(988,.06,'square',.045);tone(1319,.14,'square',.045,0,.065);tone(1976,.1,'triangle',.025,0,.12);},
+ buy(){tone(988,.05,'square',.04);tone(1319,.06,'square',.04,0,.05);tone(1568,.12,'triangle',.045,0,.1);},
+ chest(){[523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,i===5?.24:.08,'square',.045,0,i*.065));},
+ levelup(){[523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,i===5?.28:.12,'square',.05,0,i*.075));},
+ portal(){tone(220,.55,'sine',.055,880);tone(440,.5,'triangle',.04,760,.08);tone(660,.4,'sine',.03,500,.16);},
+ teleporter(){[587,740,880,1175].forEach((f,i)=>tone(f,.16,'sine',.04,80,i*.055));},
+ unlock(){[392,523,659,784,1047].forEach((f,i)=>tone(f,.17,'triangle',.055,0,i*.1));},
+ quest(){[587,740,880,1175].forEach((f,i)=>tone(f,i===3?.22:.1,'triangle',.05,0,i*.075));},
+ forge(){sfxNoise(.09,2400,.06,0);tone(1180,.18,'triangle',.06,-380,0);tone(1760,.22,'sine',.035,-240,.01);tone(190,.12,'square',.05,-90,0);sfxNoise(.14,4200,.025,.12);tone(1047,.16,'triangle',.04,0,.22);},
+ inn(){[523,659,784,1047,784,1047].forEach((f,i)=>tone(f,i===5?.34:.14,'sine',.05,0,i*.11));},
+ page(){sfxNoise(.045,3200,.035,0);tone(460,.04,'triangle',.025,140);},
+ talkOpen(){tone(520,.04,'triangle',.025,180);},
+ flash(){sfxNoise(.16,1800,.065,0);tone(320,.14,'sawtooth',.06,640,0);tone(880,.22,'square',.04,-400,.06);},
+ step(){sfxNoise(.025,520,.014,0);tone(115,.03,'triangle',.016,-35,0);},
+ grass(){sfxNoise(.055,2600,.024,0);tone(280,.04,'triangle',.01,-90,0);}
+});}
+const n2f=n=>440*Math.pow(2,(n-69)/12);
 const MUS={
-title:{bpm:84,l:[72,0,0,0,79,0,0,0,76,0,74,72,74,0,0,0,71,0,0,0,79,0,0,0,77,0,76,74,72,0,0,0],b:[48,0,43,0,45,0,41,0]},
-village:{bpm:96,l:[76,0,79,0,81,79,76,0,74,0,77,0,79,77,74,0,72,0,76,0,79,76,72,0,71,0,74,0,77,74,71,0,76,0,79,0,81,79,76,0,79,0,83,0,81,79,76,0,77,0,76,0,74,0,72,0,71,72,74,0,67,0,0,0],b:[48,53,48,53,48,43,41,43,48,53,48,55,53,52,48,43]},
-wander:{bpm:78,l:[69,0,72,0,74,0,72,0,69,0,67,0,64,0,0,0,67,0,69,0,72,0,74,0,76,0,74,0,72,0,0,0],b:[45,45,43,43,41,41,43,40]},
-battle:{bpm:168,l:[69,0,72,69,76,0,72,69,67,0,71,67,74,0,71,67,65,0,69,65,72,0,69,65,64,67,71,67,76,74,71,0],b:[45,45,43,43,41,41,40,43]},
-boss:{bpm:180,l:[62,0,65,62,69,0,65,62,60,0,64,60,67,0,64,60,58,0,62,58,65,0,62,58,57,60,64,60,69,67,64,0],b:[38,38,36,36,34,34,33,36]},tension:{bpm:138,l:[62,0,65,0,66,65,62,0,58,0,62,0,65,0,69,0,62,0,65,66,69,0,72,69,70,0,69,66,65,0,62,0],b:[38,0,38,0,41,0,36,0,34,0,34,0,37,0,33,0]},
-story:{bpm:70,l:[64,0,0,67,0,0,71,0,69,0,0,67,0,0,64,0,62,0,0,65,0,0,69,0,67,0,0,64,0,0,0,0],b:[40,0,0,0,38,0,0,0]}};
+ /* All tracks below are original CC0-1.0 public-domain compositions created for The Last Harvest */
+ title:{title:'Crown of Falling Leaves',bpm:88,wave:'square',harmWave:'triangle',echo:.12,
+  l:[72,0,76,0,79,0,84,0,83,0,79,0,76,0,74,0,72,0,74,0,76,0,79,0,77,0,76,0,74,0,0,0,72,0,76,0,79,0,84,0,86,0,84,0,83,0,79,0,81,0,79,0,76,0,74,0,72,0,0,0,72,0,0,0],
+  h:[64,0,67,0,72,0,76,0,74,0,71,0,72,0,67,0,64,0,67,0,72,0,74,0,72,0,71,0,67,0,0,0,64,0,67,0,72,0,76,0,77,0,76,0,74,0,71,0,72,0,71,0,69,0,67,0,64,0,0,0,64,0,0,0],
+  a:[48,55,60,64,43,50,55,59,45,52,57,60,41,48,53,57],
+  b:[48,0,48,0,43,0,43,0,45,0,45,0,41,0,43,0,48,0,48,0,43,0,43,0,41,0,43,0,48,0,48,0],
+  d:'k..hk.h.s..hk.h.'},
+ dream:{title:'Festival Arena Fanfare',bpm:146,wave:'square',harmWave:'sawtooth',echo:.06,
+  l:[72,72,76,0,79,0,84,0,83,79,81,83,84,0,79,0,77,0,76,74,72,0,76,0,79,79,83,0,86,0,84,0,76,76,79,0,84,0,88,0,86,84,83,81,79,0,74,0,77,0,76,74,72,0,74,0,72,0,0,0,79,0,0,0],
+  h:[64,64,67,0,72,0,76,0,74,71,72,74,76,0,72,0,69,0,67,65,64,0,67,0,71,71,74,0,79,0,76,0,67,67,72,0,76,0,79,0,77,76,74,72,71,0,67,0,69,0,67,65,64,0,67,0,64,0,0,0,71,0,0,0],
+  b:[48,48,55,48,43,43,50,43,45,45,52,45,41,41,43,43,48,48,55,48,43,43,50,43,41,41,43,43,48,48,48,0],
+  d:'k.h.s.h.k.k.s.ho'},
+ wake:{title:'Morning in Hearthvale',bpm:76,wave:'triangle',harmWave:'sine',echo:.14,
+  l:[74,0,78,0,81,0,0,0,79,0,78,0,74,0,0,0,71,0,74,0,76,0,78,0,74,0,0,0,0,0,0,0,78,0,81,0,83,0,81,0,79,0,78,0,76,0,0,0,74,0,71,0,74,0,76,0,74,0,0,0,0,0,0,0],
+  h:[66,0,69,0,74,0,0,0,71,0,69,0,66,0,0,0,67,0,69,0,71,0,74,0,69,0,0,0,0,0,0,0,69,0,74,0,76,0,74,0,71,0,69,0,67,0,0,0,66,0,67,0,69,0,67,0,66,0,0,0,0,0,0,0],
+  a:[50,57,62,66,47,54,59,62,43,50,55,59,45,52,57,61],
+  b:[50,0,0,0,47,0,0,0,43,0,0,0,45,0,0,0],
+  d:'....h.......h...'},
+ school:{title:'Hearthvale Academy',bpm:112,wave:'triangle',harmWave:'square',echo:.05,
+  l:[72,0,74,76,79,0,76,0,77,0,76,74,72,0,67,0,69,0,72,74,76,0,74,0,72,0,71,69,67,0,0,0,76,0,77,79,81,0,79,0,77,0,76,74,72,0,74,0,76,0,74,72,74,0,71,0,72,0,0,0,0,0,0,0],
+  h:[64,0,65,67,72,0,67,0,69,0,67,65,64,0,60,0,60,0,64,65,67,0,65,0,64,0,62,60,59,0,0,0,67,0,69,71,72,0,71,0,69,0,67,65,64,0,65,0,67,0,65,64,62,0,59,0,64,0,0,0,0,0,0,0],
+  b:[48,0,55,0,48,0,55,0,41,0,48,0,48,0,43,0,45,0,52,0,48,0,55,0,41,0,43,0,48,0,48,0],
+  d:'k.h.s.h.k.h.s.h.'},
+ home:{title:'The Empty Table',bpm:68,wave:'triangle',harmWave:'sine',echo:.2,
+  l:[69,0,0,0,72,0,0,0,71,0,69,0,64,0,0,0,65,0,0,0,69,0,0,0,67,0,65,0,64,0,0,0,72,0,0,0,76,0,0,0,74,0,72,0,71,0,0,0,69,0,67,0,65,0,64,0,69,0,0,0,0,0,0,0],
+  h:[60,0,0,0,64,0,0,0,62,0,60,0,59,0,0,0,60,0,0,0,65,0,0,0,64,0,62,0,59,0,0,0],
+  a:[45,52,57,60,40,47,52,56,41,48,53,57,40,47,52,55],
+  b:[45,0,0,0,40,0,0,0,41,0,0,0,40,0,0,0],
+  d:'................'},
+ lore:{title:'Legend of the Everfeast',bpm:72,wave:'triangle',harmWave:'sine',echo:.22,
+  l:[64,0,0,67,71,0,0,0,72,0,71,69,67,0,0,0,65,0,0,69,72,0,0,0,71,0,69,67,64,0,0,0,76,0,0,74,72,0,0,0,71,0,72,74,76,0,0,0,74,0,72,71,69,0,67,0,64,0,0,0,0,0,0,0],
+  h:[59,0,0,64,67,0,0,0,69,0,67,64,62,0,0,0,60,0,0,65,69,0,0,0,67,0,64,62,59,0,0,0,71,0,0,69,67,0,0,0,67,0,69,71,72,0,0,0,69,0,67,66,64,0,62,0,59,0,0,0,0,0,0,0],
+  a:[40,47,52,55,45,52,57,60,41,48,53,57,43,50,55,59],
+  b:[40,0,0,0,45,0,0,0,41,0,0,0,43,0,0,0],
+  d:'t...............'},
+ village:{title:'Hearthvale Square',bpm:98,wave:'triangle',harmWave:'square',echo:.08,
+  l:[76,0,79,0,81,79,76,0,74,0,77,0,79,77,74,0,72,0,76,0,79,76,72,0,71,0,74,0,77,74,71,0,76,0,79,0,81,79,76,0,79,0,83,0,81,79,76,0,77,0,76,0,74,0,72,0,71,72,74,0,72,0,0,0],
+  h:[67,0,72,0,72,72,67,0,65,0,69,0,71,69,65,0,64,0,67,0,72,67,64,0,62,0,67,0,71,67,62,0,67,0,72,0,72,72,67,0,71,0,74,0,72,71,67,0,69,0,67,0,65,0,64,0,62,64,65,0,64,0,0,0],
+  a:[48,55,60,64,41,48,53,57,48,55,60,64,43,50,55,59],
+  b:[48,0,55,0,41,0,48,0,48,0,55,0,43,0,50,0,48,0,55,0,43,0,50,0,41,0,43,0,48,0,48,0],
+  d:'k...s.h.k...s.h.'},
+ inside:{title:'Hearth & Lantern',bpm:84,wave:'triangle',harmWave:'sine',echo:.12,
+  l:[72,0,76,0,79,0,76,0,74,0,77,0,76,0,72,0,69,0,72,0,76,0,74,0,72,0,71,0,67,0,0,0,72,0,76,0,79,0,84,0,81,0,79,0,76,0,72,0,74,0,72,0,71,0,69,0,67,0,72,0,0,0,0,0],
+  h:[64,0,67,0,72,0,67,0,65,0,69,0,67,0,64,0,60,0,64,0,67,0,65,0,64,0,62,0,59,0,0,0],
+  a:[48,55,60,64,41,48,53,57,45,52,57,60,43,50,55,59],
+  b:[48,0,0,0,41,0,0,0,45,0,0,0,43,0,0,0],
+  d:'....h.......h...'},
+ forge:{title:"Orin's Anvil",bpm:106,wave:'square',harmWave:'triangle',echo:.05,
+  l:[69,0,72,0,76,76,72,0,74,0,72,71,69,0,64,0,69,0,72,0,76,0,79,0,76,74,72,71,69,0,0,0,72,0,74,0,76,0,79,0,77,0,76,74,72,0,69,0,71,0,72,71,69,0,67,0,69,0,0,0,0,0,0,0],
+  h:[60,0,64,0,69,69,64,0,65,0,64,62,60,0,59,0,60,0,64,0,69,0,72,0,69,67,64,62,60,0,0,0],
+  b:[45,0,45,45,52,0,45,0,41,0,43,0,45,0,40,0],
+  d:'k.h.s.h.k.h.t.hs'},
+ wilds:{title:"Ranger's Frontier",bpm:116,wave:'square',harmWave:'triangle',echo:.06,
+  l:[69,0,72,0,74,0,76,0,79,76,74,72,74,0,0,0,69,0,72,0,74,0,79,0,76,74,72,71,69,0,0,0,76,0,79,0,81,0,79,76,74,0,76,74,72,0,69,0,71,0,72,74,76,0,74,0,69,0,0,0,0,0,0,0],
+  h:[60,0,64,0,67,0,69,0,72,69,67,64,67,0,0,0,60,0,64,0,67,0,72,0,69,67,64,62,60,0,0,0],
+  a:[45,52,57,60,43,50,55,59,41,48,53,57,40,47,52,55],
+  b:[45,0,52,0,43,0,50,0,41,0,48,0,40,0,47,0,45,0,52,0,41,0,48,0,43,0,40,0,45,0,45,0],
+  d:'k.h.s.h.k.k.s.h.'},
+ wildsDeep:{title:'Hollows & Frost',bpm:108,wave:'sawtooth',harmWave:'triangle',echo:.14,
+  l:[64,0,67,0,71,0,70,0,69,0,67,0,64,0,0,0,64,0,67,0,72,0,71,0,69,0,66,0,67,0,0,0,71,0,74,0,76,0,74,0,72,0,71,0,69,0,67,0,66,0,67,69,71,0,69,0,64,0,0,0,0,0,0,0],
+  h:[59,0,62,0,64,0,63,0,62,0,60,0,59,0,0,0],
+  a:[40,47,52,55,41,48,53,57,43,50,55,59,42,49,54,58],
+  b:[40,0,40,47,41,0,41,48,43,0,43,50,42,0,47,0],
+  d:'k.h.s.h.k.h.sths'},
+ city:{title:'Goldleaf Promenade',bpm:120,wave:'square',harmWave:'triangle',echo:.07,
+  l:[74,0,78,0,81,0,86,0,85,83,81,78,79,0,76,0,74,0,76,78,81,0,78,0,76,74,73,71,69,0,0,0,74,0,78,0,81,0,86,0,88,0,86,85,83,0,79,0,81,0,79,78,76,0,73,0,74,0,0,0,74,0,0,0],
+  h:[66,0,69,0,74,0,78,0,76,74,73,69,71,0,67,0,66,0,67,69,74,0,69,0,67,66,64,62,61,0,0,0],
+  a:[50,57,62,66,45,52,57,61,47,54,59,62,43,50,55,59],
+  b:[50,0,57,0,45,0,52,0,47,0,54,0,43,0,45,0,50,0,57,0,43,0,50,0,45,0,45,0,50,0,50,0],
+  d:'k.h.s.h.k.h.s.ho'},
+ tower:{title:'Ascent of Goldleaf',bpm:124,wave:'square',harmWave:'triangle',echo:.16,
+  l:[69,0,72,76,81,0,79,0,76,0,74,72,71,0,76,0,69,0,72,76,81,0,83,0,84,0,83,81,79,0,0,0,77,0,76,74,72,0,76,0,74,0,72,71,69,0,64,0,65,0,69,72,76,0,74,0,69,0,0,0,0,0,0,0],
+  h:[60,0,64,69,72,0,71,0,69,0,67,64,62,0,67,0,60,0,64,69,72,0,74,0,76,0,74,72,71,0,0,0],
+  a:[45,52,57,60,64,60,57,52,41,48,53,57,43,50,55,59],
+  b:[45,0,45,52,43,0,43,50,41,0,41,48,40,0,43,0],
+  d:'k.h.s.h.k.k.s.h.'},
+ region1:{title:'Autumnwood Leaves',bpm:94,wave:'triangle',harmWave:'sine',echo:.14,
+  l:[74,0,77,0,81,0,79,77,76,0,74,0,72,0,0,0,74,0,77,0,81,0,84,0,81,79,77,76,74,0,0,0,79,0,81,0,82,0,81,79,77,0,76,74,72,0,69,0,70,0,72,74,76,0,74,0,74,0,0,0,0,0,0,0],
+  h:[65,0,69,0,74,0,72,69,67,0,65,0,64,0,0,0],
+  a:[50,57,62,65,48,55,60,64,46,53,58,62,45,52,57,61],
+  b:[50,0,0,57,48,0,0,55,46,0,0,53,45,0,45,0],
+  d:'k...h...s...h.h.'},
+ region2:{title:'Golden Orchard Waltz',bpm:104,wave:'triangle',harmWave:'sine',echo:.12,
+  l:[76,0,79,0,81,0,79,0,76,0,74,0,72,0,74,0,76,0,74,0,0,0,0,0,76,0,79,0,81,0,84,0,81,0,79,0,77,0,76,0,74,0,72,0,0,0,0,0],
+  h:[67,0,72,0,72,0,71,0,67,0,65,0,64,0,65,0,67,0,67,0,0,0,0,0,67,0,72,0,72,0,76,0,72,0,71,0,69,0,67,0,65,0,64,0,0,0,0,0],
+  a:[48,55,60,43,50,55,45,52,57,41,48,53],
+  b:[48,0,0,43,0,0,45,0,0,41,0,0,48,0,0,43,0,0,41,0,0,48,0,0],
+  d:'k...h.h.k...s.h.'},
+ region3:{title:'Flooded Larder',bpm:82,wave:'sine',harmWave:'triangle',echo:.22,
+  l:[64,0,0,67,71,0,72,0,71,0,67,0,64,0,0,0,67,0,0,71,74,0,76,0,74,0,71,0,67,0,0,0,72,0,71,0,69,0,67,0,66,0,67,69,71,0,0,0,67,0,66,0,64,0,62,0,64,0,0,0,0,0,0,0],
+  h:[59,0,0,62,64,0,67,0,64,0,62,0,59,0,0,0],
+  a:[40,47,52,59,43,50,55,62,45,52,57,64,42,49,54,59],
+  b:[40,0,47,0,43,0,50,0,45,0,52,0,47,0,40,0],
+  d:'....h..h....h...'},
+ region4:{title:'Shadowmarket Groove',bpm:112,wave:'square',harmWave:'triangle',echo:.09,
+  l:[64,0,67,68,69,0,67,0,64,0,62,64,67,0,0,0,69,0,71,72,74,0,72,0,71,0,69,67,64,0,0,0,76,0,75,74,72,0,71,0,69,0,68,69,71,0,0,0,72,0,71,69,67,0,66,0,64,0,0,0,0,0,0,0],
+  h:[59,0,62,63,64,0,62,0,59,0,57,59,62,0,0,0],
+  b:[40,0,40,47,45,0,45,52,43,0,43,50,47,0,46,45],
+  d:'k.h.s.hk..h.s.hs'},
+ region5:{title:'Empty Banquet',bpm:92,wave:'sawtooth',harmWave:'triangle',echo:.18,
+  l:[69,0,72,0,76,0,75,0,76,0,72,0,69,0,0,0,77,0,76,0,74,0,72,0,71,0,72,74,76,0,0,0,81,0,79,0,77,0,76,0,74,0,72,0,71,0,68,0,69,0,71,0,72,0,71,0,69,0,0,0,0,0,0,0],
+  h:[60,0,64,0,69,0,68,0,69,0,64,0,60,0,0,0],
+  a:[45,52,57,60,41,48,53,57,43,50,55,59,40,47,52,56],
+  b:[45,0,52,0,41,0,48,0,43,0,50,0,40,0,47,0],
+  d:'k..h..s.k..h..t.'},
+ region6:{title:'Frostfall Peaks',bpm:96,wave:'sine',harmWave:'triangle',echo:.22,
+  l:[76,0,0,79,83,0,84,0,83,0,79,0,76,0,0,0,78,0,0,81,84,0,86,0,84,0,81,0,78,0,0,0,83,0,81,0,79,0,78,0,76,0,74,0,71,0,0,0,74,0,76,0,78,0,76,0,76,0,0,0,0,0,0,0],
+  h:[67,0,0,71,76,0,79,0,76,0,71,0,67,0,0,0],
+  a:[52,59,64,67,50,57,62,66,48,55,60,64,47,54,59,63],
+  b:[40,0,47,0,42,0,49,0,43,0,50,0,47,0,40,0],
+  d:'....h..h....o...'},
+ region7:{title:'Iron Oath',bpm:122,wave:'sawtooth',harmWave:'square',echo:.08,
+  l:[62,62,65,0,69,0,67,65,64,0,62,0,61,0,64,0,62,62,65,0,69,0,74,0,73,0,70,0,69,0,0,0,74,0,72,0,70,0,69,0,67,0,65,0,64,0,61,0,62,0,65,0,69,0,64,0,62,0,0,0,0,0,0,0],
+  h:[53,53,57,0,62,0,60,57,56,0,53,0,52,0,56,0],
+  b:[38,38,45,38,40,40,47,40,41,41,48,41,45,45,38,38],
+  d:'k.k.s.h.k.k.sths'},
+ region8:{title:'Sanctuary of First Light',bpm:86,wave:'triangle',harmWave:'sine',echo:.2,
+  l:[72,0,76,0,79,0,84,0,83,0,81,0,79,0,0,0,77,0,79,0,81,0,84,0,83,0,79,0,76,0,0,0,74,0,76,0,79,0,81,0,83,0,84,0,86,0,0,0,84,0,83,0,81,0,79,0,76,0,0,0,72,0,0,0],
+  h:[64,0,67,0,72,0,76,0,74,0,72,0,71,0,0,0],
+  a:[48,55,60,64,45,52,57,60,41,48,53,57,43,50,55,59],
+  b:[48,0,0,55,45,0,0,52,41,0,0,48,43,0,48,0],
+  d:'k.......t...h...'},
+ region9:{title:'Heart of Hearthvale',bpm:132,wave:'square',harmWave:'triangle',echo:.12,
+  l:[74,0,77,0,81,0,86,0,84,82,81,79,81,0,77,0,74,0,77,0,82,0,86,0,84,0,81,0,79,0,0,0,86,0,84,82,81,0,77,0,79,0,77,76,74,0,69,0,70,0,74,77,81,0,79,0,74,0,0,0,0,0,0,0],
+  h:[65,0,69,0,74,0,77,0,76,74,72,70,72,0,69,0],
+  a:[50,57,62,65,46,53,58,62,48,55,60,64,45,52,57,61],
+  b:[50,0,50,57,46,0,46,53,48,0,48,55,45,0,50,0],
+  d:'k.h.s.h.k.k.s.ho'},
+ friendlyBattle:{title:'Friendly Spar',bpm:154,wave:'square',harmWave:'triangle',echo:.03,
+  l:[72,0,76,74,72,0,79,0,77,76,74,72,74,0,67,0,72,0,76,74,72,0,84,0,83,81,79,77,76,0,0,0,77,0,76,74,72,0,76,0,74,0,72,71,69,0,67,0,72,74,76,79,81,0,79,0,72,0,0,0,0,0,0,0],
+  h:[64,0,67,65,64,0,72,0,69,67,65,64,67,0,59,0],
+  b:[48,48,55,48,41,41,48,41,43,43,50,43,48,48,55,48],
+  d:'k.h.s.h.k.k.s.ho'},
+ battle:{title:'Blades in the Tall Grass',bpm:168,wave:'square',harmWave:'sawtooth',echo:.03,
+  l:[69,0,72,69,76,0,72,69,67,0,71,67,74,0,71,67,65,0,69,65,72,0,69,65,64,67,71,67,76,74,71,0,69,72,76,79,81,0,79,76,77,76,74,72,71,0,67,0,69,72,74,76,77,0,76,74,72,0,71,0,69,0,0,0],
+  h:[60,0,64,60,69,0,64,60,59,0,62,59,67,0,62,59,57,0,60,57,65,0,60,57,56,59,64,59,69,67,64,0],
+  b:[45,45,52,45,43,43,50,43,41,41,48,41,40,40,47,40],
+  d:'k.h.s.h.k.k.s.hs'},
+ towerBattle:{title:'Tower Challenger',bpm:172,wave:'square',harmWave:'sawtooth',echo:.06,
+  l:[74,0,77,74,81,0,77,74,72,0,76,72,79,0,76,72,70,0,74,70,77,0,74,70,69,72,76,72,81,79,76,0,74,77,81,84,86,0,84,81,82,81,79,77,76,0,72,0,74,76,77,81,82,0,81,79,77,0,76,0,74,0,0,0],
+  h:[65,0,69,65,74,0,69,65,64,0,67,64,72,0,67,64],
+  b:[50,50,57,50,48,48,55,48,46,46,53,46,45,45,52,45],
+  d:'k.h.s.h.k.k.sths'},
+ boss:{title:'Seal Guardian',bpm:182,wave:'sawtooth',harmWave:'square',echo:.06,
+  l:[62,0,65,62,69,0,65,62,60,0,64,60,67,0,64,60,58,0,62,58,65,0,62,58,57,60,64,60,69,67,64,0,62,65,69,72,74,0,72,69,70,69,67,65,64,0,69,0,74,0,72,70,69,0,67,65,64,0,61,0,62,0,0,0],
+  h:[53,0,57,53,62,0,57,53,52,0,55,52,60,0,55,52],
+  b:[38,38,45,38,36,36,43,36,34,34,41,34,33,33,40,33],
+  d:'kkh.s.hhkks.s.ho'},
+ finalBoss:{title:'Crown of Hunger',bpm:188,wave:'sawtooth',harmWave:'square',echo:.08,
+  l:[64,67,71,76,75,0,71,67,64,67,72,76,74,0,71,67,65,69,72,77,76,0,72,69,71,74,77,83,81,79,77,76,74,72,71,69,67,69,71,72,74,76,79,83,84,0,83,79,81,79,77,76,74,72,71,69,67,66,64,63,64,0,76,0],
+  h:[55,59,64,67,66,0,64,59,55,59,64,67,65,0,62,59],
+  a:[40,47,52,55,41,48,53,57,43,50,55,59,39,46,51,55],
+  b:[40,40,47,40,41,41,48,41,43,43,50,43,39,39,47,39],
+  d:'kkhks.hkkkhks.ho'},
+ raid:{title:'The Bell Tolls',bpm:150,wave:'sawtooth',harmWave:'square',echo:.08,
+  l:[62,0,63,0,62,0,65,0,62,0,68,0,67,65,63,0,62,0,63,0,68,0,70,0,68,67,65,63,62,0,0,0],
+  h:[50,0,51,0,50,0,53,0,50,0,56,0,55,53,51,0],
+  b:[38,38,38,45,38,38,39,38,38,38,44,38,39,38,38,0],
+  d:'k.k.s.t.k.k.stto'},
+ rowanTheme:{title:'Broken Promise',bpm:90,wave:'triangle',harmWave:'sine',echo:.18,
+  l:[69,0,72,0,71,0,69,0,65,0,69,0,67,0,64,0,69,0,72,0,76,0,74,0,72,0,71,0,69,0,0,0,77,0,76,0,74,0,72,0,71,0,72,74,76,0,0,0,72,0,71,0,69,0,67,0,65,0,64,0,69,0,0,0],
+  h:[60,0,64,0,62,0,60,0,57,0,60,0,59,0,56,0],
+  a:[45,52,57,60,41,48,53,57,43,50,55,59,40,47,52,56],
+  b:[45,0,0,52,41,0,0,48,43,0,0,50,40,0,45,0],
+  d:'k.......s...h...'},
+ tension:{title:'Shadows Beneath Hearthvale',bpm:138,wave:'square',harmWave:'triangle',echo:.1,
+  l:[62,0,65,0,66,65,62,0,58,0,62,0,65,0,69,0,62,0,65,66,69,0,72,69,70,0,69,66,65,0,62,0],
+  h:[53,0,57,0,58,57,53,0],
+  b:[38,0,38,0,41,0,36,0,34,0,34,0,37,0,33,0],
+  d:'k.h.s.h.k.h.t.h.'},
+ story:{title:'Lanternlight',bpm:74,wave:'triangle',harmWave:'sine',echo:.18,
+  l:[64,0,0,67,0,0,71,0,69,0,0,67,0,0,64,0,62,0,0,65,0,0,69,0,67,0,0,64,0,0,0,0],
+  h:[59,0,0,64,0,0,67,0,64,0,0,62,0,0,59,0],
+  a:[40,47,52,55,43,50,55,59,45,52,57,60,40,47,52,55],
+  b:[40,0,0,0,38,0,0,0],
+  d:'................'},
+ victory:{title:'Everfeast Restored',bpm:118,wave:'square',harmWave:'triangle',echo:.12,
+  l:[72,0,76,79,84,0,83,84,86,0,84,83,81,0,79,0,77,0,79,81,84,0,81,0,79,0,76,74,72,0,0,0,76,0,79,83,84,0,86,88,89,0,88,86,84,0,83,0,81,0,83,84,86,0,83,0,84,0,0,0,84,0,0,0],
+  h:[64,0,67,72,76,0,74,76,77,0,76,74,72,0,71,0],
+  a:[48,55,60,64,43,50,55,59,41,48,53,57,43,50,55,59],
+  b:[48,0,55,0,43,0,50,0,41,0,48,0,43,0,48,0],
+  d:'k.h.s.h.k.k.s.ho'}
+};
 let musCur=null,musTimer=0,musStep=0;
 function stopMusic(){clearInterval(musTimer);musTimer=0;musCur=null;}
-function playMusic(n){if(muted||!AC||AC.state!=='running')return;if(musCur===n)return;stopMusic();musCur=n;musStep=0;const T=MUS[n];if(!T)return;const ms=60000/T.bpm/2;musTimer=setInterval(()=>{const s=musStep++,l=T.l[s%T.l.length],bb=T.b[((s/4)|0)%T.b.length];if(l)tone(440*Math.pow(2,(l-69)/12),ms*.0009,'square',.012);if(s%4===0&&bb)tone(440*Math.pow(2,(bb-69)/12),ms*.0036,'triangle',.028);},ms);}
-function musicTick(){if(muted)return;const want=titleOpen?'title':battle?(battle.B?'boss':'battle'):cinematic?(cinematic.chapter>=4?'tension':'story'):scene==='area'?'wander':'village';if(want!==musCur)playMusic(want);}
+function musTone(f,d,type,v,echoAmt){
+ if(muted||!AC||AC.state!=='running')return;
+ try{
+  const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
+  o.type=type||'square';o.frequency.setValueAtTime(f,t);
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.linearRampToValueAtTime(v,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.04,d));
+  o.connect(g);g.connect(AUDIO_BUS.mus||AC.destination);
+  if(echoAmt&&AUDIO_BUS.echoIn){const eg=AC.createGain();eg.gain.setValueAtTime(echoAmt,t);g.connect(eg);eg.connect(AUDIO_BUS.echoIn);}
+  o.start(t);o.stop(t+Math.max(.05,d)+.02);
+ }catch(e){}
+}
+function musDrum(c){
+ if(muted||!AC||AC.state!=='running'||!c||c==='.')return;
+ try{
+  const t=AC.currentTime;
+  if(c==='k'||c==='t'){
+   const o=AC.createOscillator(),g=AC.createGain();
+   o.type=c==='k'?'sine':'triangle';
+   o.frequency.setValueAtTime(c==='k'?145:190,t);
+   o.frequency.exponentialRampToValueAtTime(c==='k'?38:68,t+(c==='k'?.09:.13));
+   g.gain.setValueAtTime(c==='k'?.065:.048,t);
+   g.gain.exponentialRampToValueAtTime(.0001,t+(c==='k'?.1:.14));
+   o.connect(g);g.connect(AUDIO_BUS.mus||AC.destination);o.start(t);o.stop(t+.16);
+  }else if(AUDIO_BUS.noise){
+   const s=AC.createBufferSource(),flt=AC.createBiquadFilter(),g=AC.createGain();
+   s.buffer=AUDIO_BUS.noise;
+   flt.type=c==='s'?'bandpass':'highpass';
+   flt.frequency.setValueAtTime(c==='s'?1700:c==='o'?4800:7200,t);
+   const dur=c==='s'?.09:c==='o'?.14:.035;
+   g.gain.setValueAtTime(c==='s'?.028:c==='o'?.02:.012,t);
+   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   s.connect(flt);flt.connect(g);g.connect(AUDIO_BUS.mus||AC.destination);s.start(t);s.stop(t+dur+.01);
+  }
+ }catch(e){}
+}
+function playMusic(n){
+ if(muted||!AC||AC.state!=='running')return;
+ if(musCur===n&&musTimer)return;
+ stopMusic();
+ const T=MUS[n];if(!T)return;
+ musCur=n;musStep=0;
+ const ms=60000/T.bpm/2,sec=ms/1000;
+ musTimer=setInterval(()=>{
+  const s=musStep++;
+  const l=T.l[s%T.l.length];
+  if(l)musTone(n2f(l),sec*1.25,T.wave||'square',.019,T.echo||0);
+  if(T.h){const h=T.h[s%T.h.length];if(h)musTone(n2f(h),sec*1.15,T.harmWave||'triangle',.011,(T.echo||0)*.6);}
+  if(T.a&&s%2===0){const ap=T.a[((s/2)|0)%T.a.length];if(ap)musTone(n2f(ap),sec*1.7,'triangle',.009,(T.echo||0)*.5);}
+  if(T.b&&s%2===0){const bb=T.b[((s/2)|0)%T.b.length];if(bb)musTone(n2f(bb),sec*1.85,'triangle',.028,0);}
+  if(T.d)musDrum(T.d[s%T.d.length]);
+ },ms);
+}
+function desiredMusicTrack(){
+ if(titleOpen)return 'title';
+ if(battle){
+  if(battle.g&&battle.g.friendly)return 'friendlyBattle';
+  if(battle.B)return (battle.e&&(battle.e.bi>=8||battle.e.bi===0))?'finalBoss':'boss';
+  if(battle.g&&battle.g.tower)return 'towerBattle';
+  return 'battle';
+ }
+ if(cinematic){
+  if(cinematic.phase==='dream'||cinematic.phase==='wake'||cinematic.phase==='school'||cinematic.phase==='home'||cinematic.phase==='lore')return cinematic.phase;
+  if(cinematic.phase==='sentinelRaid')return 'raid';
+  if(cinematic.phase==='region')return cinematic.chapter===5?'rowanTheme':(MUS['region'+cinematic.chapter]?'region'+cinematic.chapter:'lore');
+  if(cinematic.phase==='outside')return 'village';
+  return cinematic.chapter>=4?'tension':'story';
+ }
+ if(!$('lh-create').hidden||$b('lh-name')||$b('lh-gender'))return 'school';
+ if(tower)return 'tower';
+ if(scene==='inside')return interiorId===3?'forge':'inside';
+ if(scene==='area'&&AREA){
+  if(AREA.city)return 'city';
+  if(AREA.wilds)return (AREA.curZone||0)>=2?'wildsDeep':'wilds';
+  if(AREA.chapter)return state.ending?'victory':(MUS['region'+AREA.chapter]?'region'+AREA.chapter:'wilds');
+  return 'wilds';
+ }
+ return state.ending?'victory':'village';
+}
+function musicTick(force){if(muted)return;const want=desiredMusicTrack();if(force||want!==musCur)playMusic(want);}
 addEventListener('keydown',e=>{if((e.key==='m'||e.key==='M')&&!titleOpen&&$('lh-create').hidden){setMuted(!muted);}});
 function initRows(){Object.assign(NPC_ROW,{INSTRUCTOR:10,CHALLENGER:36,ANNOUNCER:46,'HAZEL THE HUNTER':37,'OLD WILLOW':20,PIP:18,'ORCHARD KEEPER DAHLIA':34,'FARMER FLINT':15,'BRIGAND BRUNO':3,'FISHER MARLO':33,'WAITER GHOST':44,'ORACLE SELENE':49,'SMUGGLER VEX':16,'SHADOW BROKER':43,'MERCHANT MARISOL':39,'HALL STEWARD ORLAN':42,'ANCIENT KEEPER':40,'FROST RANGER ILSA':48,'MONK TORV':47,'ICE SPRITE':45,'CAPTAIN ALDRIC':36,'SISTER MIRELLE':25,'TINKER COG':32,MARA:28,THOMAS:17,'GOLDLEAF MAYOR':30,'INNKEEPER ROSA':41,'TOWER KEEPER':46});}
 /* ---------- skills: start with one, unlock more as you level, max 4 equipped ---------- */
@@ -145,15 +465,15 @@ let titleOpen=false;
 function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro';setTimeout(()=>el.classList.remove('intro'),1700);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div>';document.body.appendChild(el);
  const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
  let sel=0;const menu=$b('lh-title-menu');const render=()=>{menu.innerHTML=items.map((it,i)=>'<button class="lh-tbtn'+(i===sel?' sel':'')+'" data-i="'+i+'">'+it[0]+'</button>').join('');};render();
- function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();}
- const choose=i=>{const k=items[i][1];sfx('select');
+ function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();musicTick(true);}
+ const choose=i=>{const k=items[i][1];sfx(k==='continue'?'confirm':'select');
   if(k==='continue'){closeTitle();}
-  else if(k==='new'){if(hasSave){if(!confirm('Start a new adventure? Your saved progress on this device will be replaced.'))return;localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);try{sessionStorage.setItem('lh_skip_title','1');}catch(e){}location.reload();return;}closeTitle();startNaming();}
+  else if(k==='new'){if(hasSave){if(!confirm('Start a new adventure? Your saved progress on this device will be replaced.'))return;resetLocalSave(true);location.reload();return;}try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}state=createFreshState('','Guardian');questStep=0;Object.keys(AREAS).forEach(k2=>delete AREAS[k2]);rebuildVillageEntities();closeTitle();startNaming();}
   else if(k==='board'){showLeaderboard();}
   else if(k==='sound'){setMuted(!muted);items[i][0]='SOUND: '+(muted?'OFF':'ON');render();if(!muted)playMusic('title');}};
  menu.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){sel=+b.dataset.i;choose(sel);}});
- function kd(e){if(!titleOpen)return;if(el.classList.contains('press')){if(e.key==='m'||e.key==='M')return;el.classList.remove('press');sfx('select');e.preventDefault();e.stopPropagation();return;}if(e.key==='ArrowDown'||e.key==='s'){sel=(sel+1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='ArrowUp'||e.key==='w'){sel=(sel+items.length-1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='Enter'||e.key===' '||e.key==='e'){choose(sel);e.preventDefault();e.stopPropagation();}}
- addEventListener('keydown',kd,true);el.addEventListener('click',()=>{if(el.classList.contains('press')){el.classList.remove('press');sfx('select');}});animateTitle(el.querySelector('canvas'));}
+ function kd(e){if(!titleOpen)return;if(el.classList.contains('press')){if(e.key==='m'||e.key==='M')return;el.classList.remove('press');audio();sfx('select');if(!muted)musicTick(true);e.preventDefault();e.stopPropagation();return;}if(e.key==='ArrowDown'||e.key==='s'){sel=(sel+1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='ArrowUp'||e.key==='w'){sel=(sel+items.length-1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='Enter'||e.key===' '||e.key==='e'){choose(sel);e.preventDefault();e.stopPropagation();}}
+ addEventListener('keydown',kd,true);el.addEventListener('click',()=>{if(el.classList.contains('press')){el.classList.remove('press');audio();sfx('select');if(!muted)musicTick(true);}});animateTitle(el.querySelector('canvas'));if(!muted)musicTick(true);}
 function animateTitle(cv){const g=cv.getContext('2d'),t0=performance.now(),el=cv.parentElement,leaves=Array.from({length:26},(_,i)=>({x:Math.random(),y:Math.random(),s:2+Math.random()*2,v:.05+Math.random()*.06,ph:Math.random()*6,c:['#e8863a','#d2552e','#f2b84a','#9a5a2a'][i%4]}));
  function frame(){if(!titleOpen||!cv.isConnected)return;const W=cv.width=innerWidth,H=cv.height=innerHeight,t=(performance.now()-t0)/1000;g.imageSmoothingEnabled=false;
   g.fillStyle='#000';g.fillRect(0,0,W,H);
@@ -204,7 +524,7 @@ function startGender(name){titleOpen=true;const old=$b('lh-gender');if(old)old.r
  const ask=()=>{stage=0;$b('lh-gd-yn').hidden=true;say('Are you a boy or a girl?');};
  const pick=v=>{g=v;el.querySelectorAll('.lh-gd-card').forEach(c=>c.classList.toggle('sel',c.dataset.g===v));sfx('menu');};
  const confirm_=()=>{stage=1;$b('lh-gd-yn').hidden=false;say('So you are '+name+', a '+(g==='boy'?'boy':'girl')+'. Is that right?');};
- const finish=()=>{removeEventListener('keydown',kd,true);clearInterval(tw);el.remove();state.gender=g;applyGender();titleOpen=false;$('lh-name-input').value=name;sfx('select');startIntro();};
+ const finish=()=>{removeEventListener('keydown',kd,true);clearInterval(tw);el.remove();state.gender=g;applyGender();titleOpen=false;$('lh-name-input').value=name;sfx('confirm');startIntro();};
  const kd=e=>{if(stage===0){if(e.key==='ArrowLeft'||e.key==='a')pick('boy');else if(e.key==='ArrowRight'||e.key==='d')pick('girl');else if(e.key==='Enter'||e.key===' ')confirm_();else return;}else{if(e.key==='Enter'||e.key==='y'||e.key==='Y')finish();else if(e.key==='Escape'||e.key==='Backspace'||e.key==='n'||e.key==='N')ask();else return;}e.preventDefault();e.stopPropagation();};
  addEventListener('keydown',kd,true);
  el.addEventListener('click',e=>{const y=e.target.closest('[data-y]');if(y){if(y.dataset.y==='1')finish();else ask();return;}const c=e.target.closest('.lh-gd-card');if(c){pick(c.dataset.g);confirm_();}});
@@ -315,11 +635,11 @@ function openBlacksmith(){
  const cls=state.heroClass||'Guardian',names={Guardian:{weapon:['Harvest Longsword','Ironroot Blade','Copperfall Greatsword','Embersteel Edge','Keeper’s Oath','Everfeast Relic'],armor:['Steel Plate Armor','Reinforced Plate','Guardian’s Bulwark','Runebound Armor','Sentinel Harness','First Keeper’s Aegis']},Scout:{weapon:['Hunter’s Longbow','Briarstring Bow','Windrunner Bow','Goldleaf Recurve','Frostfeather Bow','Wildheart Longbow'],armor:['Ranger Leather Armor','Hardened Trail Leathers','Thornweave Vest','Shadowstalker Gear','Frosthide Armor','Wildheart Mantle']},Mage:{weapon:['Amber Orb Staff','Moonlit Branch','Starfall Staff','Runesinger Rod','Frostglass Staff','Everfeast Scepter'],armor:['Spellbound Mantle','Apprentice Robes','Runesewn Robe','Stargazer Mantle','Frostweave Robe','Everfeast Vestments']}};
  const kit=names[cls]||names.Guardian,w=state.weaponTier,a=state.armorTier,k=state.skillTier,costs={weapon:160+w*140+(Number(state.stage)||0)*35,armor:150+a*130+(Number(state.stage)||0)*30,skill:220+k*180+(Number(state.stage)||0)*40};
  const el=ov('<h3>ORIN’S FORGE</h3><p>Good gear takes time and good coin. Choose an upgrade; each one is permanent and saved to your adventure.</p><div class="col"><button class="lh-ob" data-up="weapon" '+(w>=5?'disabled':'')+'><b>WEAPON · '+(w>=5?'MASTERED':kit.weapon[w+1])+'</b><br><small>Tier '+w+'/5 · +3 attack damage per tier</small><br><b>'+(w>=5?'MAX LEVEL':costs.weapon+' coins')+'</b></button><button class="lh-ob" data-up="armor" '+(a>=5?'disabled':'')+'><b>ARMOR · '+(a>=5?'MASTERED':kit.armor[a+1])+'</b><br><small>Tier '+a+'/5 · reduces incoming hits by 1 per tier</small><br><b>'+(a>=5?'MAX LEVEL':costs.armor+' coins')+'</b></button><button class="lh-ob" data-up="skill" '+(k>=5?'disabled':'')+'><b>SKILL TRAINING · '+k+'/5</b><br><small>Improves skill damage and healing by 5% per tier</small><br><b>'+(k>=5?'MAX LEVEL':costs.skill+' coins')+'</b></button></div><p class="note">Your purse: '+(state.coins||0)+' coins · Upgrades are permanent.</p><div class="row"><button class="lh-ob alt" data-close>CLOSE</button></div>','lh-blacksmith');
- el.querySelector('[data-close]').onclick=()=>el.close();el.querySelectorAll('[data-up]').forEach(btn=>btn.onclick=()=>{const type=btn.dataset.up,tier=type==='weapon'?w:type==='armor'?a:k,cost=costs[type];if(tier>=5||state.coins<cost)return;state.coins-=cost;state[type+'Tier']=tier+1;if(type==='armor'&&state.beaten&&state.beaten.north)state.firstArmorUpgrade=true;sfx('unlock');save();updateHud();el.close();if(type==='armor'&&state.beaten&&state.beaten.north&&(Number(state.level)||1)>=3){const guide=ov('<h3>ARMOR UPGRADED!</h3><p>Your first armor upgrade is equipped. It reduces incoming damage. You have completed the Sentinel preparation lesson!</p><div class="row"><button class="lh-ob" data-ok>LET’S GO</button></div>','lh-training-complete');guide.querySelector('[data-ok]').onclick=()=>guide.close();}else openBlacksmith();});
+ el.querySelector('[data-close]').onclick=()=>{sfx('menu');el.close();};el.querySelectorAll('[data-up]').forEach(btn=>btn.onclick=()=>{const type=btn.dataset.up,tier=type==='weapon'?w:type==='armor'?a:k,cost=costs[type];if(tier>=5||state.coins<cost)return;state.coins-=cost;state[type+'Tier']=tier+1;if(type==='armor'&&state.beaten&&state.beaten.north)state.firstArmorUpgrade=true;sfx('forge');save();updateHud();el.close();if(type==='armor'&&state.beaten&&state.beaten.north&&(Number(state.level)||1)>=3){const guide=ov('<h3>ARMOR UPGRADED!</h3><p>Your first armor upgrade is equipped. It reduces incoming damage. You have completed the Sentinel preparation lesson!</p><div class="row"><button class="lh-ob" data-ok>LET’S GO</button></div>','lh-training-complete');guide.querySelector('[data-ok]').onclick=()=>{sfx('confirm');guide.close();};}else openBlacksmith();});
 }
-function openTeleporter(){if(scene!=='outside'||dialogue||battle||cinematic)return;const options=[{id:'village',label:'Hearthvale Village',detail:'Return to the village square',open:true},{id:'wilds',label:'The Wildlands',detail:'Training grounds and Ranger Camp',open:!!(state.beaten&&state.beaten.north)},{id:'city',label:'Goldleaf City',detail:'The Tower and city shops',open:!!state.cityUnlocked}];for(let c=1;c<=9;c++)options.push({id:'region'+c,label:chapters[c].place,detail:'Chapter '+(c+1)+' · '+chapters[c].title,open:(Number(state.stage)||0)>=c});const menu=ov('<h3>HEARTHVALE TELEPORTER</h3><p>Choose a destination. Your journey will resume at its arrival point.</p><div class="col">'+options.map(o=>'<button class="lh-ob '+(o.open?'':'alt')+'" data-dest="'+o.id+'" '+(o.open?'':'disabled style="opacity:.42;cursor:not-allowed"')+'>'+o.label+'<br><small>'+o.detail+(o.open?'':' · LOCKED')+'</small></button>').join('')+'</div><div class="row"><button class="lh-ob alt" data-close> CLOSE </button></div>','lh-teleporter-menu');menu.querySelector('[data-close]').addEventListener('click',()=>menu.close());menu.querySelectorAll('[data-dest]:not(:disabled)').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.dest;menu.close();teleportTo(id);}));}
- function teleportTo(id){sfx('portal');if(id==='village'){if(scene==='area')leaveArea('village');else{scene='outside';AREA=null;state.x=25*TILE+16;state.y=15*TILE+56;updateHud();save();}return;}if(id==='wilds'){enterWilds();return;}if(id==='city'){enterArea('city');return;}const m=/^region(\d+)$/.exec(id);if(m){const c=Number(m[1]);if(c>=1&&c<=9&&(Number(state.stage)||0)>=c)enterRegion(c);}}
-function startArea(A,tx,ty){AREA=A;A.leaving=false;A.bossTalk=0;scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
+function openTeleporter(){if(scene!=='outside'||dialogue||battle||cinematic)return;syncStageFromBeaten();sfx('teleporter');const options=[{id:'village',label:'Hearthvale Village',detail:'Return to the village square',open:true},{id:'wilds',label:'The Wildlands',detail:'Training grounds and Ranger Camp',open:!!(state.beaten&&state.beaten.north)},{id:'city',label:'Goldleaf City',detail:'The Tower and city shops',open:!!state.cityUnlocked}];for(let c=1;c<=9;c++)options.push({id:'region'+c,label:chapters[c].place,detail:'Chapter '+(c+1)+' · '+chapters[c].title,open:(Number(state.stage)||0)>=c});const menu=ov('<h3>HEARTHVALE TELEPORTER</h3><p>Choose a destination. Your journey will resume at its arrival point.</p><div class="col">'+options.map(o=>'<button class="lh-ob '+(o.open?'':'alt')+'" data-dest="'+o.id+'" '+(o.open?'':'disabled style="opacity:.42;cursor:not-allowed"')+'>'+o.label+'<br><small>'+o.detail+(o.open?'':' · LOCKED')+'</small></button>').join('')+'</div><div class="row"><button class="lh-ob alt" data-close> CLOSE </button></div>','lh-teleporter-menu');menu.querySelector('[data-close]').addEventListener('click',()=>{sfx('menu');menu.close();});menu.querySelectorAll('[data-dest]:not(:disabled)').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.dest;menu.close();teleportTo(id);}));}
+ function teleportTo(id){syncStageFromBeaten();sfx('portal');if(id==='village'){if(scene==='area')leaveArea('village');else{scene='outside';AREA=null;state.x=25*TILE+16;state.y=15*TILE+56;updateHud();save();}return;}if(id==='wilds'){enterWilds();return;}if(id==='city'){enterArea('city');return;}const m=/^region(\d+)$/.exec(id);if(m){const c=Number(m[1]);if(c>=1&&c<=9&&(Number(state.stage)||0)>=c)enterRegion(c);}}
+function startArea(A,tx,ty){AREA=A;A.leaving=false;A.justBeatBoss=false;A.bossTalk=0;if(A.boss&&state.beaten[A.boss.id])A.npcs=A.npcs.filter(n=>!n.boss);scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
 function enterArea(id){if(id==='city'){startArea(getCity(),1,13);setDialogue([['GOLDLEAF MAYOR','Welcome to Goldleaf City, traveler! The Tower stands to the north.']]);}}
 function leaveArea(to){sfx('portal');const c=AREA&&AREA.chapter;const city=AREA&&AREA.city;const ret=AREA&&AREA.ret;AREA=null;scene='outside';stepper=null;if(city){state.x=44*TILE+16;state.y=12*TILE+24;}else if(ret){state.x=ret.x;state.y=ret.y;}else{state.x=16*TILE+16;state.y=32*TILE+24;}updateHud();save();}
 function areaHit(x,y){const A=AREA,tx=Math.floor(x/32),ty=Math.floor(y/32);if(tx<0||ty<0||tx>=A.w||ty>=A.h)return true;if(A.solid[ty*A.w+tx])return true;return A.npcs.some(n=>n.x===tx&&n.y===ty);}
@@ -365,7 +685,7 @@ function sideQuestTalk(n){if(storyArcTalk(n))return true;const defs={'HAZEL THE 
 function progressSideQuests(g){if(!g.wild||!AREA||!AREA.chapter)return[];const mq=mainQuestData(AREA.chapter);mq.kills=Math.min(3,(mq.kills||0)+1);const mainLines=mq.kills===3?[['MAIN QUEST UPDATED','The trail is clear. Return to the chapter guardian!']]:[['JOURNAL','Chapter trial: '+mq.kills+' / 3 wild creatures defeated.']];const defs=[{id:'woodland',chapter:1,title:'A Hunter’s Request',reward:70,potion:1},{id:'orchard',chapter:2,title:'The Last Good Apples',reward:95,potion:0},{id:'pantry',chapter:3,title:'A Light Below',reward:120,potion:1}],out=[];state.sideQuests=state.sideQuests||{};for(const d of defs){const q=state.sideQuests[d.id];if(!q||!q.accepted||q.done||AREA.chapter!==d.chapter)continue;q.kills=Math.min(3,(q.kills||0)+1);out.push(['JOURNAL',d.title+': '+q.kills+' / 3 wild creatures cleared.']);if(q.kills>=3){q.done=true;state.coins=(state.coins||0)+d.reward;if(d.potion)addPotions(d.potion);out.push(['QUEST COMPLETE',d.title+'! You earned '+d.reward+' coins'+(d.potion?' and a potion.':'.')]);}}if(out.length){save();updateHud();}save();updateHud();return [...mainLines,...out];}
 function playRowanConfrontation(done){cinematic={phase:'region',chapter:5,actors:{HERO:{x:innerWidth*.27,y:innerHeight*.77,face:3,step:0},ROWAN:{x:innerWidth*.73,y:innerHeight*.77,face:2,step:0}}};document.body.classList.add('lh-cinematic');const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));const walk=(name,to,duration=850)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.face=Math.abs(to.x-from.x)>Math.abs(to.y-from.y)?(to.x<from.x?2:3):(to.y<from.y?1:0);const step=now=>{if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.step=p<1?1+(Math.floor(now/120)%2):0;if(p<1)requestAnimationFrame(step);else resolve();};requestAnimationFrame(step);});(async()=>{sfx('warn');await say([['ROWAN','Stop there. I hoped you would turn back before reaching this hall.'],['YOU','You left clues for me. You wanted me to follow you. Why?']]);await walk('ROWAN',{x:innerWidth*.58,y:innerHeight*.77});await say([['ROWAN','The Hollow King promised to bring my mother back. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);await walk('HERO',{x:innerWidth*.43,y:innerHeight*.77});await say([['ROWAN','I was ashamed. Every step made it harder to turn around. I am sorry. But he is listening. He knows you are here.'],['JOURNAL','The candles gutter out one by one. Something enormous stirs beneath the banquet table.']]);cinematic=null;document.body.classList.remove('lh-cinematic');done();})();}
 function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});return;}sfx('warn');setDialogue(g.lines.map(t=>[g.name,t]),()=>{A.bossTalk=0;startBattle(g);});}
-function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
+function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
 function chapterEpilogue(c,n){
  const lines={1:['The First Seal is glowing again. The forest feels warmer, and villagers are leaving lanterns along the trail.','The road east is open now. Maplebrook has been waiting for someone to bring back the light.'],2:['The orchard trees have begun to bloom again. The fruit is sweet instead of bitter.','A path beneath the old roots has appeared.'],3:['The pantry lanterns are burning again. People have started bringing food to share.','The restored signal has reached the mountain pass.'],4:['The mountain paths are calmer now. Travelers are returning.','The market has opened its eastern gate.'],5:['The empty banquet hall is no longer silent. Music has returned to the village.','The frost lanterns have awakened.'],6:['The watchtower signal is clear. Supplies are moving safely through the snow.','The old fortress gate has opened.'],7:['The fortress banners have been raised again. Its people are returning.','A golden doorway has appeared beyond the ruins.'],8:['The voices beyond the door are no longer distant. The sanctuary is awake.','The final road is open.'],9:['The last light has reached every corner of the valley.','Hearthvale will remember what you did here.']};
  const list=lines[c];if(!list||!state.beaten['boss'+c])return false;
@@ -396,8 +716,8 @@ function areaInteract(){if(dialogue){advanceDialogue();return;}if(cinematic||tit
  if(f.chest){openChest(f);return;}
  if(f.act==='tower'){setDialogue(f.lines.map(t=>[f.name,t]),()=>towerEnter());return;}
  if(f.act==='board'){showLeaderboard();return;}
- if(f.act==='shop'){if(state.coins>=30){state.coins-=30;addPotions(1);sfx('coin');updateHud();save();setDialogue([[f.name,'One potion for 30 coins. Pleasure doing business! You carry '+state.potions+' now.']]);}else setDialogue([[f.name,'Potions are 30 coins each. Come back when your purse is heavier!']]);return;}
- if(f.act==='inn'){state.hp=state.maxHp;state.mp=state.maxMp;sfx('heal');updateHud();save();setDialogue([[f.name,'Rest your bones, dear. There! Fully refreshed.']]);return;}
+ if(f.act==='shop'){if(state.coins>=30){state.coins-=30;addPotions(1);sfx('buy');updateHud();save();setDialogue([[f.name,'One potion for 30 coins. Pleasure doing business! You carry '+state.potions+' now.']]);}else{sfx('menu');setDialogue([[f.name,'Potions are 30 coins each. Come back when your purse is heavier!']]);}return;}
+ if(f.act==='inn'){state.hp=state.maxHp;state.mp=state.maxMp;sfx('inn');updateHud();save();setDialogue([[f.name,'Rest your bones, dear. There! Fully refreshed.']]);return;}
  setDialogue(f.lines.map(t=>[f.name,t]));}
 function areaGround(A,x,y){if(A.wilds){wildGround(A,x,y);return;}const U=32,B=A.bio;if(B.hall){ctx.imageSmoothingEnabled=false;ctx.drawImage(INT,((x*7+y*3)%3)*16,16,16,16,x*U,y*U,U,U);return;}
  if(A.ground){const k=A.ground[y*A.w+x];if(k===1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}if(k===2){kTile('t',43,x*U,y*U);return;}}
@@ -436,7 +756,7 @@ function getWilds(){return AREAS.wilds||(AREAS.wilds=genWilds());}
 function enterWilds(){const A=getWilds();A.ret={x:16*TILE+16,y:3*TILE+24};A.curZone=undefined;A.name='THE WILDLANDS';startArea(A,A.spawn.x,A.spawn.y);
  setDialogue([['JOURNAL','THE WILDLANDS: a vast stretch of untamed country north of Hearthvale. Stone roads are safe. Monsters hide in the tall grass.'],['JOURNAL','Five zones grow more dangerous the farther you roam. Rest at the Ranger Camp, open chests, and beat each zone\u2019s Alpha for big rewards. A minimap shows where you are.']]);}
 function ensureWildsGate(){return;}
-function openChest(f){state.chests=state.chests||{};if(state.chests[f.chest]){setDialogue([['JOURNAL','The chest is empty.']]);return;}state.chests[f.chest]=1;state.coins=(state.coins||0)+f.coins;if(f.potion)addPotions(1);sfx('coin');updateHud();save();setDialogue([['JOURNAL','You open the chest and find '+f.coins+' coins'+(f.potion?' and a potion!':'!')]]);}
+function openChest(f){state.chests=state.chests||{};if(state.chests[f.chest]){setDialogue([['JOURNAL','The chest is empty.']]);return;}state.chests[f.chest]=1;state.coins=(state.coins||0)+f.coins;if(f.potion)addPotions(1);sfx('chest');updateHud();save();setDialogue([['JOURNAL','You open the chest and find '+f.coins+' coins'+(f.potion?' and a potion!':'!')]]);}
 function wildEdge(A,x,y,kind){const U=32,nb=(dx,dy)=>{const xx=x+dx,yy=y+dy;return(xx<0||yy<0||xx>=A.w||yy>=A.h)?kind:A.ground[yy*A.w+xx];};
  ctx.fillStyle=kind===3?'rgba(232,248,255,.85)':'rgba(40,20,20,.32)';
  if(nb(0,-1)!==kind)ctx.fillRect(x*U,y*U,U,4);if(nb(0,1)!==kind)ctx.fillRect(x*U,y*U+U-4,U,4);if(nb(-1,0)!==kind)ctx.fillRect(x*U,y*U,4,U);if(nb(1,0)!==kind)ctx.fillRect(x*U+U-4,y*U,4,U);}
@@ -593,7 +913,7 @@ const ents=npcs.map(n=>{const a=cinematic&&cinematic.actors[n.name],x=a?a.x:n.x,
 if(cinematic&&cinematic.actors.CHAMPION){const a=cinematic.actors.CHAMPION;ents.push({y:a.y,f:()=>drawPerson(a.x,a.y,'#d5b64e','#e8bd58')});}
 ents.push({y:state.y,f:()=>drawPlayer(state.x,state.y)});ents.sort((p,q)=>p.y-q.y).forEach(o=>o.f());
 let promptTarget=null,promptDist=Infinity,promptLabel='TAP / E · TALK';
-for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<((n.trainer&&n.trainer.bi!==undefined)?190:104)&&d<promptDist){promptTarget=n;promptDist=d;promptLabel='TAP / E · TALK';}}
+for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y);if(d<((n.trainer&&n.trainer.bi!==undefined)?190:104)&&d<promptDist){promptTarget=n;promptDist=d;promptLabel=n.act==='teleporter'?'TAP / E · TELEPORT':'TAP / E · TALK';}}
 const doors=[{x:10.5,y:10.5},{x:34,y:10.5},{x:22,y:22.5},{x:5.5,y:29.5}];
 for(const d of doors){const wx=d.x*TILE,wy=d.y*TILE,dd=Math.hypot(state.x-wx,state.y-wy);if(dd<112&&dd<promptDist){promptTarget={x:wx,y:wy};promptDist=dd;promptLabel='E · ENTER';}}
 const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&signDist<promptDist){promptTarget={x:27*TILE,y:10*TILE};promptLabel='E · READ';}
@@ -769,27 +1089,59 @@ function drawGates(){for(const g of GUARDS){if(state.beaten[g.id])continue;const
 /* ===== Battles: alert -> screen wipe -> entrance -> animated turn-based fight ===== */
 let battle=null,lastCam={camX:0,camY:0},FXC=null;
 const $b=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms)),clamp01=v=>Math.max(0,Math.min(1,v)),ease=p=>p*p*(3-2*p),rnd=n=>Math.floor(Math.random()*n);
-/* --- tiny synth sound effects (WebAudio, no files needed) --- */
+/* --- WebAudio synth sound effects & master bus (CC0, zero external assets required) --- */
 let AC=null;
-function audio(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}return AC;}
-function tone(f,d,type,v,slide,delay){if(muted)return;const a=audio();if(!a)return;try{const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
+const AUDIO_BUS={master:null,mus:null,sfx:null,echoIn:null,noise:null};
+function initAudioBus(a){
+ try{
+  const comp=a.createDynamicsCompressor?a.createDynamicsCompressor():null;
+  const master=a.createGain(),mus=a.createGain(),sf=a.createGain();
+  master.gain.setValueAtTime(muted?0:1,a.currentTime);
+  mus.gain.setValueAtTime(.75,a.currentTime);
+  sf.gain.setValueAtTime(.92,a.currentTime);
+  if(comp){master.connect(comp);comp.connect(a.destination);}else master.connect(a.destination);
+  mus.connect(master);sf.connect(master);
+  AUDIO_BUS.master=master;AUDIO_BUS.mus=mus;AUDIO_BUS.sfx=sf;
+  if(a.createDelay){
+   const dly=a.createDelay(1),fb=a.createGain(),wet=a.createGain();
+   dly.delayTime.setValueAtTime(.21,a.currentTime);
+   fb.gain.setValueAtTime(.18,a.currentTime);
+   wet.gain.setValueAtTime(.28,a.currentTime);
+   dly.connect(fb);fb.connect(dly);dly.connect(wet);wet.connect(mus);
+   AUDIO_BUS.echoIn=dly;
+  }
+  const len=Math.floor(a.sampleRate*.5),buf=a.createBuffer(1,len,a.sampleRate),ch=buf.getChannelData(0);
+  for(let i=0;i<len;i++)ch[i]=Math.random()*2-1;
+  AUDIO_BUS.noise=buf;
+ }catch(e){}
+}
+function audio(){try{if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();initAudioBus(AC);}if(AC.state==='suspended')AC.resume().then(()=>{if(!muted)musicTick(true);}).catch(()=>{});}catch(e){}return AC;}
+function tone(f,d,type,v,slide,delay){if(muted)return;const a=audio();if(!a)return;try{const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AUDIO_BUS.sfx||a.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
+function sfxNoise(d,freq,v,delay,q){if(muted)return;const a=audio();if(!a||!AUDIO_BUS.noise)return;try{const t=a.currentTime+(delay||0),s=a.createBufferSource(),flt=a.createBiquadFilter(),g=a.createGain();s.buffer=AUDIO_BUS.noise;flt.type='bandpass';flt.frequency.setValueAtTime(freq||1200,t);if(q)flt.Q.setValueAtTime(q,t);g.gain.setValueAtTime(v||.04,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(flt);flt.connect(g);g.connect(AUDIO_BUS.sfx||a.destination);s.start(t);s.stop(t+d+.02);}catch(e){}}
 const SFX={
-alert(){tone(988,.09);tone(1480,.14,'square',.05,0,.1);},
-warn(){for(let i=0;i<4;i++)tone(300,.22,'sawtooth',.05,260,i*.28);},
-swirl(){tone(200,.55,'triangle',.06,900);},
-hit(){tone(180,.16,'sawtooth',.07,-110);tone(90,.2,'square',.06,-40,.02);},
-crit(){tone(240,.1,'square',.07,200);tone(480,.2,'sawtooth',.07,-300,.08);},
-magic(){tone(500,.3,'sine',.06,700);tone(750,.25,'triangle',.04,500,.05);},
-arrow(){tone(900,.12,'triangle',.05,-500);},
-heal(){[523,659,784,1047].forEach((f,i)=>tone(f,.14,'triangle',.05,0,i*.09));},
-guard(){tone(320,.14,'square',.05,-120);},
-foe(){tone(130,.2,'sawtooth',.07,-60);},
-charge(){tone(120,.9,'sawtooth',.05,500);},
-boom(){tone(70,.6,'sawtooth',.09,-35);tone(140,.4,'square',.06,-90);},
-win(){[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,.16,'square',.05,0,i*.11));},
-lose(){[392,330,262,196].forEach((f,i)=>tone(f,.3,'triangle',.06,0,i*.2));}};
+alert(){tone(988,.085,'square',.055);tone(1480,.15,'square',.055,0,.095);},
+warn(){for(let i=0;i<4;i++){tone(280+i*25,.2,'sawtooth',.05,280,i*.28);sfxNoise(.08,900,.025,i*.28);}},
+swirl(){tone(220,.55,'triangle',.06,960);tone(330,.45,'sine',.035,840,.08);},
+hit(){sfxNoise(.08,1400,.06,0);tone(190,.15,'sawtooth',.07,-120);tone(95,.19,'square',.06,-45,.02);},
+crit(){sfxNoise(.1,2200,.07,0);tone(280,.09,'square',.07,280);tone(560,.2,'sawtooth',.07,-340,.07);tone(1047,.14,'square',.04,200,.08);},
+magic(){tone(520,.28,'sine',.055,740);tone(780,.24,'triangle',.04,520,.05);tone(1175,.18,'sine',.03,400,.1);},
+arrow(){sfxNoise(.06,3600,.035,0);tone(960,.12,'triangle',.05,-540);},
+heal(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.14,'triangle',.05,0,i*.075));},
+item(){[659,784,988,1319].forEach((f,i)=>tone(f,.11,'sine',.05,40,i*.055));},
+ember(){sfxNoise(.18,1600,.065,0);tone(340,.22,'sawtooth',.065,-190,0);tone(620,.16,'square',.04,-280,.05);},
+dodge(){sfxNoise(.11,2800,.04,0);tone(640,.13,'sine',.035,320,0);},
+run(){sfxNoise(.12,2100,.045,0);tone(480,.09,'triangle',.04,360,0);tone(720,.11,'triangle',.035,440,.06);},
+stun(){[880,659,988,740].forEach((f,i)=>tone(f,.09,'sine',.045,0,i*.055));},
+weaken(){tone(420,.18,'sawtooth',.045,-210,0);tone(280,.2,'triangle',.04,-140,.08);},
+burn(){sfxNoise(.12,2400,.045,0);tone(420,.13,'sawtooth',.04,-200,.02);},
+guard(){tone(340,.14,'square',.05,-110);tone(680,.1,'triangle',.035,-80,.02);},
+foe(){sfxNoise(.09,900,.06,0);tone(135,.2,'sawtooth',.07,-65);},
+charge(){tone(120,.88,'sawtooth',.05,540);tone(240,.8,'sine',.03,420,.05);},
+boom(){sfxNoise(.38,420,.09,0);tone(72,.6,'sawtooth',.09,-36);tone(140,.42,'square',.06,-90,.03);},
+win(){[523,659,784,1047,784,1047,1568].forEach((f,i)=>tone(f,i===6?.34:.14,'square',.05,0,i*.1));},
+lose(){[392,349,311,262,196].forEach((f,i)=>tone(f,.28,'triangle',.06,0,i*.19));}};
 const sfx=n=>{try{if(SFX[n])SFX[n]();}catch(e){}};
-addEventListener('pointerdown',audio,{once:true});addEventListener('keydown',audio,{once:true});
+addEventListener('pointerdown',audio);addEventListener('keydown',audio);addEventListener('touchstart',audio);
 
 /* --- class skills: pick one in the SKILL menu (tap once to read it, tap again to cast) --- */
 const SKILLS={
@@ -831,10 +1183,10 @@ if(id==='ether'&&state.mp>=state.maxMp){pkSay('Your MP is already full.',650);b.
 if(id==='cider'&&state.hp>=state.maxHp){pkSay('Your health is already full.',650);b.busy=false;pkMenu('items');return;}
 state.battleItems[id]--;if(id==='potion')state.potions=state.battleItems.potion;
 if(id==='potion'){const n=Math.min(35,state.maxHp-state.hp);state.hp+=n;healFx(n);pkSay('Harvest Potion restores '+n+' HP!',750);}
-else if(id==='ether'){const n=Math.min(8,state.maxMp-state.mp);state.mp+=n;rise(geo().hx,geo().hy,18,['#8fd8ff','#ffffff','#b06aff'],50);pkSay('Moonmint Tea restores '+n+' MP!',750);}
-else if(id==='cider'){const n=Math.min(Math.ceil(state.maxHp*.2),state.maxHp-state.hp);state.hp+=n;healFx(n,'#ffd66b');pkSay('Golden Cider restores '+n+' HP!',750);}
+else if(id==='ether'){const n=Math.min(8,state.maxMp-state.mp);state.mp+=n;sfx('item');rise(geo().hx,geo().hy,18,['#8fd8ff','#ffffff','#b06aff'],50);pkSay('Moonmint Tea restores '+n+' MP!',750);}
+else if(id==='cider'){const n=Math.min(Math.ceil(state.maxHp*.2),state.maxHp-state.hp);state.hp+=n;sfx('item');healFx(n,'#ffd66b');pkSay('Golden Cider restores '+n+' HP!',750);}
 else if(id==='charm'){b.ward=Math.max(b.ward,2);shieldFx();pkSay('Oakguard Charm protects you for 2 turns!',750);}
-else if(id==='ember'){const n=28;hitFoe(n,'magic',false);pkSay('The Ember Seed bursts for '+n+' damage!',750);}
+else if(id==='ember'){const n=28;sfx('ember');hitFoe(n,'magic',false);pkSay('The Ember Seed bursts for '+n+' damage!',750);}
 pkPanel();save();updateHud();if(!b.e.hp){pkWin();return;}endRound();
 }
 function pkMenu(kind){const m=$b('pk-menu');if(!m||!battle)return;battle.sel=-1;
@@ -843,7 +1195,7 @@ else if(kind==='items'){ensureBattleItems();m.className='pk-menu sk';m.innerHTML
 else{m.className='pk-menu';m.innerHTML='<button data-a="attack">FIGHT</button><button data-a="skill">SKILL</button><button data-a="guard">GUARD</button><button data-a="items">ITEMS</button><button data-a="run">RUN</button>';$b('pk-t').textContent='What will you do?';}}
 function pkSkillPick(i){if(!battle||battle.busy)return;const sk=knownSkills()[i];if(!sk)return;
 if(battle.sel===i){pkSkill(i);return;}
-battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
+sfx('menu');battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
 $b('pk-t').textContent=sk.n+' \u2014 '+sk.d+' (Tap again to cast)';}
 function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;$b('pk-fl').textContent=e.boss?'BOSS \u00B7 CHAPTER '+(e.bi+1)+(e.enraged?' \u00B7 ENRAGED':''):'';
 const fh=$b('pk-fh');fh.style.width=(pc*100)+'%';fh.className=pc<.25?'low':pc<.5?'mid':'';$b('pk-foe').classList.toggle('boss',!!e.boss);
@@ -888,10 +1240,10 @@ function shieldFx(){battle.shield=1;sfx('guard');}
 function rageFx(){const b=battle;b.shake=18;b.flashR=1;sfx('boom');const G=geo();rise(G.fx,G.fy,30,['#ff3b30','#ffd84a','#ff9a2e'],G.fh*.7);}
 async function pkAct(a){const b=battle;if(!b||b.busy)return;
 
-if(a==='skill'){pkMenu('skills');return;}
-if(a==='items'){pkMenu('items');return;}
+if(a==='skill'){sfx('menu');pkMenu('skills');return;}
+if(a==='items'){sfx('menu');pkMenu('items');return;}
 b.busy=true;const e=b.e;
-if(a==='run'){if(b.g.wild&&!b.g.tower){await pkSay('You got away safely!');pkEnd();return;}await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
+if(a==='run'){if(b.g.wild&&!b.g.tower){sfx('run');await pkSay('You got away safely!');pkEnd();return;}sfx('menu');await pkSay(e.boss?'There is no escape from a boss!':'You can\u2019t run from a trainer battle!',900);pkMenu('main');b.busy=false;return;}
 if(a==='guard'){b.guard=true;shieldFx();state.mp=Math.min(state.maxMp,state.mp+2);pkPanel();await pkSay('You brace yourself. (+2 MP)',700);await endRound();return;}
 if(a==='item'){b.busy=false;pkMenu('items');return;}
 await heroAttack(null);}
@@ -902,17 +1254,17 @@ await pkSay(crit?'A critical strike!':'You attack!',420);await heroStrike(kind,d
 else{await pkSay(sk.msg,650);
 if(sk.heal&&!sk.kind){const h=Math.round((sk.heal+(sk.per||0)*lv+Math.round(lv*2))*(1+Math.max(0,Math.min(5,Number(state.skillTier)||0))*.05));state.hp=Math.min(state.maxHp,state.hp+h);healFx(h,sk.color);pkPanel();await pkSay('You recover '+h+' HP!',800);}
 if(sk.ward){b.ward=sk.ward;shieldFx();if(sk.heal){state.hp=Math.min(state.maxHp,state.hp+sk.heal);healFx(sk.heal,'#8fd8ff');pkPanel();}await pkSay('Damage taken is reduced for '+sk.ward+' turns!',800);}
-if(sk.evade){b.evade=true;const G=geo();rise(G.hx,G.hy,26,['#d8d8e0','#a8a8b8','#ffffff'],G.hk*12);sfx('swirl');await pkSay('You will dodge the next attack!',800);}
+if(sk.evade){b.evade=true;const G=geo();rise(G.hx,G.hy,26,['#d8d8e0','#a8a8b8','#ffffff'],G.hk*12);sfx('dodge');await pkSay('You will dodge the next attack!',800);}
 if(sk.kind){let total=0;const hits=sk.hits||1;for(let h=0;h<hits&&e.hp>0;h++){const crit=sk.crit?Math.random()<sk.crit:Math.random()<.08;let d=Math.round((sk.base+sk.per*lv+rnd(4))*(1+Math.max(0,Math.min(5,Number(state.skillTier)||0))*.05));if(crit)d=Math.round(d*1.6);total+=d;await heroStrike(sk.kind,d,crit,sk.color);}
 if(e.hp>0){await pkSay('It deals '+total+' damage!',650);
-if(sk.stun&&Math.random()<(e.boss?sk.stun*.4:sk.stun)){e.status.stun=1;await pkSay(e.name+' is stunned!',750);}
-if(sk.weaken){e.status.weaken=sk.weaken;await pkSay(e.name+'\u2019s attacks are weakened!',750);}
-if(sk.burn){e.status.burn=sk.burn;await pkSay(e.name+' is burning!',750);}
+if(sk.stun&&Math.random()<(e.boss?sk.stun*.4:sk.stun)){e.status.stun=1;sfx('stun');await pkSay(e.name+' is stunned!',750);}
+if(sk.weaken){e.status.weaken=sk.weaken;sfx('weaken');await pkSay(e.name+'\u2019s attacks are weakened!',750);}
+if(sk.burn){e.status.burn=sk.burn;sfx('burn');await pkSay(e.name+' is burning!',750);}
 if(sk.healSelf){state.hp=Math.min(state.maxHp,state.hp+sk.healSelf);healFx(sk.healSelf,'#ffe45c');pkPanel();await pkSay('You recover '+sk.healSelf+' HP!',750);}}}}
 if(!e.hp){await pkWin();return;}
 await endRound();}
 async function endRound(){const b=battle,e=b.e;
-if(e.status.burn>0){e.status.burn--;const d=3+Math.floor(state.level/2);const G=geo();burst(G.fx,G.fy-G.fh*.5,10,['#ff7a2e','#ffd84a','#ff3b30'],120);e.hp=Math.max(0,e.hp-d);b.flashF=.7;pop(String(d),G.fx,G.fy-G.fh*.7,'#ff9a2e',18);sfx('hit');pkPanel();await pkSay(e.name+' takes '+d+' burn damage!',800);if(!e.hp){await pkWin();return;}}
+if(e.status.burn>0){e.status.burn--;const d=3+Math.floor(state.level/2);const G=geo();burst(G.fx,G.fy-G.fh*.5,10,['#ff7a2e','#ffd84a','#ff3b30'],120);e.hp=Math.max(0,e.hp-d);b.flashF=.7;pop(String(d),G.fx,G.fy-G.fh*.7,'#ff9a2e',18);sfx('burn');pkPanel();await pkSay(e.name+' takes '+d+' burn damage!',800);if(!e.hp){await pkWin();return;}}
 const alive=await foeTurn();if(!alive)return;
 if(b.ward>0)b.ward--;if(e.status.weaken>0)e.status.weaken--;b.guard=false;b.evade=false;
 save();updateHud();pkMenu('main');b.busy=false;}
@@ -927,7 +1279,7 @@ await pkSay(e.name+' '+mv.n,650);
 const dx=-(G.fx-G.hx)*(e.boss?.5:.6);await tween(e.boss?300:240,p=>{b.fox=dx*ease(p);b.foy=8*Math.sin(p*Math.PI);});
 let total=0;
 for(let h=0;h<mv.hits&&state.hp>0;h++){
-if(b.evade){pop('MISS',G.hx,G.hy-G.hk*12,'#d8d8e0',20);sfx('swirl');b.evade=h===mv.hits-1?b.evade:true;await sleep(260);continue;}
+if(b.evade){pop('MISS',G.hx,G.hy-G.hk*12,'#d8d8e0',20);sfx('dodge');b.evade=h===mv.hits-1?b.evade:true;await sleep(260);continue;}
 let d=Math.max(2,Math.round(e.atk*(e.status.weaken>0?.7:1)*mv.m-Math.floor(lv/2)+rnd(3)));d=Math.max(1,d-Math.max(0,Math.min(5,Number(state.armorTier)||0)));
 if(b.ward>0)d=Math.ceil(d*.3);else if(b.guard)d=Math.ceil(d*.35);
 // Rowan's duel is a skill check, not a surprise one-shot: cap each hit and his total turn damage.
@@ -947,7 +1299,7 @@ b.dead=1;b.flashW=B?1:0;sfx('win');await pkSay(g.name+' was defeated!',1000);
 const reward=B?B.reward:g.reward,xp=B?B.xp:(g.xp||40);state.coins+=reward;state.xp+=xp;let up=0;
 while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=6;state.maxMp+=2;state.hp=state.maxHp;up++;}
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
-if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
+if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
 if(B){state.stage=Math.max(state.stage||0,g.bi+1);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);}else {
  const redeemed=state.rowanChoice==='forgive'||state.rowanTrust>=2;
@@ -1135,10 +1487,10 @@ function askStoryChoice(speaker,prompt,options,onPick){
  const box=$('lh-dialogue'),next=$('lh-next'),row=document.createElement('div');
  row.className='lh-story-choices';row.setAttribute('role','group');row.setAttribute('aria-label','Story choice');
  next.hidden=true;
- options.forEach((option,index)=>{const button=document.createElement('button');button.type='button';button.className='lh-gold-button';button.textContent=option.label;button.addEventListener('click',()=>{row.remove();next.hidden=false;onPick(option.value);closeDialogue();});row.appendChild(button);});
+ options.forEach((option,index)=>{const button=document.createElement('button');button.type='button';button.className='lh-gold-button';button.textContent=option.label;button.addEventListener('click',()=>{sfx('confirm');row.remove();next.hidden=false;onPick(option.value);closeDialogue();});row.appendChild(button);});
  box.appendChild(row);
 }
-function setDialogue(lines,done){dialogue=lines;dialogueIndex=0;dialogueDone=done||null;showLine();}
+function setDialogue(lines,done){const opening=!dialogue;dialogue=lines;dialogueIndex=0;dialogueDone=done||null;if(opening)sfx('talkOpen');showLine();}
 let dialogueDone=null;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);}
 function portraitRow(name){if(name==='YOU')return(cinematic&&cinematic.phase!=='outside')?CIV:heroRow();if(NPC_ROW[name]!==undefined)return NPC_ROW[name];return[11,15,22,27,32][[...String(name)].reduce((a,c)=>a+c.charCodeAt(0),0)%5];}
@@ -1159,8 +1511,8 @@ function positionSpeechBubble(){const box=$('lh-dialogue');if(!box)return;box.cl
 function closeDialogue(){const choices=$('lh-dialogue').querySelector('.lh-story-choices');if(choices)choices.remove();$('lh-next').hidden=false;$('lh-dialogue').hidden=true;$('lh-dialogue').classList.remove('lh-dialogue-top');$('lh-game').classList.remove('lh-dialogue-open');dialogue=null;if(dialogueDone){const fn=dialogueDone;dialogueDone=null;fn();}}
 function typeText(t){clearInterval(typer);fullText=t;typing=true;const el=$('lh-dialogue-text');let i=0;el.textContent='';typer=setInterval(()=>{el.textContent=t.slice(0,++i);if(i%2===0&&t[i-1]!==' ')talkBlip();if(i>=t.length)finishType();},24);}
 function finishType(){clearInterval(typer);typing=false;$('lh-dialogue-text').textContent=fullText;}
-function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else showLine();}
-function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer=roomStart(id);facing=1;updateHud();save();setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
+function advanceDialogue(){if(!dialogue)return;if(typing){finishType();return;}dialogueIndex++;if(dialogueIndex>=dialogue.length)closeDialogue();else{sfx('menu');showLine();}}
+function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;sfx('door');const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer=roomStart(id);facing=1;updateHud();save();musicTick(true);setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
 function turnInClues(){setQ(4);state.coins=(state.coins||0)+50;addPotions(2);sfx('unlock');updateHud();updateQuest();
 setDialogue([['YOU','Elder Maple... I searched the village. Orin kept an old map safe for my parents.'],
@@ -1173,8 +1525,8 @@ function elderChat(){const n=state.elderTalks=(state.elderTalks||0)+1,nm='ELDER 
 const hint=questStep<2?'Rowan is waiting for you in the village square. Speak with him, then search the homes.':questStep<3?'Have you searched every building? Old Orin in the workshop keeps many secrets.':!b.north?'Gatekeeper Brawn guards the north road. Beat him and the Wildlands will open to you.':!b.south?('Before the Pumpkin Sentinel, defeat a Wildlands creature, reach level 3, and upgrade your armor at Orin’s Forge. '+trainingHint()):(state.stage>=BOSSES.length?'You saved Hearthvale. I could not be prouder.':'Your next trial: '+chapters[Math.min(state.stage,9)].place+'. '+BOSSES[Math.min(state.stage,9)].name+' waits there.');
 const flavor=['Autumn always smelled of cinnamon here. Lately it smells of ash.','Keep your potions close and your guard closer.','Grass that sways against the wind hides monsters. The stone roads are safe if you need to rest.','Rest at the Ranger Camp in the Wildlands. Old Willow keeps the fire burning there.','Your mother used to hum the harvest song on that bench by the fountain.','Every zone has an Alpha. Defeat one and the wild folk will whisper your name.'];
 const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(state.elderKey!==key){state.elderKey=key;save();setDialogue([[nm,hint],[nm,flavor[n%flavor.length]]]);}else setDialogue([[nm,flavor[n%flavor.length]],[nm,flavor[(n+1)%flavor.length]]]);}
-function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep<3){setQ(3);updateQuest();}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
-let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:64;if(d<rc&&d<dist){found=n;dist=d;}}
+function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep<3){setQ(3);updateQuest();}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){sfx('inn');state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:(n.act==='teleporter'?72:64);if(d<rc&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.act==='teleporter'){openTeleporter();return;}
  if(found.region!==undefined){enterRegion(found.region);return;}
@@ -1213,11 +1565,17 @@ function showBeginnerTutorial(){
 }
 function startIntro(){
 document.body.classList.add('lh-cinematic');
-state.name=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';
-state.x=20*TILE;state.y=15*TILE;state.coins=100;state.stage=0;state.seenIntro=false;
+const chosenName=$('lh-name-input').value.trim().slice(0,16)||'Adventurer';
+const chosenGender=state.gender;
+state=createFreshState(chosenName,'Guardian',chosenGender);
+questStep=0;scene='outside';AREA=null;stepper=null;insideTalked=false;
+Object.keys(AREAS).forEach(k=>delete AREAS[k]);
+rebuildVillageEntities();
+applyGender();
 $('lh-create').hidden=true;updateHud();
 const W=innerWidth,H=innerHeight;
 cinematic={phase:'dream',camera:{x:0,y:0},flash:0,actors:{HERO:{x:W*.2,y:H*.78},FOE:{x:W*.86,y:H*.74},MARA:{x:W*.1,y:H*.58},THOMAS:{x:W*.9,y:H*.58},ROWAN:{x:W*.32,y:H*.58}}};
+musicTick(true);
 const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
 const moveActor=(name,to,duration=900)=>new Promise(resolve=>{const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.face=Math.abs(to.x-from.x)>Math.abs(to.y-from.y)?(to.x<from.x?2:3):(to.y<from.y?1:0);function step(now){if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.step=1+(Math.floor(now/140)%2);if(cinematic.phase==='outside'&&name==='HERO')cinematic.camera={x:a.x,y:a.y};if(p<1)requestAnimationFrame(step);else{a.step=0;resolve();}}requestAnimationFrame(step);});
 (async()=>{
@@ -1226,46 +1584,46 @@ await say([['CROWD',state.name+'! '+state.name+'! '+state.name+'!'],['ROWAN','Go
 await moveActor('HERO',{x:W*.42,y:H*.78},1000);
 await moveActor('FOE',{x:W*.68,y:H*.76},900);
 await say([['ANNOUNCER','The final match of the Harvest Festival begins now!'],['CHALLENGER','You really think you can beat me?']]);
-await moveActor('HERO',{x:W*.6,y:H*.77},420);cinematic.flash=1;
+await moveActor('HERO',{x:W*.6,y:H*.77},420);cinematic.flash=1;sfx('flash');
 await moveActor('FOE',{x:W*.86,y:H*.74},500);
 await say([['ANNOUNCER','A STRIKE LIKE LIGHTNING! THE CHAMPION WINS!'],['MARA','That is our child! We are so proud of you!'],['THOMAS','The greatest champion Hearthvale has ever seen!']]);
-cinematic.flash=1;cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={MARA:{x:-W*.1,y:H*.84},THOMAS:{x:W*1.1,y:H*.84}};
+cinematic.flash=1;sfx('flash');cinematic.phase='wake';cinematic.wakePose='lying';cinematic.actors={MARA:{x:-W*.1,y:H*.84},THOMAS:{x:W*1.1,y:H*.84}};musicTick(true);
 await moveActor('MARA',{x:W*.3,y:H*.84},900);
 await say([['MARA','Wake up, sleepyhead… You were dreaming about the championship again.']]);
 cinematic.wakePose='sitting';moveActor('THOMAS',{x:W*.7,y:H*.84},900);
 await say([['MARA','Good morning! Rowan is waiting outside. You are both old enough to attend Hearthvale School today.'],['THOMAS','The instructor will help you choose the path that suits you. We will see you after lessons.']]);
 cinematic.wakePose='standing';
 await say([['ROWAN','(from outside) Ready? Let’s walk to school together!']]);
-cinematic.flash=1;cinematic.phase='school';cinematic.actors={HERO:{x:W*.4,y:H*.72},ROWAN:{x:W*.6,y:H*.72}};
+cinematic.flash=1;sfx('flash');cinematic.phase='school';cinematic.actors={HERO:{x:W*.4,y:H*.72},ROWAN:{x:W*.6,y:H*.72}};musicTick(true);
 await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],['INSTRUCTOR','Welcome to Hearthvale School. Every adventurer chooses one path: Guardian, Scout, or Mage. Your choice will shape how you face the world.']]);
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
 await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.']]);
 const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
 await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]);
-cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};
+cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};musicTick(true);
 await say([['ROWAN','Come on, let’s walk home. Your parents promised a feast for tonight.']]);
 await Promise.all([moveActor('HERO',{x:10*TILE+16,y:11*TILE+24},3200),moveActor('ROWAN',{x:11*TILE+16,y:11*TILE+24},3200)]);
 await say([['ROWAN','Huh? The front door is wide open…'],['ROWAN','Mara? Thomas? Hello?']]);
-cinematic.flash=1;cinematic.phase='home';{const g0=roomGeom(0);cinematic.actors={HERO:{x:rcx(g0,5),y:rcy(g0,6),face:1},ROWAN:{x:rcx(g0,6),y:rcy(g0,6),face:1}};
+cinematic.flash=1;sfx('door');cinematic.phase='home';musicTick(true);{const g0=roomGeom(0);cinematic.actors={HERO:{x:rcx(g0,5),y:rcy(g0,6),face:1},ROWAN:{x:rcx(g0,6),y:rcy(g0,6),face:1}};
 await say([['ROWAN','Dinner is still on the table… and nobody touched it.'],['YOU','The fire is out and the lanterns are dark. They would never leave like this.']]);
-await moveActor('HERO',{x:rcx(g0,4),y:rcy(g0,5)},900);cinematic.sparkle=true;
+await moveActor('HERO',{x:rcx(g0,4),y:rcy(g0,5)},900);cinematic.sparkle=true;sfx('unlock');
 await say([['YOU','A golden leaf… and Mom’s journal is open on the table.'],['ROWAN','That symbol… the Everfeast sigil! Read it out loud.']]);}
-cinematic.sparkle=false;cinematic.flash=1;cinematic.phase='lore';cinematic.t0=performance.now();cinematic.act=0;
+cinematic.sparkle=false;cinematic.flash=1;sfx('page');cinematic.phase='lore';cinematic.t0=performance.now();cinematic.act=0;musicTick(true);
 const lore=[[['JOURNAL','THE LEGEND OF THE EVERFEAST, written by the First Keepers of Hearthvale.'],['JOURNAL','Long ago this valley was ash and hunger. Three winters passed without a single harvest.'],['JOURNAL','The villagers shared the last of their grain, but it was never enough.']],
 [['JOURNAL','Then, on the coldest night, the First Keepers set one golden table in the square and fed every neighbor and stranger.'],['JOURNAL','That was the first Everfeast: wherever a meal is shared in kindness, the harvest returns. By morning the fields were green.']],
 [['JOURNAL','But hunger has a master: the Hollow King, who feeds on forgotten promises and empty tables.'],['JOURNAL','He rose from the frozen north and swallowed orchards, rivers, and whole villages.']],
 [['JOURNAL','The Keepers made the First Promise: never let a table in Hearthvale stand empty. Their light sealed the Hollow King beneath the village.'],['JOURNAL','Every autumn, new Keepers renew the promise at the Everfeast. As long as the table is full, the seal holds.']],
 [['JOURNAL','But this year the Keepers are gone, the sigil is cracking, and tonight the table stands empty…']]];
-for(let a=0;a<lore.length;a++){if(a>0){cinematic.flash=1;cinematic.act=a;cinematic.t0=performance.now();}await say(lore[a]);}
-cinematic.flash=1;cinematic.phase='home';cinematic.sparkle=false;
+for(let a=0;a<lore.length;a++){if(a>0){cinematic.flash=1;sfx('page');cinematic.act=a;cinematic.t0=performance.now();}await say(lore[a]);}
+cinematic.flash=1;cinematic.phase='home';cinematic.sparkle=false;musicTick(true);
 await say([['ROWAN','Your parents are Keepers… and the Hollow King’s seal is breaking!'],['YOU','Then we have to find them before the Everfeast fails.'],['ROWAN','Elder Maple knows the old stories. Let’s ask him first.']]);
-cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';state.x=10*TILE+16;state.y=12*TILE+24;state.seenIntro=true;setQ(0);updateQuest();showBeginnerTutorial();
+cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';state.x=10*TILE+16;state.y=12*TILE+24;state.seenIntro=true;setQ(0);updateQuest();musicTick(true);showBeginnerTutorial();
 })();
 }
 
 function areaName(){if(scene==='area'&&AREA)return AREA.routeName||AREA.name;return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
-function updateQuest(){state.sideQuests=state.sideQuests||{};const active=Object.entries(state.sideQuests).find(([id,q])=>q&&q.accepted&&!q.done);if(state.beaten&&state.beaten.north&&!state.beaten.south){$('lh-quest-text').textContent=sentinelTrainingReady()?'Return to the south road and challenge the Pumpkin Sentinel':'Training for the Pumpkin Sentinel · '+trainingHint();return;}if(state.beaten&&state.beaten.south){const i=Math.min(state.stage||0,BOSSES.length-1);$('lh-quest-text').textContent=(state.beaten['boss'+i]||(state.stage||0)>=BOSSES.length)?'Hearthvale is saved!':'Defeat the '+BOSSES[i].name+(i>0?' in '+chapters[i].place:' on the south road');return;}if(scene==='area'&&AREA&&AREA.chapter&&!mainQuestReady(AREA.chapter)){const q=mainQuestData(AREA.chapter);$('lh-quest-text').textContent='Chapter '+(AREA.chapter+1)+' trial · Talk to '+(q.talked||[]).length+'/2 locals · Defeat '+(q.kills||0)+'/3 creatures';return;}const storyActive=Object.entries(state.storyArcs||{}).find(([id,q])=>q&&!q.done);if(storyActive){const names={market_truth:'A Name Left Behind',frost_lanterns:'Lanterns for the Lost',fortress_oath:'The Oath Beneath the Gate'};$('lh-quest-text').textContent=names[storyActive[0]]+(storyActive[1].stage===2?' · Return to the quest giver':' · Find the next character');return;}if(active){const labels={woodland:'Hunter’s Request',orchard:'Last Good Apples',pantry:'A Light Below'};$('lh-quest-text').textContent=labels[active[0]]+' · '+(active[1].kills||0)+'/3 wild creatures';return;}if((questStep||0)>=4&&!(state.beaten&&state.beaten.south)){$('lh-quest-text').textContent=state.beaten&&state.beaten.north?'Hunt monsters in the Wildlands (north road), then face the south road':'Defeat Gatekeeper Brawn to open the Wildlands (north road)';return;}
+function updateQuest(){state.sideQuests=state.sideQuests||{};const active=Object.entries(state.sideQuests).find(([id,q])=>q&&q.accepted&&!q.done);if(state.beaten&&state.beaten.north&&!state.beaten.south){$('lh-quest-text').textContent=sentinelTrainingReady()?'Return to the south road and challenge the Pumpkin Sentinel':'Training for the Pumpkin Sentinel · '+trainingHint();return;}if(scene==='area'&&AREA&&AREA.chapter&&!state.beaten['boss'+AREA.chapter]&&!mainQuestReady(AREA.chapter)){const q=mainQuestData(AREA.chapter);$('lh-quest-text').textContent='Chapter '+(AREA.chapter+1)+' trial · Talk to '+(q.talked||[]).length+'/2 locals · Defeat '+(q.kills||0)+'/3 creatures';return;}if(state.beaten&&state.beaten.south){syncStageFromBeaten();const next=currentTargetChapter();$('lh-quest-text').textContent=next>=BOSSES.length?'Hearthvale is saved!':'Defeat the '+BOSSES[next].name+' in '+chapters[next].place;return;}const storyActive=Object.entries(state.storyArcs||{}).find(([id,q])=>q&&!q.done);if(storyActive){const names={market_truth:'A Name Left Behind',frost_lanterns:'Lanterns for the Lost',fortress_oath:'The Oath Beneath the Gate'};$('lh-quest-text').textContent=names[storyActive[0]]+(storyActive[1].stage===2?' · Return to the quest giver':' · Find the next character');return;}if(active){const labels={woodland:'Hunter’s Request',orchard:'Last Good Apples',pantry:'A Light Below'};$('lh-quest-text').textContent=labels[active[0]]+' · '+(active[1].kills||0)+'/3 wild creatures';return;}if((questStep||0)>=4&&!(state.beaten&&state.beaten.south)){$('lh-quest-text').textContent=state.beaten&&state.beaten.north?'Hunt monsters in the Wildlands (north road), then face the south road':'Defeat Gatekeeper Brawn to open the Wildlands (north road)';return;}
 const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function drawAvatarTo(cv){if(!cv||!CHARS.naturalWidth)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,16,16);c.drawImage(CHARS,0,((cinematic&&cinematic.phase!=='outside')?CIV:heroRow())*16,16,16,0,0,16,16);}
 CHARS.addEventListener('load',()=>drawAvatarTo($('lh-hud-avatar')));
@@ -1276,7 +1634,7 @@ function updateHud(){const mh=state.maxHp||40,mm=state.maxMp||20,mp=state.mp??mm
  drawAvatarTo($('lh-hud-avatar'));
  $('lh-location').textContent=scene==='inside'?['MAPLE COTTAGE','VILLAGE INN','GENERAL STORE','OLD WORKSHOP'][interiorId]:areaName().toUpperCase();updateQuest();}
 function move(dt){walking=false;const ins=scene==='inside',ar=scene==='area',P=ins?insidePlayer:ar?areaPlayer:state;
-if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;if(ar)areaStep();if(!ins&&!ar){const an=areaName();if(an!==lastArea){lastArea=an;updateHud();}}if(!ins&&!ar&&++stepCount%4===0)save();if(!ins&&!ar&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){startBattle(wildEncounter());}}
+if(stepper){stepper.t+=dt/.19;const e=Math.min(1,stepper.t);P.x=stepper.fx+(stepper.tx-stepper.fx)*e;P.y=stepper.fy+(stepper.ty-stepper.fy)*e;walking=true;if(stepper.t<1)return;P.x=stepper.tx;P.y=stepper.ty;stepper=null;alt^=1;const tall=(!ins&&!ar&&inGrass(P))||(ar&&AREA&&AREA.enc&&AREA.enc[Math.floor(P.y/32)*AREA.w+Math.floor(P.x/32)]);if(tall)sfx('grass');else if(!alt)sfx('step');if(ar)areaStep();if(!ins&&!ar){const an=areaName();if(an!==lastArea){lastArea=an;updateHud();}}if(!ins&&!ar&&++stepCount%4===0)save();if(!ins&&!ar&&!battle&&!dialogue&&inGrass(P)&&Math.random()<.14){startBattle(wildEncounter());}}
 if(titleOpen||battle||dialogue||cinematic||transitioning||!$('lh-create').hidden||!$('lh-game-menu').hidden)return;
 if(!ins&&!ar){P.x=Math.floor(P.x/TILE)*TILE+16;P.y=Math.floor(P.y/TILE)*TILE+24;}
 let dx=joystick.x,dy=joystick.y;if(keys.ArrowLeft||keys.a||touch.left)dx--;if(keys.ArrowRight||keys.d||touch.right)dx++;if(keys.ArrowUp||keys.w||touch.up)dy--;if(keys.ArrowDown||keys.s||touch.down)dy++;
@@ -1301,10 +1659,10 @@ joy.addEventListener('pointerup',releaseJoy);joy.addEventListener('pointercancel
 // Tap the game world to interact; keyboard E/Space remains available.
 $('lh-dialogue').addEventListener('pointerup',e=>{if(e.target.closest('button'))return;e.preventDefault();advanceDialogue();});
 $('lh-next').addEventListener('click',advanceDialogue);
-document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
-$('lh-school-confirm').addEventListener('click',()=>{const selected=$('lh-school-class').querySelector('.lh-class.selected');state.heroClass=selected.dataset.class;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;$('lh-school-class').hidden=true;updateHud();save();if(window.__lhClassChosen){const done=window.__lhClassChosen;window.__lhClassChosen=null;done();}});
-$('lh-begin').addEventListener('click',startIntro);
-$('lh-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')startIntro();});
+document.querySelectorAll('#lh-school-class .lh-class').forEach(b=>b.addEventListener('click',()=>{sfx('menu');$('lh-school-class').querySelectorAll('.lh-class').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');}));
+$('lh-school-confirm').addEventListener('click',()=>{sfx('confirm');const selected=$('lh-school-class').querySelector('.lh-class.selected');state.heroClass=selected.dataset.class;state.hp=state.heroClass==='Guardian'?50:state.heroClass==='Mage'?36:40;state.maxHp=state.hp;state.maxMp=state.maxMp||20;state.mp=state.maxMp;state.level=state.level||1;state.xp=state.xp||0;$('lh-school-class').hidden=true;updateHud();save();if(window.__lhClassChosen){const done=window.__lhClassChosen;window.__lhClassChosen=null;done();}});
+$('lh-begin').addEventListener('click',()=>{sfx('confirm');startIntro();});
+$('lh-name-input').addEventListener('keydown',e=>{if(e.key==='Enter'){sfx('confirm');startIntro();}});
 function jBar(cls,label,v,max,txt){return'<div class="lh-j-bar '+cls+'"><label>'+label+'</label><div class="t"><i style="width:'+Math.max(0,Math.min(100,v/max*100))+'%"></i></div><b>'+txt+'</b></div>';}
 function jChip(label,val,wide){return'<div class="lh-j-chip'+(wide?' wide':'')+'"><small>'+label+'</small><b>'+escapeMenuText(val)+'</b></div>';}
 const J_ZONES=[['SUNNY MEADOW','#7bc86c','1-2'],['ORCHARD WOODS','#d9a04a','3-4'],['MISTY MARSH','#4fa9a0','5-6'],['STONE HOLLOW','#8a7f9a','7-8'],['FROST RIDGE','#cfe6f6','9-10']];
@@ -1319,8 +1677,10 @@ function renderRpgMenu(tab='status'){
   const lv=state.level||1,mh=state.maxHp||40,mm=state.maxMp||20,mp=state.mp??mm,xp=state.xp||0,xn=lv*100;ensureBattleItems();
   if(tab==='status'){
     const loc=scene==='inside'?['Maple Cottage','Village Inn','General Store','Old Workshop'][interiorId]:areaName(),items=BATTLE_ITEMS.reduce((a,it)=>a+battleItemCount(it.id),0),sk=Array.isArray(state.skills)?state.skills.length:Object.keys(state.skills||{}).length;
-    panel.innerHTML='<div class="lh-j-hero"><div class="lh-j-portrait"><canvas id="lh-j-avatar" width="16" height="16"></canvas></div><div class="lh-j-info"><b class="lh-j-name">'+esc(state.name||'Adventurer')+'</b><span class="lh-j-sub">LV '+lv+' \u00B7 '+esc((state.heroClass||'Guardian').toUpperCase())+'</span>'+jBar('hp','HP',state.hp,mh,state.hp+'/'+mh)+jBar('mp','MP',mp,mm,mp+'/'+mm)+jBar('xp','XP',xp,xn,xp+'/'+xn)+'</div></div><div class="lh-j-chips">'+jChip('COINS',state.coins||0)+jChip('ITEMS',items)+jChip('CHAPTER',(stage+1)+' / 10')+jChip('SKILLS',sk)+jChip('LOCATION',loc,true)+'</div>';
+    const trackKey=desiredMusicTrack(),trackMeta=MUS[trackKey],trackLabel=((trackMeta&&trackMeta.title)||'Hearthvale Theme')+' \u00B7 CC0-1.0';
+    panel.innerHTML='<div class="lh-j-hero"><div class="lh-j-portrait"><canvas id="lh-j-avatar" width="16" height="16"></canvas></div><div class="lh-j-info"><b class="lh-j-name">'+esc(state.name||'Adventurer')+'</b><span class="lh-j-sub">LV '+lv+' \u00B7 '+esc((state.heroClass||'Guardian').toUpperCase())+'</span>'+jBar('hp','HP',state.hp,mh,state.hp+'/'+mh)+jBar('mp','MP',mp,mm,mp+'/'+mm)+jBar('xp','XP',xp,xn,xp+'/'+xn)+'</div></div><div class="lh-j-chips">'+jChip('COINS',state.coins||0)+jChip('ITEMS',items)+jChip('CHAPTER',(stage+1)+' / 10')+jChip('SKILLS',sk)+jChip('LOCATION',loc,true)+jChip('SOUNDTRACK',trackLabel,true)+'</div><div style="margin-top:10px;display:flex;justify-content:flex-end"><button id="lh-j-sound" type="button" class="lh-j-btn '+(muted?'red':'gold')+'" style="width:100%">AUDIO: '+(muted?'OFF':'ON')+' (M)</button></div>';
     drawAvatarTo($('lh-j-avatar'));
+    const sb=$('lh-j-sound');if(sb)sb.addEventListener('click',()=>{setMuted(!muted);sfx('select');renderRpgMenu('status');});
   }else if(tab==='bag'){
     const gearTier=Math.max(0,Math.min(5,Number(state.weaponTier)||0)),armorTier=Math.max(0,Math.min(5,Number(state.armorTier)||0)),gearNames={Guardian:[['Harvest Longsword','Ironroot Blade','Copperfall Greatsword','Embersteel Edge','Keeper’s Oath','Everfeast Relic'],['Steel Plate Armor','Reinforced Plate','Guardian’s Bulwark','Runebound Armor','Sentinel Harness','First Keeper’s Aegis']],Scout:[['Hunter’s Longbow','Briarstring Bow','Windrunner Bow','Goldleaf Recurve','Frostfeather Bow','Wildheart Longbow'],['Ranger Leather Armor','Hardened Trail Leathers','Thornweave Vest','Shadowstalker Gear','Frosthide Armor','Wildheart Mantle']],Mage:[['Amber Orb Staff','Moonlit Branch','Starfall Staff','Runesinger Rod','Frostglass Staff','Everfeast Scepter'],['Spellbound Mantle','Apprentice Robes','Runesewn Robe','Stargazer Mantle','Frostweave Robe','Everfeast Vestments']]},gn=gearNames[state.heroClass]||gearNames.Guardian,kit=[gn[0][gearTier]+' \u2014 weapon',gn[1][armorTier]+' \u2014 armor'];
     const items=[...kit,...(Array.isArray(state.inventory)?state.inventory:[])],pal=['#d9534a','#4a9ad9','#4fa04a','#d9a94e','#9a6ad9'];
@@ -1337,11 +1697,11 @@ function renderRpgMenu(tab='status'){
   }
 }
 function escapeMenuText(value){return String(value??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
-$('lh-menu').addEventListener('click',()=>{$('lh-game-menu').hidden=false;renderRpgMenu('status');});
-document.querySelectorAll('[data-rpg-tab]').forEach(b=>b.addEventListener('click',()=>renderRpgMenu(b.dataset.rpgTab)));
-$('lh-resume').addEventListener('click',()=>{$('lh-game-menu').hidden=true;});
-{const r2=$('lh-resume2');if(r2)r2.addEventListener('click',()=>{$('lh-game-menu').hidden=true;});}
-$('lh-reset').addEventListener('click',()=>{if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);location.reload();}});
+$('lh-menu').addEventListener('click',()=>{sfx('page');$('lh-game-menu').hidden=false;renderRpgMenu('status');});
+document.querySelectorAll('[data-rpg-tab]').forEach(b=>b.addEventListener('click',()=>{sfx('page');renderRpgMenu(b.dataset.rpgTab);}));
+$('lh-resume').addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidden=true;});
+{const r2=$('lh-resume2');if(r2)r2.addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidden=true;});}
+$('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){resetLocalSave(false);location.reload();}});
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},enterRegion,enterArea,towerEnter,showLeaderboard,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
