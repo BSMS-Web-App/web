@@ -540,7 +540,35 @@ px(x+w-38,y+24,26,23,'#344c63');px(x+w-36,y+26,22,18,C.glass);px(x+w-36,y+34,22,
 px(x+w/2-17,y+h-42,34,42,'#344457');px(x+w/2-13,y+h-38,26,38,'#815236');px(x+w/2-9,y+h-34,18,30,'#a86b43');px(x+w/2+7,y+h-22,3,3,C.gold);
 px(x+w/2-22,y+17,44,9,'#f1e6c6');px(x+w/2-17,y+19,34,5,'#d0b66d');
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawSentinelRaid(W,H){
+ const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#151326');sky.addColorStop(.58,'#542d35');sky.addColorStop(1,'#17151d');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ // Hearthvale rooftops and warm windows, now under a smoky orange sky.
+ for(let i=0;i<9;i++){const x=i*W/8-20,bh=H*(.2+(i%3)*.055);ctx.fillStyle=i%2?'#302a3b':'#49303a';ctx.fillRect(x,H*.68-bh,W/9,bh);ctx.fillStyle='#1b1928';ctx.beginPath();ctx.moveTo(x-5,H*.68-bh);ctx.lineTo(x+W/18,H*.68-bh-H*.09);ctx.lineTo(x+W/9+5,H*.68-bh);ctx.fill();for(let q=0;q<3;q++){ctx.fillStyle='#f7b65c';ctx.fillRect(x+10+q*18,H*.68-bh+18,7,11);}}
+ ctx.fillStyle='#211b28';ctx.fillRect(0,H*.68,W,H*.32);
+ // Citizens flee in both directions; no one is harmed on screen.
+ for(let i=0;i<8;i++){const speed=65+i*12,x=((i*W/7+(t*speed*(i%2?1:-1))+W*4)%(W+60))-30,y=H*(.72+(i%3)*.045),sc=Math.max(2,Math.floor(H/220));ctx.fillStyle=i%2?'#d69a68':'#8cb1a3';ctx.fillRect(x,y-18*sc,8*sc,12*sc);ctx.fillStyle='#d8b18b';ctx.fillRect(x+2*sc,y-25*sc,5*sc,6*sc);ctx.fillStyle='#262438';ctx.fillRect(x,y-7*sc,3*sc,8*sc);ctx.fillRect(x+5*sc,y-7*sc,3*sc,8*sc);}
+ // Rowan hesitates for a beat, then runs toward the edge of the square.
+ const rx=W*.66-Math.min(W*.5,t*95),ry=H*.7,sc=Math.max(3,Math.floor(H/150));
+ if(CHARS.naturalWidth){const frame=Math.floor(t*9)%4;ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,rx,ry-48*sc,16*sc,16*sc);}
+ // The Pumpkin Sentinel looms beyond the rooftops.
+ const sx=W*.82-Math.min(W*.18,t*5),sy=H*.31+Math.sin(t*1.8)*4;
+ if(BOS.naturalWidth){const bi=BOSS_NPC['PUMPKIN SENTINEL']||0;ctx.drawImage(BOS,bi*64,0,64,64,sx-48*sc,sy,96*sc,96*sc);}
+ else{ctx.fillStyle='#e07832';ctx.beginPath();ctx.arc(sx,sy+35*sc,34*sc,0,Math.PI*2);ctx.fill();}
+ // Dust, falling leaves, and cinematic letterbox.
+ for(let i=0;i<24;i++){const x=(i*79+t*(i%2?18:-12)+W*2)%(W+10),y=(i*43+t*(12+i%5))%(H*.7);ctx.fillStyle=i%2?'#f1a34e':'#d6b86b';ctx.globalAlpha=.35;ctx.fillRect(x,y,3,3);}ctx.globalAlpha=1;
+ ctx.fillStyle='#08080d';ctx.fillRect(0,0,W,H*.09);ctx.fillRect(0,H*.91,W,H*.09);
+ const lines=t<2.8?'THE SENTINEL HAS REACHED HEARTHVALE':t<5.5?'GET EVERYONE TO SAFETY!':t<8?'ROWAN! WAIT!':'YOU CANNOT RUN FROM THIS.';
+ ctx.textAlign='center';ctx.font='bold '+Math.max(11,Math.min(20,W/34))+'px monospace';ctx.fillStyle='#fff0c2';ctx.fillText(lines,W/2,H*.15);
+ ctx.restore();
+}
+async function playSentinelRaid(done){
+ cinematic={phase:'sentinelRaid',t0:performance.now()};sfx('warn');
+ await sleep(2600);if(!cinematic||cinematic.phase!=='sentinelRaid')return;
+ setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{cinematic=null;done();});
+}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
@@ -1152,7 +1180,7 @@ if(found.act==='teleporter'){openTeleporter();return;}
  if(found.region!==undefined){enterRegion(found.region);return;}
 if(found.wilds){sfx('portal');enterWilds();return;}
 if(found.city){enterArea('city');return;}
-if(found.trainer&&!state.beaten[found.trainer.id]){if(found.trainer.id==='south'&&!sentinelTrainingReady()){showTrainingGuide();return;}setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
+if(found.trainer&&!state.beaten[found.trainer.id]){if(found.trainer.id==='south'&&!sentinelTrainingReady()){showTrainingGuide();return;}if(found.trainer.id==='south'&&!state.sentinelRaidSeen){state.sentinelRaidSeen=true;save();playSentinelRaid(()=>{setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));});return;}setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
 if(found.name==='ELDER MAPLE'&&questStep===0){setQ(1);setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
 else if(found.name==='ROWAN'&&questStep===1){setQ(2);setDialogue([[found.name,'I will check the fountain. You should search the buildings.'],['QUEST UPDATED','Enter a building and look for clues.']]);}
 else if(found.name==='ELDER MAPLE'&&questStep===3){turnInClues();}
