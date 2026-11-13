@@ -968,7 +968,7 @@ function drawSentinelRaid(W,H){
  ctx.globalAlpha=1;ctx.restore();
  // rooftops; three of them burning
  for(let i=0;i<9;i++){
-  const x=i*W/8-20,bw=W/9,bh=H*(.17+(i%3)*.045),top=horizon-bh,burning=i===2||i===5||i===7;
+  const x=i*W/8-20,bw=W/9,bh=H*(.10+(i%3)*.028),top=horizon-bh,burning=i===2||i===5||i===7;
   ctx.fillStyle=burning?'#221a23':(i%2?'#2a2333':'#3d2a34');ctx.fillRect(x,top,bw,bh);
   ctx.fillStyle='#161320';ctx.beginPath();ctx.moveTo(x-6,top);ctx.lineTo(x+bw/2,top-H*.08);ctx.lineTo(x+bw+6,top);ctx.fill();
   for(let q=0;q<3;q++){const flick=.55+.45*Math.sin(t*7+i*2+q);ctx.globalAlpha=burning?flick*.85:.45+flick*.3;ctx.fillStyle=burning?'#ffb057':'#f7b65c';ctx.fillRect(x+10+q*(bw/4),top+bh*.3,7,10);}
@@ -985,6 +985,24 @@ function drawSentinelRaid(W,H){
    ctx.fillStyle=fg;ctx.fillRect(x-20,top-40,bw+40,bh+60);}
   ctx.fillStyle='rgba(10,8,14,.45)';ctx.fillRect(x,top+bh-9,bw,9);
  }
+ // Hearthvale itself: the village's own cottages, three of them alight
+ const vs=Math.max(1.15,(W/540)*1.9),plots=[['cottage',.02],['house1',.21],['store',.40],['inn',.60],['workshop',.78]];
+ plots.forEach(([bn,px],pi)=>{
+  const r=VR[bn];if(!r||!VIL.naturalWidth)return;
+  const bw=r[2]*vs,bh=r[3]*vs,bx=W*px,by=horizon+H*.015-bh,burning=pi===1||pi===3||pi===4;
+  ctx.drawImage(VIL,r[0],r[1],r[2],r[3],bx,by,bw,bh);
+  if(burning){
+   const rx=bx+bw*.5,ry=by+bh*.16;
+   const fgl=ctx.createRadialGradient(rx,ry,4,rx,ry,bw*.85);
+   fgl.addColorStop(0,'rgba(255,150,60,'+(.30+.10*Math.sin(t*8+pi))+')');fgl.addColorStop(1,'rgba(255,120,40,0)');
+   ctx.fillStyle=fgl;ctx.fillRect(bx-bw*.3,by-bh*.5,bw*1.6,bh*1.3);
+   raidSmoke(rx,ry,Math.max(1,k*.6),t,pi*2);
+   raidFlame(bx+bw*.3,ry+6,k*.28,t,pi*3+1);
+   raidFlame(bx+bw*.46,ry+8,k*.38,t,pi*5+2);
+   raidFlame(bx+bw*.63,ry+5,k*.3,t,pi*7+3);
+   ctx.globalAlpha=.35;ctx.fillStyle='#160c10';ctx.fillRect(bx+bw*.18,by+bh*.42,bw*.64,bh*.3);ctx.globalAlpha=1;
+  }
+ });
  // dusty square, lit by the fires
  const gd=ctx.createLinearGradient(0,horizon,0,H);
  gd.addColorStop(0,'#3a2320');gd.addColorStop(.35,'#2a1a1b');gd.addColorStop(1,'#140e13');
@@ -999,9 +1017,8 @@ function drawSentinelRaid(W,H){
   const dir=i%2?1:-1,speed=70+i*14,x=((i*W/8+(t*speed*dir)+W*4)%(W+80))-40;
   const y=horizon+H*(.03+(i%3)*.038),vk=Math.max(2,Math.floor(H/230)),bob=Math.abs(Math.sin(t*9+i))*2*vk;
   ctx.fillStyle='rgba(255,150,70,.16)';ctx.beginPath();ctx.ellipse(x+4*vk,y+2*vk,10*vk,3*vk,0,0,7);ctx.fill();
-  ctx.fillStyle=i%2?'#c98f61':'#7fa294';ctx.fillRect(x,y-18*vk-bob,8*vk,12*vk);
-  ctx.fillStyle='#d8b18b';ctx.fillRect(x+2*vk,y-25*vk-bob,5*vk,6*vk);
-  ctx.fillStyle='#221f31';ctx.fillRect(x,y-7*vk,3*vk,8*vk);ctx.fillRect(x+5*vk,y-7*vk,3*vk,8*vk);
+  if(CHARS.naturalWidth){const vr=[8,12,14,19,21,24,28,29,31][i%9];ctx.drawImage(CHARS,0,vr*16,16,16,x,y-16*vk-bob,16*vk,16*vk);}
+  else{ctx.fillStyle=i%2?'#c98f61':'#7fa294';ctx.fillRect(x,y-18*vk-bob,8*vk,12*vk);}
   for(let d=0;d<3;d++){const dp=((t*2.4+d*.3+i*.11)%1);ctx.globalAlpha=.2*(1-dp);ctx.fillStyle='#d9b58c';ctx.beginPath();ctx.arc(x-dir*dp*12*vk,y-2*vk-dp*5*vk,(1.5+dp*3.5)*vk,0,7);ctx.fill();}
   ctx.globalAlpha=1;
  }
@@ -1033,7 +1050,7 @@ function drawSentinelRaid(W,H){
 }
 async function playSentinelRaid(done){
  cinematic={phase:'sentinelRaid',t0:performance.now()};document.body.classList.add('lh-cinematic');sfx('warn');
- await sleep(2600);if(!cinematic||cinematic.phase!=='sentinelRaid')return;
+ await sleep(6200);if(!cinematic||cinematic.phase!=='sentinelRaid')return;
  setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{document.body.classList.remove('lh-cinematic');cinematic=null;done();});
 }
 function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
@@ -1557,7 +1574,7 @@ if(boss&&b.phase==='enter'&&enterP<.9&&Math.random()<.5)rise(G.fx,G.fy,2,['#c9a0
 if(e.charging&&b.phase==='fight'){const by=fyp-G.fh-10-Math.abs(Math.sin(t*8))*8;bubbleText('!',fxp,by,'#ff3b30',Math.max(28,G.fk*8));}
 /* hero */
 const hxp=G.hx+b.hox+(b.kh||0)+(1-ep)*-W*.5,hyp=G.hy+b.hoy,hbob=Math.sin(t*3+1)*2;
-withFlash(b.flashH,'#ff4040',()=>{ctx.globalAlpha=1-b.hdead*.8;drawSpriteK(heroRow(),1,0,hxp,hyp+hbob+b.hdead*G.hk*3,G.hk);drawGear(hxp,hyp+hbob+b.hdead*G.hk*3,G.hk,1,state.heroClass);ctx.globalAlpha=1;});
+withFlash(b.flashH,'#ff4040',()=>{ctx.globalAlpha=1-b.hdead*.8;drawSpriteK(heroRow(),1,0,hxp,hyp+hbob+b.hdead*G.hk*3,G.hk*.84);ctx.globalAlpha=1;});
 /* guard / ward bubble */
 if(b.shield>0||b.ward>0){const a=b.shield>0?b.shield:.45+.15*Math.sin(t*5);ctx.strokeStyle='rgba(130,220,255,'+a+')';ctx.fillStyle='rgba(130,220,255,'+a*.18+')';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(hxp,hyp-G.hk*8,G.hk*10,G.hk*11,0,0,7);ctx.fill();ctx.stroke();b.shield=Math.max(0,b.shield-dt*1.6);}
 if(b.evade){ctx.fillStyle='rgba(220,220,235,.25)';ctx.beginPath();ctx.ellipse(hxp,hyp-G.hk*8,G.hk*11,G.hk*12,0,0,7);ctx.fill();}
