@@ -685,7 +685,92 @@ function storyArcTalk(n){
 }
 function sideQuestTalk(n){if(storyArcTalk(n))return true;const defs={'HAZEL THE HUNTER':{id:'woodland',title:'A Hunter’s Request',ask:'The forest creatures have been restless since the First Seal dimmed. Could you calm three wild creatures along the trail? I will share my best supplies.',thanks:'You helped restore a little peace to the woods. Take these trail supplies.'},'ORCHARD KEEPER DAHLIA':{id:'orchard',title:'The Last Good Apples',ask:'Three corrupted creatures are roaming the orchard. Clear them out and I can save the last healthy apple trees. Will you help?',thanks:'The orchard can breathe again. Please take these coins.'},'FISHER MARLO':{id:'pantry',title:'A Light Below',ask:'The flooded pantry is full of restless things. Defeat three of them and I can relight the lanterns along the lower shelves.',thanks:'The lower pantry is safe enough to search again. Take this tonic.'}};const d=defs[n.name];if(!d)return false;state.sideQuests=state.sideQuests||{};const q=state.sideQuests[d.id];if(q&&q.done){setDialogue([[n.name,d.thanks],['JOURNAL','Side quest complete: '+d.title+'.']]);return true;}if(!q||!q.accepted){setDialogue([[n.name,d.ask],['JOURNAL','I’ll take care of that.']],()=>{state.sideQuests[d.id]={accepted:true,kills:0,done:false};save();updateQuest();setDialogue([['QUEST ACCEPTED',d.title+' — defeat three wild creatures in this region.']]);});return true;}setDialogue([[n.name,'You have cleared '+q.kills+' of 3 creatures. Keep to the trail and watch the tall grass.']]);return true;}
 function progressSideQuests(g){if(!g.wild||!AREA||!AREA.chapter)return[];const mq=mainQuestData(AREA.chapter);mq.kills=Math.min(3,(mq.kills||0)+1);const mainLines=mq.kills===3?[['MAIN QUEST UPDATED','The trail is clear. Return to the chapter guardian!']]:[['JOURNAL','Chapter trial: '+mq.kills+' / 3 wild creatures defeated.']];const defs=[{id:'woodland',chapter:1,title:'A Hunter’s Request',reward:70,potion:1},{id:'orchard',chapter:2,title:'The Last Good Apples',reward:95,potion:0},{id:'pantry',chapter:3,title:'A Light Below',reward:120,potion:1}],out=[];state.sideQuests=state.sideQuests||{};for(const d of defs){const q=state.sideQuests[d.id];if(!q||!q.accepted||q.done||AREA.chapter!==d.chapter)continue;q.kills=Math.min(3,(q.kills||0)+1);out.push(['JOURNAL',d.title+': '+q.kills+' / 3 wild creatures cleared.']);if(q.kills>=3){q.done=true;state.coins=(state.coins||0)+d.reward;if(d.potion)addPotions(d.potion);out.push(['QUEST COMPLETE',d.title+'! You earned '+d.reward+' coins'+(d.potion?' and a potion.':'.')]);}}if(out.length){save();updateHud();}save();updateHud();return [...mainLines,...out];}
-function playRowanConfrontation(done){cinematic={phase:'region',chapter:5,actors:{HERO:{x:innerWidth*.27,y:innerHeight*.77,face:3,step:0},ROWAN:{x:innerWidth*.73,y:innerHeight*.77,face:2,step:0}}};document.body.classList.add('lh-cinematic');const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));const walk=(name,to,duration=850)=>new Promise(resolve=>{if(!cinematic||!cinematic.actors||!cinematic.actors[name])return resolve();const a=cinematic.actors[name],from={x:a.x,y:a.y},start=performance.now();a.face=Math.abs(to.x-from.x)>Math.abs(to.y-from.y)?(to.x<from.x?2:3):(to.y<from.y?1:0);const step=now=>{if(!cinematic)return resolve();const p=Math.min(1,(now-start)/duration),e=p*p*(3-2*p);a.x=from.x+(to.x-from.x)*e;a.y=from.y+(to.y-from.y)*e;a.step=p<1?1+(Math.floor(now/120)%2):0;if(p<1)requestAnimationFrame(step);else resolve();};requestAnimationFrame(step);});(async()=>{try{sfx('warn');await say([['ROWAN','Stop there. I hoped you would turn back before reaching this hall.'],['YOU','You left clues for me. You wanted me to follow you. Why?']]);await walk('ROWAN',{x:innerWidth*.58,y:innerHeight*.77});await say([['ROWAN','The Hollow King promised to bring my mother back. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);await walk('HERO',{x:innerWidth*.43,y:innerHeight*.77});await say([['ROWAN','I was ashamed. Every step made it harder to turn around. I am sorry. But he is listening. He knows you are here.'],['YOU','Your mother traded one season for you. He is your father. You never chose that.'],['ROWAN','No. But I chose everything after I found out. So hear me: when he asks, I will tell him where you are.'],['JOURNAL','The candles gutter out one by one. Something enormous stirs beneath the banquet table.']]);}catch(err){console.error('[LH] Rowan cutscene failed:',err);}cinematic=null;document.body.classList.remove('lh-cinematic');done();})();}
+function drawRowanScene(W,H){
+ const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
+ const horizon=H*.7,k=Math.max(3,Math.round(Math.min(W,H)/170));
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ const sky=ctx.createLinearGradient(0,0,0,horizon);
+ sky.addColorStop(0,'#0a0712');sky.addColorStop(.36,'#281020');sky.addColorStop(.66,'#6a2a21');sky.addColorStop(1,'#c85a2a');
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizon);
+ for(let i=0;i<6;i++){const p=((t*.03+i*.15)%1);ctx.globalAlpha=.16;ctx.fillStyle=i%2?'#150e19':'#22141a';
+  ctx.beginPath();ctx.ellipse(((i*W/5+p*40)%(W+140))-70,H*(.10+(i%4)*.06),(80+i*24)*(W/900),H*.045,0,0,7);ctx.fill();}
+ ctx.globalAlpha=1;
+ const glow=ctx.createRadialGradient(W*.5,horizon,10,W*.5,horizon,W*.7);
+ glow.addColorStop(0,'rgba(255,140,60,'+(.3+.07*Math.sin(t*5))+')');glow.addColorStop(1,'rgba(255,120,40,0)');
+ ctx.fillStyle=glow;ctx.fillRect(0,0,W,horizon+10);
+ // the street, and Hearthvale's cottages still burning behind him
+ const gd=ctx.createLinearGradient(0,horizon,0,H);
+ gd.addColorStop(0,'#3a2320');gd.addColorStop(.35,'#2a1a1b');gd.addColorStop(1,'#140e13');
+ ctx.fillStyle=gd;ctx.fillRect(0,horizon,W,H-horizon);
+ const vs=Math.max(1.05,(W/540)*1.3),order=['cottage','house1','inn','workshop'];
+ const hw=order.map(b=>VR[b]?VR[b][2]*vs:0),hgap=Math.max(7,(W-hw.reduce((a,b)=>a+b,0))/5);
+ let hx=hgap;
+ order.forEach((bn,pi)=>{
+  const r=VR[bn];if(!r||!VIL.naturalWidth){hx+=hgap;return;}
+  const bw=r[2]*vs,bh=r[3]*vs,bx=hx,by=horizon+H*.01-bh,burning=pi===0||pi===3;
+  hx+=bw+hgap;
+  ctx.globalAlpha=.45;ctx.fillStyle='#0d0910';ctx.beginPath();ctx.ellipse(bx+bw*.5,by+bh-2,bw*.5,bh*.05,0,0,7);ctx.fill();ctx.globalAlpha=1;
+  ctx.drawImage(VIL,r[0],r[1],r[2],r[3],bx,by,bw,bh);
+  if(burning){
+   const rx=bx+bw*.5,ry=by+bh*.16;
+   const fgl=ctx.createRadialGradient(rx,ry,4,rx,ry,bw*.8);
+   fgl.addColorStop(0,'rgba(255,150,60,'+(.24+.09*Math.sin(t*8+pi))+')');fgl.addColorStop(1,'rgba(255,120,40,0)');
+   ctx.fillStyle=fgl;ctx.fillRect(bx-bw*.25,by-bh*.45,bw*1.5,bh*1.25);
+   raidSmoke(rx,ry,Math.max(1,k*.55),t,pi*2+5);
+   raidFlame(bx+bw*.32,ry+6,k*.24,t,pi*3+2);
+   raidFlame(bx+bw*.5,ry+8,k*.32,t,pi*5+3);
+   raidFlame(bx+bw*.68,ry+5,k*.26,t,pi*7+1);
+   ctx.globalAlpha=.3;ctx.fillStyle='#160c10';ctx.fillRect(bx+bw*.2,by+bh*.34,bw*.6,bh*.3);ctx.globalAlpha=1;
+  }
+ });
+ // Rowan, alone in the street, facing away until he decides to turn
+ const rs=Math.max(3,Math.round(H/150)),rx=W*.5+Math.sin(t*.7)*3,ry=horizon+H*.06;
+ // a few villagers still running past him
+ for(let i=0;i<4;i++){
+  const dir=i%2?1:-1,vk=Math.max(2,Math.round(H/320)),vy=horizon+H*(.02+(i%2)*.03);
+  const vx=((i*W/2+(t*(60+i*10)*dir)+W*3)%(W+60))-30;
+  if(CHARS.naturalWidth)ctx.drawImage(CHARS,0,[8,12,21,28][i]*16,16,16,vx,vy-16*vk-Math.abs(Math.sin(t*9+i))*2*vk,16*vk,16*vk);
+ }
+ const face=t<2.2?-1:1,turned=Math.min(1,Math.max(0,(t-2.2)/.35));
+ ctx.fillStyle='rgba(255,140,70,.2)';ctx.beginPath();ctx.ellipse(rx,ry+2,11*rs,3.5*rs,0,0,7);ctx.fill();
+ const rg=ctx.createRadialGradient(rx,ry-8*rs,4,rx,ry-8*rs,15*rs);
+ rg.addColorStop(0,'rgba(255,168,90,'+(.16+.06*Math.sin(t*3))+')');rg.addColorStop(1,'rgba(255,140,60,0)');
+ ctx.fillStyle=rg;ctx.beginPath();ctx.arc(rx,ry-8*rs,15*rs,0,7);ctx.fill();
+ if(CHARS.naturalWidth){
+  ctx.save();ctx.translate(rx,0);ctx.scale(face,1);
+  ctx.drawImage(CHARS,0,(NPC_ROW.ROWAN||0)*16,16,16,-8*rs,ry-15*rs,16*rs,16*rs);
+  ctx.restore();
+ }
+ // embers, heat shimmer, vignette, letterbox
+ for(let i=0;i<60;i++){
+  const sp=24+(i%7)*8,x0=(i*137)%W,p=((t*sp/H)+i*.039)%1;
+  ctx.globalAlpha=Math.max(0,.9-p)*.85;ctx.fillStyle=i%3?'#ffb257':'#ffe1a0';
+  ctx.fillRect(x0+Math.sin(p*7+i)*12*p,horizon-p*(horizon*.9),2,2);
+ }
+ ctx.globalAlpha=1;
+ for(let i=0;i<3;i++){const y=horizon-16-i*22+Math.sin(t*3+i)*4;ctx.globalAlpha=.04;ctx.fillStyle='#ffd9a0';ctx.fillRect(0,y,W,5);}
+ ctx.globalAlpha=1;
+ const vg=ctx.createRadialGradient(W/2,H*.55,H*.3,W/2,H*.55,Math.max(W,H)*.8);
+ vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(26,3,5,.62)');
+ ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#08080d';ctx.fillRect(0,0,W,H*.09);ctx.fillRect(0,H*.91,W,H*.09);
+ ctx.textAlign='center';ctx.font='bold '+Math.max(11,Math.min(21,W/34))+'px monospace';
+ ctx.shadowColor='#ff7a2a';ctx.shadowBlur=16;ctx.fillStyle='#fff0c2';
+ ctx.fillText('HEARTHVALE \u00b7 STILL BURNING',W/2,H*.152);
+ ctx.shadowBlur=0;ctx.restore();
+}
+function playRowanConfrontation(done){
+ cinematic={phase:'rowanScene',t0:performance.now()};document.body.classList.add('lh-cinematic');
+ const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
+ (async()=>{try{
+  sfx('warn');
+  await say([['ROWAN','Stop there. I hoped you would turn back before reaching this hall.'],['YOU','You left clues for me. You wanted me to follow you. Why?']]);
+  await sleep(300);
+  await say([['ROWAN','The Hollow King promised to bring my mother back. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);
+  await say([['ROWAN','I was ashamed. Every step made it harder to turn around. I am sorry. But he is listening. He knows you are here.'],['YOU','Your mother traded one season for you. He is your father. You never chose that.'],['ROWAN','No. But I chose everything after I found out. So hear me: when he asks, I will tell him where you are.'],['JOURNAL','The candles gutter out one by one. Something enormous stirs beneath the banquet table.']]);
+ }catch(err){console.error('[LH] Rowan cutscene failed:',err);}
+  cinematic=null;document.body.classList.remove('lh-cinematic');done();})();
+}
 function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});});return;}playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();A.bossTalk=0;startBattle(g);});});}
 function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
 function chapterEpilogue(c,n){
@@ -1158,7 +1243,7 @@ function playBossScene(g,next){
  setTimeout(()=>{if(!cinematic||cinematic.phase!=='bossScene')return;
   next(()=>{document.body.classList.remove('lh-cinematic');cinematic=null;});},4300);
 }
-function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='bossScene'){drawBossScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='bossScene'){drawBossScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='rowanScene'){drawRowanScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
