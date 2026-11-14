@@ -321,3 +321,6 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialogue *,.lh-overlay,.lh-overlay *,.lh-modal,.lh-modal *,.lh-gold-button,.lh-dialogue-speaker{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 
 
+
+/* gear sheet icons in the field journal bag */
+.lh-j-slot canvas.ic{width:32px;height:32px;image-rendering:pixelated;background:#1a110c;border:3px solid #1a110c;box-shadow:inset 0 0 0 1px #4a3a28}
