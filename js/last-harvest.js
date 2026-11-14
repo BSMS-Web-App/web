@@ -635,15 +635,16 @@ function animateTitle(cv){
   g.fillStyle='rgba(255,220,150,.16)';g.beginPath();g.arc(fx2,fy2,sc*7,0,7);g.fill();
   g.fillStyle='#c98a3a';g.fillRect(Math.round(fx2-sc*.6),Math.round(fy2-sc*.4),Math.max(2,sc*1.2),Math.max(3,sc*2));
   g.fillStyle='rgba(255,226,140,'+(.65+.3*Math.sin(t*6)).toFixed(2)+')';g.fillRect(Math.round(fx2-sc*.4),Math.round(fy2-sc*.7),Math.max(1,sc*.8),Math.max(2,sc*1.4));
-  if(BOS.naturalWidth){const bs=Math.max(2,Math.floor(Math.min(W,H)/(W<620?140:105))),s2=64*bs;
+  if(BOS.naturalWidth){const HK=8,bs=Math.max(2,Math.floor(Math.min(W,H)/(W<620?140:105))),s2=64*bs;
    const bx=W*(W<620?.7:.73),byy=hor+H*.03+Math.sin(t*1.1)*2.5;
-   const bg2=g.createRadialGradient(bx,byy-s2*.45,s2*.15,bx,byy-s2*.45,s2*.8);
-   bg2.addColorStop(0,'rgba(255,150,60,.26)');bg2.addColorStop(1,'rgba(255,120,50,0)');
+   const bg2=g.createRadialGradient(bx,byy-s2*.45,s2*.15,bx,byy-s2*.45,s2*.85);
+   const pulse=.22+.07*Math.sin(t*1.6);
+   bg2.addColorStop(0,'rgba(150,90,255,'+pulse.toFixed(2)+')');bg2.addColorStop(.55,'rgba(120,60,220,.07)');bg2.addColorStop(1,'rgba(90,40,180,0)');
    g.fillStyle=bg2;g.fillRect(bx-s2,byy-s2*1.3,s2*2,s2*1.5);
-   g.globalAlpha=.96;g.drawImage(BOS,0,0,64,64,Math.round(bx-s2/2),Math.round(byy-s2),s2,s2);g.globalAlpha=1;
-   g.fillStyle='rgba(255,200,90,'+(.35+.25*Math.sin(t*2.2)).toFixed(2)+')';
-   const ey=byy-s2*.62;g.fillRect(Math.round(bx-s2*.26),Math.round(ey),Math.max(2,bs*1.2),Math.max(2,bs*.8));
-   g.fillRect(Math.round(bx+s2*.13),Math.round(ey),Math.max(2,bs*1.2),Math.max(2,bs*.8));}
+   g.globalAlpha=.97;g.drawImage(BOS,HK*64,0,64,64,Math.round(bx-s2/2),Math.round(byy-s2),s2,s2);g.globalAlpha=1;
+   for(let i=0;i<14;i++){const ph=(t*.35+i*.071)%1,px=bx-s2*.42+((i*53)%64)/64*s2*.84+Math.sin(t*1.7+i)*bs*2,py=byy-ph*s2*.95;
+    g.fillStyle=['#c79aff','#8a5cf0','#e0c8ff'][i%3];g.globalAlpha=.5*(1-ph);g.fillRect(Math.round(px),Math.round(py),Math.max(1,bs*.8),Math.max(1,bs*.8));}
+   g.globalAlpha=1;}
   leaves.forEach(l=>{l.y+=l.v*.016;l.x+=Math.sin(t*l.sp+l.ph)*.0006;if(l.y>1.06){l.y=-.06;l.x=Math.random();}
    g.save();g.translate(l.x*W,l.y*H);g.rotate(t*1.2+l.ph);g.fillStyle=l.c;g.fillRect(-l.s*2,-l.s,l.s*4,l.s*2);g.restore();});
   const fs=Math.max(18,Math.min(W*.054,H*.09)),lx=W<620?W*.5:W*.3,by=H*.16+Math.sin(t*1.4)*3;
