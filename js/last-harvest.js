@@ -559,11 +559,22 @@ function animateTitle(cv){
   const waiting=!!(el&&el.classList.contains('press'));
   g.imageSmoothingEnabled=false;g.setTransform(1,0,0,1,0,0);
   const bandTop=H*(waiting?.615:.545),bandBot=H*.845,topH=H*.075;
-  g.fillStyle='#4ec3b2';g.fillRect(0,0,W,H);
-  g.fillStyle='rgba(255,255,255,.045)';
-  for(let i=-1;i<7;i++){const x=i*W*.19+((t*8)%(W*.19));g.beginPath();g.moveTo(x,H*.075);g.lineTo(x+W*.055,H*.075);g.lineTo(x-W*.09,bandTop);g.lineTo(x-W*.145,bandTop);g.closePath();g.fill();}
-  g.fillStyle='#0c0c10';g.fillRect(0,0,W,topH);g.fillRect(0,bandTop,W,bandBot-bandTop);
-  g.fillStyle='#c8102e';g.fillRect(0,bandBot,W,H-bandBot);
+  const sk=g.createLinearGradient(0,0,W,H);
+  sk.addColorStop(0,'#00e6cf');sk.addColorStop(.45,'#16cfe0');sk.addColorStop(1,'#0a9fe6');
+  g.fillStyle=sk;g.fillRect(0,0,W,H);
+  g.save();g.beginPath();g.rect(0,topH,W,bandTop-topH);g.clip();
+  const rcx=W*(W<620?.5:.3),rcy=topH+H*.13,rr2=Math.max(W,H)*.95;
+  for(let i=0;i<16;i++){const a=t*.05+i*(Math.PI*2/16);
+   g.fillStyle=i%2?'rgba(255,255,255,.065)':'rgba(0,110,150,.045)';
+   g.beginPath();g.moveTo(rcx,rcy);g.arc(rcx,rcy,rr2,a,a+.2);g.closePath();g.fill();}
+  g.restore();
+  g.fillStyle='rgba(255,255,255,.10)';
+  for(let i=-1;i<7;i++){const x=i*W*.19+((t*8)%(W*.19));g.beginPath();g.moveTo(x,H*.075);g.lineTo(x+W*.05,H*.075);g.lineTo(x-W*.085,bandTop);g.lineTo(x-W*.135,bandTop);g.closePath();g.fill();}
+  for(let i=0;i<26;i++){const sx=(i*173.7)%W,sy=topH+((i*97.3)%Math.max(20,bandTop-topH-10));
+   const tw=.35+.5*Math.abs(Math.sin(t*1.7+i));g.fillStyle='rgba(255,255,255,'+tw.toFixed(2)+')';g.fillRect(Math.round(sx),Math.round(sy),i%5===0?3:2,i%5===0?3:2);}
+  g.fillStyle='#08080b';g.fillRect(0,0,W,topH);g.fillRect(0,bandTop,W,bandBot-bandTop);
+  g.fillStyle='#e40f2e';g.fillRect(0,bandBot,W,H-bandBot);
+  g.fillStyle='#ff5a72';g.fillRect(0,bandBot,W,Math.max(2,H*.004));
   g.fillStyle='#0c0c10';g.fillRect(0,bandBot,W,Math.max(3,H*.012));
   if(BOS.naturalWidth){const HK=8,ph=W<620,bs=Math.max(2,Math.floor(Math.min(W*(ph?.5:.36),H*(ph?.21:.52))/64)),s2=64*bs;
    const bx=W*(W<620?.68:.73),byy=bandTop+Math.max(2,H*.004)+Math.sin(t*1.2)*2;
