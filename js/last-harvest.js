@@ -1683,6 +1683,17 @@ function pkSkillPick(i){if(!battle||battle.busy)return;const sk=knownSkills()[i]
 if(battle.sel===i){pkSkill(i);return;}
 sfx('menu');battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
 $b('pk-t').textContent=sk.n+' \u2014 '+sk.d+' (Tap again to cast)';}
+async function sparBeat(b,n){
+ if(!battle||battle!==b||!b.g||!b.g.friendly)return;
+ b.busy=true;b.spar=n;sfx('talkOpen');
+ const ui=$('pk-ui');if(ui)ui.hidden=true;
+ const lines=n===1
+  ? [['ROWAN','Ha! Nice one. Keep your feet moving though!'],['INSTRUCTOR','Good form. Guard up, both of you.']]
+  : [['ROWAN','Careful, I am actually trying now!'],['INSTRUCTOR','One clean hit left in this round.']];
+ await new Promise(res=>setDialogue(lines,res));
+ b.spar=0;b.busy=false;
+ const ui2=$('pk-ui');if(ui2&&battle===b)ui2.hidden=false;
+}
 async function rowanBeat(b,n){
  if(!battle||battle!==b||!b.B||(b.g&&b.g.friendly))return;
  b.busy=true;b.story=n;sfx('warn');const ui=$('pk-ui');if(ui)ui.hidden=true;
@@ -1722,11 +1733,11 @@ b.phase='swirl';b.t0=performance.now();sfx('swirl');await sleep(650);if(battle!=
 b.phase='enter';b.t0=performance.now();document.body.classList.add('lh-battling');pkUI().hidden=false;$b('pk-ui').classList.add('intro');pkMenu('main');pkPanel();if(B)sfx('boom');
 $b('pk-t').textContent=b.g.wild?'A wild '+b.g.name+' appeared!':B?b.g.name+' awakens!':b.g.name+' wants to battle!';
 await sleep(B?2600:1150);if(battle!==b)return;$b('pk-ui').classList.remove('intro');b.phase='fight';pkMenu('main');
- if(b.B&&!b.g.friendly&&b.e&&b.e.name==='ROWAN'&&!b.sw){const e=b.e;let told=0;
+ if(b.e&&b.e.name==='ROWAN'&&!b.sw&&(b.B||b.g.friendly)){const e=b.e,spar=!!b.g.friendly;let told=0;
   b.sw=setInterval(()=>{if(battle!==b){clearInterval(b.sw);return;}if(b.phase!=='fight'||b.busy)return;
    const full=e.maxHp||e.max||1;
-   if(told===0&&e.hp<=full*.66){told=1;rowanBeat(b,1);return;}
-   if(told===1&&e.hp<=full*.33){told=2;clearInterval(b.sw);rowanBeat(b,2);}
+   if(told===0&&e.hp<=full*.66){told=1;(spar?sparBeat:rowanBeat)(b,1);return;}
+   if(told===1&&e.hp<=full*.33){told=2;clearInterval(b.sw);(spar?sparBeat:rowanBeat)(b,2);}
   },220);}b.busy=false;}
 function pkEnd(lost){const gg=battle&&battle.g,fr=gg&&gg.friendly,won=!!(battle&&battle.e&&battle.e.hp<=0),cbk=gg&&gg.onEnd;battle=null;document.body.classList.remove('lh-battling');const u=pkUI();u.hidden=true;u.classList.remove('intro');if(fr){state.hp=Math.max(1,Math.ceil(state.maxHp*.6));}else if(lost){state.hp=Math.ceil(state.maxHp*.6);scene='outside';state.x=20*TILE+16;state.y=15*TILE+24;}save();updateHud();if(cbk)cbk(won);}
 
@@ -2166,9 +2177,9 @@ cinematic.flash=1;sfx('flash');cinematic.phase='school';cinematic.actors={HERO:{
 await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],['INSTRUCTOR','Welcome to Hearthvale School. Every adventurer chooses one path: Guardian, Scout, or Mage. Your choice will shape how you face the world.']]);
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
-await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.']]);
+await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.'],['ROWAN','Ready? On three. One… two… go easy on me!']]);
 const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
-await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!']]);
+await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!'],['ROWAN','Same time tomorrow? I want a rematch!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!'],['ROWAN','Best two out of three next week?']]);
 cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};musicTick(true);
 await say([['ROWAN','Come on, let’s walk home. Your parents promised a feast for tonight.']]);
 await Promise.all([moveActor('HERO',{x:10*TILE+16,y:11*TILE+24},3200),moveActor('ROWAN',{x:11*TILE+16,y:11*TILE+24},3200)]);
