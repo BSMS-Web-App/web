@@ -48,6 +48,63 @@ try{const old=restoreLocalSave();if(old&&old.name)state={...state,...old};}catch
 let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalked=false,questStep=0,dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13,cinematic=null;
 questStep=state.questStep!==undefined?state.questStep:((state.cityUnlocked||(state.beaten&&(state.beaten.north||state.beaten.east||state.beaten.south)))?4:0);
 function setQ(n){const prev=questStep;questStep=n;state.questStep=n;if(n>prev)sfx('quest');try{save();}catch(e){}}
+/* ---------------- story: the first investigation ---------------- */
+const VILLAGE_CLUES={
+0:{who:'MARA THE NEIGHBOR',tag:'A Keeper\'s ribbon in the hearth, its gold thread scorched from the inside out.',
+ lines:[
+  ['MARA THE NEIGHBOR','I was sweeping your step when I heard it. A door closing, very far away \u2014 like it was closing inside the hill.'],
+  ['JUNIPER','And the bread I left out was still warm. Nobody leaves warm bread. Not even people in a hurry.'],
+  ['YOU','Did you see them leave?'],
+  ['MARA THE NEIGHBOR','Lanterns. Four of them, going down toward the fountain at three in the morning. All burning the same pale colour.'],
+  ['JUNIPER','I told everyone something was wrong and they said it was the cold. It is not the cold, is it.']]},
+1:{who:'INNKEEPER BRAM',tag:'A page torn from the inn ledger. The guest\'s name was written in the Hollow King\'s ink, and the ink is still wet.',
+ lines:[
+  ['INNKEEPER BRAM','Two travellers took my best room, paid in advance, then left before dawn and forgot the key.'],
+  ['YOU','Paid with what?'],
+  ['INNKEEPER BRAM','Old coins. So old the raven stamped on them has worn down to a rumour.\u201d'],
+  ['NELL THE TRAVELER','I saw them leave. They walked through the square and nobody looked up. Nobody. In a village this nosy.'],
+  ['INNKEEPER BRAM','And my ledger has a page missing. Torn out clean, like it was never anybody\'s name at all.']]},
+2:{who:'SHOPKEEPER TILLY',tag:'A black feather, cold as iron, and a shelf of lantern oil sold out overnight.',
+ lines:[
+  ['SHOPKEEPER TILLY','Every drop of lantern oil, gone. Six barrels. Who needs six barrels and pays in coin with a raven on it?'],
+  ['FINN','I found this by the back door.',''],
+  ['YOU','It is freezing.'],
+  ['FINN','It has been sitting by the stove all morning.'],
+  ['SHOPKEEPER TILLY','Your parents bought a tonic here the day before they vanished. They asked me to keep a candle lit for them. I did. I still do.']]},
+3:{who:'OLD CRAFTSMAN ORIN',tag:'An old map, sealed with the Everfeast sigil \u2014 the same mark carved beneath the fountain.',
+ lines:[
+  ['OLD CRAFTSMAN ORIN','They gave me this map and made me swear I would not open it until someone came asking.'],
+  ['WREN THE APPRENTICE','He opened it four times. I counted.'],
+  ['OLD CRAFTSMAN ORIN','Wren.'],
+  ['WREN THE APPRENTICE','What? You said I should be honest. You said it was the whole point of the forge.'],
+  ['OLD CRAFTSMAN ORIN','...It is the whole point of the forge. The seal in the corner is the Everfeast sigil. It is also carved beneath the fountain, and it is older than the fountain.']]},
+};
+function villageClueGate(id,target){
+ if(questStep!==2)return false;
+ const C=VILLAGE_CLUES[id];
+ if(!C||target.name!==C.who)return false;
+ state.clues=state.clues||[];
+ if(state.clues.includes(id))return false;
+ state.clues.push(id);sfx('quest');save();
+ setDialogue([...C.lines.map(l=>[l[0],l[1]]),['CLUE FOUND',C.tag],
+  ['JOURNAL','Clues found: '+state.clues.length+' of 4. Elder Maple is waiting in the square.']]);
+ updateQuest();return true;
+}
+/* ---------------- story: a word from Rowan after each guardian ---------------- */
+const CHAPTER_EPILOGUE=[
+ [['ROWAN','Every one of those things had a name carved into it. I keep wondering who did the carving.'],
+  ['YOU','Then we find the carver.']],
+ [['ROWAN','Your mother used to say the woods were a library and every tree was somebody\'s story.'],
+  ['ROWAN','I never liked reading. I liked the noise you made turning the pages.']],
+ [['ROWAN','The orchard remembered you. I did not expect that to hurt this much.']],
+ [['ROWAN','I ate one of those jars. I know. It said DO NOT EAT in three languages and I thought, well, one of them might be joking.']],
+ [['ROWAN','This market will sell you anything. Even the thing I have been trying very hard not to buy.']],
+ [['ROWAN','I keep expecting you to hit me. It would be easier if you did.']],
+ [['ROWAN','The cold gets into the seams of you. I can hear it in my teeth.']],
+ [['ROWAN','Every banner in here has a promise on it. Mine is the only one with a lie in it.']],
+ [['ROWAN','I can hear them through the door. Your parents. They sound like they did when we were small.']]
+];
+
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
 function resetLocalSave(skipTitle){resetting=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}try{if(skipTitle)sessionStorage.setItem('lh_skip_title','1');else sessionStorage.removeItem('lh_skip_title');}catch(e){}state=createFreshState('','Guardian');state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;}
 let saveWarning=false;function save(){if(resetting)return false;state.saveVersion=2;state.savedAt=Date.now();try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name)localStorage.setItem(BACKUP,previous);}catch(e){}}localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(data&&data.name)return data;}catch(e){}}return null;}
@@ -1819,7 +1876,7 @@ while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.m
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
-if(B){state.stage=Math.max(state.stage||0,g.bi+1);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);}else {
+if(B){state.stage=Math.max(state.stage||0,g.bi+1);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
  const redeemed=state.rowanChoice==='forgive'||state.rowanTrust>=2;
  const mercy=state.finalChoice==='mercy';
  state.ending=redeemed?(mercy?'together':'guardian'):(mercy?'unfinished':'steadfast');
@@ -2094,17 +2151,31 @@ function advanceDialogue(){if(!dialogue)return;const cbox=$('lh-dialogue');if(cb
 function enterBuilding(id){if(transitioning||scene!=='outside')return;transitioning=true;sfx('door');const doors=[{x:10.5*TILE,y:10.55*TILE},{x:34*TILE,y:10.55*TILE},{x:22*TILE,y:22.55*TILE},{x:5.5*TILE,y:29.55*TILE}],door=doors[id],from={x:state.x,y:state.y},start=performance.now(),duration=620;function walk(now){const p=Math.min(1,(now-start)/duration),ease=p*p*(3-2*p);state.x=from.x+(door.x-from.x)*ease;state.y=from.y+(door.y-from.y)*ease;playerFrame+=.45;if(p<1)requestAnimationFrame(walk);else{interiorId=id;scene='inside';insideTalked=false;insidePlayer=roomStart(id);facing=1;updateHud();save();musicTick(true);setTimeout(()=>{transitioning=false;},180);}}requestAnimationFrame(walk);}
 let transitioning=false,insidePlayer={x:innerWidth/2,y:innerHeight*.76};
 function turnInClues(){setQ(4);state.coins=(state.coins||0)+50;addPotions(2);sfx('unlock');updateHud();updateQuest();
-setDialogue([['YOU','Elder Maple... I searched the village. Orin kept an old map safe for my parents.'],
-['ELDER MAPLE','*She unfolds the map slowly, her hands trembling.* This seal in the corner... it is the same one carved beneath the fountain.'],
-['YOU','There was a strange black feather at the store, and a torn royal banner near the fountain. Something is very wrong.'],
-['ELDER MAPLE','Then it is true. The Hollow King stirs, and the Everfeast is failing. Your parents went to find the First Keepers\u2019 road.'],
-['ELDER MAPLE','Take 50 coins and two potions. The north road leads to the Wildlands, where monsters roam. Train there before you face the guardians of the old roads.'],
-['QUEST UPDATED','Follow the golden leaves. Train in the Wildlands (north road) once Gatekeeper Brawn lets you pass.']]);}
+const found=(state.clues||[]).length;
+const open=[['YOU','Elder Maple... I searched the village. It is worse than we thought.']];
+const body=found>=3?[
+  ['ELDER MAPLE','Three? Then this is not one bad night. It is a pattern, and a pattern is an honest thing \u2014 it tells you where it is going.'],
+  ['YOU','Raven coins at the inn and the shop. Six barrels of lantern oil, gone. A feather that is cold to the touch.'],
+  ['ELDER MAPLE','*She turns the feather over. Her hands are not trembling now, which is somehow worse.* Cold iron. The Hollow King\u2019s herald has been walking this village on raven coin.'],
+]:[
+  ['ELDER MAPLE','Only a thread of it? Then we pull the thread and see what is attached.'],
+  ['YOU','Black feathers. Raven coins. My parents\u2019 map. It is not much.'],
+  ['ELDER MAPLE','It is enough to know the shape of the thing in the dark. Most people never get that much.'],
+];
+const rest=[
+  ['ELDER MAPLE','Orin\u2019s map, the seal beneath the fountain \u2014 I know that mark. It is older than the fountain. It is older than the square.'],
+  ['ELDER MAPLE','Your parents were Keepers. They kept the seal from breaking, and this year it is breaking.'],
+  ['YOU','Then where did they go?'],
+  ['ELDER MAPLE','To the First Keepers\u2019 road, to ask the old guardians of the harvest why the Everfeast is failing. They did not tell you because they thought they could be back before you noticed. Parents are proud and stupid in equal measure.'],
+  ['ELDER MAPLE','Take 50 coins and two potions. Train on the north road before you face anything that has a name.'],
+  ['QUEST UPDATED','Follow the golden leaves. Train in the Wildlands (north road) once Gatekeeper Brawn lets you pass.']
+];
+setDialogue([...open,...body,...rest]);}
 function elderChat(){const n=state.elderTalks=(state.elderTalks||0)+1,nm='ELDER MAPLE',b=state.beaten||{};
 const hint=questStep<2?'Rowan is waiting for you in the village square. Speak with him, then search the homes.':questStep<3?'Have you searched every building? Old Orin in the workshop keeps many secrets.':!b.north?'Gatekeeper Brawn guards the north road. Beat him and the Wildlands will open to you.':!b.south?('Before the Pumpkin Sentinel, defeat a Wildlands creature, reach level 3, and upgrade your armor at Orin’s Forge. '+trainingHint()):(state.stage>=BOSSES.length?'You saved Hearthvale. I could not be prouder.':'Your next trial: '+chapters[Math.min(state.stage,9)].place+'. '+BOSSES[Math.min(state.stage,9)].name+' waits there.');
 const flavor=['Autumn always smelled of cinnamon here. Lately it smells of ash.','Keep your potions close and your guard closer.','Grass that sways against the wind hides monsters. The stone roads are safe if you need to rest.','Rest at the Ranger Camp in the Wildlands. Old Willow keeps the fire burning there.','Your mother used to hum the harvest song on that bench by the fountain.','Every zone has an Alpha. Defeat one and the wild folk will whisper your name.'];
 const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(state.elderKey!==key){state.elderKey=key;save();setDialogue([[nm,hint],[nm,flavor[n%flavor.length]]]);}else setDialogue([[nm,flavor[n%flavor.length]],[nm,flavor[(n+1)%flavor.length]]]);}
-function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep<3){setQ(3);updateQuest();}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){sfx('inn');state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(villageClueGate(interiorId,target))return;if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep<3){setQ(3);updateQuest();}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){sfx('inn');state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));if(interiorId===3&&target.name==='OLD CRAFTSMAN ORIN'&&questStep<3){setQ(3);updateQuest();}return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:(n.act==='teleporter'?72:64);if(d<rc&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.act==='teleporter'){openTeleporter();return;}
@@ -2112,8 +2183,23 @@ if(found.act==='teleporter'){openTeleporter();return;}
 if(found.wilds){sfx('portal');enterWilds();return;}
 if(found.city){enterArea('city');return;}
 if(found.trainer&&!state.beaten[found.trainer.id]){if(found.trainer.id==='south'&&!sentinelTrainingReady()){showTrainingGuide();return;}if(found.trainer.id==='south'&&!state.sentinelRaidSeen){state.sentinelRaidSeen=true;save();playSentinelRaid(()=>{setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));});return;}setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
-if(found.name==='ELDER MAPLE'&&questStep===0){setQ(1);setDialogue([[found.name,'First, visit the village homes. Your parents may have left a clue.'],['QUEST UPDATED','Visit the homes around the village.']]);}
-else if(found.name==='ROWAN'&&questStep===1){setQ(2);setDialogue([[found.name,'I will check the fountain. You should search the buildings.'],['QUEST UPDATED','Enter a building and look for clues.']]);}
+if(found.name==='ELDER MAPLE'&&questStep===0){setQ(1);setDialogue([
+  ['ELDER MAPLE','Ah. There you are. Do not sit on that bench \u2014 there is ash on it, and it has been there since dawn.'],
+  ['YOU','Ash? Nothing in Hearthvale has burned since the old mill.'],
+  ['ELDER MAPLE','Exactly. Your parents\u2019 door stood open all night, the fountain ran black at sunrise, and nobody in this village will say the word \u201cfeather\u201d to me.'],
+  ['YOU','Feather?'],
+  ['ELDER MAPLE','I have lived long enough to know when a harvest is lying to me, child. Rowan is at the fountain. Ask him what he saw and do not let him joke his way out of it.'],
+  ['QUEST UPDATED','Visit Rowan in the village square, then search the homes.']]);}
+else if(found.name==='ROWAN'&&questStep===1){setQ(2);setDialogue([
+  ['ROWAN','You took your time. I have been staring at this fountain so long I started naming the pigeons.'],
+  ['YOU','Elder Maple says it ran black this morning.'],
+  ['ROWAN','Black? ...Huh. I thought that was the light.'],
+  ['YOU','Rowan. You are doing the thing.'],
+  ['ROWAN','What thing.'],
+  ['YOU','The thing where you make a joke so nobody asks you a question.'],
+  ['ROWAN','...It is a very good joke.'],
+  ['ROWAN','Go look inside the houses. I will keep watch here \u2014 if anyone comes near this seal I want to be the one who sees them.'],
+  ['QUEST UPDATED','Search the village: the cottage, the inn, the shop, the workshop.']]);}
 else if(found.name==='ELDER MAPLE'&&questStep===3){turnInClues();}
 else if(found.name==='ELDER MAPLE'){elderChat();}
 else setDialogue(found.lines.map(t=>[found.name,t]));
@@ -2203,7 +2289,7 @@ cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';st
 
 function areaName(){if(scene==='area'&&AREA)return AREA.routeName||AREA.name;return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
 function updateQuest(){state.sideQuests=state.sideQuests||{};if(scene==='area'&&AREA&&AREA.trap){const left=3-trapSealsDone();$('lh-quest-text').textContent=left?'Break the seals of the Gilded Snare · '+left+' remaining':'The doors are open · Walk to the western door';return;}const active=Object.entries(state.sideQuests).find(([id,q])=>q&&q.accepted&&!q.done);if(state.beaten&&state.beaten.north&&!state.beaten.south){$('lh-quest-text').textContent=sentinelTrainingReady()?'Return to the south road and challenge the Pumpkin Sentinel':'Training for the Pumpkin Sentinel · '+trainingHint();return;}if(scene==='area'&&AREA&&AREA.chapter&&!state.beaten['boss'+AREA.chapter]&&!mainQuestReady(AREA.chapter)){const q=mainQuestData(AREA.chapter);$('lh-quest-text').textContent='Chapter '+(AREA.chapter+1)+' trial · Talk to '+(q.talked||[]).length+'/2 locals · Defeat '+(q.kills||0)+'/3 creatures';return;}if(state.beaten&&state.beaten.south){syncStageFromBeaten();const next=currentTargetChapter();$('lh-quest-text').textContent=next>=BOSSES.length?'Hearthvale is saved!':'Defeat the '+BOSSES[next].name+' in '+chapters[next].place;return;}const storyActive=Object.entries(state.storyArcs||{}).find(([id,q])=>q&&!q.done);if(storyActive){const names={market_truth:'A Name Left Behind',frost_lanterns:'Lanterns for the Lost',fortress_oath:'The Oath Beneath the Gate'};$('lh-quest-text').textContent=names[storyActive[0]]+(storyActive[1].stage===2?' · Return to the quest giver':' · Find the next character');return;}if(active){const labels={woodland:'Hunter’s Request',orchard:'Last Good Apples',pantry:'A Light Below'};$('lh-quest-text').textContent=labels[active[0]]+' · '+(active[1].kills||0)+'/3 wild creatures';return;}if((questStep||0)>=4&&!(state.beaten&&state.beaten.south)){$('lh-quest-text').textContent=state.beaten&&state.beaten.north?'Hunt monsters in the Wildlands (north road), then face the south road':'Defeat Gatekeeper Brawn to open the Wildlands (north road)';return;}
-const q=['Speak with Elder Maple','Visit Rowan in the village square','Enter a building and search for clues','Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
+const q=['Speak with Elder Maple','Visit Rowan in the village square',(state.clues&&state.clues.length?'Search the village for clues · '+state.clues.length+'/4 found':'Enter a building and search for clues'),'Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function drawAvatarTo(cv){if(!cv||!CHARS.naturalWidth)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,16,16);c.drawImage(CHARS,0,((cinematic&&cinematic.phase!=='outside')?CIV:heroRow())*16,16,16,0,0,16,16);}
 CHARS.addEventListener('load',()=>drawAvatarTo($('lh-hud-avatar')));
 function updateHud(){const mh=state.maxHp||40,mm=state.maxMp||20,mp=state.mp??mm,hp=Math.max(0,state.hp);
