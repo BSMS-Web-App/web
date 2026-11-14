@@ -169,7 +169,7 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 .lh-banner h2{font-size:clamp(24px,6vw,52px);margin:0 0 10px;text-shadow:4px 4px 0 #3f1a24}
 .lh-banner p{font-size:12px;color:#fff;margin:0}
 @keyframes lhfade{from{opacity:0}to{opacity:1}}
-#lh-title{position:fixed;inset:0;z-index:85;background:#07060f;transition:opacity .5s}
+#lh-title{position:fixed;inset:0;z-index:85;background:#4ec3b2;transition:opacity .5s}
 #lh-title.out{opacity:0;pointer-events:none}
 #lh-title canvas{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:pixelated}
 .lh-title-menu{position:absolute;left:50%;bottom:11%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;width:min(80vw,380px)}
@@ -179,8 +179,9 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 .lh-tbtn.sel{background:linear-gradient(180deg,#f0a23a,#c4641d);color:#26120a;border-color:#fff0d0;text-shadow:0 1px 0 rgba(255,255,255,.35)}
 .lh-tbtn.sel:before{content:"\25B6 "}
 .lh-title-hint{position:absolute;left:0;right:0;bottom:3%;text-align:center;color:rgba(255,240,210,.7);font:9px "Press Start 2P",ui-monospace,monospace;margin:0}
-.lh-title-menu{left:50%!important;bottom:9%!important;width:min(86vw,420px)!important;gap:8px!important;transform:translateX(-50%)!important}
-@media(max-width:620px){.lh-title-menu{left:auto!important;right:4vw!important;bottom:9%!important;transform:none!important;width:min(58vw,300px)!important}.lh-title-menu .lh-tbtn{font-size:clamp(8px,2.3vw,11px)!important;padding:9px 8px!important}}
+.lh-title-menu{left:8%!important;bottom:18%!important;width:min(50vw,420px)!important;gap:6px!important;transform:none!important}
+.lh-title-menu .lh-tbtn{padding:10px 12px!important;font-size:clamp(9px,1.5vw,12px)!important}
+@media(max-width:620px){.lh-title-menu{left:50%!important;transform:translateX(-50%)!important;bottom:18%!important;width:min(84vw,340px)!important}.lh-title-menu .lh-tbtn{font-size:clamp(8px,2.4vw,11px)!important;padding:9px 8px!important}}
 .lh-title-menu .lh-tbtn{padding:10px 14px!important;font-size:clamp(9px,1.7vw,13px)!important}
 #lh-title.press .lh-title-menu{display:none}
 .lh-title-hint{display:none}
