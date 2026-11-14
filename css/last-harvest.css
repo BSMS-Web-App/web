@@ -319,6 +319,12 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 /* lh-nodbl: stop the tablet double-tap zoom when tapping through dialogue */
 html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialogue *,.lh-overlay,.lh-overlay *,.lh-modal,.lh-modal *,.lh-gold-button,.lh-dialogue-speaker{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 
-/* attract battle intro before the title screen */
-#lh-intro{position:fixed;inset:0;z-index:86;background:#000;opacity:1}
-#lh-intro canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+
+/* pokemon-style start menu: cream panel, dark ink, red cursor */
+.lh-title-menu{background:linear-gradient(#fdfcf2,#eceee4)!important;border:4px solid #2f3a5c!important;border-radius:12px!important;padding:10px 10px!important;box-shadow:inset 0 0 0 3px #fff,0 6px 0 rgba(0,0,0,.45),0 0 0 2px rgba(0,0,0,.35)!important}
+.lh-tbtn{position:relative;background:transparent!important;border:0!important;border-radius:6px!important;box-shadow:none!important;color:#2f3a5c!important;text-align:left!important;padding:11px 12px 11px 30px!important;letter-spacing:.04em!important;text-shadow:none!important}
+.lh-tbtn:before{content:"";position:absolute;left:10px;top:50%;margin-top:-5px;width:0;height:0;border-left:9px solid transparent;border-top:7px solid transparent;border-bottom:7px solid transparent}
+.lh-tbtn:hover{background:#e3e8f4!important}
+.lh-tbtn.sel{background:#dbe3f3!important;color:#1b2438!important;border:0!important}
+.lh-tbtn.sel:before{border-left-color:#d8382e!important}
+.lh-tbtn:active{transform:translateY(1px)}
