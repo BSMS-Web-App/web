@@ -169,16 +169,19 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 .lh-banner h2{font-size:clamp(24px,6vw,52px);margin:0 0 10px;text-shadow:4px 4px 0 #3f1a24}
 .lh-banner p{font-size:12px;color:#fff;margin:0}
 @keyframes lhfade{from{opacity:0}to{opacity:1}}
-#lh-title{position:fixed;inset:0;z-index:85;background:#120a24;transition:opacity .5s}
+#lh-title{position:fixed;inset:0;z-index:85;background:#07060f;transition:opacity .5s}
 #lh-title.out{opacity:0;pointer-events:none}
 #lh-title canvas{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:pixelated}
 .lh-title-menu{position:absolute;left:50%;bottom:11%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;width:min(80vw,380px)}
-.lh-tbtn{font-family:"Press Start 2P",ui-monospace,monospace;font-size:clamp(11px,2.4vw,15px);background:rgba(30,16,40,.82);color:#ffe9a0;border:4px solid #f0a050;border-radius:10px;padding:14px;cursor:pointer;text-align:center}
-.lh-tbtn.sel{background:#e3862a;color:#fff;border-color:#fff0d0}
+.lh-tbtn{font-family:"Press Start 2P",ui-monospace,monospace;font-size:clamp(11px,2.4vw,15px);background:linear-gradient(180deg,rgba(36,19,30,.92),rgba(20,11,20,.95));color:#ffe9b8;border:3px solid #e0a24c;border-radius:4px;padding:13px 16px;cursor:pointer;text-align:center;box-shadow:inset 0 0 0 2px rgba(255,214,150,.22),0 4px 0 rgba(0,0,0,.55),0 0 18px rgba(255,150,60,.10);letter-spacing:.06em;transition:transform .08s,box-shadow .15s,background .15s}
+.lh-tbtn:hover{background:linear-gradient(180deg,rgba(64,31,36,.95),rgba(32,16,24,.97));box-shadow:inset 0 0 0 2px rgba(255,226,170,.4),0 4px 0 rgba(0,0,0,.6),0 0 26px rgba(255,160,70,.28)}
+.lh-tbtn:active{transform:translateY(2px)}
+.lh-tbtn.sel{background:linear-gradient(180deg,#f0a23a,#c4641d);color:#26120a;border-color:#fff0d0;text-shadow:0 1px 0 rgba(255,255,255,.35)}
 .lh-tbtn.sel:before{content:"\25B6 "}
 .lh-title-hint{position:absolute;left:0;right:0;bottom:3%;text-align:center;color:rgba(255,240,210,.7);font:9px "Press Start 2P",ui-monospace,monospace;margin:0}
-.lh-title-menu{left:29%!important;bottom:6%!important;width:min(46vw,380px)!important;gap:7px!important}
-.lh-title-menu .lh-tbtn{padding:9px!important;font-size:clamp(9px,1.7vw,13px)!important}
+.lh-title-menu{left:50%!important;bottom:9%!important;width:min(86vw,420px)!important;gap:8px!important;transform:translateX(-50%)!important}
+@media(max-width:620px){.lh-title-menu{left:auto!important;right:4vw!important;bottom:9%!important;transform:none!important;width:min(58vw,300px)!important}.lh-title-menu .lh-tbtn{font-size:clamp(8px,2.3vw,11px)!important;padding:9px 8px!important}}
+.lh-title-menu .lh-tbtn{padding:10px 14px!important;font-size:clamp(9px,1.7vw,13px)!important}
 #lh-title.press .lh-title-menu{display:none}
 .lh-title-hint{display:none}
 .lh-fr{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;font-family:"Press Start 2P",ui-monospace,monospace;background:repeating-linear-gradient(0deg,#fff8c8 0 5px,#f2e890 5px 10px);padding:2vh 3vw;color:#38404c;overflow:hidden}
