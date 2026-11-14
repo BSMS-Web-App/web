@@ -2229,7 +2229,15 @@ requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(dialogue&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(!e.repeat)advanceDialogue();return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
 const joy=$('lh-joystick'),stick=$('lh-stick');let joyPointer=null;
-const worldCanvas=$('lh-world');worldCanvas.addEventListener('click',e=>{if(e.button!==0||dialogue||battle||cinematic||titleOpen||!$('lh-game-menu').hidden)return;if(e.target!==worldCanvas)return;e.preventDefault();interact();});
+const worldCanvas=$('lh-world');
+function tapNearPlayer(cx,cy){
+ if(scene!=='outside')return true;
+ const W=innerWidth,H=innerHeight,zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;
+ const camX=Math.max(0,Math.min(MAP_W*TILE-vw,state.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,state.y-vh/2));
+ const sx=(state.x-camX-W/2)*zoom+W/2,sy=(state.y-camY-H/2)*zoom+H/2;
+ return Math.hypot(cx-sx,cy-sy)<170;
+}
+worldCanvas.addEventListener('click',e=>{if(e.button!==0||dialogue||battle||cinematic||titleOpen||!$('lh-game-menu').hidden)return;if(e.target!==worldCanvas)return;if(!tapNearPlayer(e.clientX,e.clientY))return;e.preventDefault();interact();});
 function setJoy(e){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,max=r.width*.34,len=Math.hypot(dx,dy),scale=len>max?max/len:1;joystick.x=(dx*scale)/max;joystick.y=(dy*scale)/max;stick.style.transform='translate('+joystick.x*34+'px,'+joystick.y*34+'px)';}
 joy.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e);});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)setJoy(e);});
