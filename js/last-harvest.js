@@ -476,7 +476,7 @@ function desiredMusicTrack(){
 }
 function musicTick(force){if(muted)return;const want=desiredMusicTrack();if(force||want!==musCur)playMusic(want);}
 addEventListener('keydown',e=>{if((e.key==='m'||e.key==='M')&&!titleOpen&&$('lh-create').hidden){setMuted(!muted);}});
-function initRows(){Object.assign(NPC_ROW,{ROWAN:1,INSTRUCTOR:10,CHALLENGER:36,ANNOUNCER:46,'HAZEL THE HUNTER':37,'OLD WILLOW':20,PIP:18,'ORCHARD KEEPER DAHLIA':34,'FARMER FLINT':15,'BRIGAND BRUNO':3,'FISHER MARLO':33,'WAITER GHOST':44,'ORACLE SELENE':49,'SMUGGLER VEX':16,'SHADOW BROKER':43,'MERCHANT MARISOL':39,'HALL STEWARD ORLAN':42,'ANCIENT KEEPER':40,'FROST RANGER ILSA':48,'MONK TORV':47,'ICE SPRITE':45,'CAPTAIN ALDRIC':36,'SISTER MIRELLE':25,'TINKER COG':32,MARA:28,THOMAS:17,'GOLDLEAF MAYOR':30,'INNKEEPER ROSA':41,'TOWER KEEPER':46});}
+function initRows(){Object.assign(NPC_ROW,{ROWAN:7,INSTRUCTOR:10,CHALLENGER:36,ANNOUNCER:46,'HAZEL THE HUNTER':37,'OLD WILLOW':20,PIP:18,'ORCHARD KEEPER DAHLIA':34,'FARMER FLINT':15,'BRIGAND BRUNO':3,'FISHER MARLO':33,'WAITER GHOST':44,'ORACLE SELENE':49,'SMUGGLER VEX':16,'SHADOW BROKER':43,'MERCHANT MARISOL':39,'HALL STEWARD ORLAN':42,'ANCIENT KEEPER':40,'FROST RANGER ILSA':48,'MONK TORV':47,'ICE SPRITE':45,'CAPTAIN ALDRIC':36,'SISTER MIRELLE':25,'TINKER COG':32,MARA:28,THOMAS:17,'GOLDLEAF MAYOR':30,'INNKEEPER ROSA':41,'TOWER KEEPER':46});}
 /* ---------- skills: start with one, unlock more as you level, max 4 equipped ---------- */
 const SKILL_LV=[1,2,3,5,7,9,11,13,15,17];
 const SKILL_EXTRA={
@@ -549,7 +549,7 @@ function animateTitle(cv){
   sky.addColorStop(0,'#06050d');sky.addColorStop(.24,'#150f27');sky.addColorStop(.48,'#3d1838');sky.addColorStop(.7,'#7d2c31');sky.addColorStop(.87,'#bf522c');sky.addColorStop(1,'#eb9a45');
   s.fillStyle=sky;s.fillRect(0,0,W,hor);
   for(let i=0;i<120;i++){const x=(i*137.51)%W,y=((i*61.7)%(hor*.7)),b=((i*29)%11)/11;s.fillStyle='rgba(255,246,224,'+(.14+.5*b).toFixed(2)+')';const sz=b>.8?2:1;s.fillRect(Math.round(x),Math.round(y),sz,sz);}
-  const mr=Math.max(20,Math.min(W,H)*.085),mx=W*.83,my=H*.155;
+  const mr=Math.max(20,Math.min(W,H)*.078),mx=W*.9,my=H*.115;
   let gr=s.createRadialGradient(mx,my,mr*.5,mx,my,mr*4.2);
   gr.addColorStop(0,'rgba(255,206,130,.38)');gr.addColorStop(.4,'rgba(255,150,80,.12)');gr.addColorStop(1,'rgba(255,120,60,0)');
   s.fillStyle=gr;s.beginPath();s.arc(mx,my,mr*4.2,0,7);s.fill();
@@ -629,12 +629,21 @@ function animateTitle(cv){
   g.fillStyle=lg;g.fillRect(hx-glowR,hy-glowR*1.2,glowR*2.4,glowR*1.5);
   g.fillStyle='rgba(255,190,110,.10)';g.beginPath();g.ellipse(hx+sc*16,hy+2,sc*20,sc*4,0,0,7);g.fill();
   g.fillStyle='rgba(0,0,0,.4)';g.beginPath();g.ellipse(hx+sc*4,hy+2,sc*15,sc*3.4,0,0,7);g.fill();
-  spr(1,3,hx+sc*10,hy-sc*.2,sc*.9);
+  spr(7,3,hx+sc*10,hy-sc*.2,sc*.9);
   spr(heroRow(),1,hx,hy,sc);
   const fx2=hx+sc*19,fy2=hy-sc*8;
   g.fillStyle='rgba(255,220,150,.16)';g.beginPath();g.arc(fx2,fy2,sc*7,0,7);g.fill();
   g.fillStyle='#c98a3a';g.fillRect(Math.round(fx2-sc*.6),Math.round(fy2-sc*.4),Math.max(2,sc*1.2),Math.max(3,sc*2));
   g.fillStyle='rgba(255,226,140,'+(.65+.3*Math.sin(t*6)).toFixed(2)+')';g.fillRect(Math.round(fx2-sc*.4),Math.round(fy2-sc*.7),Math.max(1,sc*.8),Math.max(2,sc*1.4));
+  if(BOS.naturalWidth){const bs=Math.max(2,Math.floor(Math.min(W,H)/(W<620?140:105))),s2=64*bs;
+   const bx=W*(W<620?.7:.73),byy=hor+H*.03+Math.sin(t*1.1)*2.5;
+   const bg2=g.createRadialGradient(bx,byy-s2*.45,s2*.15,bx,byy-s2*.45,s2*.8);
+   bg2.addColorStop(0,'rgba(255,150,60,.26)');bg2.addColorStop(1,'rgba(255,120,50,0)');
+   g.fillStyle=bg2;g.fillRect(bx-s2,byy-s2*1.3,s2*2,s2*1.5);
+   g.globalAlpha=.96;g.drawImage(BOS,0,0,64,64,Math.round(bx-s2/2),Math.round(byy-s2),s2,s2);g.globalAlpha=1;
+   g.fillStyle='rgba(255,200,90,'+(.35+.25*Math.sin(t*2.2)).toFixed(2)+')';
+   const ey=byy-s2*.62;g.fillRect(Math.round(bx-s2*.26),Math.round(ey),Math.max(2,bs*1.2),Math.max(2,bs*.8));
+   g.fillRect(Math.round(bx+s2*.13),Math.round(ey),Math.max(2,bs*1.2),Math.max(2,bs*.8));}
   leaves.forEach(l=>{l.y+=l.v*.016;l.x+=Math.sin(t*l.sp+l.ph)*.0006;if(l.y>1.06){l.y=-.06;l.x=Math.random();}
    g.save();g.translate(l.x*W,l.y*H);g.rotate(t*1.2+l.ph);g.fillStyle=l.c;g.fillRect(-l.s*2,-l.s,l.s*4,l.s*2);g.restore();});
   const fs=Math.max(18,Math.min(W*.054,H*.09)),lx=W<620?W*.5:W*.3,by=H*.16+Math.sin(t*1.4)*3;
@@ -1579,7 +1588,7 @@ const heroRow=()=>(state.gender==='girl'?{Guardian:5,Scout:38,Mage:18}:{Guardian
 function actor(x,fy,row,face,k,g,step){drawSpriteK(row,face,step||0,x,fy,k);if(g)drawGear(x,fy,k,face,g);}
 function bars(W,H){px(0,0,W,H*.07,'#000');px(0,H*.93,W,H*.07,'#000');if(cinematic&&cinematic.flash>0){ctx.fillStyle='rgba(255,255,255,'+cinematic.flash+')';ctx.fillRect(0,0,W,H);cinematic.flash=Math.max(0,cinematic.flash-.035);}}
 function drawHomeScene(W,H){const{g,list}=drawRoom(0,W,H,false),a=cinematic.actors,k=2*g.Z;
-for(const n of ['ROWAN','HERO']){const p=a[n];if(p)list.push({y:p.y,f:()=>{drawSpriteK(n==='HERO'?heroRow():1,p.face||0,p.step||0,p.x,p.y,k);if(n==='HERO')drawGear(p.x,p.y,k,p.face||0,state.heroClass);}});}
+for(const n of ['ROWAN','HERO']){const p=a[n];if(p)list.push({y:p.y,f:()=>{drawSpriteK(n==='HERO'?heroRow():7,p.face||0,p.step||0,p.x,p.y,k);if(n==='HERO')drawGear(p.x,p.y,k,p.face||0,state.heroClass);}});}
 list.sort((p,q)=>p.y-q.y).forEach(o=>o.f());const t=performance.now()/1000;
 if(VIL.naturalWidth){ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,150,180,16,16,Math.round(g.ox+3*g.U),Math.round(g.oy+3*g.U-g.U*.2),g.U,g.U);}
 if(cinematic.sparkle){const tx=g.ox+3.5*g.U,ty=g.oy+3.4*g.U;ctx.fillStyle='rgba(255,220,120,'+(.45+.3*Math.sin(t*4))+')';ctx.beginPath();ctx.arc(tx,ty,g.U*.45,0,7);ctx.fill();}
@@ -1614,7 +1623,7 @@ function drawRegionScene(W,H){
  else if(c===6){for(let i=0;i<8;i++){const x=i*W/7;ctx.fillStyle='#a8c8d8';ctx.fillRect(x,H*.48+(i%3)*8,Math.max(8,W*.025),H*.18);}}
  else {for(let i=0;i<12;i++){ctx.fillStyle='rgba(255,218,125,.75)';ctx.fillRect((i*97)%W,H*(.28+(i%4)*.08),3,3);}}
  ctx.fillStyle='rgba(8,10,16,.35)';ctx.fillRect(0,H*.76,W,H*.24);
- const a=cinematic.actors,scale=Math.max(3,Math.min(6,Math.floor(H/150)));if(a.ROWAN)drawSpriteK(1,a.ROWAN.face||0,a.ROWAN.step||0,a.ROWAN.x,a.ROWAN.y,scale);if(a.HERO)drawSpriteK(heroRow(),a.HERO.face||0,a.HERO.step||0,a.HERO.x,a.HERO.y,scale);
+ const a=cinematic.actors,scale=Math.max(3,Math.min(6,Math.floor(H/150)));if(a.ROWAN)drawSpriteK(7,a.ROWAN.face||0,a.ROWAN.step||0,a.ROWAN.x,a.ROWAN.y,scale);if(a.HERO)drawSpriteK(heroRow(),a.HERO.face||0,a.HERO.step||0,a.HERO.x,a.HERO.y,scale);
  for(let i=0;i<22;i++){const x=(i*83+t*(8+i%4)*((i%2)?1:-1)+W*2)%W,y=(i*47+Math.sin(t*1.4+i)*12)%(H*.78);ctx.fillStyle=pal[2];ctx.globalAlpha=.18+.28*Math.abs(Math.sin(t*1.2+i));ctx.fillRect(Math.round(x),Math.round(y),i%5===0?4:2,i%5===0?4:2);}ctx.globalAlpha=1;
  const v=ctx.createRadialGradient(W/2,H*.52,H*.18,W/2,H*.52,Math.max(W,H)*.68);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.58)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);ctx.restore();
  ctx.fillStyle='#08080c';ctx.fillRect(0,0,W,H*.085);ctx.fillRect(0,H*.915,W,H*.085);ctx.textAlign='center';ctx.font='bold '+Math.max(12,Math.min(22,W/28))+'px "Press Start 2P",monospace';ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillText(chapters[c].place.toUpperCase(),W/2+2,H*.145+2);ctx.fillStyle=pal[2];ctx.fillText(chapters[c].place.toUpperCase(),W/2,H*.145);
@@ -1671,7 +1680,7 @@ for(let r=0;r<3;r++){const y=H*.2+r*u*.8;for(let x=0;x<W;x+=u)kPlank(x,y,u,Math.
 px(0,H*.5,W,H*.5,'#d9b57a');for(let y=H*.5;y<H;y+=u)for(let x=0;x<W;x+=u){const q=rand(x/u+3,y/u+1);kTile('t',q<.2?39:q<.3?40:q<.4?41:25,x,y,s);}
 for(let x=0;x<W;x+=u)kTile('t',x===0?80:81,x,H*.5-u*.4,s);
 ctx.strokeStyle='rgba(120,80,40,.55)';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(W/2,H*.76,W*.3,H*.13,0,0,6.3);ctx.stroke();
-[[a.MARA,28,0,null],[a.THOMAS,17,0,null],[a.ROWAN,1,0,null],[a.HERO,CIV,3,null],[a.FOE,36,2,'Foe']].sort((p,q)=>p[0].y-q[0].y).forEach(([p,row,face,g])=>actor(p.x,p.y,row,face,g==='Foe'?k+1:k,g,p.step||0));
+[[a.MARA,28,0,null],[a.THOMAS,17,0,null],[a.ROWAN,7,0,null],[a.HERO,CIV,3,null],[a.FOE,36,2,'Foe']].sort((p,q)=>p[0].y-q[0].y).forEach(([p,row,face,g])=>actor(p.x,p.y,row,face,g==='Foe'?k+1:k,g,p.step||0));
 const v=ctx.createRadialGradient(W/2,H*.6,H*.2,W/2,H*.6,Math.max(W,H)*.7);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(10,0,30,.5)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
 sceneTitle('HARVEST FESTIVAL CHAMPIONSHIP',W,H*.115);bars(W,H);}
 function drawBed(bx,by,s,pose,row){const P=s,R=(x,y,w,h,c)=>px(bx+x*P,by+y*P,w*P,h*P,c),o='#3f2631';
@@ -2372,7 +2381,7 @@ await say([['ROWAN','I saved you a seat! I wonder which path you will choose.'],
 $('lh-school-class').hidden=false;
 await new Promise(resolve=>{window.__lhClassChosen=resolve;});
 await say([['ROWAN','Hey! Let’s test your new path with a friendly duel. Loser buys lunch!'],['INSTRUCTOR','A friendly duel? Very well. No injuries, and no cheating.'],['ROWAN','Ready? On three. One… two… go easy on me!']]);
-const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:1,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
+const won=await new Promise(res=>startBattle({id:'friendly',name:'ROWAN',row:7,friendly:true,hp:42,atk:5,reward:0,win:[],onEnd:res}));
 await say(won?[['ROWAN','Whoa! You are good! Fine, lunch is on me.'],['INSTRUCTOR','Well fought, both of you. School is dismissed!'],['ROWAN','Same time tomorrow? I want a rematch!']]:[['ROWAN','Ha! I win! Do not worry, you will catch up. Lunch is on you!'],['INSTRUCTOR','Well fought, both of you. School is dismissed!'],['ROWAN','Best two out of three next week?']]);
 cinematic.flash=1;cinematic.phase='outside';cinematic.camera={x:20*TILE+16,y:15*TILE+24};cinematic.actors={HERO:{x:20*TILE+16,y:15*TILE+24},ROWAN:{x:21*TILE+16,y:15*TILE+24}};musicTick(true);
 await say([['ROWAN','Come on, let’s walk home. Your parents promised a feast for tonight.']]);
