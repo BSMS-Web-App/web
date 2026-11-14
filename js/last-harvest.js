@@ -1684,7 +1684,7 @@ if(battle.sel===i){pkSkill(i);return;}
 sfx('menu');battle.sel=i;[...document.querySelectorAll('#pk-menu [data-s]')].forEach(b=>b.classList.toggle('sel',+b.dataset.s===i));
 $b('pk-t').textContent=sk.n+' \u2014 '+sk.d+' (Tap again to cast)';}
 async function rowanBeat(b,n){
- if(!battle||battle!==b)return;
+ if(!battle||battle!==b||!b.B||(b.g&&b.g.friendly))return;
  b.busy=true;b.story=n;sfx('warn');const ui=$('pk-ui');if(ui)ui.hidden=true;
  const one1=[['ROWAN','YOU NEVER ASKED WHY I WAS ALWAYS HUNGRY.','red'],
   ['ROWAN','MY MOTHER GAVE HER LAST SEASON SO I COULD EAT THROUGH THE WINTER.','red'],
@@ -1722,7 +1722,7 @@ b.phase='swirl';b.t0=performance.now();sfx('swirl');await sleep(650);if(battle!=
 b.phase='enter';b.t0=performance.now();document.body.classList.add('lh-battling');pkUI().hidden=false;$b('pk-ui').classList.add('intro');pkMenu('main');pkPanel();if(B)sfx('boom');
 $b('pk-t').textContent=b.g.wild?'A wild '+b.g.name+' appeared!':B?b.g.name+' awakens!':b.g.name+' wants to battle!';
 await sleep(B?2600:1150);if(battle!==b)return;$b('pk-ui').classList.remove('intro');b.phase='fight';pkMenu('main');
- if(b.e&&b.e.name==='ROWAN'&&!b.sw){const e=b.e;let told=0;
+ if(b.B&&!b.g.friendly&&b.e&&b.e.name==='ROWAN'&&!b.sw){const e=b.e;let told=0;
   b.sw=setInterval(()=>{if(battle!==b){clearInterval(b.sw);return;}if(b.phase!=='fight'||b.busy)return;
    const full=e.maxHp||e.max||1;
    if(told===0&&e.hp<=full*.66){told=1;rowanBeat(b,1);return;}
