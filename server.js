@@ -33,6 +33,14 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+// Public, read-only health endpoint used by the browser connection monitor.
+// This endpoint exposes no account or infrastructure details.
+app.get('/health', (_req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.status(200).json({ ok: true, service: 'bsms-web-api' });
+});
+
 // The application API runs behind Cloudflare Tunnel on the Mac mini.
 // Browser origins are explicitly allowlisted; no wildcard CORS is used.
 const allowedOrigins = new Set([
