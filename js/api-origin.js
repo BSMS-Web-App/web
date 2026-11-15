@@ -36,4 +36,10 @@
 
         return originalFetch(destination.href, init);
     };
+
+    // Load the shared connection monitor on every page using the API bootstrap.
+    const monitorScript = document.createElement('script');
+    monitorScript.src = '/js/connection-monitor.js';
+    monitorScript.defer = true;
+    document.head.appendChild(monitorScript);
 })();
