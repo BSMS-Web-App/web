@@ -543,15 +543,31 @@ async function showLeaderboard(){
 
 /* ---------- the Goldleaf Tower ---------- */
 let tower=null;
-function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Defeat one foe per floor. Your HP and MP carry over, with a small rest between floors. Every floor is tougher than the last \u2014 every fifth is an <b>elite</b>, every tenth a <b>guardian</b>. If you fall, your highest floor is posted on the leaderboard.</p><p>Your best: <b>floor '+best+'</b></p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
- el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();state.hp=state.maxHp;state.mp=state.maxMp;updateHud();save();tower={floor:1,best:0};towerFloor();};}
+function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Every floor is a gauntlet. Early floors are a single foe, but from floor seven you face <b>several in a row</b> \u2014 up to four on the deepest floors \u2014 and the guardian of every tenth floor always closes the run of them. Your HP and MP carry between every fight, with a sip of health after each cleared wave.</p><p>Every fifth floor is an <b>elite</b>, every tenth a <b>guardian</b>. If you fall, your highest floor is posted on the leaderboard.</p><p>Your best: <b>floor '+best+'</b></p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
+ el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();state.hp=state.maxHp;state.mp=state.maxMp;updateHud();save();tower={floor:1,best:0,wave:0,waves:1};towerFloor();};}
 function banner(t,sub,cb){const el=document.createElement('div');el.className='lh-banner';el.innerHTML='<div><h2>'+esc(t)+'</h2><p>'+esc(sub||'')+'</p></div>';document.body.appendChild(el);sfx('alert');setTimeout(()=>{el.remove();cb&&cb();},1500);}
-function towerFloor(){const f=tower.floor,g=Math.min(9,Math.floor((f-1)/5)),boss=f%10===0,elite=!boss&&f%5===0,i=g*10+(boss?9:rnd(9)),m=monInfo(i);
- const sc=1+f*.085,asc=1+f*.05,em=elite?1.28:1,bm=boss?1.8:1,am=boss?1.3:(elite?1.12:1);
- const enc={id:'tower',tower:true,wild:true,floor:f,name:(elite?'ELITE ':'')+m.name,mi:i,hp:Math.round(m.hp*sc*bm*em),atk:Math.round(m.atk*asc*am),reward:8*f+(boss?80:elite?25:0),xp:14+f*4+(boss?50:elite?15:0),win:[],onEnd:won=>towerResult(won)};
- banner('FLOOR '+f,(boss?'GUARDIAN FLOOR':elite?'ELITE FLOOR':GENS[g].toUpperCase()+' CHAMBER')+' \u00B7 '+enc.name,()=>startBattle(enc));}
+function towerWavesFor(f){let w=Math.min(4,1+Math.floor((f-1)/6));if(f%10===0)w=Math.min(4,w+1);return w;}
+function towerFloor(){tower.wave=0;tower.waves=towerWavesFor(tower.floor);towerStartWave();}
+function towerStartWave(){const f=tower.floor;tower.wave++;
+ const g=Math.min(9,Math.floor((f-1)/5)),boss=f%10===0,elite=!boss&&f%5===0,last=tower.wave>=tower.waves,isBoss=boss&&last;
+ const i=g*10+(isBoss?9:rnd(9)),m=monInfo(i);
+ const sc=1+f*.085,asc=1+f*.05,em=elite&&last?1.28:1,bm=isBoss?1.8:1,am=isBoss?1.3:(elite&&last?1.12:1);
+ const softer=last?1:(tower.waves>1?.66:1),cut=Math.max(1,tower.waves);
+ const enc={id:'tower',tower:true,wild:true,floor:f,wave:tower.wave,waves:tower.waves,name:((elite&&last)?'ELITE ':'')+m.name,mi:i,
+  hp:Math.round(m.hp*sc*bm*em*softer),atk:Math.round(m.atk*asc*am*(last?1:.9)),
+  reward:Math.round((8*f+(boss?80:elite?25:0))/cut),xp:Math.round((14+f*4+(boss?50:elite?15:0))/cut),
+  win:[],onEnd:won=>towerWaveResult(won)};
+ const title=tower.waves>1?('WAVE '+tower.wave+' / '+tower.waves):('FLOOR '+f);
+ const sub=(isBoss?'GUARDIAN FLOOR':elite?'ELITE FLOOR':GENS[g].toUpperCase()+' CHAMBER')+' \u00B7 '+enc.name;
+ banner(title,sub,()=>startBattle(enc));}
+function towerWaveResult(won){
+ if(!tower)return;
+ if(!won){const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f));return;}
+ if(tower.wave<tower.waves){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.1));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.15));updateHud();save();whenFree(towerStartWave);return;}
+ towerResult(true);}
+
 function towerResult(won){if(!tower)return;if(won){tower.best=tower.floor;tower.floor++;state.towerBest=Math.max(Number(state.towerBest)||0,tower.best);state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.2));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.3));save();whenFree(towerMenu);}else{const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f));}}
-function towerMenu(){if(!tower)return;updateHud();const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00b7 MP '+state.mp+'/'+state.maxMp+' \u00b7 '+state.coins+' coins</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+tower.floor+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
+function towerMenu(){if(!tower)return;updateHud();const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00b7 MP '+state.mp+'/'+state.maxMp+' \u00b7 '+state.coins+' coins</p><p>Next: floor '+tower.floor+' \u00B7 '+towerWavesFor(tower.floor)+' foe'+(towerWavesFor(tower.floor)>1?'s':'')+'</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+tower.floor+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
  el.querySelector('#tw-up').onclick=()=>{sfx('select');el.close();towerFloor();};el.querySelector('#tw-out').onclick=()=>{sfx('menu');el.close();const f=tower.best;tower=null;towerEnd(f);};}
 async function towerEnd(f){AREA=getCity();scene='area';stepper=null;resetRoamers();areaPlayer={x:20*32+16,y:11*32+24};state.hp=Math.max(state.hp,Math.min(state.maxHp,Math.ceil(state.maxHp*.5)));updateHud();save();const ok=f>0?await submitTower(f):false;
  const el=ov('<h3>TOWER RESULT</h3><p>You reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
@@ -1940,7 +1956,7 @@ async function rowanBeat(b,n){
  await new Promise(res=>setDialogue(n===1?one1:two2,res));
  b.story=0;b.busy=false;const ui2=$('pk-ui');if(ui2&&battle===b)ui2.hidden=false;
 }
-function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;const fl=[];if(b.g&&b.g.tower&&b.g.floor)fl.push('FLOOR '+b.g.floor);if(e.boss)fl.push('BOSS'+(e.bi!==undefined?' \u00B7 CH '+(e.bi+1):''));if(e.enraged)fl.push('ENRAGED');fl.push(e.hp+' / '+e.max+' HP');$b('pk-fl').textContent=fl.join(' \u00B7 ');
+function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;const fl=[];if(b.g&&b.g.tower&&b.g.floor)fl.push('FLOOR '+b.g.floor);if(b.g&&b.g.waves>1)fl.push('WAVE '+b.g.wave+'/'+b.g.waves);if(e.boss)fl.push('BOSS'+(e.bi!==undefined?' \u00B7 CH '+(e.bi+1):''));if(e.enraged)fl.push('ENRAGED');fl.push(e.hp+' / '+e.max+' HP');$b('pk-fl').textContent=fl.join(' \u00B7 ');
 const fh=$b('pk-fh');fh.style.width=(pc*100)+'%';fh.className=pc<.25?'low':pc<.5?'mid':'';$b('pk-foe').classList.toggle('boss',!!e.boss);
 $b('pk-mn').textContent=(state.name||'HERO').toUpperCase()+'  Lv'+state.level+(state.pet&&PETS[state.pet.id]?'  · '+PETS[state.pet.id].name:'');$b('pk-mh').textContent=state.hp+' / '+state.maxHp+'  MP '+state.mp;
 const mh=$b('pk-mhb'),hp=state.hp/state.maxHp;mh.style.width=(hp*100)+'%';mh.className=hp<.25?'low':hp<.5?'mid':'';$b('pk-mmb').style.width=(state.mp/state.maxMp*100)+'%';}
