@@ -2029,10 +2029,13 @@ function rise(x,y,n,cols,w){const b=battle;if(!b)return;for(let i=0;i<n;i++)b.pa
 function pop(txt,x,y,c,size){battle.pops.push({t:txt,x,y,c:c||'#fff',s:size||18,age:0});}
 
 /* --- starting a battle: ! alert -> stripe wipe -> entrance -> fight --- */
+function screenOfWorld(x,y){const W=innerWidth,H=innerHeight,zoom=(scene==='outside'||scene==='area')?(W<700?Math.min(1.65,Math.max(1.22,700/W)):1):1;return{x:((x-lastCam.camX)-W/2)*zoom+W/2,y:((y-lastCam.camY)-H/2)*zoom+H/2};}
+function bangAnchor(){if(scene==='area'&&AREA){let best=null,bd=1e9;for(const n of AREA.npcs){const d=Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24));if(d<200&&d<bd){best=n;bd=d;}}if(best)return{x:best.x*32+16,y:best.y*32-6};return{x:areaPlayer.x,y:areaPlayer.y-44};}
+if(scene==='outside'){let best=null,bd=1e9;for(const n of npcs){const d=Math.hypot(state.x-(n.x+16),state.y-(n.y+24));if(d<220&&d<bd){best=n;bd=d;}}if(best)return{x:best.x+16,y:best.y-6};return{x:state.x,y:state.y-44};}return null;}
 function startBattle(g){ensureBattleItems();state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
 const B=g.bi!==undefined?BOSSES[g.bi]:null,hp=B?B.hp:g.hp,atk=B?B.atk:g.atk;
 battle={g,B,e:{name:g.name,hp,max:hp,atk,row:g.row,mi:g.mi,bi:g.bi,boss:!!B,status:{},turn:0,charging:false,enraged:false},ward:0,evade:false,guard:false,busy:true,sel:-1,phase:'alert',t0:performance.now(),last:performance.now(),
-hox:0,hoy:0,fox:0,foy:0,shake:0,flashF:0,flashH:0,flashR:0,flashW:0,shield:0,dead:0,hdead:0,parts:[],pops:[],proj:null};
+hox:0,hoy:0,fox:0,foy:0,shake:0,flashF:0,flashH:0,flashR:0,flashW:0,shield:0,dead:0,hdead:0,parts:[],pops:[],proj:null};battle.bang=(function(){const a=(g&&g.bang)||bangAnchor();if(!a)return null;const s=screenOfWorld(a.x,a.y);return{x:Math.round(s.x),y:Math.round(s.y)};})();
 runIntro();}
 async function runIntro(){const b=battle,B=b.B;sfx(B?'warn':'alert');b.phase='alert';b.t0=performance.now();await sleep(B?1700:900);if(battle!==b)return;
 b.phase='swirl';b.t0=performance.now();sfx('swirl');await sleep(650);if(battle!==b)return;
@@ -2173,7 +2176,7 @@ function roamerTick(){if(scene!=='area'||!AREA||battle||dialogue||cinematic||tra
  if(now>ROAM_T.cool&&now-ROAM_T.last>2200&&ROAM.length<4){ROAM_T.last=now;spawnRoamer();}
  for(let i=ROAM.length-1;i>=0;i--){const r=ROAM[i];
   if(Math.hypot(r.x-areaPlayer.x,r.y-areaPlayer.y)<40){ROAM.splice(i,1);ROAM_T.cool=now+1500;
-   startBattle({id:'wild',wild:true,name:monInfo(r.mi).name,mi:r.mi,hp:r.hp,atk:r.atk,reward:r.reward,xp:r.xp,win:[]});return;}}}
+   startBattle({id:'wild',wild:true,name:monInfo(r.mi).name,mi:r.mi,hp:r.hp,atk:r.atk,reward:r.reward,xp:r.xp,win:[],bang:{x:r.x,y:r.y-40}});return;}}}
 function drawPetWorld(){if(battle||dialogue||cinematic||!state.pet)return;const P=PETS[state.pet.id];if(!P)return;const W=innerWidth,H=innerHeight;let sx,sy,k=2;
  if(scene==='area'&&AREA){const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1;sx=W/2-24*zoom;sy=H*.55+16*zoom;k=Math.max(2,Math.round(2*zoom));}
  else if(scene==='outside'){sx=state.x-18-lastCam.camX;sy=state.y+4-lastCam.camY;}
@@ -2270,7 +2273,7 @@ function drawBattleFx(W,H){const b=battle;if(!b)return;const now=performance.now
 if(b.phase==='alert'){const boss=!!b.B;
 if(boss){ctx.fillStyle='rgba(200,20,30,'+(.15+Math.abs(Math.sin(el*5))*.35)+')';ctx.fillRect(0,0,W,H);}
 const f=boss?0:(el<.5&&Math.floor(el*10)%2?.5:0);if(f>0){ctx.fillStyle='rgba(255,255,255,'+f+')';ctx.fillRect(0,0,W,H);}
-let px0=W/2,py0=H/2;if(scene==='inside'){px0=insidePlayer.x;py0=insidePlayer.y-40;}else{const G0=geo();px0=G0.fx;py0=G0.fy-G0.fh-14;}px0=Math.max(40,Math.min(W-40,px0));py0=Math.max(90,Math.min(H-40,py0));
+let px0=W/2,py0=H/2;if(b.bang){px0=b.bang.x;py0=b.bang.y;}else if(scene==='inside'){px0=insidePlayer.x;py0=insidePlayer.y-40;}else if(scene==='area'&&AREA){const s1=screenOfWorld(areaPlayer.x,areaPlayer.y);px0=s1.x;py0=s1.y-44;}else{const s1=screenOfWorld(state.x,state.y);px0=s1.x;py0=s1.y-44;}px0=Math.max(40,Math.min(W-40,px0));py0=Math.max(64,Math.min(H-40,py0));
 const hop=Math.abs(Math.sin(Math.min(el,.7)*9))*(el<.7?14:0);drawBang(Math.round(px0),Math.round(py0-8-hop),boss?1.5:1);
 if(boss){const bh=H*.13,y=H*.4;ctx.fillStyle='rgba(20,0,4,.88)';ctx.fillRect(0,y,W,bh);ctx.save();ctx.beginPath();ctx.rect(0,y,W,10);ctx.rect(0,y+bh-10,W,10);ctx.clip();ctx.fillStyle='#ffd84a';ctx.fillRect(0,y-1,W,bh+2);ctx.fillStyle='#26334a';for(let x=-60+((el*140)%60);x<W;x+=60){ctx.beginPath();ctx.moveTo(x,y-1);ctx.lineTo(x+30,y-1);ctx.lineTo(x+6,y+bh+1);ctx.lineTo(x-24,y+bh+1);ctx.fill();}ctx.restore();
 if(Math.floor(el*4)%2===0)bubbleText('WARNING!  BOSS APPROACHING',W/2,y+bh*.62,'#ff4a3a',Math.max(14,Math.min(26,W/34)));}}
@@ -2648,6 +2651,6 @@ $('lh-resume').addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidde
 $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){resetLocalSave(false);location.reload();}});
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
-if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name}:null;},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
+if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
 {const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();if(skip)startNaming();else showTitle(hasSave);}
 })();
