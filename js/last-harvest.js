@@ -179,6 +179,7 @@ const VR={cottage:[0,0,112,80],inn:[120,0,128,80],store:[256,0,128,80],workshop:
 function drawFountainSprite(){if(!VIL.naturalWidth)return;const r=VR['fountain'+(Math.floor(performance.now()/380)%2)];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*TILE-16,14*TILE-r[3]*2+4,r[2]*2,r[3]*2);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);}
 function ov(html,cls){const el=document.createElement('div');el.className='lh-ov '+(cls||'');el.innerHTML='<div class="pn">'+html+'</div>';document.body.appendChild(el);el.close=()=>el.remove();return el;}
+function whenFree(fn){let n=0;const iv=setInterval(()=>{n++;if(!dialogue&&!battle&&!cinematic&&!transitioning&&!titleOpen&&$('lh-create').hidden&&!document.querySelector('.lh-ov')){clearInterval(iv);fn();return;}if(n>160)clearInterval(iv);},240);}
 function whenIdle(fn){const iv=setInterval(()=>{if(!dialogue&&!battle&&!cinematic&&!transitioning&&!titleOpen&&$('lh-create').hidden){clearInterval(iv);fn();}},300);}
 /* ---------- sound: CC0-1.0 original chiptune music (30 tracks) + WebAudio SFX ---------- */
 var muted=false;try{muted=localStorage.getItem('lh_mute')==='1';}catch(e){}
@@ -500,28 +501,53 @@ function sessionId(){try{return localStorage.getItem('session_id')||localStorage
 function localBoard(){try{return JSON.parse(localStorage.getItem('lh_tower_scores')||'[]');}catch(e){return[];}}
 function addLocalScore(f){const r=localBoard();r.push({name:state.name||'Adventurer',floor:f,cls:state.heroClass,level:state.level||1,t:Date.now()});r.sort((a,b)=>b.floor-a.floor||a.t-b.t);try{localStorage.setItem('lh_tower_scores',JSON.stringify(r.slice(0,20)));}catch(e){}}
 async function submitTower(f){addLocalScore(f);const sid=sessionId();if(!sid)return false;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify({action:'tower-score',floor:f,cls:state.heroClass,level:state.level||1})});return r.ok;}catch(e){return false;}}
-async function showLeaderboard(){const el=ov('<h3>TOWER LEADERBOARD</h3><div id="lb-body">Loading\u2026</div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
- let rows=null,online=false;try{const sid=sessionId();const r=await fetch('/api/last-harvest?action=tower-leaderboard',{headers:sid?{'X-Session-ID':sid}:{}});if(r.ok){const d=await r.json();rows=d.leaderboard||[];online=true;}}catch(e){}
- if(!rows)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
- el.querySelector('#lb-body').innerHTML=(rows.length?'<table><tr><th>#</th><th>NAME</th><th>FLOOR</th><th>CLASS</th></tr>'+rows.slice(0,20).map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.displayName||r.name)+'</td><td>'+r.floor+'</td><td>'+esc(r.cls||'')+' L'+(r.level||1)+'</td></tr>').join('')+'</table>':'<p>No climbers yet. Be the first!</p>')+'<p class="note">'+(online?'Global ranking.':'Local ranking only. Sign in to BSMS to join the global leaderboard.')+'</p>';}
+async function boardRows(){
+ let rows=null,online=false;
+ try{const sid=sessionId();const r=await fetch('/api/last-harvest?action=tower-leaderboard',{headers:sid?{'X-Session-ID':sid}:{}});if(r.ok){const d=await r.json();rows=d.leaderboard||[];online=true;}}catch(e){}
+ if(!rows||!rows.length)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
+ return {rows,online};
+}
+function boardTable(rows,limit){
+ if(!rows||!rows.length)return '<p class="lh-lb-empty">No climbers yet. Be the first to post a floor.</p>';
+ const me=String(state.name||'').trim().toLowerCase(),shown=rows.slice(0,limit||20);
+ const body=shown.map((r,i)=>{const nm=String(r.displayName||r.name||'Adventurer'),mine=me&&nm.trim().toLowerCase()===me,fl=Math.max(0,Number(r.floor)||0);
+  return '<li class="lh-lb-row'+(mine?' me':'')+(i<3?' p'+(i+1):'')+'"><span class="lh-lb-rank">'+(i+1)+'</span>'
+   +'<span class="lh-lb-name">'+esc(nm)+(mine?' <em>YOU</em>':'')+'</span>'
+   +'<span class="lh-lb-lv">Lv '+(Math.max(1,Number(r.level)||1))+'</span>'
+   +'<span class="lh-lb-tower"><b>'+fl+'</b><small>TOWERS</small></span></li>';}).join('');
+ const at=me?rows.findIndex(r=>String(r.displayName||r.name||'').trim().toLowerCase()===me):-1;
+ const yours=at>=0?'<p class="lh-lb-you">Your rank: <b>#'+(at+1)+'</b> with <b>'+Math.max(0,Number(rows[at].floor)||0)+'</b> towers cleared.</p>':'<p class="lh-lb-you">Your best this device: <b>'+Math.max(0,Number(state.towerBest)||0)+'</b> towers cleared.</p>';
+ return '<ol class="lh-lb">'+body+'</ol>'+yours;
+}
+async function showLeaderboard(){
+ const el=ov('<h3>TOWER LEADERBOARD</h3><p class="note">Every floor of the Goldleaf Tower you clear counts as one tower. Highest total wins.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
+ el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
+ const {rows,online}=await boardRows();
+ const body=el.querySelector('#lb-body');if(!body)return;
+ body.innerHTML=boardTable(rows,20)+'<p class="note">'+(online?'Global ranking.':'Local ranking only. Sign in to BSMS to join the global leaderboard.')+'</p>';
+}
+
 /* ---------- the Goldleaf Tower ---------- */
 let tower=null;
-function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Defeat one foe per floor. Your HP and MP carry over, with a small rest between floors. If you fall, your highest floor is posted on the leaderboard.</p><p>Your best: <b>floor '+best+'</b></p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
+function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Defeat one foe per floor. Your HP and MP carry over, with a small rest between floors. Every floor is tougher than the last \u2014 every fifth is an <b>elite</b>, every tenth a <b>guardian</b>. If you fall, your highest floor is posted on the leaderboard.</p><p>Your best: <b>floor '+best+'</b></p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
  el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();state.hp=state.maxHp;state.mp=state.maxMp;updateHud();save();tower={floor:1,best:0};towerFloor();};}
 function banner(t,sub,cb){const el=document.createElement('div');el.className='lh-banner';el.innerHTML='<div><h2>'+esc(t)+'</h2><p>'+esc(sub||'')+'</p></div>';document.body.appendChild(el);sfx('alert');setTimeout(()=>{el.remove();cb&&cb();},1500);}
-function towerFloor(){const f=tower.floor,g=Math.min(9,Math.floor((f-1)/5)),boss=f%10===0,i=g*10+(boss?9:rnd(9)),m=monInfo(i),sc=1+f*.045;
- const enc={id:'tower',tower:true,wild:true,name:m.name,mi:i,hp:Math.round(m.hp*sc*(boss?1.4:1)),atk:Math.round(m.atk*(1+f*.035)),reward:6*f+(boss?60:0),xp:12+f*3+(boss?40:0),win:[],onEnd:won=>towerResult(won)};
- banner('FLOOR '+f,boss?'GUARDIAN FLOOR':GENS[g].toUpperCase()+' CHAMBER',()=>startBattle(enc));}
-function towerResult(won){if(!tower)return;if(won){tower.best=tower.floor;tower.floor++;state.towerBest=Math.max(Number(state.towerBest)||0,tower.best);state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.2));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.3));save();whenIdle(towerMenu);}else{const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenIdle(()=>towerEnd(f));}}
-function towerMenu(){if(!tower)return;updateHud();const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00b7 MP '+state.mp+'/'+state.maxMp+'</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+tower.floor+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
+function towerFloor(){const f=tower.floor,g=Math.min(9,Math.floor((f-1)/5)),boss=f%10===0,elite=!boss&&f%5===0,i=g*10+(boss?9:rnd(9)),m=monInfo(i);
+ const sc=1+f*.085,asc=1+f*.05,em=elite?1.28:1,bm=boss?1.8:1,am=boss?1.3:(elite?1.12:1);
+ const enc={id:'tower',tower:true,wild:true,floor:f,name:(elite?'ELITE ':'')+m.name,mi:i,hp:Math.round(m.hp*sc*bm*em),atk:Math.round(m.atk*asc*am),reward:8*f+(boss?80:elite?25:0),xp:14+f*4+(boss?50:elite?15:0),win:[],onEnd:won=>towerResult(won)};
+ banner('FLOOR '+f,(boss?'GUARDIAN FLOOR':elite?'ELITE FLOOR':GENS[g].toUpperCase()+' CHAMBER')+' \u00B7 '+enc.name,()=>startBattle(enc));}
+function towerResult(won){if(!tower)return;if(won){tower.best=tower.floor;tower.floor++;state.towerBest=Math.max(Number(state.towerBest)||0,tower.best);state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.2));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.3));save();whenFree(towerMenu);}else{const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f));}}
+function towerMenu(){if(!tower)return;updateHud();const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00b7 MP '+state.mp+'/'+state.maxMp+' \u00b7 '+state.coins+' coins</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+tower.floor+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
  el.querySelector('#tw-up').onclick=()=>{sfx('select');el.close();towerFloor();};el.querySelector('#tw-out').onclick=()=>{sfx('menu');el.close();const f=tower.best;tower=null;towerEnd(f);};}
 async function towerEnd(f){AREA=getCity();scene='area';stepper=null;resetRoamers();areaPlayer={x:20*32+16,y:11*32+24};state.hp=Math.max(state.hp,Math.min(state.maxHp,Math.ceil(state.maxHp*.5)));updateHud();save();const ok=f>0?await submitTower(f):false;
  const el=ov('<h3>TOWER RESULT</h3><p>You reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
  el.querySelector('#tr-x').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tr-b').onclick=()=>{el.close();showLeaderboard();};}
 
+async function fillTitleBoard(){const {rows}=await boardRows();const b=$('lh-title-board');if(!b||!rows||!rows.length)return;
+ b.hidden=false;b.innerHTML='<b class="tb-h">TOP CLIMBERS \u00B7 TOWERS</b>'+rows.slice(0,3).map((r,i)=>'<span class="tb-r"><i>'+(i+1)+'</i><span class="tb-n">'+esc(r.displayName||r.name||'Adventurer')+'</span><em>'+Math.max(0,Number(r.floor)||0)+'</em></span>').join('');}
 /* ---------- title screen ---------- */
 let titleOpen=false;
-function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro';setTimeout(()=>el.classList.remove('intro'),1700);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div>';document.body.appendChild(el);
+function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro';setTimeout(()=>el.classList.remove('intro'),1700);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div><div class="lh-title-board" id="lh-title-board" hidden></div>';document.body.appendChild(el);
  const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
  let sel=0;const menu=$b('lh-title-menu');const render=()=>{menu.innerHTML=items.map((it,i)=>'<button class="lh-tbtn'+(i===sel?' sel':'')+'" data-i="'+i+'">'+it[0]+'</button>').join('');};render();
  function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();musicTick(true);}
@@ -532,7 +558,7 @@ function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.r
   else if(k==='sound'){setMuted(!muted);items[i][0]='SOUND: '+(muted?'OFF':'ON');render();if(!muted)playMusic('title');}};
  menu.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){sel=+b.dataset.i;choose(sel);}});
  function kd(e){if(!titleOpen)return;if(el.classList.contains('press')){if(e.key==='m'||e.key==='M')return;el.classList.remove('press');audio();sfx('select');if(!muted)musicTick(true);e.preventDefault();e.stopPropagation();return;}if(e.key==='ArrowDown'||e.key==='s'){sel=(sel+1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='ArrowUp'||e.key==='w'){sel=(sel+items.length-1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='Enter'||e.key===' '||e.key==='e'){choose(sel);e.preventDefault();e.stopPropagation();}}
- addEventListener('keydown',kd,true);el.addEventListener('click',()=>{if(el.classList.contains('press')){el.classList.remove('press');audio();sfx('select');if(!muted)musicTick(true);}});animateTitle(el.querySelector('canvas'));if(!muted)musicTick(true);}
+ addEventListener('keydown',kd,true);el.addEventListener('click',()=>{if(el.classList.contains('press')){el.classList.remove('press');audio();sfx('select');if(!muted)musicTick(true);}});animateTitle(el.querySelector('canvas'));if(!muted)musicTick(true);fillTitleBoard();}
 function animateTitle(cv){
  const g=cv.getContext('2d'),t0=performance.now(),el=cv.parentElement;
  let W=0,H=0;
@@ -1900,7 +1926,7 @@ async function rowanBeat(b,n){
  await new Promise(res=>setDialogue(n===1?one1:two2,res));
  b.story=0;b.busy=false;const ui2=$('pk-ui');if(ui2&&battle===b)ui2.hidden=false;
 }
-function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;$b('pk-fl').textContent=e.boss?'BOSS \u00B7 CHAPTER '+(e.bi+1)+(e.enraged?' \u00B7 ENRAGED':''):'';
+function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;const fl=[];if(b.g&&b.g.tower&&b.g.floor)fl.push('FLOOR '+b.g.floor);if(e.boss)fl.push('BOSS'+(e.bi!==undefined?' \u00B7 CH '+(e.bi+1):''));if(e.enraged)fl.push('ENRAGED');fl.push(e.hp+' / '+e.max+' HP');$b('pk-fl').textContent=fl.join(' \u00B7 ');
 const fh=$b('pk-fh');fh.style.width=(pc*100)+'%';fh.className=pc<.25?'low':pc<.5?'mid':'';$b('pk-foe').classList.toggle('boss',!!e.boss);
 $b('pk-mn').textContent=(state.name||'HERO').toUpperCase()+'  Lv'+state.level+(state.pet&&PETS[state.pet.id]?'  · '+PETS[state.pet.id].name:'');$b('pk-mh').textContent=state.hp+' / '+state.maxHp+'  MP '+state.mp;
 const mh=$b('pk-mhb'),hp=state.hp/state.maxHp;mh.style.width=(hp*100)+'%';mh.className=hp<.25?'low':hp<.5?'mid':'';$b('pk-mmb').style.width=(state.mp/state.maxMp*100)+'%';}
@@ -2032,7 +2058,7 @@ if(B){state.stage=Math.max(state.stage||0,g.bi+1);if(g.bi<BOSSES.length-1){const
 }spawnLair();}
 pkEnd();if(up){sfx('levelup');offerSkillsWhenReady();}
 const lines=(g.win||[]).map(t=>[g.name,t]);lines.push(...progressSideQuests(g));lines.push(['REWARD','You earned '+reward+' coins'+(B?' and 2 potions':'')+(up?' and reached level '+state.level+'!':'.')]);
-setDialogue([...lines,...extra]);}
+if(!g.tower)setDialogue([...lines,...extra]);}
 
 /* ================= v11: roaming monsters, pets, level 10 powers ================= */
 const PETS={
@@ -2506,6 +2532,11 @@ function renderRpgMenu(tab='status'){
     if(other){panel.innerHTML='<h3 class="lh-j-h">'+esc(areaName().toUpperCase())+'</h3><p class="lh-j-p">You have not surveyed this area yet. Explore it to learn the roads.</p>';return;}
     panel.innerHTML='<h3 class="lh-j-h">'+(wild?'THE WILDLANDS':'HEARTHVALE VILLAGE')+'</h3><div class="lh-j-mapwrap"><canvas id="lh-j-map"></canvas></div>'+(wild?'<div class="lh-j-legend">'+J_ZONES.map(z=>'<span><i style="background:'+z[1]+'"></i>'+z[0]+' <em>Lv '+z[2]+'</em></span>').join('')+'<span><i style="background:#e8c690"></i>Roads</span><span><i style="background:#4aa8d8"></i>Water</span><span><i class="you"></i>You</span></div>':'<div class="lh-j-legend"><span><i style="background:#315f48"></i>Woods</span><span><i style="background:#b87849"></i>Buildings</span><span><i style="background:#e2d6b0"></i>Roads</span><span><i class="you"></i>You</span></div><p class="lh-j-p">A field sketch of the village. The village teleporter can take you to every destination you have unlocked.</p>');
     drawJournalMap();
+  }else if(tab==='tower'){
+    const best=Math.max(0,Number(state.towerBest)||0);
+    panel.innerHTML='<h3 class="lh-j-h">GOLDLEAF TOWER</h3><div class="lh-j-chips">'+jChip('YOUR TOWERS',best)+jChip('NEXT FLOOR',best+1)+jChip('BEST RUN',best?'FLOOR '+best:'\u2014')+'</div><div id="lh-j-tower"><p class="lh-j-p">Loading the board\u2026</p></div><div style="margin-top:10px"><button type="button" class="lh-j-btn gold" id="lh-j-climb">CLIMB THE TOWER</button></div>';
+    (async()=>{try{const {rows,online}=await boardRows();const box=$('lh-j-tower');if(box)box.innerHTML=boardTable(rows,10)+'<p class="lh-j-p">'+(online?'Global ranking.':'Local ranking only \u2014 sign in to join the global board.')+'</p>';}catch(e){}})();
+    const cb=$('lh-j-climb');if(cb)cb.addEventListener('click',()=>{sfx('select');$('lh-game-menu').hidden=true;towerEnter();});
   }else{
     const obj=$('lh-quest-text').textContent,pips=Array.from({length:10},(_,i)=>'<i class="'+(i<stage?'done':i===stage?'now':'')+'"></i>').join(''),sq=Object.entries(state.sideQuests||{}),names={woodland:'A Hunter\u2019s Request',orchard:'The Last Good Apples',pantry:'A Light Below'};
     const alphas=Object.keys(state.beaten||{}).filter(k=>k.indexOf('alpha')===0).length,chests=Object.keys(state.chests||{}).length;

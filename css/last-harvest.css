@@ -350,3 +350,29 @@ html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialog
 .lh-shop-art.emo{display:grid;place-items:center;font-size:32px;line-height:1;font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;image-rendering:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.18))}
 .lh-shop-coins{padding-right:6px}
 .lh-shop-price.free:before{display:none}
+/* ---- tower leaderboard ---- */
+.lh-lb{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+.lh-lb-row{display:grid;grid-template-columns:30px 1fr auto auto;align-items:center;gap:10px;padding:8px 10px;background:#e8d39e;border:3px solid #1a110c;box-shadow:inset 0 0 0 2px #fff4d8}
+.lh-lb-rank{display:grid;place-items:center;width:24px;height:24px;background:#c9b078;border:2px solid #1a110c;font-size:9px}
+.lh-lb-row.p1 .lh-lb-rank{background:#ffd86a}.lh-lb-row.p2 .lh-lb-rank{background:#e2e2e2}.lh-lb-row.p3 .lh-lb-rank{background:#e0a56a}
+.lh-lb-name{font-size:clamp(8px,1.5vw,10px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lh-lb-name em{font-style:normal;font-size:7px;padding:2px 4px;background:#a8452e;color:#fff4d8;margin-left:6px}
+.lh-lb-lv{font-size:9px;color:#6a4a38}
+.lh-lb-tower{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
+.lh-lb-tower b{font-size:clamp(10px,1.8vw,13px);color:#a8452e}
+.lh-lb-tower small{font-size:7px;letter-spacing:.5px;color:#6a4a38}
+.lh-lb-row.me{background:#ffd86a;box-shadow:inset 0 0 0 2px #fff3b8,0 0 0 2px #a8452e}
+.lh-lb-you{margin:12px 0 0;font-size:9px;color:#6a4a38}
+.lh-lb-you b{color:#a8452e}
+.lh-lb-empty{font-size:9px;color:#6a4a38;margin:10px 0}
+.lh-ov .lh-lb-row{background:#f4e3b8}
+.lh-ov .lh-lb-row.me{background:#ffd86a}
+/* ---- title screen board preview ---- */
+.lh-title-board{position:absolute;right:3.5%;bottom:19%;width:min(280px,42vw);background:rgba(12,20,26,.72);border:3px solid #0b1116;box-shadow:inset 0 0 0 2px rgba(255,216,106,.35);padding:10px 12px;color:#ffe9b0;z-index:3}
+.lh-title-board .tb-h{display:block;font-size:8px;letter-spacing:1px;color:#ffd86a;margin-bottom:8px}
+.lh-title-board .tb-r{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:8px;font-size:9px;padding:3px 0;border-top:1px dashed rgba(255,216,106,.25)}
+.lh-title-board .tb-r:first-of-type{border-top:0}
+.lh-title-board i{font-style:normal;color:#ffd86a}
+.lh-title-board .tb-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lh-title-board em{font-style:normal;color:#8fe0a0}
+@media(max-width:620px){.lh-title-board{display:none}}
