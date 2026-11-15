@@ -24,6 +24,7 @@
     let lastDiagnosis = null;
     let hadOutage = false;
     let recoveryDismissed = false;
+    let recoveryVisible = false;
     let banner = null;
     let titleNode = null;
     let messageNode = null;
@@ -67,6 +68,7 @@
         dismissButton = banner.querySelector('.bsms-connection-dismiss');
         dismissButton.addEventListener('click', () => {
             recoveryDismissed = true;
+            recoveryVisible = false;
             banner.hidden = true;
         });
     }
@@ -131,6 +133,7 @@
             if (diagnosis === 'server') {
                 hadOutage = true;
                 recoveryDismissed = false;
+                recoveryVisible = false;
                 showBanner(
                     'server',
                     'Server is not reachable',
@@ -139,6 +142,7 @@
             } else if (diagnosis === 'internet') {
                 hadOutage = true;
                 recoveryDismissed = false;
+                recoveryVisible = false;
                 showBanner(
                     'internet',
                     'No internet connection',
@@ -151,9 +155,9 @@
                         'Connection restored',
                         'BSMS Web is connected again. You can safely continue where you left off.'
                     );
+                    recoveryVisible = true;
                     window.dispatchEvent(new CustomEvent('bsms:connection-restored'));
-                    recoveryDismissed = true;
-                } else if (!hadOutage || recoveryDismissed) {
+                } else if (!recoveryVisible || recoveryDismissed) {
                     hideBanner();
                 }
                 hadOutage = false;
@@ -161,6 +165,7 @@
                 // Cloudflare is unavailable while the BSMS server still responds.
                 // Per the agreed decision table, this condition does not show a popup.
                 hideBanner();
+                if (recoveryVisible) recoveryVisible = false;
             }
 
             lastDiagnosis = diagnosis;
