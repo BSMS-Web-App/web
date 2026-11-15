@@ -520,10 +520,10 @@ function localBoard(){try{return JSON.parse(localStorage.getItem('lh_tower_score
 function addLocalScore(f){const r=localBoard();r.push({name:(ACCOUNT_NAME||state.name||'Adventurer'),floor:f,cls:state.heroClass,level:state.level||1,t:Date.now()});r.sort((a,b)=>b.floor-a.floor||a.t-b.t);try{localStorage.setItem('lh_tower_scores',JSON.stringify(r.slice(0,20)));}catch(e){}}
 async function submitTower(f){addLocalScore(f);const sid=sessionId();if(!sid)return false;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify({action:'tower-score',floor:f,cls:state.heroClass,level:state.level||1})});return r.ok;}catch(e){return false;}}
 async function boardRows(){
- let rows=null,online=false;
- try{const sid=sessionId();const r=await fetch('/api/last-harvest?action=tower-leaderboard',{headers:sid?{'X-Session-ID':sid}:{}});if(r.ok){const d=await r.json();rows=d.leaderboard||[];online=true;}}catch(e){}
+ let rows=null,online=false,submissionsOpen=null,opensAt=null;
+ try{const sid=sessionId();const r=await fetch('/api/last-harvest?action=tower-leaderboard',{headers:sid?{'X-Session-ID':sid}:{}});if(r.ok){const d=await r.json();rows=d.leaderboard||[];online=true;submissionsOpen=d.submissionsOpen!==false;opensAt=d.phase==='upcoming'?(Number(d.startsAt)||null):null;}}catch(e){}
  if(!rows||!rows.length)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
- return {rows,online};
+ return {rows,online,submissionsOpen,opensAt};
 }
 function boardTable(rows,limit,who){
  if(!rows||!rows.length)return '<p class="lh-lb-empty">No climbers yet. Be the first to post a floor.</p>';
@@ -541,9 +541,10 @@ function boardIdentity(who){return who?'<p class="lh-lb-id">Signed in as <b>'+es
 async function showLeaderboard(){
  const el=ov('<h3>TOWER LEADERBOARD</h3><p class="note">Every floor of the Goldleaf Tower you clear counts as one tower. Highest total wins.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
  el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
- const {rows,online}=await boardRows();const who=await accountName();
+ const {rows,online,submissionsOpen,opensAt}=await boardRows();const who=await accountName();
  const body=el.querySelector('#lb-body');if(!body)return;
- body.innerHTML=boardIdentity(who)+boardTable(rows,20,who)+'<p class="note">'+(online?'Global ranking.':(who?'Saved on this device \u2014 the global board could not be reached.':'Local ranking only. Sign in to BSMS to join the global leaderboard.'))+'</p>';
+ const closed=submissionsOpen===false?'<p class="note">Online scores are paused'+(opensAt?' until '+new Date(opensAt).toLocaleDateString():' now that the event has ended')+' \u2014 this run is still saved on your device.</p>':'';
+ body.innerHTML=boardIdentity(who)+closed+boardTable(rows,20,who)+'<p class="note">'+(online?'Global ranking.':(who?'Saved on this device \u2014 the global board could not be reached.':'Local ranking only. Sign in to BSMS to join the global leaderboard.'))+'</p>';
  if(!who){const row=el.querySelector('.row');if(row){const sb=document.createElement('button');sb.className='lh-ob alt';sb.textContent='SIGN IN TO BSMS';sb.onclick=()=>{location.href='/accounts';};row.insertBefore(sb,row.firstChild);}}
 }
 

@@ -3,9 +3,12 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: AGPL-3.0-only
  *
- * Private, server-authoritative Last Harvest contest API.
- * Enable only after configuring LAST_HARVEST_ENABLED, LAST_HARVEST_START_DATE,
- * and LAST_HARVEST_ALLOWED_UIDS in the deployment environment.
+ * Server-authoritative Last Harvest contest API.
+ *
+ * The contest window is defined in this file, not in the deployment
+ * environment: a missing or mistyped variable used to close the whole event,
+ * and an environment cannot describe an end date the server can enforce.
+ * Every write is rejected before EVENT_START and at/after EVENT_END.
  */
 import { db } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
@@ -24,8 +27,36 @@ const EQUIPMENT = {
 const SIDES = new Set(['Rowan','Hazel','Flint','Pip','Maple']);
 const PETS = new Set(['Pumpkin Pup','Autumn Fox','Turkey Chick','Golden Squirrel','Little Owl','Cranberry Slime']);
 
-function allowedUids(){return new Set(String(process.env.LAST_HARVEST_ALLOWED_UIDS||'').split(',').map(x=>x.trim()).filter(Boolean));}
-function isEnabled(){return process.env.LAST_HARVEST_ENABLED === 'true' && /^\d{4}-\d{2}-\d{2}$/.test(process.env.LAST_HARVEST_START_DATE||'') && allowedUids().size>0;}
+/* ---- event schedule (edit here; deliberately not environment-driven) ---- */
+export const EVENT_START = '2026-11-14T05:00:00.000Z'; // Nov 14, 2026, 12:00 AM EST
+export const EVENT_END   = '2026-12-20T05:00:00.000Z'; // Dec 20, 2026, 12:00 AM EST
+const START_MS = Date.parse(EVENT_START);
+const END_MS = Date.parse(EVENT_END);
+if(!Number.isFinite(START_MS)||!Number.isFinite(END_MS)||END_MS<=START_MS)throw new Error('[Last Harvest] EVENT_START/EVENT_END are invalid.');
+
+function eventPhase(now=Date.now()){
+ if(now<START_MS)return{phase:'upcoming',startsAt:START_MS,endsAt:END_MS,serverTime:now};
+ if(now>=END_MS)return{phase:'ended',startsAt:START_MS,endsAt:END_MS,serverTime:now};
+ return{phase:'active',startsAt:START_MS,endsAt:END_MS,serverTime:now};
+}
+/* Writes are only accepted while the window is open. */
+function windowRejection(now=Date.now()){
+ const {phase}=eventPhase(now);
+ if(phase==='active')return null;
+ return phase==='upcoming'
+  ?{status:425,error:'The Last Harvest contest has not started yet.'}
+  :{status:410,error:'The Last Harvest contest has ended. Progress and scores are locked.'};
+}
+/* Timestamps supplied by a client must fall inside the window too. */
+function foreignTimestamp(body){
+ if(!body||typeof body!=='object')return null;
+ for(const key of ['at','completedAt','timestamp','startedAt','submittedAt','endedAt']){
+  if(body[key]===undefined)continue;
+  const t=Number(body[key]);
+  if(!Number.isFinite(t)||t<START_MS||t>=END_MS)return key;
+ }
+ return null;
+}
 async function resolveUser(sessionId){
   if(!sessionId)return null;
   const snap=await db.ref('/accounts').once('value');
@@ -39,7 +70,7 @@ function easternParts(date){
   return Object.fromEntries(parts.map(p=>[p.type,p.value]));
 }
 function easternRelease(stage){
-  const start=process.env.LAST_HARVEST_START_DATE;
+  const start=EVENT_START.slice(0,10);
   const d=new Date(start+'T12:00:00Z');
   let count=0;
   while(count<stage-1){d.setUTCDate(d.getUTCDate()+1);const day=d.getUTCDay();if(day!==0&&day!==6)count++;}
@@ -82,16 +113,22 @@ export default async function handler(req,res){
  if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Origin','same-origin');return res.status(204).end();}
  if(!['GET','POST'].includes(req.method))return res.status(405).json({error:'Method not allowed.'});
  if((req.method==='GET'&&req.query&&req.query.action==='tower-leaderboard')||(req.method==='POST'&&(req.body||{}).action==='tower-score'))return towerApi(req,res);
- if(!isEnabled())return res.status(404).json({error:'The Last Harvest contest is not open.'});
+ const phase=eventPhase();
+ const reqBody=req.body||{};
+ if(req.method==='POST'){
+  const blocked=windowRejection(phase.serverTime);
+  if(blocked)return res.status(blocked.status).json({...blocked,phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt});
+  const badStamp=foreignTimestamp(reqBody);
+  if(badStamp)return res.status(400).json({error:'The '+badStamp+' value falls outside the contest window.'});
+ }
  const sessionId=req.headers['x-session-id'];
  let user;
  try{user=await resolveUser(sessionId);}catch(e){return res.status(503).json({error:'Account service unavailable.'});}
  if(!user)return res.status(401).json({error:'Please sign in to continue.'});
- if(!allowedUids().has(user.uid))return res.status(403).json({error:'This account is not on the private event access list.'});
  if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot access this event.'});
  if(req.method==='GET' && req.query.action==='leaderboard'){
   const boardSnap=await db.ref('/last_harvest/finishers').once('value');
-  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&allowedUids().has(row.uid)&&typeof row.completedAt==='number');
+  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&Number.isFinite(row.completedAt));
   rows.sort((x,y)=>x.completedAt-y.completedAt);
   return res.status(200).json({success:true,rankings:rows.slice(0,50).map((row,index)=>({rank:index+1,displayName:row.displayName,completedAt:row.completedAt}))});
  }
@@ -100,8 +137,8 @@ export default async function handler(req,res){
   const snap=await ref.once('value');
   const state=cleanState(snap.val()||freshState());
   const openStage=releasedStage();
-  if(req.method==='GET')return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:openStage<10?new Date(easternRelease(openStage+1)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player'});
-  const body=req.body||{},action=body.action;
+  if(req.method==='GET')return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:openStage<10?new Date(easternRelease(openStage+1)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt});
+  const body=reqBody,action=body.action;
   if(action==='save-loadout'){
    const next=cleanState({...state,character:body.character,sidekick:body.sidekick,pet:body.pet,equipped:body.equipped});
    await ref.set(next);return res.json({success:true,state:next});
@@ -124,12 +161,17 @@ export default async function handler(req,res){
 /* ---- Goldleaf Tower leaderboard (open to any signed-in account; independent of the private contest) ---- */
 async function towerApi(req,res){
  try{
+  const window=eventPhase();
   if(req.method==='GET'){
    const snap=await db.ref('/last_harvest_tower/best').once('value');
    const rows=Object.values(snap.val()||{}).filter(r=>r&&Number.isInteger(r.floor));
    rows.sort((a,b)=>b.floor-a.floor||a.at-b.at);
-   return res.status(200).json({success:true,leaderboard:rows.slice(0,50).map((r,i)=>({rank:i+1,displayName:r.displayName,floor:r.floor,cls:r.cls,level:r.level}))});
+   return res.status(200).json({success:true,leaderboard:rows.slice(0,50).map((r,i)=>({rank:i+1,displayName:r.displayName,floor:r.floor,cls:r.cls,level:r.level})),phase:window.phase,startsAt:window.startsAt,endsAt:window.endsAt,submissionsOpen:window.phase==='active'});
   }
+  const blocked=windowRejection();
+  if(blocked)return res.status(blocked.status).json({error:blocked.error});
+  const badStamp=foreignTimestamp(req.body||{});
+  if(badStamp)return res.status(400).json({error:'The '+badStamp+' value falls outside the contest window.'});
   const user=await resolveUser(req.headers['x-session-id']);
   if(!user)return res.status(401).json({error:'Please sign in to post a score.'});
   if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot post scores.'});
