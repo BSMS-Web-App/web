@@ -744,6 +744,52 @@ function showTrainingGuide(){
  const el=ov('<h3>KEEPER TRAINING</h3><p>'+trainingHint()+'</p><p>Required before the Pumpkin Sentinel: reach level 3 and upgrade one armor piece at Orin’s Forge.</p><div class="row"><button class="lh-ob" data-ok>UNDERSTOOD</button></div>','lh-training-guide');
  el.querySelector('[data-ok]').onclick=()=>el.close();
 }
+/* ---------- shared card board for the store and the inn ---------- */
+function shopShell(title,inner,note){
+ const html='<div class="lh-shop">'
+  +'<header class="lh-shop-top"><h3>'+title+'</h3><button class="lh-shop-x" data-close aria-label="Close">\u2715</button></header>'
+  +'<p class="lh-shop-coins">'+(state.coins||0)+' COINS</p>'
+  +'<div class="lh-shop-grid">'+inner+'</div>'
+  +'<p class="lh-shop-note">'+(note||'')+'</p></div>';
+ const el=ov(html,'lh-shop-ov');
+ paintSheetIcons(el);
+ el.querySelector('[data-close]').onclick=()=>{sfx('menu');el.close();};
+ return el;
+}
+function shopCard(o){
+ const act=o.act?' data-'+o.act.kind+'="'+o.act.id+'"':'';
+ const fr=o.frame?' data-frame="'+o.frame+'"':'';
+ return '<button class="lh-shop-card'+(o.dim?' max':'')+'"'+act+fr+(o.dim?' disabled':'')+'>'
+  +'<span class="lh-shop-name">'+o.name+'</span><span class="lh-shop-sub">'+o.sub+'</span>'
+  +'<span class="lh-shop-art emo">'+o.icon+'</span>'
+  +'<span class="lh-shop-price'+(String(o.price)==='FREE'?' free':'')+'">'+o.price+'</span></button>';
+}
+const STORE_PRICE={potion:30,ether:40,cider:60,charm:90,ember:75};
+const STORE_ICON={potion:'\uD83E\uDDEA',ether:'\uD83C\uDF75',cider:'\uD83C\uDF4E',charm:'\uD83D\uDEE1\uFE0F',ember:'\uD83D\uDD25'};
+function openStore(){
+ ensureBattleItems();
+ const cards=BATTLE_ITEMS.map(it=>{const price=STORE_PRICE[it.id]||40,have=battleItemCount(it.id);
+  return shopCard({name:it.name.toUpperCase(),sub:it.desc+'  \u00B7  HAVE '+have,icon:STORE_ICON[it.id]||'\u2726',price:price,act:{kind:'buy',id:it.id},dim:(state.coins||0)<price});}).join('');
+ const el=shopShell('STORE',cards,'Tilly keeps the shelves stocked. Prices are firm.');
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const id=b.dataset.buy,price=STORE_PRICE[id]||40;if((state.coins||0)<price)return;
+  state.coins-=price;ensureBattleItems();state.battleItems[id]=(Number(state.battleItems[id])||0)+1;if(id==='potion')state.potions=state.battleItems.potion;
+  sfx('confirm');save();updateHud();el.close();openStore();});
+}
+function openInn(){
+ const free=(state.coins||0)<25;
+ const cards=[
+  shopCard({name:'REST',sub:'Restore all HP and MP',icon:'\uD83C\uDF19',price:'FREE',act:{kind:'rest',id:'rest'}}),
+  shopCard({name:'HOT MEAL',sub:'Restore 20 HP on the spot',icon:'\uD83C\uDF72',price:25,act:{kind:'meal',id:'meal'},dim:free}),
+  shopCard({name:'RUMOURS',sub:'Ask what the guests are saying',icon:'\uD83D\uDCDC',price:'FREE',act:{kind:'gossip',id:'gossip'}})
+ ].join('');
+ const el=shopShell('INN',cards,'Rooms are made up and the fire is lit.');
+ el.querySelector('[data-rest]').onclick=()=>{sfx('inn');state.hp=state.maxHp||state.hp;state.mp=state.maxMp||state.mp;save();updateHud();el.close();
+  setDialogue([['INNKEEPER BRAM','You look worn out. Rest a moment... there, good as new!']]);};
+ el.querySelector('[data-meal]').onclick=()=>{if((state.coins||0)<25)return;state.coins-=25;state.hp=Math.min(state.maxHp||state.hp,state.hp+20);sfx('confirm');save();updateHud();el.close();
+  setDialogue([['INNKEEPER BRAM','Stew, bread, and a seat by the fire. That will put some colour back in you.']]);};
+ el.querySelector('[data-gossip]').onclick=()=>{el.close();setDialogue([['INNKEEPER BRAM','A hooded guest took my best room, paid in advance, and left before dawn.'],['INNKEEPER BRAM','The coins were old. So old the raven stamped on them has worn down to a rumour.']]);};
+}
+
 function openBlacksmith(){
  state.weaponTier=Math.max(0,Math.min(8,Number(state.weaponTier)||0));state.armorTier=Math.max(0,Math.min(8,Number(state.armorTier)||0));state.skillTier=Math.max(0,Math.min(8,Number(state.skillTier)||0));state.vitalityTier=Math.max(0,Math.min(8,Number(state.vitalityTier)||0));state.focusTier=Math.max(0,Math.min(8,Number(state.focusTier)||0));
  const cls=state.heroClass||'Guardian',names={Guardian:{weapon:['Harvest Longsword','Ironroot Blade','Copperfall Greatsword','Embersteel Edge','Keeper’s Oath','Everfeast Relic'],armor:['Steel Plate Armor','Reinforced Plate','Guardian’s Bulwark','Runebound Armor','Sentinel Harness','First Keeper’s Aegis','Aegis of Dawn','Sunward Plate','Eternal Bulwark']},Scout:{weapon:['Hunter’s Longbow','Briarstring Bow','Windrunner Bow','Goldleaf Recurve','Frostfeather Bow','Wildheart Longbow'],armor:['Ranger Leather Armor','Hardened Trail Leathers','Thornweave Vest','Shadowstalker Gear','Frosthide Armor','Wildheart Mantle','Wildheart Garb','Moonshadow Vest','Eternal Vestment']},Mage:{weapon:['Amber Orb Staff','Moonlit Branch','Starfall Staff','Runesinger Rod','Frostglass Staff','Everfeast Scepter'],armor:['Spellbound Mantle','Apprentice Robes','Runesewn Robe','Stargazer Mantle','Frostweave Robe','Everfeast Vestments','Everfeast Regalia','Starlit Robe','Eternal Mantle']}};
@@ -2253,7 +2299,7 @@ function elderChat(){const n=state.elderTalks=(state.elderTalks||0)+1,nm='ELDER 
 const hint=questStep<2?'Rowan is waiting for you in the village square. Speak with him, then search the homes.':questStep<3?'Have you searched every building? Old Orin in the workshop keeps many secrets.':!b.north?'Gatekeeper Brawn guards the north road. Beat him and the Wildlands will open to you.':!b.south?('Before the Pumpkin Sentinel, defeat a Wildlands creature, reach level 3, and upgrade your armor at Orin’s Forge. '+trainingHint()):(state.stage>=BOSSES.length?'You saved Hearthvale. I could not be prouder.':'Your next trial: '+chapters[Math.min(state.stage,9)].place+'. '+BOSSES[Math.min(state.stage,9)].name+' waits there.');
 const flavor=['Autumn always smelled of cinnamon here. Lately it smells of ash.','Keep your potions close and your guard closer.','Grass that sways against the wind hides monsters. The stone roads are safe if you need to rest.','Rest at the Ranger Camp in the Wildlands. Old Willow keeps the fire burning there.','Your mother used to hum the harvest song on that bench by the fountain.','Every zone has an Alpha. Defeat one and the wild folk will whisper your name.'];
 const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(state.elderKey!==key){state.elderKey=key;save();setDialogue([[nm,hint],[nm,flavor[n%flavor.length]]]);}else setDialogue([[nm,flavor[n%flavor.length]],[nm,flavor[(n+1)%flavor.length]]]);}
-function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(villageClueGate(interiorId,target))return;if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep===2){const cn=(state.clues||[]).length;setQ(3);updateQuest();setDialogue([['OLD CRAFTSMAN ORIN','The map is yours now. Read it slowly \u2014 that seal is older than my forge.'],['OLD CRAFTSMAN ORIN','Wren says I am a sentimental old man. Wren is right.'],['JOURNAL','Clues found: '+cn+' of 4. Elder Maple is waiting in the square.']]);return;}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){sfx('inn');state.hp=Math.max(state.maxHp||state.hp,state.hp);state.mp=state.maxMp||state.mp;updateHud();save();target={...target,lines:[...target.lines,'You look worn out. Rest a moment... there, good as new!']};}setDialogue(target.lines.map(t=>[target.name,t]));return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
+function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d<roomGeom(interiorId).U*3.3&&d<dist){target=n;dist=d;}}if(target){if(villageClueGate(interiorId,target))return;if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep===2){const cn=(state.clues||[]).length;setQ(3);updateQuest();setDialogue([['OLD CRAFTSMAN ORIN','The map is yours now. Read it slowly \u2014 that seal is older than my forge.'],['OLD CRAFTSMAN ORIN','Wren says I am a sentimental old man. Wren is right.'],['JOURNAL','Clues found: '+cn+' of 4. Elder Maple is waiting in the square.']]);return;}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){openInn();return;}if(target.name==='SHOPKEEPER TILLY'){openStore();return;}setDialogue(target.lines.map(t=>[target.name,t]));return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:(n.act==='teleporter'?72:64);if(d<rc&&d<dist){found=n;dist=d;}}
 if(found){
 if(found.act==='teleporter'){openTeleporter();return;}

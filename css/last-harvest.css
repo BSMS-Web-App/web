@@ -347,3 +347,6 @@ html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialog
 .lh-shop-price:before{content:"";display:inline-block;width:9px;height:9px;margin-right:6px;border-radius:50%;background:#ffd75e;border:2px solid #b57e1e;vertical-align:-1px}
 .lh-shop-card.max .lh-shop-price{background:#7f8a93}
 .lh-shop-note{margin:14px 16px 0;font-size:8px;line-height:1.7;color:#8a5a3a;text-align:center}
+.lh-shop-art.emo{display:grid;place-items:center;font-size:32px;line-height:1;font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;image-rendering:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.18))}
+.lh-shop-coins{padding-right:6px}
+.lh-shop-price.free:before{display:none}
