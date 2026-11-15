@@ -1187,7 +1187,7 @@ ctx.clearRect(0,0,W,H);px(0,0,W,H,'#0d0a14');ctx.save();ctx.translate(W/2,H/2);c
  if(!dialogue&&!battle){let best=null,bd=1e9;for(const n of A.npcs){const d=Math.hypot(areaPlayer.x-(n.x*U+16),areaPlayer.y-(n.y*U+24));if(d<(n.boss?150:64)&&d<bd){best=n;bd=d;}}if(best&&!(best.boss&&state.beaten[best.trainer.id]))drawWorldPrompt(best.x*U+16,best.y*U-(best.boss?96:22),(best.boss||best.alpha||best.rival)?'E \u00b7 CHALLENGE':best.chest?'E \u00b7 OPEN':'E \u00b7 TALK');}
  ctx.restore();
  const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,Math.max(W,H)*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.35)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
- if(A.wilds&&W>=560&&!dialogue&&!battle){const m=wildsMini(A),sc=W<760?1:2,mx=W-A.w*sc-14,my=H-A.h*sc-40;ctx.imageSmoothingEnabled=false;ctx.fillStyle='rgba(38,51,74,.9)';ctx.fillRect(mx-4,my-4,A.w*sc+8,A.h*sc+8);ctx.drawImage(m,mx,my,A.w*sc,A.h*sc);ctx.fillStyle=Math.floor(t*3)%2?'#ffffff':'#e03838';ctx.fillRect(mx+Math.floor(areaPlayer.x/32)*sc-1,my+Math.floor(areaPlayer.y/32)*sc-1,sc+2,sc+2);}
+ if(A.wilds&&W>=560&&!dialogue&&!battle){const m=wildsMini(A),sc=W<760?1:2,mx=W-A.w*sc-14,my=H-A.h*sc-40;ctx.imageSmoothingEnabled=false;ctx.fillStyle='rgba(38,51,74,.9)';ctx.fillRect(mx-4,my-4,A.w*sc+8,A.h*sc+8);ctx.drawImage(m,mx,my,A.w*sc,A.h*sc);ctx.fillStyle=Math.floor(t*3)%2?'#ffffff':'#e03838';ctx.fillRect(mx+Math.floor(areaPlayer.x/32)*sc-1,my+Math.floor(areaPlayer.y/32)*sc-1,sc+2,sc+2);const wt=questTarget();if(wt){miniMarker(ctx,mx+Math.floor(wt.x/32)*sc+sc/2,my+Math.floor(wt.y/32)*sc+sc/2,Math.max(2.2,sc*.8));}}
  return{camX:cx,camY:cy};}
 
 /* ================= THE WILDLANDS: a big open map with five monster zones ================= */
@@ -1616,6 +1616,39 @@ function playBossScene(g,next){
  setTimeout(()=>{if(!cinematic||cinematic.phase!=='bossScene')return;
   next(()=>{document.body.classList.remove('lh-cinematic');cinematic=null;});},5400);
 }
+
+/* ---------------- quest markers: where the next objective actually is ---------------- */
+const VILLAGE_MAP_ROWS=['FFFFFFFFFFFF','FHH...F...HF','FHH...F...HF','pppppppppppp','...ppp......','...ppp......','HHH.ppp.....','HHH.ppp.....','FFFFFFFFFFFF'];
+const VILLAGE_MAP_COL={F:'#315f48',H:'#b87849',p:'#e2d6b0','.':'#79b66c'};
+const VILLAGE_DOORS=[[10.5,10.5],[34,10.5],[22,22.5],[5.5,29.5]];
+let VILLAGE_MINI=null;
+function villageMini(cell){if(VILLAGE_MINI&&VILLAGE_MINI.cell===cell)return VILLAGE_MINI.cv;const cv=document.createElement('canvas');cv.width=12*cell;cv.height=9*cell;const g=cv.getContext('2d');VILLAGE_MAP_ROWS.forEach((r,y)=>[...r].forEach((ch,x)=>{g.fillStyle=VILLAGE_MAP_COL[ch]||'#79b66c';g.fillRect(x*cell,y*cell,cell,cell);}));VILLAGE_MINI={cell,cv};return cv;}
+function clueTargetBuilding(){const have=(state.clues||[]).map(String);for(let i=0;i<4;i++)if(!have.includes(String(i)))return i;return -1;}
+function questTarget(){
+ if(scene==='inside')return null;
+ if(scene==='outside'){
+  const step=Math.max(0,Number(questStep)||0),elder={x:16*TILE+16,y:12*TILE+24,label:'ELDER MAPLE'};
+  if(step<=1)return elder;
+  if(step===2){const i=clueTargetBuilding();if(i<0)return elder;const d=VILLAGE_DOORS[i];return{x:d[0]*TILE,y:d[1]*TILE,label:'CLUE'};}
+  if(step===3)return elder;
+  if(!state.teleUsed)return{x:25*TILE+16,y:15*TILE+24,label:'TELEPORTER'};
+  return null;
+ }
+ if(scene==='area'&&AREA&&AREA.wilds)return{x:48*TILE+16,y:63*TILE+16,label:'HOME'};
+ return null;
+}
+function miniMarker(g,cx,cy,r){const pulse=.5+.5*Math.sin(performance.now()/260),s=r*(1+pulse*.18);
+ g.save();g.translate(cx,cy);g.rotate(Math.PI/4);
+ g.fillStyle='rgba(0,0,0,.55)';g.fillRect(-s-1,-s-1,s*2+2,s*2+2);
+ g.fillStyle='#ffd86a';g.fillRect(-s,-s,s*2,s*2);
+ g.fillStyle='#fff3c4';g.fillRect(-s*.35,-s*.35,s*.7,s*.7);
+ g.restore();}
+function drawVillageMini(W,H){if(W<560||dialogue||battle||cinematic||titleOpen)return;const cell=7,cv=villageMini(cell),mw=cv.width,mh=cv.height,mx=W-mw-14,my=H-mh-40;
+ ctx.imageSmoothingEnabled=false;ctx.fillStyle='rgba(38,51,74,.9)';ctx.fillRect(mx-4,my-4,mw+8,mh+8);ctx.drawImage(cv,mx,my);
+ const bt=(x,y)=>[Math.max(0,Math.min(11,Math.floor(x/TILE/4))),Math.max(0,Math.min(8,Math.floor(y/TILE/4)))];
+ const tgt=questTarget();if(tgt){const[tx,ty]=bt(tgt.x,tgt.y);miniMarker(ctx,mx+tx*cell+cell/2,my+ty*cell+cell/2,cell*.42);}
+ const[px,py]=bt(state.x,state.y);ctx.fillStyle=Math.floor(performance.now()/300)%2?'#ffffff':'#e03838';ctx.fillRect(mx+px*cell+cell/2-1,my+py*cell+cell/2-1,3,3);}
+
 function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='bossScene'){drawBossScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='rowanScene'){drawRowanScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(camX),-Math.floor(camY));
@@ -1646,7 +1679,7 @@ const doors=[{x:10.5,y:10.5},{x:34,y:10.5},{x:22,y:22.5},{x:5.5,y:29.5}];
 for(const d of doors){const wx=d.x*TILE,wy=d.y*TILE,dd=Math.hypot(state.x-wx,state.y-wy);if(dd<112&&dd<promptDist){promptTarget={x:wx,y:wy};promptDist=dd;promptLabel='E · ENTER';}}
 const signDist=Math.hypot(state.x-27*TILE,state.y-10*TILE);if(signDist<100&&signDist<promptDist){promptTarget={x:27*TILE,y:10*TILE};promptLabel='E · READ';}
 if(promptTarget)drawWorldPrompt(promptTarget.x,promptTarget.y-((promptTarget.trainer&&promptTarget.trainer.bi!==undefined)?126:30),promptLabel);
-ctx.restore();return{camX,camY};}
+ctx.restore();drawVillageMini(W,H);return{camX,camY};}
 const CS_ROW={'#b86c78':14,'#577f9b':8,'#bb6542':2,'#7d526f':20,'#6b9c70':5,'#d5b64e':10};
 function drawCutscenePerson(x,y,shirt,hat,scale=1.75){drawSpriteK(CS_ROW[shirt]??7,0,0,x,y+10*scale,scale*2);}
 function drawCutscenePlayer(x,y,scale=1.75){drawSpriteK(state.heroClass==='Mage'?20:state.heroClass==='Scout'?1:0,0,0,x,y+10*scale,scale*2);}
@@ -2550,10 +2583,10 @@ function jBar(cls,label,v,max,txt){return'<div class="lh-j-bar '+cls+'"><label>'
 function jChip(label,val,wide){return'<div class="lh-j-chip'+(wide?' wide':'')+'"><small>'+label+'</small><b>'+escapeMenuText(val)+'</b></div>';}
 const J_ZONES=[['SUNNY MEADOW','#7bc86c','1-2'],['ORCHARD WOODS','#d9a04a','3-4'],['MISTY MARSH','#4fa9a0','5-6'],['STONE HOLLOW','#8a7f9a','7-8'],['FROST RIDGE','#cfe6f6','9-10']];
 function drawJournalMap(){const cv=$('lh-j-map');if(!cv)return;const g=cv.getContext('2d');g.imageSmoothingEnabled=false;
- if(scene==='area'&&AREA&&AREA.wilds){const A=AREA,sc=4;cv.width=A.w*sc;cv.height=A.h*sc;g.drawImage(wildsMini(A),0,0,cv.width,cv.height);const px=Math.floor(areaPlayer.x/32)*sc,py=Math.floor(areaPlayer.y/32)*sc;g.fillStyle='#ffffff';g.fillRect(px-4,py-4,sc+8,sc+8);g.fillStyle='#e03838';g.fillRect(px-2,py-2,sc+4,sc+4);return;}
+ if(scene==='area'&&AREA&&AREA.wilds){const A=AREA,sc=4;cv.width=A.w*sc;cv.height=A.h*sc;g.drawImage(wildsMini(A),0,0,cv.width,cv.height);const px=Math.floor(areaPlayer.x/32)*sc,py=Math.floor(areaPlayer.y/32)*sc;g.fillStyle='#ffffff';g.fillRect(px-4,py-4,sc+8,sc+8);g.fillStyle='#e03838';g.fillRect(px-2,py-2,sc+4,sc+4);const wt=questTarget();if(wt){const s2=4;miniMarker(g,Math.floor(wt.x/32)*s2+s2/2,Math.floor(wt.y/32)*s2+s2/2,s2*1.1);}return;}
  const rows=['FFFFFFFFFFFF','FHH...F...HF','FHH...F...HF','pppppppppppp','...ppp......','...ppp......','HHH.ppp.....','HHH.ppp.....','FFFFFFFFFFFF'],cs=26,col={F:'#315f48',H:'#b87849',p:'#e2d6b0','.':'#79b66c'};cv.width=12*cs;cv.height=9*cs;
  rows.forEach((r,y)=>[...r].forEach((c,x)=>{g.fillStyle=col[c];g.fillRect(x*cs,y*cs,cs,cs);g.fillStyle='rgba(0,0,0,.12)';g.fillRect(x*cs,y*cs+cs-2,cs,2);}));
- const mx=Math.max(0,Math.min(11,Math.floor(state.x/TILE/4))),my=Math.max(0,Math.min(8,Math.floor(state.y/TILE/4)));g.fillStyle='#fff';g.fillRect(mx*cs+2,my*cs+2,cs-4,cs-4);g.fillStyle='#e03838';g.fillRect(mx*cs+6,my*cs+6,cs-12,cs-12);}
+ const mx=Math.max(0,Math.min(11,Math.floor(state.x/TILE/4))),my=Math.max(0,Math.min(8,Math.floor(state.y/TILE/4)));const wt=questTarget();if(wt){miniMarker(g,Math.max(0,Math.min(11,Math.floor(wt.x/TILE/4)))*cs+cs/2,Math.max(0,Math.min(8,Math.floor(wt.y/TILE/4)))*cs+cs/2,cs*.3);}g.fillStyle='#fff';g.fillRect(mx*cs+2,my*cs+2,cs-4,cs-4);g.fillStyle='#e03838';g.fillRect(mx*cs+6,my*cs+6,cs-12,cs-12);}
 function renderRpgMenu(tab='status'){
   document.querySelectorAll('[data-rpg-tab]').forEach(b=>b.classList.toggle('active',b.dataset.rpgTab===tab));
   const panel=$('lh-rpg-content'),stage=Math.min(Number(state.stage)||0,9),chapter=chapters[stage],esc=escapeMenuText;
@@ -2595,6 +2628,6 @@ $('lh-resume').addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidde
 $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){resetLocalSave(false);location.reload();}});
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
-if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},enterRegion,enterArea,towerEnter,showLeaderboard,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
+if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,enterArea,towerEnter,showLeaderboard,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
 {const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();if(skip)startNaming();else showTitle(hasSave);}
 })();
