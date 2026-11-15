@@ -89,6 +89,14 @@ async function apiFetch(endpoint, options = {}) {
         return data;
     } catch (err) {
         console.error(`[BSMS Web :: API] Fetch failed for ${endpoint}:`, err);
+        if (!err.status && !err.code) {
+            const networkError = new Error(
+                err.name === 'AbortError' ? 'The request timed out.' : 'Unable to reach the server.'
+            );
+            networkError.code = err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR';
+            networkError.cause = err;
+            throw networkError;
+        }
         throw err;
     }
 }
