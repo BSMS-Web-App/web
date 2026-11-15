@@ -1684,16 +1684,33 @@ const CS_ROW={'#b86c78':14,'#577f9b':8,'#bb6542':2,'#7d526f':20,'#6b9c70':5,'#d5
 function drawCutscenePerson(x,y,shirt,hat,scale=1.75){drawSpriteK(CS_ROW[shirt]??7,0,0,x,y+10*scale,scale*2);}
 function drawCutscenePlayer(x,y,scale=1.75){drawSpriteK(state.heroClass==='Mage'?20:state.heroClass==='Scout'?1:0,0,0,x,y+10*scale,scale*2);}
 const GEAR_COL=['#b9c6d6','#9fd8b0','#e0c274','#f0a050','#ff7a5a','#d29bff','#8fd8ff','#ffe45c','#ff5af0'];
-function drawGear(x,fy,k,face,cls){const T={Guardian:[['d',104],['d',101]],Scout:[['t',118]],Mage:[['d',130]],Foe:[['d',107]]}[cls];if(!T)return;
-const wt=Math.max(0,Math.min(8,Number(state.weaponTier)||0)),at=Math.max(0,Math.min(8,Number(state.armorTier)||0)),t=performance.now();
-const side=face>1,m=face===2?-1:1;
-const put=(w,ox,oy)=>{ctx.save();ctx.translate(Math.round(x+m*ox*k),0);ctx.scale(m,1);kTile(w[0],w[1],-8*k,fy-oy*k,k);ctx.restore();};
-if(wt>0){ctx.save();ctx.shadowColor=GEAR_COL[wt];ctx.shadowBlur=Math.min(16,3+wt*2);put(T[0],side?6:9,14);ctx.restore();}else put(T[0],side?6:9,14);
-if(T[1]&&!side)put(T[1],-9,11);
-if(wt>=4){ctx.save();ctx.globalAlpha=.45+.45*Math.sin(t/220);ctx.fillStyle=GEAR_COL[wt];const g=Math.max(2,Math.round(2*k));ctx.fillRect(Math.round(x-8*k),Math.round(fy-22*k),g,g);ctx.fillRect(Math.round(x+6*k),Math.round(fy-18*k),g,Math.max(1,Math.round(1.4*k)));ctx.restore();}
-if(at>0){ctx.save();const w2=Math.max(4,Math.round(7*k)),h2=Math.max(1,Math.round(1.4*k));ctx.globalAlpha=.3+.6*(at/8);ctx.fillStyle=GEAR_COL[at];
-ctx.fillRect(Math.round(x-w2/2),Math.round(fy-11*k),w2,h2);ctx.globalAlpha=.18+.4*(at/8);ctx.fillRect(Math.round(x-w2/2),Math.round(fy-9*k),w2,Math.max(1,Math.round(.9*k)));
-if(at>=5){ctx.globalAlpha=.25+.3*Math.sin(t/300);ctx.fillStyle='#ffffff';ctx.fillRect(Math.round(x-Math.max(1,k*.5)),Math.round(fy-12*k),Math.max(2,Math.round(k)),Math.max(1,Math.round(k*.7)));}ctx.restore();}
+const GEAR_W={Guardian:[1,2,3,4,5,6,7,8,9],Scout:[0,1,2,4,6,8,7,9,3],Mage:[18,19,20,21,24,25,26,22,23]};
+const GEAR_A={Guardian:[74,75,76,77,78,79,80,84,85],Scout:[64,65,66,67,70,71,76,77,83],Mage:[72,73,84,86,87,88,89,82,78]};
+const GEAR_H=[36,37,38,39,40,41,42,43,44];
+const GEAR_S={Guardian:[12,13,14,15,17,27,29,32,35]};
+function drawGear(x,fy,k,face,cls){
+ if(!GEAR.naturalWidth||cls==='Foe')return;
+ const wt=Math.min(8,Math.max(0,Number(state.weaponTier)||0)),at=Math.min(8,Math.max(0,Number(state.armorTier)||0)),t=performance.now();
+ const m=face===2?-1:1,L=x-8*k,T=fy-16*k;
+ /* draw an icon centred on a screen point, mirrored when the hero faces west */
+ const putC=(idx,cx,cy,size)=>{if(idx===undefined)return;const c=idx%12,r=(idx/12)|0,S=Math.max(2,Math.round(size));
+  ctx.save();ctx.translate(Math.round(cx),0);if(m<0)ctx.scale(-1,1);ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(GEAR,c*16,r*16,16,16,Math.round(-S/2),Math.round(cy-S/2),S,S);ctx.restore();};
+ if(at>0){
+  /* chest plate, clipped to the hero's torso so it reads as worn armour */
+  ctx.save();ctx.beginPath();ctx.rect(Math.round(L+3*k),Math.round(T+5*k),Math.round(10*k),Math.round(7*k));ctx.clip();
+  const c=(GEAR_A[cls]||GEAR_A.Guardian)[at-1],cc=c%12,rr=(c/12)|0,S=Math.round(11*k);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(GEAR,cc*16,rr*16,16,16,Math.round(L+2.5*k),Math.round(T+2.4*k),S,S);ctx.restore();
+  ctx.save();ctx.globalAlpha=.5+.4*(at/8);ctx.fillStyle=GEAR_COL[at];
+  ctx.fillRect(Math.round(L+3*k),Math.round(T+5.4*k),Math.max(1,Math.round(1.3*k)),Math.max(1,Math.round(.9*k)));
+  ctx.fillRect(Math.round(L+11.7*k),Math.round(T+5.4*k),Math.max(1,Math.round(1.3*k)),Math.max(1,Math.round(.9*k)));ctx.restore();
+ }
+ putC((GEAR_W[cls]||GEAR_W.Guardian)[wt],x+m*5.2*k,fy-8.6*k,9*k);
+ const sh=GEAR_S[cls];
+ if(sh&&at>0)putC(sh[at-1],x-m*5*k,fy-6.2*k,5.8*k);
+ if(wt>=4){ctx.save();ctx.globalAlpha=.55+.45*Math.sin(t/240);ctx.fillStyle=GEAR_COL[wt];
+  ctx.fillRect(Math.round(x-m*5.2*k),Math.round(fy-12.2*k),Math.max(1,Math.round(1.2*k)),Math.max(1,Math.round(1.2*k)));ctx.restore();}
 }
 const heroRow=()=>(state.gender==='girl'?{Guardian:5,Scout:38,Mage:18}:{Guardian:5,Scout:7,Mage:0})[state.heroClass]??5;
 function actor(x,fy,row,face,k,g,step){drawSpriteK(row,face,step||0,x,fy,k);if(g)drawGear(x,fy,k,face,g);}
