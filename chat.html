@@ -632,15 +632,15 @@ SPDX-License-Identifier: AGPL-3.0-only
             <button class="icon-btn" id="btnUnpinBtn" style="padding: 6px;" onclick="ContextMenu.unpin(event)"><svg class="ic"><use href="#ico-unpin"></use></svg></button>
         </div>
         
-        <!-- TARGET DM BAN UI OVERRIDE -->
-        <div id="dmBannedState" style="display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; z-index:10;">
-            <svg class="ic" style="width:100px; height:100px; fill:#ef4444; margin-bottom:20px;"><use href="#ico-banned"></use></svg>
-            <h2 style="color:#ef4444; font-size: 2rem; margin:0 0 10px;">Chat Unavailable</h2>
-            <p style="color:var(--fg2); font-size:1.2rem; margin:0 0 15px;">The user <strong id="dmBannedName" style="color:var(--fg);"></strong> is currently banned from BSMS Web.</p>
-            <div style="background:var(--section-bg); border:1px solid var(--border); padding:12px 20px; border-radius:12px;">
-                <strong style="color:var(--fg);">Ban Expires:</strong>
-                <div id="dmBannedTimer" style="font-family:monospace; font-size:1.2rem; color:var(--fg2); margin-top:4px;">---</div>
-            </div>
+        <!-- BANNED DM CONVERSATION BARRIER -->
+        <div id="dmBannedState" style="display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; z-index:10;">
+            <svg class="ic" style="width:76px; height:76px; fill:var(--fg2); margin-bottom:20px;"><use href="#ico-banned"></use></svg>
+            <h2 style="color:var(--fg); font-size:1.8rem; margin:0 0 10px;">Chat Unavailable</h2>
+            <p style="color:var(--fg2); font-size:1.05rem; line-height:1.55; max-width:440px; margin:0 0 22px;">This conversation is unavailable because the other user was banned from BSMS Web.</p>
+            <button class="btn sec" style="width:auto; min-width:150px; padding:10px 22px; display:inline-flex; align-items:center; justify-content:center; gap:8px;" onclick="ChatManager.executeHideDM()">
+                <svg class="ic" style="width:18px;height:18px;"><use href="#ico-eye-off"></use></svg>
+                Hide chat
+            </button>
         </div>
 
         <!-- JOIN REQUESTS BANNER FOR GROUP OWNER -->
