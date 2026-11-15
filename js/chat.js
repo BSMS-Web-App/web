@@ -1164,6 +1164,7 @@ const ChatManager = {
                     UI.hide('sysBotNotice');
                     UI.hide('pinnedBanner');
                     UI.show('dmBannedState');
+                    if (typeof ProfileHoverManager !== 'undefined') ProfileHoverManager.hide();
                     this.resetChatLog();
                     if (State.dmBanTimer) clearInterval(State.dmBanTimer);
                     UI.hide('btnHideDM');
@@ -1365,6 +1366,7 @@ const ChatManager = {
                 }
                 UI.show('btnHideDM');
                 UI.show('btnGroupSettings');
+                UI.show('btnVoiceChat');
             }
             UI.hide('btnLeaveGroup');
             document.getElementById('activeChatInfo').classList.remove('clickable');
