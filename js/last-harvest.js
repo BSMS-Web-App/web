@@ -498,8 +498,20 @@ function offerSkills(){if(offering)return;const cat=skillCat();state.skills=stat
   el.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{sfx('select');state.skills.splice(+b.dataset.f,1,idx);done();});};}
 /* ---------- leaderboard (global when signed in to BSMS, always saved locally) ---------- */
 function sessionId(){try{return localStorage.getItem('session_id')||localStorage.getItem('bsms_session')||'';}catch(e){return'';}}
+let ACCOUNT_NAME=null,ACCOUNT_ASKED=false;
+async function accountName(){
+ if(ACCOUNT_NAME!==null)return ACCOUNT_NAME;
+ if(ACCOUNT_ASKED)return ACCOUNT_NAME||'';
+ ACCOUNT_ASKED=true;
+ const sid=sessionId();
+ if(!sid){ACCOUNT_NAME='';return '';}
+ try{const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify({action:'getProfile'})});
+  if(r.ok){const d=await r.json();const pr=d&&d.profile||{};ACCOUNT_NAME=String(pr.displayName||pr.username||'').trim();return ACCOUNT_NAME;}
+ }catch(e){}
+ ACCOUNT_NAME='';return '';
+}
 function localBoard(){try{return JSON.parse(localStorage.getItem('lh_tower_scores')||'[]');}catch(e){return[];}}
-function addLocalScore(f){const r=localBoard();r.push({name:state.name||'Adventurer',floor:f,cls:state.heroClass,level:state.level||1,t:Date.now()});r.sort((a,b)=>b.floor-a.floor||a.t-b.t);try{localStorage.setItem('lh_tower_scores',JSON.stringify(r.slice(0,20)));}catch(e){}}
+function addLocalScore(f){const r=localBoard();r.push({name:(ACCOUNT_NAME||state.name||'Adventurer'),floor:f,cls:state.heroClass,level:state.level||1,t:Date.now()});r.sort((a,b)=>b.floor-a.floor||a.t-b.t);try{localStorage.setItem('lh_tower_scores',JSON.stringify(r.slice(0,20)));}catch(e){}}
 async function submitTower(f){addLocalScore(f);const sid=sessionId();if(!sid)return false;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify({action:'tower-score',floor:f,cls:state.heroClass,level:state.level||1})});return r.ok;}catch(e){return false;}}
 async function boardRows(){
  let rows=null,online=false;
@@ -507,9 +519,9 @@ async function boardRows(){
  if(!rows||!rows.length)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
  return {rows,online};
 }
-function boardTable(rows,limit){
+function boardTable(rows,limit,who){
  if(!rows||!rows.length)return '<p class="lh-lb-empty">No climbers yet. Be the first to post a floor.</p>';
- const me=String(state.name||'').trim().toLowerCase(),shown=rows.slice(0,limit||20);
+ const me=String(who||state.name||'').trim().toLowerCase(),shown=rows.slice(0,limit||20);
  const body=shown.map((r,i)=>{const nm=String(r.displayName||r.name||'Adventurer'),mine=me&&nm.trim().toLowerCase()===me,fl=Math.max(0,Number(r.floor)||0);
   return '<li class="lh-lb-row'+(mine?' me':'')+(i<3?' p'+(i+1):'')+'"><span class="lh-lb-rank">'+(i+1)+'</span>'
    +'<span class="lh-lb-name">'+esc(nm)+(mine?' <em>YOU</em>':'')+'</span>'
@@ -519,12 +531,14 @@ function boardTable(rows,limit){
  const yours=at>=0?'<p class="lh-lb-you">Your rank: <b>#'+(at+1)+'</b> with <b>'+Math.max(0,Number(rows[at].floor)||0)+'</b> towers cleared.</p>':'<p class="lh-lb-you">Your best this device: <b>'+Math.max(0,Number(state.towerBest)||0)+'</b> towers cleared.</p>';
  return '<ol class="lh-lb">'+body+'</ol>'+yours;
 }
+function boardIdentity(who){return who?'<p class="lh-lb-id">Signed in as <b>'+esc(who)+'</b> \u00B7 BSMS account</p>':'<p class="lh-lb-id">Not signed in \u2014 this run is saved on this device as <b>'+esc(state.name||'Adventurer')+'</b>. <b>Sign in to BSMS</b> to post under your account name.</p>';}
 async function showLeaderboard(){
  const el=ov('<h3>TOWER LEADERBOARD</h3><p class="note">Every floor of the Goldleaf Tower you clear counts as one tower. Highest total wins.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
  el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
- const {rows,online}=await boardRows();
+ const {rows,online}=await boardRows();const who=await accountName();
  const body=el.querySelector('#lb-body');if(!body)return;
- body.innerHTML=boardTable(rows,20)+'<p class="note">'+(online?'Global ranking.':'Local ranking only. Sign in to BSMS to join the global leaderboard.')+'</p>';
+ body.innerHTML=boardIdentity(who)+boardTable(rows,20,who)+'<p class="note">'+(online?'Global ranking.':(who?'Saved on this device \u2014 the global board could not be reached.':'Local ranking only. Sign in to BSMS to join the global leaderboard.'))+'</p>';
+ if(!who){const row=el.querySelector('.row');if(row){const sb=document.createElement('button');sb.className='lh-ob alt';sb.textContent='SIGN IN TO BSMS';sb.onclick=()=>{location.href='/accounts';};row.insertBefore(sb,row.firstChild);}}
 }
 
 /* ---------- the Goldleaf Tower ---------- */
@@ -543,8 +557,8 @@ async function towerEnd(f){AREA=getCity();scene='area';stepper=null;resetRoamers
  const el=ov('<h3>TOWER RESULT</h3><p>You reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
  el.querySelector('#tr-x').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tr-b').onclick=()=>{el.close();showLeaderboard();};}
 
-async function fillTitleBoard(){const {rows}=await boardRows();const b=$('lh-title-board');if(!b||!rows||!rows.length)return;
- b.hidden=false;b.innerHTML='<b class="tb-h">TOP CLIMBERS \u00B7 TOWERS</b>'+rows.slice(0,3).map((r,i)=>'<span class="tb-r"><i>'+(i+1)+'</i><span class="tb-n">'+esc(r.displayName||r.name||'Adventurer')+'</span><em>'+Math.max(0,Number(r.floor)||0)+'</em></span>').join('');}
+async function fillTitleBoard(){const {rows}=await boardRows();const who=await accountName();const b=$('lh-title-board');if(!b||!rows||!rows.length)return;
+ b.hidden=false;b.innerHTML='<b class="tb-h">TOP CLIMBERS \u00B7 TOWERS</b>'+rows.slice(0,3).map((r,i)=>'<span class="tb-r"><i>'+(i+1)+'</i><span class="tb-n">'+esc(r.displayName||r.name||'Adventurer')+'</span><em>'+Math.max(0,Number(r.floor)||0)+'</em></span>').join('')+(who?'<span class="tb-you">YOU \u00B7 '+esc(who)+'</span>':'');}
 /* ---------- title screen ---------- */
 let titleOpen=false;
 function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro';setTimeout(()=>el.classList.remove('intro'),1700);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div><div class="lh-title-board" id="lh-title-board" hidden></div>';document.body.appendChild(el);
@@ -2535,7 +2549,7 @@ function renderRpgMenu(tab='status'){
   }else if(tab==='tower'){
     const best=Math.max(0,Number(state.towerBest)||0);
     panel.innerHTML='<h3 class="lh-j-h">GOLDLEAF TOWER</h3><div class="lh-j-chips">'+jChip('YOUR TOWERS',best)+jChip('NEXT FLOOR',best+1)+jChip('BEST RUN',best?'FLOOR '+best:'\u2014')+'</div><div id="lh-j-tower"><p class="lh-j-p">Loading the board\u2026</p></div><div style="margin-top:10px"><button type="button" class="lh-j-btn gold" id="lh-j-climb">CLIMB THE TOWER</button></div>';
-    (async()=>{try{const {rows,online}=await boardRows();const box=$('lh-j-tower');if(box)box.innerHTML=boardTable(rows,10)+'<p class="lh-j-p">'+(online?'Global ranking.':'Local ranking only \u2014 sign in to join the global board.')+'</p>';}catch(e){}})();
+    (async()=>{try{const {rows,online}=await boardRows();const who=await accountName();const box=$('lh-j-tower');if(box)box.innerHTML=boardIdentity(who)+boardTable(rows,10,who)+'<p class="lh-j-p">'+(online?'Global ranking.':(who?'Saved on this device \u2014 the global board could not be reached.':'Local ranking only \u2014 sign in to join the global board.'))+'</p>';}catch(e){}})();
     const cb=$('lh-j-climb');if(cb)cb.addEventListener('click',()=>{sfx('select');$('lh-game-menu').hidden=true;towerEnter();});
   }else{
     const obj=$('lh-quest-text').textContent,pips=Array.from({length:10},(_,i)=>'<i class="'+(i<stage?'done':i===stage?'now':'')+'"></i>').join(''),sq=Object.entries(state.sideQuests||{}),names={woodland:'A Hunter\u2019s Request',orchard:'The Last Good Apples',pantry:'A Light Below'};
