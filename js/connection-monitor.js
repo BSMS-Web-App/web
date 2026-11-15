@@ -21,7 +21,6 @@
     const HEALTH_URL = new URL('/health', API_ORIGIN).href;
 
     let checking = false;
-    let lastDiagnosis = null;
     let hadOutage = false;
     let recoveryDismissed = false;
     let recoveryVisible = false;
@@ -168,7 +167,6 @@
                 if (recoveryVisible) recoveryVisible = false;
             }
 
-            lastDiagnosis = diagnosis;
             window.dispatchEvent(new CustomEvent('bsms:connection-status', {
                 detail: { cloudflareUp, serverUp, diagnosis }
             }));
@@ -181,7 +179,9 @@
         addStyles();
         createBanner();
         runCheck();
-        window.setInterval(runCheck, CHECK_INTERVAL);
+        window.setInterval(() => {
+            if (document.visibilityState === 'visible') runCheck();
+        }, CHECK_INTERVAL);
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') runCheck();
