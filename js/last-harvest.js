@@ -797,15 +797,17 @@ function openBlacksmith(){
  const wRow=cls==='Scout'?2:cls==='Mage'?1:0,wCol=cls==='Scout'?Math.min(5,w+1):cls==='Mage'?6+Math.min(5,w+1):Math.min(11,w+1);
  const gearArt=(r,c)=>'<canvas class="lh-shop-art" data-g="'+r+','+c+'" width="16" height="16"></canvas>';
  const monArt=i=>'<canvas class="lh-shop-art" data-mon="'+i+'" width="16" height="16"></canvas>';
- const card=o=>'<button class="lh-shop-card'+(o.max?' max':'')+'"'+(o.up?' data-up="'+o.up+'"':'')+(o.pet?' data-pet="'+o.pet+'"':'')+(o.max?' disabled':'')+'><span class="lh-shop-name">'+o.name+'</span><span class="lh-shop-sub">'+o.sub+'</span>'+o.art+'<span class="lh-shop-price">'+(o.max?'MAX':o.cost)+'</span></button>';
- const pets=Object.keys(PETS).map(id=>{const P=PETS[id],owned=state.pet&&state.pet.id===id,lv=owned?Math.max(1,Number(state.pet.level)||1):1,full=owned&&lv>=5;
-  return card({name:'PET \u00B7 '+P.name,sub:owned?('LEVEL '+lv+'/5 \u00B7 UPGRADE'):(P.desc||'ADOPT'),art:monArt(P.mi),cost:owned?lv*260:P.cost,pet:id,max:full});}).join('');
+ const card=o=>'<button class="lh-shop-card'+(o.max?' max':'')+'"'+(o.up?' data-up="'+o.up+'"':'')+(o.pet?' data-pet="'+o.pet+'"':'')+(o.max?' disabled':'')+'><span class="lh-shop-name">'+o.name+'</span><span class="lh-shop-sub">'+o.sub+'</span>'+o.art+'<span class="lh-shop-price">'+(o.max?(typeof o.cost==='string'?o.cost:'MAX'):o.cost)+'</span></button>';
+ const pets=Object.keys(PETS).map(id=>{const P=PETS[id],owned=state.pet&&state.pet.id===id,lv=owned?Math.max(1,Number(state.pet.level)||1):1,full=owned&&lv>=5,other=!!(state.pet&&state.pet.id&&state.pet.id!==id),lock=other||full;
+  return card({name:'PET \u00B7 '+P.name,sub:other?('YOU ALREADY KEEP A '+PETS[state.pet.id].name):owned?('LEVEL '+lv+'/5 \u00B7 '+P.desc):(P.desc||'ADOPT'),art:monArt(P.mi),cost:other?'LOCKED':owned?lv*260:P.cost,pet:id,max:lock});}).join('');
+ const wName=t=>kit.weapon[Math.min(t,kit.weapon.length-1)]||'MASTERED',aName=t=>kit.armor[Math.min(t,kit.armor.length-1)]||'MASTERED';
+ const wSub=(w>=8?'MASTERED':wName(w+1))+(w>=5?' \u00B7 KEEPER\u2019S EDGE':''),aSub=(a>=8?'MASTERED':aName(a+1))+(a>=4?' \u00B7 AEGIS':'');
  const html='<div class="lh-shop">'
   +'<header class="lh-shop-top"><h3>SHOP</h3><button class="lh-shop-x" data-close aria-label="Close">\u2715</button></header>'
   +'<p class="lh-shop-coins">'+(state.coins||0)+' COINS</p>'
   +'<div class="lh-shop-grid">'
-  +card({name:'WEAPON',sub:w>=8?'MASTERED':kit.weapon[w+1],art:gearArt(wRow,wCol),cost:costs.weapon,up:'weapon',max:w>=8})
-  +card({name:'ARMOR',sub:a>=8?'MASTERED':kit.armor[a+1],art:gearArt(7,Math.min(11,a+1)),cost:costs.armor,up:'armor',max:a>=8})
+  +card({name:'WEAPON',sub:wSub,art:gearArt(wRow,wCol),cost:costs.weapon,up:'weapon',max:w>=8})
+  +card({name:'ARMOR',sub:aSub,art:gearArt(7,Math.min(11,a+1)),cost:costs.armor,up:'armor',max:a>=8})
   +card({name:'SKILL TRAINING',sub:'LEVEL '+k+'/8 \u00B7 +5% POWER',art:gearArt(1,7),cost:costs.skill,up:'skill',max:k>=8})
   +card({name:'VITALITY',sub:'LEVEL '+v+'/8 \u00B7 +8 MAX HP',art:gearArt(3,8),cost:costs.vitality,up:'vitality',max:v>=8})
   +card({name:'FOCUS',sub:'LEVEL '+f+'/8 \u00B7 +4 MAX MP',art:gearArt(1,9),cost:costs.focus,up:'focus',max:f>=8})
@@ -1586,8 +1588,18 @@ ctx.restore();return{camX,camY};}
 const CS_ROW={'#b86c78':14,'#577f9b':8,'#bb6542':2,'#7d526f':20,'#6b9c70':5,'#d5b64e':10};
 function drawCutscenePerson(x,y,shirt,hat,scale=1.75){drawSpriteK(CS_ROW[shirt]??7,0,0,x,y+10*scale,scale*2);}
 function drawCutscenePlayer(x,y,scale=1.75){drawSpriteK(state.heroClass==='Mage'?20:state.heroClass==='Scout'?1:0,0,0,x,y+10*scale,scale*2);}
-function drawGear(x,fy,k,face,cls){const T={Guardian:[['d',104],['d',101]],Scout:[['t',118]],Mage:[['d',130]],Foe:[['d',107]]}[cls];if(!T)return;const side=face>1,m=face===2?-1:1;
-const put=(w,ox,oy)=>{ctx.save();ctx.translate(Math.round(x+m*ox*k),0);ctx.scale(m,1);kTile(w[0],w[1],-8*k,fy-oy*k,k);ctx.restore();};put(T[0],side?6:9,14);if(T[1]&&!side)put(T[1],-9,11);}
+const GEAR_COL=['#b9c6d6','#9fd8b0','#e0c274','#f0a050','#ff7a5a','#d29bff','#8fd8ff','#ffe45c','#ff5af0'];
+function drawGear(x,fy,k,face,cls){const T={Guardian:[['d',104],['d',101]],Scout:[['t',118]],Mage:[['d',130]],Foe:[['d',107]]}[cls];if(!T)return;
+const wt=Math.max(0,Math.min(8,Number(state.weaponTier)||0)),at=Math.max(0,Math.min(8,Number(state.armorTier)||0)),t=performance.now();
+const side=face>1,m=face===2?-1:1;
+const put=(w,ox,oy)=>{ctx.save();ctx.translate(Math.round(x+m*ox*k),0);ctx.scale(m,1);kTile(w[0],w[1],-8*k,fy-oy*k,k);ctx.restore();};
+if(wt>0){ctx.save();ctx.shadowColor=GEAR_COL[wt];ctx.shadowBlur=Math.min(16,3+wt*2);put(T[0],side?6:9,14);ctx.restore();}else put(T[0],side?6:9,14);
+if(T[1]&&!side)put(T[1],-9,11);
+if(wt>=4){ctx.save();ctx.globalAlpha=.45+.45*Math.sin(t/220);ctx.fillStyle=GEAR_COL[wt];const g=Math.max(2,Math.round(2*k));ctx.fillRect(Math.round(x-8*k),Math.round(fy-22*k),g,g);ctx.fillRect(Math.round(x+6*k),Math.round(fy-18*k),g,Math.max(1,Math.round(1.4*k)));ctx.restore();}
+if(at>0){ctx.save();const w2=Math.max(4,Math.round(7*k)),h2=Math.max(1,Math.round(1.4*k));ctx.globalAlpha=.3+.6*(at/8);ctx.fillStyle=GEAR_COL[at];
+ctx.fillRect(Math.round(x-w2/2),Math.round(fy-11*k),w2,h2);ctx.globalAlpha=.18+.4*(at/8);ctx.fillRect(Math.round(x-w2/2),Math.round(fy-9*k),w2,Math.max(1,Math.round(.9*k)));
+if(at>=5){ctx.globalAlpha=.25+.3*Math.sin(t/300);ctx.fillStyle='#ffffff';ctx.fillRect(Math.round(x-Math.max(1,k*.5)),Math.round(fy-12*k),Math.max(2,Math.round(k)),Math.max(1,Math.round(k*.7)));}ctx.restore();}
+}
 const heroRow=()=>(state.gender==='girl'?{Guardian:5,Scout:38,Mage:18}:{Guardian:5,Scout:7,Mage:0})[state.heroClass]??5;
 function actor(x,fy,row,face,k,g,step){drawSpriteK(row,face,step||0,x,fy,k);if(g)drawGear(x,fy,k,face,g);}
 function bars(W,H){px(0,0,W,H*.07,'#000');px(0,H*.93,W,H*.07,'#000');if(cinematic&&cinematic.flash>0){ctx.fillStyle='rgba(255,255,255,'+cinematic.flash+')';ctx.fillRect(0,0,W,H);cinematic.flash=Math.max(0,cinematic.flash-.035);}}
@@ -1926,11 +1938,16 @@ function pkEnd(lost){const gg=battle&&battle.g,fr=gg&&gg.friendly,won=!!(battle&
 function hitFoe(dmg,kind,crit){const b=battle,e=b.e,G=geo();e.hp=Math.max(0,e.hp-dmg);b.flashF=1;b.shake=Math.max(b.shake,crit?16:e.boss?10:8);b.kf=16;const cx=G.fx,cy=G.fy-G.fh*.5;
 const cols=kind==='magic'?['#ffffff','#d29bff','#8fd8ff']:kind==='arrow'?['#ffffff','#e8d890','#c9a032']:['#ffffff','#ffd84a','#ff9a2e'];burst(cx,cy,crit?22:14,cols,crit?260:190);
 b.slash={x:cx,y:cy,t:0,k:kind};b.rings=b.rings||[];b.rings.push({x:cx,y:cy,age:0,r:8,max:crit?96:62,c:crit?'#ffd84a':(kind==='magic'?'#d29bff':kind==='arrow'?'#e8d890':'#ff9a2e')});if(crit)b.white=1;pop(String(dmg)+(crit?'!':''),cx,cy-G.fh*.25,crit?'#ffd84a':'#ffffff',crit?26:20);sfx(crit?'crit':'hit');pkPanel();}
-function hitHero(dmg,heavy){const b=battle,G=geo();state.hp=Math.max(0,state.hp-dmg);b.flashH=1;b.shake=Math.max(b.shake,heavy?18:10);b.flashR=heavy?.9:.35;b.kh=-14;b.rings=b.rings||[];b.rings.push({x:G.hx,y:G.hy-G.hk*8,age:0,r:8,max:heavy?92:58,c:'#ff6a5a'});if(heavy)b.white=.7;const cx=G.hx,cy=G.hy-G.hk*8;burst(cx,cy,heavy?20:12,['#ffffff','#ff6a5a','#ffd84a'],200);pop(String(dmg),cx,cy-G.hk*5,'#ff6a5a',heavy?26:20);sfx('foe');pkPanel();}
+function hitHero(dmg,heavy){const b=battle,G=geo();
+if(!b.aegis&&(Number(state.armorTier)||0)>=4&&state.hp>0&&dmg>=state.hp){b.aegis=1;dmg=Math.max(1,Math.ceil(dmg*.3));b.rings=b.rings||[];b.rings.push({x:G.hx,y:G.hy-G.hk*8,age:0,r:8,max:120,c:'#8fd8ff'});b.white=.55;pop('AEGIS HOLDS',G.hx,G.hy-G.hk*14,'#8fd8ff',20);sfx('unlock');}
+state.hp=Math.max(0,state.hp-dmg);b.flashH=1;b.shake=Math.max(b.shake,heavy?18:10);b.flashR=heavy?.9:.35;b.kh=-14;b.rings=b.rings||[];b.rings.push({x:G.hx,y:G.hy-G.hk*8,age:0,r:8,max:heavy?92:58,c:'#ff6a5a'});if(heavy)b.white=.7;const cx=G.hx,cy=G.hy-G.hk*8;burst(cx,cy,heavy?20:12,['#ffffff','#ff6a5a','#ffd84a'],200);pop(String(dmg),cx,cy-G.hk*5,'#ff6a5a',heavy?26:20);sfx('foe');pkPanel();}
 async function heroStrike(kind,dmg,crit,color){const b=battle,G=geo();let dx=0;
 if(kind==='melee'){dx=(G.fx-G.hx)*.68;burst(G.hx,G.hy,7,['#d9c9a8','#bda882','#efe3c8'],70);await tween(210,p=>{b.hox=dx*ease(p);b.hoy=-10*Math.sin(p*Math.PI);});}
 else{sfx(kind==='arrow'?'arrow':'magic');const sy=G.hy-G.hk*9,ty=G.fy-G.fh*.5;await tween(kind==='arrow'?250:360,p=>{const q=ease(p);b.proj={k:kind,c:color||'#d29bff',p,x:G.hx+G.hk*8+(G.fx-G.hx-G.hk*8)*q,y:sy+(ty-sy)*q-Math.sin(p*Math.PI)*28};if(kind==='magic'&&Math.random()<.8)b.parts.push({x:b.proj.x,y:b.proj.y,vx:(Math.random()-.5)*50,vy:(Math.random()-.5)*50,g:0,life:.3,max:.3,c:color||'#d29bff',s:4+rnd(3)});});b.proj=null;}
+const wt=Math.max(0,Math.min(8,Number(state.weaponTier)||0));
+if(kind==='melee'&&wt>=5){b.atkCount=(b.atkCount||0)+1;if(b.atkCount%4===0){crit=true;pop('KEEPER\u2019S EDGE',G.fx,G.fy-G.fh*.85,'#ffe45c',18);}}
 hitFoe(dmg,kind,crit);
+if(wt>0){const c=GEAR_COL[wt],n=kind==='melee'?Math.min(3,1+(wt/3|0)):1;for(let q=0;q<n;q++)b.rings.push({x:G.fx,y:G.fy-G.fh*.5,age:0,r:10+q*7,max:70+wt*7+q*12,c});}
 if(kind==='melee'){await sleep(130);await tween(190,p=>{b.hox=dx*(1-ease(p));b.hoy=0;});b.hox=0;}else await sleep(200);}
 function healFx(n,color){const b=battle,G=geo(),cx=G.hx,cy=G.hy-G.hk*8;sfx('heal');rise(cx,cy+G.hk*6,24,[color||'#7bf08a','#ffffff','#d8ffd8'],G.hk*10);pop('+'+n,cx,cy-G.hk*4,color||'#7bf08a',22);}
 function shieldFx(){battle.shield=1;sfx('guard');}
@@ -1975,6 +1992,7 @@ if(e.boss){const sig=b.B.sig;
 if(e.charging){e.charging=false;mv={n:'uses '+sig.n+'!',m:sig.k==='heavy'?2.3:sig.k==='multi'?.85:sig.k==='drain'?1.6:1.7,k:sig.k,hits:sig.k==='multi'?3:1};}
 else if(e.turn%3===0){e.charging=true;sfx('charge');b.flashR=.5;b.shake=10;rise(G.fx,G.fy,26,[BOSSES[e.bi].theme[2],'#ffffff'],G.fh*.6);await pkSay(e.name+' '+sig.t,1400);$b('pk-t').textContent='DANGER! GUARD, Iron Wall or Smoke Bomb will help!';await sleep(900);return true;}}
 await pkSay(e.name+' '+mv.n,650);
+if(e.status&&e.status.blind>0){e.status.blind--;if(Math.random()<.55){pop('MISS',G.hx,G.hy-G.hk*12,'#d8d8e0',22);sfx('dodge');await sleep(240);await pkSay(e.name+' swipes at shadows and misses!',800);return true;}}
 const dx=-(G.fx-G.hx)*(e.boss?.5:.6);await tween(e.boss?300:240,p=>{b.fox=dx*ease(p);b.foy=8*Math.sin(p*Math.PI);});
 let total=0;
 for(let h=0;h<mv.hits&&state.hp>0;h++){
@@ -2018,9 +2036,9 @@ setDialogue([...lines,...extra]);}
 
 /* ================= v11: roaming monsters, pets, level 10 powers ================= */
 const PETS={
- crow:{name:'CROW',mi:8,kind:'attack',cost:300,desc:'Strikes the foe every turn for bonus damage.'},
- toad:{name:'TOAD',mi:0,kind:'heal',cost:320,desc:'Restores your HP at the end of every turn.'},
- fox:{name:'FOX',mi:3,kind:'attack',cost:360,desc:'A swift ally whose strikes grow with its level.'}
+ crow:{name:'CROW',mi:8,kind:'attack',cost:300,desc:'RAVEN STORM: strikes every turn and often blinds the foe.'},
+ toad:{name:'TOAD',mi:0,kind:'heal',cost:320,desc:'MENDING CROAK: heals every turn and wards the next blow.'},
+ fox:{name:'FOX',mi:3,kind:'attack',cost:360,desc:'EMBER DASH: two swift strikes that can crit and set it burning.'}
 };
 let ROAM=[],ROAM_T={last:0,cool:0};
 function resetRoamers(){ROAM=[];ROAM_T={last:0,cool:0};}
@@ -2049,12 +2067,7 @@ function drawPetWorld(){if(battle||dialogue||cinematic||!state.pet)return;const 
  else{sx=insidePlayer.x-26;sy=insidePlayer.y+6;}
  drawMon(P.mi,sx,sy+Math.sin(performance.now()/400)*1.5,k);}
 function drawOverworldActors(){drawPetWorld();}
-async function petTurn(){const b=battle;if(!b||!state.pet)return 'ok';const P=PETS[state.pet.id];if(!P)return 'ok';const lv=Math.max(1,Number(state.pet.level)||1),e=b.e,G=geo();
- if(P.kind==='heal'){const h=Math.round(4+lv*2+(Number(state.level)||1)*.6);state.hp=Math.min(state.maxHp,state.hp+h);healFx(h,'#8fd8ff');await pkSay(P.name+' restores '+h+' HP!',700);return 'ok';}
- const d=Math.round(3+lv*2+(Number(state.level)||1)*1.1+rnd(3));
- e.hp=Math.max(0,e.hp-d);b.flashF=.8;burst(G.fx,G.fy-G.fh*.5,10,['#ffffff','#ffd84a'],150);
- pop(String(d),G.fx,G.fy-G.fh*.6,'#ffd84a',18);sfx('hit');pkPanel();await pkSay(P.name+' strikes for '+d+' damage!',750);
- return e.hp<=0?'win':'ok';}
+async function petTurn(){const b=battle;if(!b||!state.pet)return 'ok';const P=PETS[state.pet.id];if(!P)return 'ok';const lv=Math.max(1,Number(state.pet.level)||1),e=b.e,G=geo(),id=state.pet.id;if(id==='toad'){const h=Math.round(5+lv*3+(Number(state.level)||1)*.7);state.hp=Math.min(state.maxHp||state.hp,state.hp+h);healFx(h,'#8fd8ff');if(!b.guard){b.guard=true;b.shield=1;}await pkSay(P.name+' croaks a mending note: +'+h+' HP and a ward for the next blow!',1000);return 'ok';}if(id==='fox'){let total=0;for(let h2=0;h2<2;h2++){const crit=Math.random()<.22;let d=Math.round(2+lv*1.6+(Number(state.level)||1)*.7+rnd(3));if(crit)d=Math.round(d*1.7);e.hp=Math.max(0,e.hp-d);total+=d;b.flashF=.7;b.shake=Math.max(b.shake,crit?12:7);burst(G.fx,G.fy-G.fh*.5,10,['#ffffff','#ff9a2e','#ffd84a'],170);pop(String(d)+(crit?'!':''),G.fx,G.fy-G.fh*.55,crit?'#ffd84a':'#ff9a2e',crit?24:18);sfx(crit?'crit':'hit');pkPanel();await sleep(190);}if(e.hp>0){e.status.burn=Math.max(e.status.burn||0,2);await pkSay(P.name+' dashes twice for '+total+' and leaves an ember burning!',950);}else await pkSay(P.name+' dashes twice for '+total+'!',800);return e.hp<=0?'win':'ok';}const d=Math.round(4+lv*2.4+(Number(state.level)||1)*1.2+rnd(4));e.hp=Math.max(0,e.hp-d);b.flashF=.85;b.shake=Math.max(b.shake,9);burst(G.fx,G.fy-G.fh*.5,14,['#ffffff','#c79aff','#ffd84a'],200);pop(String(d),G.fx,G.fy-G.fh*.6,'#c79aff',20);sfx('hit');pkPanel();if(Math.random()<.4){e.status.blind=2;await pkSay(P.name+' strikes for '+d+' and blinds it with black feathers!',950);}else await pkSay(P.name+' strikes for '+d+'!',800);return e.hp<=0?'win':'ok';}
 const ULTIMATES={
  Guardian:{n:'EVERFEAST BULWARK',kind:'melee',base:52,per:4,color:'#ffe45c',msg:'You raise the First Keeper shield. Golden light floods the field!'},
  Scout:{n:'THOUSAND LEAVES',kind:'arrow',base:14,per:2.2,hits:6,crit:.3,color:'#e8d890',msg:'A storm of arrows blots out the sky!'},
@@ -2106,7 +2119,7 @@ if(boss&&b.phase==='enter'&&enterP<.9&&Math.random()<.5)rise(G.fx,G.fy,2,['#c9a0
 if(e.charging&&b.phase==='fight'){const by=fyp-G.fh-10-Math.abs(Math.sin(t*8))*8;bubbleText('!',fxp,by,'#ff3b30',Math.max(28,G.fk*8));}
 /* hero */
 const hxp=G.hx+b.hox+(b.kh||0)+(1-ep)*-W*.5,hyp=G.hy+b.hoy,hbob=Math.sin(t*3+1)*2;
-withFlash(b.flashH,'#ff4040',()=>{ctx.globalAlpha=1-b.hdead*.8;drawSpriteK(heroRow(),0,0,hxp,hyp+hbob+b.hdead*G.hk*3,G.hk*.84);ctx.globalAlpha=1;});
+withFlash(b.flashH,'#ff4040',()=>{ctx.globalAlpha=1-b.hdead*.8;drawSpriteK(heroRow(),0,0,hxp,hyp+hbob+b.hdead*G.hk*3,G.hk*.84);drawGear(hxp,hyp+hbob+b.hdead*G.hk*3,G.hk*.84,0,state.heroClass);ctx.globalAlpha=1;});
 /* guard / ward bubble */
 if(b.shield>0||b.ward>0){const a=b.shield>0?b.shield:.45+.15*Math.sin(t*5);ctx.strokeStyle='rgba(130,220,255,'+a+')';ctx.fillStyle='rgba(130,220,255,'+a*.18+')';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(hxp,hyp-G.hk*8,G.hk*10,G.hk*11,0,0,7);ctx.fill();ctx.stroke();b.shield=Math.max(0,b.shield-dt*1.6);}
 if(b.evade){ctx.fillStyle='rgba(220,220,235,.25)';ctx.beginPath();ctx.ellipse(hxp,hyp-G.hk*8,G.hk*11,G.hk*12,0,0,7);ctx.fill();}
@@ -2414,7 +2427,7 @@ cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';st
 function areaName(){if(scene==='area'&&AREA)return AREA.routeName||AREA.name;return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
 function updateQuest(){state.sideQuests=state.sideQuests||{};if(scene==='area'&&AREA&&AREA.trap){const left=3-trapSealsDone();$('lh-quest-text').textContent=left?'Break the seals of the Gilded Snare · '+left+' remaining':'The doors are open · Walk to the western door';return;}const active=Object.entries(state.sideQuests).find(([id,q])=>q&&q.accepted&&!q.done);if(state.beaten&&state.beaten.north&&!state.beaten.south){$('lh-quest-text').textContent=sentinelTrainingReady()?'Return to the south road and challenge the Pumpkin Sentinel':'Training for the Pumpkin Sentinel · '+trainingHint();return;}if(scene==='area'&&AREA&&AREA.chapter&&!state.beaten['boss'+AREA.chapter]&&!mainQuestReady(AREA.chapter)){const q=mainQuestData(AREA.chapter);$('lh-quest-text').textContent='Chapter '+(AREA.chapter+1)+' trial · Talk to '+(q.talked||[]).length+'/2 locals · Defeat '+(q.kills||0)+'/3 creatures';return;}if(state.beaten&&state.beaten.south){syncStageFromBeaten();const next=currentTargetChapter();$('lh-quest-text').textContent=next>=BOSSES.length?'Hearthvale is saved!':'Defeat the '+BOSSES[next].name+' in '+chapters[next].place;return;}const storyActive=Object.entries(state.storyArcs||{}).find(([id,q])=>q&&!q.done);if(storyActive){const names={market_truth:'A Name Left Behind',frost_lanterns:'Lanterns for the Lost',fortress_oath:'The Oath Beneath the Gate'};$('lh-quest-text').textContent=names[storyActive[0]]+(storyActive[1].stage===2?' · Return to the quest giver':' · Find the next character');return;}if(active){const labels={woodland:'Hunter’s Request',orchard:'Last Good Apples',pantry:'A Light Below'};$('lh-quest-text').textContent=labels[active[0]]+' · '+(active[1].kills||0)+'/3 wild creatures';return;}if((questStep||0)>=4&&!(state.beaten&&state.beaten.south)){$('lh-quest-text').textContent=state.beaten&&state.beaten.north?'Hunt monsters in the Wildlands (north road), then face the south road':'Defeat Gatekeeper Brawn to open the Wildlands (north road)';return;}
 const q=['Speak with Elder Maple','Visit Rowan in the village square',(state.clues&&state.clues.length?'Search the village for clues · '+state.clues.length+'/4 found':'Enter a building and search for clues'),'Return to Elder Maple with what you found','Follow the golden leaves beyond the village'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
-function drawAvatarTo(cv){if(!cv||!CHARS.naturalWidth)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,16,16);c.drawImage(CHARS,0,((cinematic&&cinematic.phase!=='outside')?CIV:heroRow())*16,16,16,0,0,16,16);}
+function drawAvatarTo(cv){if(!cv||!CHARS.naturalWidth)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,16,16);c.drawImage(CHARS,0,((cinematic&&cinematic.phase!=='outside')?CIV:heroRow())*16,16,16,0,0,16,16);const wt=Math.max(0,Math.min(8,Number(state.weaponTier)||0)),at=Math.max(0,Math.min(8,Number(state.armorTier)||0));if(wt>0){c.fillStyle=GEAR_COL[wt];c.fillRect(13,6,2,7);}if(at>0){c.globalAlpha=.55;c.fillStyle=GEAR_COL[at];c.fillRect(5,8,6,2);c.globalAlpha=1;}}
 CHARS.addEventListener('load',()=>drawAvatarTo($('lh-hud-avatar')));
 function updateHud(){const mh=state.maxHp||40,mm=state.maxMp||20,mp=state.mp??mm,hp=Math.max(0,state.hp);
  $('lh-name-hud').textContent=state.name.toUpperCase();$('lh-class-hud').textContent=state.heroClass.toUpperCase();$('lh-level-hud').textContent=state.level||1;
