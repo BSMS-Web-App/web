@@ -1255,8 +1255,8 @@ WOB.forEach((l,z)=>{OFF[z]=OBL.length;l.forEach((n,j)=>OBL.push({w:n,fb:BIO[ZB[z
  chestPos.forEach(([x,y],k)=>npcs.push({x,y,name:'CHEST',chest:'wc'+k,coins:30+k*18,potion:k%3===2,lines:[]}));
  npcs.push({x:50,y:7,name:'CHEST',chest:'wshrine',coins:250,potion:true,lines:[]});
  solid[T(48,55)]=1;
- const exits=[];for(let x=46;x<=50;x++)exits.push({x,y:63,to:'village'});
- return{id:'wilds',wilds:true,name:'THE WILDLANDS',w,h,solid,ob,enc,zone,zb:ZB,ground,dec,npcs,spawn:{x:48,y:60},exits,bio:{g:BIO[0].g,ob:OBL,tint:'rgba(0,0,0,0)'},mus:'wander'};}
+ const exits=[];for(let x=47;x<=49;x++)exits.push({x,y:63,to:'village'});
+ return{id:'wilds',wilds:true,name:'THE WILDLANDS',w,h,solid,ob,enc,zone,zb:ZB,ground,dec,npcs,spawn:{x:48,y:52},exits,bio:{g:BIO[0].g,ob:OBL,tint:'rgba(0,0,0,0)'},mus:'wander'};}
 function exitBuilding(){const id=interiorId;scene='outside';state.x=([10.5,34,22,5.5][id])*TILE;state.y=([10.9,10.9,22.9,29.9][id])*TILE;const sp=safeSpot(state.x,state.y);state.x=sp.x;state.y=sp.y;sfx('door');updateHud();save();}
 function ensureCityGate(){if(scene!=='outside'||(questStep||0)<3)return;if(!state.cityUnlocked){state.cityUnlocked=true;save();setTimeout(()=>{sfx('unlock');if(!dialogue&&!battle&&!cinematic)setDialogue([['ELDER MAPLE','A new road has opened to the east: Goldleaf City. The village teleporter can now take you there.']]);},1200);}}
 function drawTeleporter(x,y){const t=performance.now()/1000;ctx.save();ctx.imageSmoothingEnabled=false;ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x-29,y+13,58,8);ctx.fillStyle='#343b55';ctx.fillRect(x-25,y-10,50,26);ctx.fillStyle='#7183a2';ctx.fillRect(x-21,y-14,42,26);ctx.fillStyle='#b8c8d8';ctx.fillRect(x-17,y-11,34,18);ctx.fillStyle='#493f70';ctx.fillRect(x-13,y-8,26,12);ctx.fillStyle='#a98bff';ctx.fillRect(x-8,y-5,16,6);ctx.fillStyle='#ffe6a0';ctx.fillRect(x-3,y-3,6,3);ctx.fillStyle='#8fd8ff';ctx.fillRect(x-31,y+2,5,5);ctx.fillRect(x+26,y+2,5,5);ctx.fillStyle='#fff0b0';ctx.globalAlpha=.55+.35*Math.sin(t*3);ctx.fillRect(x-2,y-18,4,5);ctx.restore();}
