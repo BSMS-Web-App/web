@@ -28,7 +28,7 @@ const SIDES = new Set(['Rowan','Hazel','Flint','Pip','Maple']);
 const PETS = new Set(['Pumpkin Pup','Autumn Fox','Turkey Chick','Golden Squirrel','Little Owl','Cranberry Slime']);
 
 /* ---- event schedule (edit here; deliberately not environment-driven) ---- */
-export const EVENT_START = '2026-11-14T05:00:00.000Z'; // Nov 14, 2026, 12:00 AM EST
+export const EVENT_START = '2026-11-16T12:00:00.000Z'; // Nov 16, 2026, 7:00 AM EST
 export const EVENT_END   = '2026-12-20T05:00:00.000Z'; // Dec 20, 2026, 12:00 AM EST
 const START_MS = Date.parse(EVENT_START);
 const END_MS = Date.parse(EVENT_END);
@@ -70,6 +70,7 @@ function easternParts(date){
   return Object.fromEntries(parts.map(p=>[p.type,p.value]));
 }
 function easternRelease(stage){
+  if(stage<=1)return START_MS; // stage one opens with the event itself
   const start=EVENT_START.slice(0,10);
   const d=new Date(start+'T12:00:00Z');
   let count=0;
@@ -80,7 +81,8 @@ function easternRelease(stage){
   const p=easternParts(noon);
   const offsetMinutes=((Number(p.hour)*60+Number(p.minute))-(12*60));
   const easternOffset=offsetMinutes===-240?'-04:00':'-05:00';
-  return new Date(date+'T08:00:00'+easternOffset).getTime();
+  // Stage 1 opens with the event itself, even when that is not 08:00 ET.
+  return Math.max(START_MS,new Date(date+'T08:00:00'+easternOffset).getTime());
 }
 function releasedStage(now=Date.now()){
   let result=0;
