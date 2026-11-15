@@ -324,3 +324,26 @@ html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialog
 
 /* gear sheet icons in the field journal bag */
 .lh-j-slot canvas.ic{width:32px;height:32px;image-rendering:pixelated;background:#1a110c;border:3px solid #1a110c;box-shadow:inset 0 0 0 1px #4a3a28}
+/* blacksmith shop board */
+.lh-shop-ov{background:rgba(20,64,92,.55)!important;backdrop-filter:blur(3px)}
+.lh-shop-ov .pn{background:none;border:0;padding:0;width:auto;max-height:none;box-shadow:none;overflow:visible;border-radius:0}
+.lh-shop{width:min(720px,94vw);max-height:90vh;overflow:hidden auto;background:linear-gradient(#fdf4dc,#efd6a8);border:6px solid #b5762e;border-radius:16px;padding:0 0 14px;box-shadow:0 12px 0 rgba(0,0,0,.3),inset 0 0 0 3px #fff7e6;position:relative}
+.lh-shop-top{position:sticky;top:0;z-index:2;display:flex;justify-content:center;align-items:center;margin:-6px -6px 10px;padding:15px 0 13px;background:linear-gradient(#c07a34,#8a4a1e);border-bottom:4px solid #6d3a16;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+.lh-shop-top h3{margin:0;font-size:clamp(18px,4.2vw,30px);letter-spacing:.1em;color:#fff7e4;text-shadow:0 3px 0 #4a2410,0 0 14px rgba(255,205,120,.5)}
+.lh-shop-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:34px;height:34px;display:grid;place-items:center;border:3px solid #6d3a16;border-radius:8px;background:#f7c74a;color:#4a2410;font:inherit;font-size:14px;cursor:pointer;box-shadow:0 3px 0 #6d3a16}
+.lh-shop-x:active{transform:translateY(-1px);box-shadow:0 1px 0 #6d3a16}
+.lh-shop-coins{margin:0 18px 10px;text-align:right;font-size:10px;color:#8a4a1e}
+.lh-shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 14px}
+@media(max-width:720px){.lh-shop-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.lh-shop-grid{grid-template-columns:repeat(2,1fr);gap:8px}}
+.lh-shop-card{position:relative;display:flex;flex-direction:column;align-items:center;padding:9px 7px 0;background:linear-gradient(#fff6d9,#f7d79c);border:3px solid #c98a3c;border-radius:10px;cursor:pointer;font:inherit;color:#8a2f22;transition:transform .08s,box-shadow .12s;overflow:hidden}
+.lh-shop-card:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(0,0,0,.16)}
+.lh-shop-card:active{transform:translateY(1px)}
+.lh-shop-card.max{opacity:.55;cursor:default}
+.lh-shop-name{font-size:9px;letter-spacing:.04em;color:#e0492f;text-shadow:0 1px 0 #ffe6bd}
+.lh-shop-sub{display:block;font-size:7px;line-height:1.5;color:#7a4a20;text-align:center;min-height:3em;margin-top:3px}
+.lh-shop-art{width:46px;height:46px;image-rendering:pixelated;margin:4px 0 6px}
+.lh-shop-price{display:block;width:calc(100% + 14px);margin:auto -7px 0;padding:7px 0;background:#2f9fd4;border-top:3px solid #c98a3c;color:#fff;font-size:10px;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.lh-shop-price:before{content:"";display:inline-block;width:9px;height:9px;margin-right:6px;border-radius:50%;background:#ffd75e;border:2px solid #b57e1e;vertical-align:-1px}
+.lh-shop-card.max .lh-shop-price{background:#7f8a93}
+.lh-shop-note{margin:14px 16px 0;font-size:8px;line-height:1.7;color:#8a5a3a;text-align:center}
