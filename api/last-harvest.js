@@ -65,29 +65,13 @@ async function resolveUser(sessionId){
   }
   return null;
 }
-function easternParts(date){
-  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
-  return Object.fromEntries(parts.map(p=>[p.type,p.value]));
-}
-function easternRelease(stage){
-  if(stage<=1)return START_MS; // stage one opens with the event itself
-  const start=EVENT_START.slice(0,10);
-  const d=new Date(start+'T12:00:00Z');
-  let count=0;
-  while(count<stage-1){d.setUTCDate(d.getUTCDate()+1);const day=d.getUTCDay();if(day!==0&&day!==6)count++;}
-  const date=d.toISOString().slice(0,10);
-  // 08:00 America/New_York, with DST resolved by Intl offset for that date.
-  const noon=new Date(date+'T12:00:00Z');
-  const p=easternParts(noon);
-  const offsetMinutes=((Number(p.hour)*60+Number(p.minute))-(12*60));
-  const easternOffset=offsetMinutes===-240?'-04:00':'-05:00';
-  // Stage 1 opens with the event itself, even when that is not 08:00 ET.
-  return Math.max(START_MS,new Date(date+'T08:00:00'+easternOffset).getTime());
-}
+/* Every stage opens together when the event does: the contest is a sprint, not
+   a daily drip, so nobody is gated on a weekday cadence. */
 function releasedStage(now=Date.now()){
-  let result=0;
-  for(let i=1;i<=10;i++){if(now>=easternRelease(i))result=i;else break;}
-  return result;
+ return now<START_MS?0:STAGES.length;
+}
+function nextReleaseAt(openStage){
+ return openStage<STAGES.length?START_MS:null;
 }
 function freshState(){
  return {version:1,character:'Harvest Guardian',sidekick:'Rowan',pet:'Pumpkin Pup',stage:0,
@@ -139,7 +123,7 @@ export default async function handler(req,res){
   const snap=await ref.once('value');
   const state=cleanState(snap.val()||freshState());
   const openStage=releasedStage();
-  if(req.method==='GET')return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:openStage<10?new Date(easternRelease(openStage+1)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt});
+  if(req.method==='GET')return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt});
   const body=reqBody,action=body.action;
   if(action==='save-loadout'){
    const next=cleanState({...state,character:body.character,sidekick:body.sidekick,pet:body.pet,equipped:body.equipped});
@@ -147,14 +131,14 @@ export default async function handler(req,res){
   }
   if(action==='complete-stage'){
    const stage=Math.floor(Number(body.stage));
-   if(!Number.isInteger(stage)||stage<1||stage>10||stage!==state.stage+1)return res.status(400).json({error:'Stages must be completed in order.'});
+   if(!Number.isInteger(stage)||stage<1||stage>STAGES.length||stage!==state.stage+1)return res.status(400).json({error:'Stages must be completed in order.'});
    if(stage>openStage)return res.status(423).json({error:'This stage has not unlocked yet.'});
-   const now=Date.now(),next=cleanState({...state,stage,xp:state.xp+stage*100,coins:state.coins+stage*25,health:30,completedAt:stage===10?now:state.completedAt});
+   const now=Date.now(),next=cleanState({...state,stage,xp:state.xp+stage*100,coins:state.coins+stage*25,health:30,completedAt:stage===STAGES.length?now:state.completedAt});
    await ref.set(next);
-   if(stage===10){
+   if(stage===STAGES.length){
     await db.ref('/last_harvest/finishers/'+user.uid).set({uid:user.uid,displayName:user.account.display_name||user.account.username||'Player',completedAt:now});
    }
-   return res.json({success:true,state:next,finished:stage===10});
+   return res.json({success:true,state:next,finished:stage===STAGES.length});
   }
   return res.status(400).json({error:'Unknown action.'});
  }catch(error){console.error('[Last Harvest] API error:',error);return res.status(500).json({error:'Could not save contest progress.'});}
