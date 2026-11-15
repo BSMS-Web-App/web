@@ -1017,7 +1017,14 @@ function buildFontList(){
   FONTS.forEach((f,idx)=>{
     const row=document.createElement("div"); row.className="font-opt"+(f===currentFont?" active":"");
     row.style.animationDelay=(idx*0.02)+"s";
-    row.innerHTML=`<div class="font-preview" style="font-family:'${f}',cursive">${previewText}</div><div class="font-name">${f}</div>`;
+    const preview=document.createElement("div");
+    preview.className="font-preview";
+    preview.style.fontFamily="'"+String(f).replace(/['"\\]/g,"")+"',cursive";
+    preview.textContent=previewText;
+    const name=document.createElement("div");
+    name.className="font-name";
+    name.textContent=f;
+    row.append(preview,name);
     row.addEventListener("click",()=>{
       const prev=currentFont; currentFont=f;
       document.documentElement.style.setProperty("--font",`'${f}',cursive`);

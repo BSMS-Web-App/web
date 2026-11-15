@@ -2,143 +2,43 @@
 BSMS Web
 Copyright © 2026 Jellyfish Jelly
 SPDX-License-Identifier: AGPL-3.0-only
--->    
-
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="description" content="Get ready for special BSMS Web events featuring unique challenges, exciting rewards, and friendly competition."/>
-<meta name="category" content="Education"/>
-<meta name="author" content="BSMS Web"/>
-<meta name="theme-color" content="#f97316">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Explore events and competitions hosted by BSMS Web.">
+<meta name="category" content="Education">
+<meta name="author" content="BSMS Web">
+<meta name="theme-color" content="#BB001E">
 <meta name="color-scheme" content="dark">
 <meta name="application-name" content="BSMS Web">
 <title>Events - BSMS Web</title>
-
-<!-- Ban Check Enforcer -->
 <script src="/js/ban-check.js"></script>
-<!-- Account Update Checker -->
 <script src="/js/account-check.js"></script>
-
 <link rel="icon" href="/img/icon.png">
 <link rel="apple-touch-icon" href="/img/app-icon.png">
-
-<!-- Vercel Web Analytics -->
 <script src="/js/vercel-analytics-bootstrap.js"></script>
 <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
-
-
-
 <link rel="stylesheet" href="/css/styles.css">
-<link rel="stylesheet" href="/css/events.css">
 <script src="/js/legal-updates.js" defer></script>
+<style>
+.events-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;text-align:center}
+.events-empty{width:min(100%,680px);padding:clamp(28px,5vw,52px);border:1px solid var(--border,rgba(255,255,255,.12));border-radius:24px;background:rgba(255,255,255,.035);backdrop-filter:blur(18px)}
+.events-empty h1{font-size:clamp(2.5rem,7vw,4.5rem);margin:0 0 12px;color:var(--red,#BB001E)}
+.events-empty p{max-width:620px;color:var(--fg2,rgba(255,255,255,.72));line-height:1.65;margin:0 auto 24px}
+.events-empty a{display:inline-flex;align-items:center;justify-content:center;padding:11px 22px;border-radius:12px;background:var(--red,#BB001E);color:#fff;text-decoration:none}
+</style>
 </head>
 <body>
-
-<div id="main-wrapper">
-  <!-- Background Ambient -->
-  <div class="ambient-particles"></div>
-
-  <!-- Page Header -->
-  <section class="page-header">
+<main class="events-page">
+  <section class="events-empty">
     <h1>Events</h1>
-    <h2>Compete, collect, and climb the leaderboard.</h2>
-    <p>Get ready for special BSMS Web events featuring unique challenges, exciting rewards, and friendly competition. New events are on the way, so stay tuned!</p>
-    <a href="/" class="btn-cinematic">Return to Home</a>
+    <p>There are no active events right now. Check back for future competitions, special events, and new ways to participate.</p>
+    <a href="/">Return to Home</a>
   </section>
-
-  <!-- Featured Event: Halloween Haunt -->
-  <section class="feature-section">
-    <div class="hh-card">
-      <div class="hh-content-left">
-        <div class="hh-badge" id="eventStatusBadge">Upcoming</div>
-        <div class="hh-title-wrap">
-          <img src="/img/halloween-haunt-event/pumpkin.svg" alt="Pumpkin">
-          <h2>Halloween Haunt</h2>
-        </div>
-        
-        <div class="hh-dates">
-          <strong>Start:</strong> Monday, October 26, 2026<br>
-          <strong>End:</strong> Friday, October 30, 2026 at 3:10 PM EDT
-        </div>
-        
-        <p class="hh-desc">
-          Get ready for a Halloween adventure! Explore spooky neighborhoods, visit houses, collect candy, discover rare treats, and build your way toward the top of the leaderboard.
-        </p>
-        
-        <div class="event-actions"><a id="eventPlayButton" class="btn-halloween" href="/event/halloween-haunt" style="display:none">Play Halloween Haunt</a><button id="eventLearnMore" class="btn-halloween" onclick="openHHModal()">Learn More</button></div>
-
-        <!-- Countdown Card Integrated Here -->
-        <div class="hh-countdown">
-          <h3 id="eventCountdownHeading">The countdown to Halloween Haunt is on.</h3>
-          <p>Stay tuned for more announcements and get ready for an unforgettable candy-collecting adventure!</p>
-          <h4 id="eventCountdownLabel">Begins In</h4>
-          <div class="hh-countdown-timer" id="hh-cd-timer">--d --h --m --s</div>
-        </div>
-      </div>
-
-      <!-- Leaderboard Preview -->
-      <div class="hh-leaderboard">
-        <div class="hh-lb-header">
-          <h3>Halloween Haunt Leaderboard</h3>
-          <p id="eventLeaderboardStatus">Live standings ranked by current cash. Updates automatically.</p>
-        </div>
-        
-        <div id="eventLeaderboardRows"><div class="lb-row"><span class="lb-rank">—</span><div class="lb-box"></div><span class="lb-score">Loading…</span></div></div><p class="lb-note" id="eventLeaderboardNote">Loading live leaderboard…</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- More Events Section -->
-  <section class="secondary-section">
-    <h3>More Events Coming Soon</h3>
-    <p>Halloween Haunt is just the beginning. Keep an eye on this page for future BSMS Web events, special events, and new ways to compete.</p>
-  </section>
-
-  <div class="footer">
-    © 2026 Jellyfish Jelly. <a href="/privacy.html">Privacy Policy</a>
-  </div>
-</div>
-
-<!-- Learn More Dialog -->
-<div id="hhModal" class="hh-modal" onclick="handleModalClick(event)">
-  <div class="hh-modal-content">
-    <button class="hh-close-btn" onclick="closeHHModal()" aria-label="Close dialog">&times;</button>
-    
-    <h2 id="eventModalTitle">Halloween Haunt Is Coming!</h2>
-    
-    <p>Get ready for the ultimate Halloween candy-collecting adventure on BSMS Web! Halloween Haunt is an upcoming limited-time event where every house could hold a surprise, every neighborhood has something new to discover, and every piece of candy brings you one step closer to the top.</p>
-    
-    <h3>Explore Spooky Neighborhoods</h3>
-    <p>Venture through Halloween-themed neighborhoods, explore streets lined with decorated houses, and see what surprises are waiting behind each door. The further you progress, the more exciting your candy-hunting adventures can become.</p>
-
-    <h3>Ring the Doorbell. Grab the Candy.</h3>
-    <p>Visit houses, ring their doorbells, and get ready for a candy-collecting experience. Discover different types of candy, chase rare finds, and work toward building an impressive collection. You never know what you might find!</p>
-
-    <h3>Build Your Candy Empire</h3>
-    <p>Collect candy, unlock new possibilities, upgrade your progress, and build your very own Trick-or-Treat Crew. Your crew will help you collect even more candy while you explore the event's features.</p>
-
-    <h3>Discover Rare Treats</h3>
-    <p>Not all candy is created equal! Keep an eye out for uncommon and extraordinary discoveries. Every candy type has a place in your collection, and rare finds will make your Halloween adventure even more memorable.</p>
-
-    <h3>Climb the Leaderboard</h3>
-    <p>Think you can collect enough candy to reach the top? Watch the leaderboard, keep improving your strategy, and see how you stack up against other players once the event begins.</p>
-
-    <h3>When Does It Begin?</h3>
-    <p>Halloween Haunt begins Monday, October 26, 2026, and ends Friday, October 30, 2026, at 3:10 PM EDT. This is a limited-time event, so make the most of it while it lasts!</p>
-
-    <h3>PRIZES</h3>
-    <h3>First Place Prize</h3>
-    <p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p>
-    <p class="hype">The houses are waiting. The candy is calling. Halloween Haunt is almost here!</p>
-    <p class="callout">Stay tuned for more details, and get ready to trick-or-treat your way to the top!</p>
-
-    <div style="display:flex;justify-content:center;margin-top:24px"><button type="button" class="btn-halloween" onclick="closeHHModal()">Got it</button></div>
-  </div>
-</div>
-
-<script src="/js/events.js"></script>
-<div id="hh-prize-callout" class="hh-prize-callout"><span class="hh-badge">PRIZES</span><h3>First Place Prize</h3><p><strong>$10 in real-life money</strong> and a <strong>special role for BSMS Web</strong>. Additional prizes are still to be determined and will be announced later.</p></div></body>
+  <footer class="footer">© 2026 Jellyfish Jelly. <a href="/privacy.html">Privacy Policy</a></footer>
+</main>
+</body>
 </html>

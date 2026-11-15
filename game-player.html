@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Play a game in BSMS Web.">
+  <title>Loading game | BSMS Web</title>
+  <link rel="icon" href="/img/icon.png">
+  <link rel="apple-touch-icon" href="/img/app-icon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/game-player.css">
+  <script src="/js/game-player.js" defer></script>
+</head>
+<body class="game-player-page">
+  <header class="player-bar">
+    <a class="vault-back" id="vaultBack" href="/g" aria-label="Back to Game Vault">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7 7-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Back to Game Vault</span>
+    </a>
+    <div class="player-title" id="playerTitle">Loading game…</div>
+    <a class="player-brand" href="/" aria-label="BSMS Web home"><span>BSMS</span> Web</a>
+  </header>
+
+  <main class="player-stage">
+    <div class="player-loading" id="playerLoading" role="status" aria-live="polite">
+      <div class="loading-card">
+        <img class="loading-logo" src="/img/app-icon.png" alt="BSMS Web">
+        <div class="loading-brand"><span>BSMS</span> Web</div>
+        <div class="loading-title" id="loadingTitle">Preparing your game</div>
+        <div class="loading-track" aria-hidden="true"><span></span></div>
+        <div class="loading-caption" id="loadingCaption">Connecting to the game library…</div>
+      </div>
+    </div>
+    <iframe
+      id="gameFrame"
+      title="Game"
+      allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write"
+      allowfullscreen
+      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads">
+    </iframe>
+  </main>
+</body>
+</html>

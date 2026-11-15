@@ -1,0 +1,33 @@
+/*
+ * BSMS Web
+ * Copyright © 2026 Jellyfish Jelly
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+/* Game Vault service notice */
+.game-notice-overlay {
+  z-index: 5000;
+}
+
+.game-notice-popup {
+  width: min(520px, 100%);
+  padding: 32px 28px 26px;
+}
+
+.game-notice-popup h2 {
+  margin-bottom: 12px;
+}
+
+.game-notice-popup p {
+  margin-bottom: 24px;
+}
+
+.game-notice-popup .btn {
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .game-notice-popup {
+    padding: 28px 22px 22px;
+  }
+}

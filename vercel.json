@@ -7,33 +7,19 @@
       "permanent": true
     },
     {
-      "source": "/c",
-      "destination": "/chat",
-      "permanent": true
-    },
-    {
       "source": "/games",
       "destination": "/g",
       "permanent": true
-    },
+    }
+  ],
+  "rewrites": [
     {
-      "source": "/rooms",
-      "destination": "/chat",
-      "permanent": true
-    },
-    {
-      "source": "/contact",
-      "destination": "/support",
-      "permanent": true
+      "source": "/g/:gameSlug",
+      "destination": "/game-player?slug=:gameSlug"
     }
   ],
   "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "dev1": false,
-      "dev2": false,
-      "dev3": false,
-      "dev4": false
-    }
-  }
+    "deploymentEnabled": false
+  },
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }

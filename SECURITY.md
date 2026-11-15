@@ -25,7 +25,7 @@ Public disclosure before a vulnerability has been investigated and addressed cou
 
 Submit a private vulnerability report through GitHub:
 
-[**Report a vulnerability privately**](https://github.com/JellyfishJelly13/BSMS-Web/security/advisories/new)
+[**Report a vulnerability privately**](https://github.com/BSMS-Web-App/web/security/advisories/new)
 
 If private vulnerability reporting is unavailable, contact a repository maintainer privately through an appropriate communication channel. Do not post sensitive details publicly while arranging contact.
 
@@ -69,6 +69,7 @@ Potentially relevant security issues include, but are not limited to:
 - Cross-site scripting (XSS), injection vulnerabilities, and other exploitable input-handling issues.
 - Security weaknesses in session management or account recovery.
 - Security misconfigurations affecting production deployments.
+- Unsafe handling of text sent to external moderation providers or accidental exposure of moderation credentials.
 - Vulnerabilities in dependencies used by BSMS Web.
 
 Reports about ordinary bugs, feature requests, visual issues, or general performance problems should be submitted through the repository's normal issue-reporting process instead.

@@ -179,7 +179,7 @@ const DirectoryApp = {
 
     renderUserCard: function(u, isWide = false) {
         const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-        const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+        const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" loading="lazy" decoding="async">` : initial;
         const badgesHtml = this.getBadgesHTML(u);
         const wideClass = isWide ? 'wide' : '';
         const tagLine = isWide ? `<span style="font-size:0.9rem; color:var(--accent); font-weight:bold; margin-bottom:4px; display:block;">Your Profile</span>` : '';
@@ -296,7 +296,7 @@ const DirectoryApp = {
 
         const pvAvEl = document.getElementById('pvAvatar');
         if (pvAvEl) {
-            pvAvEl.innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+            pvAvEl.innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" loading="eager" decoding="async" fetchpriority="high">` : initial;
             if (pvColor) {
                 pvAvEl.style.borderColor = pvColor;
                 pvAvEl.style.boxShadow = `0 0 16px ${pvColor}44`;
@@ -391,7 +391,7 @@ const DirectoryApp = {
             if (!u) return;
 
             const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-            const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}">` : initial;
+            const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" loading="lazy" decoding="async">` : initial;
             const uColor = (u.nameColor || u.chatColor || '').trim();
             const uColorStyle = uColor ? `style="color:${this.escapeHTML(uColor)} !important; font-weight:bold;"` : 'style="color:var(--fg); font-weight:bold;"';
             const uAvStyle = uColor ? `style="border-color:${this.escapeHTML(uColor)};"` : '';

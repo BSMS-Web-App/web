@@ -6,12 +6,9 @@
 
 import { db } from './db.js';
 import crypto from 'crypto';
+import { hashPassword } from './passwords.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
-
-// Matches auth.js password hashing
-function hashPassword(password) {
-    return crypto.createHash('sha256').update(password).digest('hex');
-}
+import { mediaUrl } from '../lib/media-url.js';
 
 // Verify session belongs to an owner, admin or moderator
 async function verifyStaff(sessionId) {
@@ -164,7 +161,7 @@ export default async function handler(req, res) {
                 const accounts = accountsSnap.val() || {};
                 for (const account of Object.values(accounts)) {
                     if (account.avatar && typeof account.avatar === 'object' && account.avatar.type === 'media' && /^[a-f0-9]{64}$/.test(account.avatar.mediaId || '')) {
-                        account.avatar = `/api/media?id=${encodeURIComponent(account.avatar.mediaId)}`;
+                        account.avatar = mediaUrl(account.avatar);
                     }
                 }
                 return res.status(200).json({
@@ -243,9 +240,9 @@ export default async function handler(req, res) {
 
                 const finalUpdates = { ...updates };
                 
-                // If admin typed a new password, hash it using auth.js SHA-256 standard
+                // If admin typed a new password, store a modern scrypt hash.
                 if (newPassword && newPassword.trim() !== '') {
-                    finalUpdates.password = hashPassword(newPassword.trim());
+                    finalUpdates.password = await hashPassword(newPassword.trim());
                 }
 
                 await db.ref(`/accounts/${targetUid}`).update(finalUpdates);

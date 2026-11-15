@@ -592,21 +592,21 @@ section {
 .ann-card-body em { font-style: italic; color: rgba(255,255,255,0.92); }
 .ann-card-body u { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Events Card (Updated for Halloween Theme) */
+/* Events Card */
 .events-card {
-  background: radial-gradient(ellipse at top left, rgba(249, 115, 22, 0.12) 0%, rgba(14, 14, 18, 0.95) 70%);
-  border: 1px solid rgba(249, 115, 22, 0.4);
+  background: radial-gradient(ellipse at top left, rgba(187, 0, 30, 0.12) 0%, rgba(14, 14, 18, 0.95) 70%);
+  border: 1px solid rgba(187, 0, 30, 0.4);
   border-radius: 20px;
   padding: 24px 28px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(249, 115, 22, 0.15);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(187, 0, 30, 0.15);
   position: relative;
   overflow: hidden;
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .events-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(249, 115, 22, 0.6);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 35px rgba(249, 115, 22, 0.25);
+  border-color: rgba(187, 0, 30, 0.6);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 35px rgba(187, 0, 30, 0.25);
 }
 .event-header-row {
   display: flex;
@@ -618,8 +618,8 @@ section {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(249, 115, 22, 0.15);
-  border: 1px solid rgba(249, 115, 22, 0.4);
+  background: rgba(187, 0, 30, 0.15);
+  border: 1px solid rgba(187, 0, 30, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -632,17 +632,17 @@ section {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(249, 115, 22, 0.15);
-  border: 1px solid rgba(249, 115, 22, 0.4);
+  background: rgba(187, 0, 30, 0.15);
+  border: 1px solid rgba(187, 0, 30, 0.4);
   padding: 4px 12px;
   border-radius: 20px;
   font-family: var(--font-tech);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #fb923c;
+  color: #ff5369;
 }
-.event-sparkle { color: #fdba74; font-size: 13px; }
+.event-sparkle { color: #ff8796; font-size: 13px; }
 .event-title {
   font-family: var(--font-brand);
   font-size: clamp(1.3rem, 2.3vw, 1.7rem);
@@ -683,17 +683,17 @@ section {
   padding: 9px 22px;
   border-radius: 12px;
   border: 1px solid rgba(249, 115, 22, 0.5);
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(187, 0, 30, 0.35) 100%);
+  background: linear-gradient(135deg, rgba(187, 0, 30, 0.25) 0%, rgba(187, 0, 30, 0.35) 100%);
   color: #fff;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.15);
+  box-shadow: 0 4px 15px rgba(187, 0, 30, 0.15);
 }
 .event-coming-soon-btn:hover {
   transform: translateY(-2px) scale(1.02);
-  border-color: #fb923c;
+  border-color: #ff5369;
   box-shadow: 0 6px 20px rgba(249, 115, 22, 0.35);
 }
 .event-coming-soon-btn .btn-shine {

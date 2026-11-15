@@ -1,4 +1,4 @@
-name: Require Linked Issue
+name: BSMS Web
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   require-linked-issue:
-    name: Linked Issue Required
+    name: Require Linked Issue for Pull Request
     runs-on: ubuntu-latest
     steps:
       - name: Check for a linked closing issue

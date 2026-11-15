@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import 'dotenv/config';
 import express from 'express';
+import crypto from 'node:crypto';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -22,11 +25,96 @@ import halloweenHauntHandler from './api/halloween-haunt.js';
 import lastHarvestHandler from './api/last-harvest.js';
 import reportsHandler from './api/reports.js';
 import supportConversationsHandler from './api/support-conversations.js';
+import mediaHandler from './api/media.js';
+import voiceHandler from './api/voice.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+// The application API runs behind Cloudflare Tunnel on the Mac mini.
+// Browser origins are explicitly allowlisted; no wildcard CORS is used.
+const allowedOrigins = new Set([
+    'https://bsms-web.com',
+    'https://www.bsms-web.com',
+    'https://bsms-web.vercel.app',
+    'https://bsms-web-dev2.vercel.app',
+    'https://dev2.bsms-web.com',
+    'https://bsms-web-beta.vercel.app',
+    'https://bsms-web-development.vercel.app',
+    'https://bsms-web-dev3.vercel.app',
+    'http://localhost:3000',
+    ...String(process.env.APP_ALLOWED_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean)
+]);
+
+function apiCors(req, res, next) {
+    const origin = req.get('Origin');
+
+    if (origin && !allowedOrigins.has(origin)) {
+        return res.status(403).json({ error: 'Origin is not allowed.' });
+    }
+
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID, X-Device-ID, X-UID, Authorization');
+    res.setHeader('Access-Control-Max-Age', '600');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    return next();
+}
+
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    keyGenerator: (req) => {
+        const sessionId = String(req.get('X-Session-ID') || '').trim();
+        if (sessionId) return 'session:' + crypto.createHash('sha256').update(sessionId).digest('hex');
+        return ipKeyGenerator(req.ip);
+    },
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again shortly.' }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many authentication attempts. Please try again later.' },
+    skip: (req) => !['login', 'register'].includes(String(req.query.action || req.body?.action || '').toLowerCase())
+});
+
+const rawFileLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many file requests. Please try again shortly.' }
+});
+
+const pageFileLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 300,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many page requests. Please try again shortly.' }
+});
+
+// Apply CORS before body parsing and rate limiting so browser preflight requests terminate cleanly.
+app.use('/api', apiCors);
+app.use('/games/saves', apiCors);
+app.use('/raw', apiCors);
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
@@ -37,8 +125,14 @@ app.get('/account', (req, res) => res.redirect(301, '/accounts'));
 app.get('/c', (req, res) => res.redirect(301, '/chat'));
 app.get('/games', (req, res) => res.redirect(301, '/g'));
 app.get('/rooms', (req, res) => res.redirect(301, '/chat'));
+app.get('/event/halloween-haunt', (req, res) => res.redirect(301, '/events'));
+app.all('/api/halloween-haunt', (req, res) => res.status(410).json({ error: 'This event has ended.' }));
 
 // API Routes
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
+app.use('/games/saves', apiLimiter);
+app.use('/raw', rawFileLimiter);
 app.use('/api/auth', (req, res) => authHandler(req, res));
 app.use('/api/admin', (req, res) => adminHandler(req, res));
 app.use('/api/chat', (req, res) => chatHandler(req, res));
@@ -55,6 +149,8 @@ app.use('/api/last-harvest', (req, res) => lastHarvestHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 app.use('/api/legal', (req, res) => legalHandler(req, res));
+app.use('/api/media', (req, res) => mediaHandler(req, res));
+app.use('/api/voice', (req, res) => voiceHandler(req, res));
 
 // Raw text endpoints for 1-click copy into GitHub
 app.get('/raw/chat.html', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'chat.html')));
@@ -68,12 +164,111 @@ app.get('/raw/package.json', (req, res) => res.type('text/plain').sendFile(path.
 app.get('/raw/vercel.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'vercel.json')));
 app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'server.js')));
 
+// Rate-limit routes that read and serve individual page files.
+app.use(pageFileLimiter);
+
+// Same-origin proxy for the approved 55GMS game repositories.
+// Only the two known repositories are accessible; this is not an open proxy.
+app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
+    try {
+        const parts = String(req.params[0] || '').split('/');
+        const [owner, repository, ref, ...fileParts] = parts;
+        const filePath = fileParts.join('/');
+
+        if (
+            owner !== '55gms' ||
+            !['55GMS', 'assets'].includes(repository) ||
+            !ref || !/^[A-Za-z0-9._-]+$/.test(ref) ||
+            !filePath || fileParts.some((part) => !part || part === '.' || part === '..' || part.includes('\\'))
+        ) {
+            return res.status(400).send('Invalid game asset path.');
+        }
+
+        const upstreamUrl = 'https://raw.githubusercontent.com/' +
+            [owner, repository, ref, filePath].join('/');
+        const upstream = await fetch(upstreamUrl, {
+            redirect: 'follow',
+            signal: AbortSignal.timeout(12000),
+            headers: { 'User-Agent': 'BSMS-Web-Game-Asset-Proxy' }
+        });
+
+        if (!upstream.ok) {
+            return res.status(upstream.status).send('Game asset unavailable.');
+        }
+
+        const declaredLength = Number(upstream.headers.get('content-length') || 0);
+        if (declaredLength > 50 * 1024 * 1024) {
+            return res.status(413).send('Game asset is too large.');
+        }
+
+        let bytes = Buffer.from(await upstream.arrayBuffer());
+        if (bytes.length > 50 * 1024 * 1024) {
+            return res.status(413).send('Game asset is too large.');
+        }
+
+        const extension = filePath.split('.').pop().toLowerCase();
+        const mimeTypes = {
+            html: 'text/html; charset=utf-8',
+            htm: 'text/html; charset=utf-8',
+            js: 'text/javascript; charset=utf-8',
+            mjs: 'text/javascript; charset=utf-8',
+            cjs: 'text/javascript; charset=utf-8',
+            css: 'text/css; charset=utf-8',
+            json: 'application/json; charset=utf-8',
+            svg: 'image/svg+xml',
+            png: 'image/png',
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            avif: 'image/avif',
+            ico: 'image/x-icon',
+            mp3: 'audio/mpeg',
+            mp4: 'video/mp4',
+            webm: 'video/webm',
+            wasm: 'application/wasm',
+            woff: 'font/woff',
+            woff2: 'font/woff2',
+            ttf: 'font/ttf',
+            otf: 'font/otf',
+            xml: 'application/xml',
+            txt: 'text/plain; charset=utf-8'
+        };
+        const contentType = mimeTypes[extension] || upstream.headers.get('content-type') || 'application/octet-stream';
+        if (/^(text\/|application\/(?:javascript|json|xml)|image\/svg\+xml)/i.test(contentType)) {
+            let source = bytes.toString('utf8');
+            source = source
+                .replace(/https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi, '/game-assets/$1/$2/$3/$4')
+                .replace(/https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi, '/game-assets/55gms/$1/$2/$3')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, '/game-assets/55gms/55GMS/main/static/assets/')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, '/game-assets/55gms/55GMS/main/static/img/')
+                .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, '/game-assets/55gms/55GMS/main/static/misc/')
+                .replace(/(["'(=])\/assets\//g, '$1/game-assets/55gms/55GMS/main/static/assets/')
+                .replace(/(["'(=])\/img\//g, '$1/game-assets/55gms/55GMS/main/static/img/')
+                .replace(/(["'(=])\/misc\//g, '$1/game-assets/55gms/55GMS/main/static/misc/');
+            bytes = Buffer.from(source);
+        }
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Length', String(bytes.length));
+        return res.status(200).send(bytes);
+    } catch (error) {
+        console.error('[BSMS Web :: Game Asset Proxy]', error);
+        return res.status(502).send('Unable to retrieve game asset.');
+    }
+});
+
+
 // Clean URLs
+// Serve the original homepage at the root path.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/accounts', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 app.get('/countdown', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
 app.get('/g', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
+app.get('/g/:gameSlug', (req, res) => res.sendFile(path.join(__dirname, 'game-player.html')));
 app.get('/support', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
 app.get('/contact', (req, res) => res.redirect(301, '/support'));
 app.get('/bug-report', (req, res) => res.redirect(302, '/support?type=bug'));
@@ -82,22 +277,35 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'privacy.htm
 app.get('/401', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin/index.html')));
 app.get('/users', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
+app.get('/events', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get('/metadata.json', (req, res) => res.sendFile(path.join(__dirname, 'metadata.json')));
+app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/accounts.html', (req, res) => res.sendFile(path.join(__dirname, 'accounts.html')));
+app.get('/chat.html', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
+app.get('/countdown.html', (req, res) => res.sendFile(path.join(__dirname, 'countdown.html')));
+app.get('/g.html', (req, res) => res.sendFile(path.join(__dirname, 'g.html')));
+app.get('/support.html', (req, res) => res.sendFile(path.join(__dirname, 'support.html')));
+app.get('/privacy.html', (req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get('/401.html', (req, res) => res.status(401).sendFile(path.join(__dirname, '401.html')));
+app.get('/users.html', (req, res) => res.sendFile(path.join(__dirname, 'users.html')));
+app.get('/events.html', (req, res) => res.sendFile(path.join(__dirname, 'events.html')));
+app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
 
-// Static asset folders
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
-app.use('/img', express.static(path.join(__dirname, 'img')));
-app.use('/js', express.static(path.join(__dirname, 'js')));
-
-// General static serving with clean URL support
-app.use(express.static(__dirname, { extensions: ['html'] }));
+// Serve only intentionally public asset directories. The repository root contains
+// server code, API handlers, configuration, and deployment metadata and must not be static.
+app.use('/admin', express.static(path.join(__dirname, 'admin'), { dotfiles: 'deny', index: false }));
+app.use('/css', express.static(path.join(__dirname, 'css'), { dotfiles: 'deny', index: false }));
+app.use('/img', express.static(path.join(__dirname, 'img'), { dotfiles: 'deny', index: false }));
+app.use('/js', express.static(path.join(__dirname, 'js'), { dotfiles: 'deny', index: false }));
 
 // 404 handler
 app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
-const PORT = parseInt(process.env.APP_PORT || '3000', 10);
-const HOST = '0.0.0.0';
+const PORT = parseInt(process.env.APP_PORT || '4903', 10);
+const HOST = process.env.APP_HOST || '127.0.0.1';
 
 app.listen(PORT, HOST, () => {
     console.log(`[BSMS Web] Server listening on http://${HOST}:${PORT}`);

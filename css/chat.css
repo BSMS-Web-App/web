@@ -709,6 +709,8 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 @media (max-width: 768px) {
+    /* On phones, the conversation list is the landing screen; never cover it with the desktop empty state. */
+    #emptyState { display: none !important; }
     #sidebar { position: fixed; inset: 0; width: 100%; z-index: 50; transform: translateX(0); background: var(--bg); transition: transform 0.25s ease; box-shadow: var(--shadow); }
     #sidebar.hidden { transform: translateX(-100%); pointer-events: none; box-shadow: none; }
     #mainView { width: 100%; }
