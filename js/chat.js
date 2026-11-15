@@ -754,7 +754,7 @@ const SidebarManager = {
             const lastM = c.lastMessage || null;
             const dmTargetUid = c._type === 'dms' ? Object.keys(c.members || {}).find(u => u !== State.user.uid) : null;
             const bannedDm = Boolean(dmTargetUid && dmTargetUid !== BOT_UID && State.accountsCache[dmTargetUid]?.account_status === 'banned');
-            const bannedLastSender = Boolean(lastM?.senderUid && State.accountsCache[lastM.senderUid]?.account_status === 'banned');
+            const bannedLastSender = Boolean(lastM?.senderBanned || (lastM?.senderUid && State.accountsCache[lastM.senderUid]?.account_status === 'banned'));
             const msgCount = Number(c.messageCount || 0);
             if (msgCount === 0 && !lastM && State.activeChannelId !== id) continue;
 
