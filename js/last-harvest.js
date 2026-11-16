@@ -832,13 +832,15 @@ function shopCard(o){
   +'<span class="lh-shop-art emo">'+(o.img?'<img src="'+o.img+'" alt="" style="width:46px;height:46px;image-rendering:pixelated">':o.icon)+'</span>'
   +'<span class="lh-shop-price'+(String(o.price)==='FREE'?' free':'')+'">'+o.price+'</span></button>';
 }
+const STORE_MARKUP=1.5; // Tilly's shelves cost more than the city market
+const storePrice=it=>Math.round(it.cost*STORE_MARKUP/5)*5;
 function openStore(){
- const cards=BATTLE_ITEMS.map(it=>{const have=battleItemCount(it.id),full=have>=it.max;
-  return shopCard({name:it.name.toUpperCase(),sub:it.desc+'  \u00B7  HAVE '+have+' / '+it.max,img:it.img,price:full?'FULL':it.cost+' C',act:{kind:'buy',id:it.id},dim:full||(state.coins||0)<it.cost});}).join('');
- const el=shopShell('STORE',cards,'Tilly keeps the shelves stocked. Prices are firm.');
- el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const it=BATTLE_ITEMS.find(x=>x.id===b.dataset.buy);
-  if(!it||(state.coins||0)<it.cost||battleItemCount(it.id)>=it.max)return;
-  state.coins-=it.cost;addBattleItem(it.id,1);sfx('confirm');save();updateHud();el.close();openStore();});
+ const cards=BATTLE_ITEMS.map(it=>{const have=battleItemCount(it.id),full=have>=it.max,price=storePrice(it);
+  return shopCard({name:it.name.toUpperCase(),sub:it.desc+'  \u00B7  HAVE '+have+' / '+it.max,img:it.img,price:full?'FULL':price+' C',act:{kind:'buy',id:it.id},dim:full||(state.coins||0)<price});}).join('');
+ const el=shopShell('STORE',cards,'Tilly keeps the shelves stocked. The market in Goldleaf undercuts her, but she is the only shop this side of the wilds.');
+ el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const it=BATTLE_ITEMS.find(x=>x.id===b.dataset.buy);if(!it)return;
+  const price=storePrice(it);if((state.coins||0)<price||battleItemCount(it.id)>=it.max)return;
+  state.coins-=price;addBattleItem(it.id,1);sfx('confirm');save();updateHud();el.close();openStore();});
 }
 function openInn(){
  const free=(state.coins||0)<25;
@@ -1990,12 +1992,12 @@ el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disa
 return el;}
 const BATTLE_ITEMS=[
 {id:'potion',name:'Harvest Potion',desc:'Restore 35 HP.',count:3,max:9,cost:30,img:'img/last-harvest/items/potion.png?v=2'},
-{id:'ether',name:'Moonmint Tea',desc:'Restore 8 MP.',count:2,max:5,cost:26,img:'img/last-harvest/items/ether.png?v=2'},
-{id:'cider',name:'Golden Cider',desc:'Restore 20% of your maximum HP.',count:1,max:3,cost:55,img:'img/last-harvest/items/cider.png?v=3'},
-{id:'charm',name:'Oakguard Charm',desc:'Reduce the next 2 turns of damage.',count:1,max:3,cost:48,img:'img/last-harvest/items/charm.png?v=2'},
-{id:'ember',name:'Ember Seed',desc:'Deal 28 damage to the opponent.',count:1,max:3,cost:60,img:'img/last-harvest/items/ember.png?v=2'}
+{id:'ether',name:'Moonmint Tea',desc:'Restore 8 MP.',count:2,max:5,cost:24,img:'img/last-harvest/items/ether.png?v=2'},
+{id:'cider',name:'Golden Cider',desc:'Restore 20% of your maximum HP.',count:1,max:3,cost:25,img:'img/last-harvest/items/cider.png?v=3'},
+{id:'charm',name:'Oakguard Charm',desc:'Reduce the next 2 turns of damage.',count:1,max:3,cost:35,img:'img/last-harvest/items/charm.png?v=2'},
+{id:'ember',name:'Ember Seed',desc:'Deal 28 damage to the opponent.',count:1,max:3,cost:55,img:'img/last-harvest/items/ember.png?v=2'}
 ],ITEM_PAL=['#d9534a','#4a9ad9','#4fa04a','#d9a94e','#9a6ad9'];
-function ensureBattleItems(){state.battleItems=state.battleItems||{};BATTLE_ITEMS.forEach(it=>{if(!Number.isFinite(state.battleItems[it.id]))state.battleItems[it.id]=it.id==='potion'&&Number.isFinite(state.potions)?Math.max(0,state.potions):it.count;});if(!state.potionInventoryMigrated){state.battleItems.potion=Math.max(Number(state.battleItems.potion)||0,Number(state.potions)||0);state.potionInventoryMigrated=true;}state.potions=Math.max(0,Number(state.battleItems.potion)||0);}
+function ensureBattleItems(){state.battleItems=state.battleItems||{};BATTLE_ITEMS.forEach(it=>{if(!Number.isFinite(state.battleItems[it.id]))state.battleItems[it.id]=it.id==='potion'&&Number.isFinite(state.potions)?Math.max(0,state.potions):it.count;});if(!state.potionInventoryMigrated){state.battleItems.potion=Math.max(Number(state.battleItems.potion)||0,Number(state.potions)||0);state.potionInventoryMigrated=true;}BATTLE_ITEMS.forEach(it=>{state.battleItems[it.id]=Math.min(Math.max(0,Math.floor(Number(state.battleItems[it.id])||0)),it.max);});state.potions=Math.max(0,Number(state.battleItems.potion)||0);}
  function addBattleItem(id,n){ensureBattleItems();const it=BATTLE_ITEMS.find(x=>x.id===id);if(!it)return 0;
  const cur=Math.max(0,Number(state.battleItems[id])||0),add=Math.min(Math.max(0,Number(n)||0),Math.max(0,it.max-cur));
  state.battleItems[id]=cur+add;if(id==='potion')state.potions=state.battleItems.potion;return add;}
@@ -2680,5 +2682,6 @@ $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new 
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
+{/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore)save();
 {const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();if(skip)startNaming();else showTitle(hasSave);}
 })();
