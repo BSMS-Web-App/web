@@ -20,7 +20,9 @@ const UI = {
     showAdminModal: (name) => { document.getElementById('amUserDisplay').innerText = name; UI.openModal('adminModal'); },
     showModModal: (name) => { document.getElementById('mmUserDisplay').innerText = name; UI.openModal('modModal'); },
     showDevModal: (name) => { document.getElementById('dmUserDisplay').innerText = name; UI.openModal('devModal'); },
-    showOwnerModal: (name) => { document.getElementById('omUserDisplay').innerText = name; UI.openModal('ownerModal'); }
+    showOwnerModal: (name) => { document.getElementById('omUserDisplay').innerText = name; UI.openModal('ownerModal'); },
+    showNetanyahuModal: (name) => { document.getElementById('nbmUserDisplay').innerText = name; UI.openModal('netanyahuBadgeModal'); },
+    showDavidModal: (name) => { document.getElementById('dbmUserDisplay').innerText = name; UI.openModal('davidBadgeModal'); }
 };
 
 const DirectoryApp = {
@@ -173,6 +175,17 @@ const DirectoryApp = {
         }
         if (u.isDeveloper) {
             b += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal('${safeName}')"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
+        }
+        let localBadges = {};
+        if (this.myUid && u.uid === this.myUid) {
+            try { localBadges = JSON.parse(localStorage.getItem('bsms_chess_badges_v1') || '{}') || {}; } catch(e) {}
+        }
+        const badges = { ...localBadges, ...(u.chessBadges || {}) };
+        if (badges.netanyahu) {
+            b += `<span class="boss-badge-netanyahu" title="Defeated Benjamin Netanyahu (10,000 ELO)" onclick="event.stopPropagation(); UI.showNetanyahuModal('${safeName}')"><img src="/img/bots/netanyahu.png" alt="" style="width:13px;height:13px;object-fit:contain;"> Netanyahu Slayer</span>`;
+        }
+        if (badges.david_martinez) {
+            b += `<span class="boss-badge-david" title="Defeated David Martinez (3,000 ELO)" onclick="event.stopPropagation(); UI.showDavidModal('${safeName}')"><img src="/img/bots/david_martinez.jpg" alt="" style="width:13px;height:13px;object-fit:cover;border-radius:3px;"> Sandevistan</span>`;
         }
         return b;
     },

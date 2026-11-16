@@ -382,6 +382,69 @@ function loadDashboard() {
     
     renderAvatarPreview();
     updateBioPreview();
+    renderChessBadges();
+}
+
+function renderChessBadges() {
+    const container = document.getElementById('accountChessBadgesContainer');
+    if (!container) return;
+    let localBadges = {};
+    try { localBadges = JSON.parse(localStorage.getItem('bsms_chess_badges_v1') || '{}') || {}; } catch (e) {}
+    const accountBadges = (currentAccountData && currentAccountData.chessBadges) ? currentAccountData.chessBadges : {};
+    const merged = { ...localBadges, ...accountBadges };
+
+    // Sync any local-only badges up to backend profile
+    const missingRemote = Object.keys(localBadges).filter(k => localBadges[k] && !accountBadges[k]);
+    if (missingRemote.length > 0 && authSession && authSession.loggedIn) {
+        apiFetch('/api/auth', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'recordChessBadge', badges: missingRemote })
+        }).then(res => {
+            if (res && res.chessBadges && currentAccountData) {
+                currentAccountData.chessBadges = res.chessBadges;
+            }
+        }).catch(() => {});
+    }
+
+    const defs = [
+        {
+            id: 'netanyahu',
+            title: 'Netanyahu Slayer',
+            subtitle: 'Defeated Benjamin Netanyahu (10,000 ELO)',
+            img: '/img/bots/netanyahu.png',
+            imgContain: true,
+            unlockedBg: 'linear-gradient(135deg, rgba(187,0,30,0.22), rgba(245,158,11,0.12))',
+            unlockedBorder: 'rgba(245,158,11,0.65)',
+            accent: '#fde68a'
+        },
+        {
+            id: 'david_martinez',
+            title: 'Sandevistan Survivor',
+            subtitle: 'Defeated David Martinez (3,000 ELO)',
+            img: '/img/bots/david_martinez.jpg',
+            imgContain: false,
+            unlockedBg: 'linear-gradient(135deg, rgba(0,240,255,0.18), rgba(74,222,128,0.14))',
+            unlockedBorder: 'rgba(0,240,255,0.65)',
+            accent: '#67e8f9'
+        }
+    ];
+
+    container.innerHTML = defs.map(d => {
+        const ts = merged[d.id];
+        const unlocked = Boolean(ts);
+        const dateStr = unlocked && typeof ts === 'number' ? new Date(ts).toLocaleDateString() : '';
+        return `
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; border:1.5px solid ${unlocked ? d.unlockedBorder : 'var(--border)'}; background:${unlocked ? d.unlockedBg : 'var(--input-bg)'}; opacity:${unlocked ? '1' : '0.58'};">
+            <img src="${d.img}" alt="${d.title}" style="width:44px; height:44px; border-radius:10px; object-fit:${d.imgContain ? 'contain' : 'cover'}; flex-shrink:0; border:1px solid rgba(255,255,255,0.12);">
+            <div style="min-width:0; flex:1;">
+                <div style="font-size:17px; font-weight:bold; color:${unlocked ? d.accent : 'var(--fg)'};">${d.title}</div>
+                <div style="font-size:13px; color:var(--fg2); line-height:1.3;">${d.subtitle}</div>
+                <div style="font-size:12px; margin-top:3px; font-weight:bold; color:${unlocked ? '#4ade80' : 'var(--fg2)'};">
+                    ${unlocked ? ('Unlocked' + (dateStr ? ' · ' + dateStr : '')) : 'Locked — Beat in /chess'}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function renderBioMarkdown(str) {
