@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { handleApiCors } from '../lib/api-cors.js';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 import { mediaUrl } from '../lib/media-url.js';
@@ -27,14 +28,7 @@ async function verifyStaff(sessionId) {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID');
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
+    if (!handleApiCors(req, res)) return;
     if (!db) {
         return res.status(503).json({ error: "Database unavailable." });
     }
