@@ -6,7 +6,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/js/api-origin.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="description" content="BSMS Web Account Manager. Manage your profile, identity, and security across the BSMS Web ecosystem."/>
@@ -303,6 +302,12 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <input type="checkbox" id="toggleShowInUsers" checked style="width:24px; height:24px; accent-color:var(--red); cursor:pointer; flex-shrink:0; margin-left:16px;"/>
             </label>
         </div>
+
+        <div class="panel-header" style="margin-top: 32px;">
+            <h2 style="margin:0; font-size: 28px; color:var(--fg);">BSMS Arena Boss Badges</h2>
+            <p style="font-size:15px; color:var(--fg2); margin:4px 0 0;">Earn these profile badges by defeating Bosses in BSMS Chess Arena.</p>
+        </div>
+        <div id="accountChessBadgesContainer" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:24px;"></div>
 
         <div class="panel-header" style="margin-top: 40px;">
             <h2 style="margin:0; font-size: 32px; color:var(--fg);">Contact Information (Optional)</h2>

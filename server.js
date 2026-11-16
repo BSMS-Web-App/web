@@ -121,6 +121,7 @@ function upsertMemberFromUser(user, stats) {
         draws: typeof stats?.draws === 'number' ? stats.draws : (existing?.draws ?? 0),
         losses: typeof stats?.losses === 'number' ? stats.losses : (existing?.losses ?? 0),
         streak: typeof stats?.streak === 'number' ? stats.streak : (existing?.streak ?? 0),
+        badges: (user.badges && typeof user.badges === 'object') ? { ...(existing?.badges || {}), ...user.badges } : (existing?.badges || {}),
         online: true,
         status: user.status,
         lastSeen: Date.now()
@@ -132,6 +133,7 @@ function upsertMemberFromUser(user, stats) {
         draws: updated.draws,
         losses: updated.losses,
         streak: updated.streak,
+        badges: updated.badges,
         lastSeen: Date.now()
     });
     saveStoredMembers(membersRegistry);
@@ -241,7 +243,7 @@ app.get('/api/members', (req, res) => {
 });
 
 app.post('/api/members/sync', (req, res) => {
-    const { memberId, username, avatar, pfp, elo, wins, draws, losses, streak } = req.body || {};
+    const { memberId, username, avatar, pfp, elo, wins, draws, losses, streak, badges } = req.body || {};
     if (!username || typeof username !== 'string') {
         return res.status(400).json({ error: 'username is required' });
     }
@@ -256,6 +258,7 @@ app.post('/api/members/sync', (req, res) => {
         draws: typeof draws === 'number' ? draws : (existing?.draws ?? 0),
         losses: typeof losses === 'number' ? losses : (existing?.losses ?? 0),
         streak: typeof streak === 'number' ? streak : (existing?.streak ?? 0),
+        badges: (badges && typeof badges === 'object') ? { ...(existing?.badges || {}), ...badges } : (existing?.badges || {}),
         online: existing?.online ?? false,
         status: existing?.status ?? 'offline',
         lastSeen: Date.now()
@@ -271,8 +274,10 @@ registerWsSender((clientId, data) => {
     if (entry && entry.ws && entry.ws.readyState === WebSocket.OPEN) {
         try {
             entry.ws.send(JSON.stringify(data));
+            return true;
         } catch {}
     }
+    return false;
 });
 
 function sendToClient(clientId, data) {
@@ -294,6 +299,7 @@ wss.on('connection', (ws) => {
                     username: msg.username || 'BSMS_Member',
                     elo: typeof msg.elo === 'number' ? Math.max(0, msg.elo) : 0,
                     avatar: msg.avatar || '/img/pfp.png',
+                    badges: (msg.badges && typeof msg.badges === 'object') ? msg.badges : {},
                     status: 'online'
                 };
                 clients.set(currentClientId, { ws, user: userObj });
@@ -320,6 +326,7 @@ wss.on('connection', (ws) => {
                     if (typeof msg.elo === 'number') entry.user.elo = Math.max(0, msg.elo);
                     if (msg.avatar) entry.user.avatar = msg.avatar;
                     if (msg.memberId) entry.user.memberId = msg.memberId;
+                    if (msg.badges && typeof msg.badges === 'object') entry.user.badges = { ...(entry.user.badges || {}), ...msg.badges };
 
                     upsertMemberFromUser(entry.user, {
                         wins: msg.wins,
@@ -653,11 +660,83 @@ wss.on('connection', (ws) => {
                     }
                 }
                 broadcastPresence();
+            } else if (msg.type === 'draw:offer') {
+                const roomId = cleanRoomCode(msg.roomId);
+                const room = rooms.get(roomId);
+                if (!room || room.status !== 'playing' || room.isBotMatch) return;
+                const isWhite = room.whitePlayer?.clientId === currentClientId;
+                const isBlack = room.blackPlayer?.clientId === currentClientId;
+                if (!isWhite && !isBlack) return;
+                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
+                const fromUsername = (isWhite ? room.whitePlayer?.username : room.blackPlayer?.username) || 'Opponent';
+                if (targetId) {
+                    sendToClient(targetId, {
+                        type: 'draw:offered',
+                        roomId: room.roomId,
+                        fromClientId: currentClientId,
+                        fromUsername
+                    });
+                }
+            } else if (msg.type === 'draw:response') {
+                const roomId = cleanRoomCode(msg.roomId);
+                const room = rooms.get(roomId);
+                if (!room || room.status !== 'playing' || room.isBotMatch) return;
+                const isWhite = room.whitePlayer?.clientId === currentClientId;
+                const isBlack = room.blackPlayer?.clientId === currentClientId;
+                if (!isWhite && !isBlack) return;
+                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
+                const byUsername = (isWhite ? room.whitePlayer?.username : room.blackPlayer?.username) || 'Opponent';
+                if (msg.accepted) {
+                    room.status = 'finished';
+                    room.reason = 'agreement';
+                    room.winner = 'draw';
+                    room.updatedAt = Date.now();
+                    const endPayload = {
+                        type: 'game:ended',
+                        roomId: room.roomId,
+                        reason: 'agreement',
+                        winner: 'draw'
+                    };
+                    if (room.whitePlayer?.clientId) sendToClient(room.whitePlayer.clientId, endPayload);
+                    if (room.blackPlayer?.clientId) sendToClient(room.blackPlayer.clientId, endPayload);
+                    const specs = ensureSpectatorSet(room);
+                    specs.forEach((specId) => sendToClient(specId, endPayload));
+                    specs.clear();
+                    const wEntry = clients.get(room.whitePlayer?.clientId);
+                    if (wEntry) {
+                        wEntry.user.status = 'online';
+                        wEntry.user.roomId = null;
+                        upsertMemberFromUser(wEntry.user);
+                    }
+                    if (room.blackPlayer) {
+                        const bEntry = clients.get(room.blackPlayer.clientId);
+                        if (bEntry) {
+                            bEntry.user.status = 'online';
+                            bEntry.user.roomId = null;
+                            upsertMemberFromUser(bEntry.user);
+                        }
+                    }
+                    broadcastPresence();
+                } else if (targetId) {
+                    sendToClient(targetId, {
+                        type: 'draw:declined',
+                        roomId: room.roomId,
+                        byUsername
+                    });
+                }
             } else if (msg.type === 'bot_match:start') {
                 const entry = clients.get(currentClientId);
                 if (!entry) return;
                 for (const [rid, r] of rooms.entries()) {
                     if (r.isBotMatch && r.whitePlayer?.clientId === currentClientId) {
+                        ensureSpectatorSet(r).forEach((specId) => {
+                            sendToClient(specId, {
+                                type: 'game:ended',
+                                roomId: r.roomId,
+                                reason: 'ended',
+                                winner: 'draw'
+                            });
+                        });
                         rooms.delete(rid);
                     }
                 }
@@ -682,6 +761,7 @@ wss.on('connection', (ws) => {
                     moves: [],
                     lastBoard: msg.board || null,
                     lastMissile: null,
+                    lastSandevistan: null,
                     updatedAt: Date.now(),
                     spectators: new Set()
                 };
@@ -704,6 +784,7 @@ wss.on('connection', (ws) => {
                 if (msg.board) room.lastBoard = msg.board;
                 room.updatedAt = Date.now();
                 const nextTurn = msg.turn || (room.moves.length % 2 === 0 ? 'w' : 'b');
+                room.turn = nextTurn;
                 ensureSpectatorSet(room).forEach((specId) => {
                     sendToClient(specId, {
                         type: 'game:opponent_move',
@@ -727,6 +808,39 @@ wss.on('connection', (ws) => {
                         roomId: room.roomId,
                         missileStrike: msg.missileStrike || null,
                         missileDetonation: msg.missileDetonation || null,
+                        board: msg.board || null
+                    });
+                });
+            } else if (msg.type === 'bot_match:sandevistan') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (!room || !room.isBotMatch || room.status !== 'playing') return;
+                room.lastSandevistan = msg.sandevistanState || null;
+                if (msg.turn) room.turn = msg.turn;
+                room.updatedAt = Date.now();
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'spectate:sandevistan',
+                        roomId: room.roomId,
+                        sandevistanState: msg.sandevistanState || null,
+                        trail: msg.trail || null,
+                        turn: msg.turn || null
+                    });
+                });
+            } else if (msg.type === 'bot_match:golden') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (!room || !room.isBotMatch || room.status !== 'playing') return;
+                room.lastGolden = msg.goldenState || null;
+                if (msg.board) room.lastBoard = msg.board;
+                room.updatedAt = Date.now();
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'spectate:golden',
+                        roomId: room.roomId,
+                        goldenState: msg.goldenState || null,
                         board: msg.board || null
                     });
                 });
@@ -765,6 +879,13 @@ wss.on('connection', (ws) => {
                     });
                     return;
                 }
+                if (room.whitePlayer?.clientId === currentClientId || (!room.isBotMatch && room.blackPlayer?.clientId === currentClientId)) {
+                    sendToClient(currentClientId, {
+                        type: 'room:error',
+                        message: 'You are already playing in this match.'
+                    });
+                    return;
+                }
                 for (const r of rooms.values()) {
                     ensureSpectatorSet(r).delete(currentClientId);
                 }
@@ -783,8 +904,12 @@ wss.on('connection', (ws) => {
                     botInfo: room.botInfo || null,
                     board: room.lastBoard || null,
                     moves: room.moves || [],
-                    turn: (room.moves?.length || 0) % 2 === 0 ? 'w' : 'b',
+                    turn: (room.lastSandevistan?.active && Date.now() < room.lastSandevistan.endsAt)
+                        ? 'b'
+                        : (room.turn || ((room.moves?.length || 0) % 2 === 0 ? 'w' : 'b')),
                     missileStrike: room.lastMissile || null,
+                    sandevistanState: room.lastSandevistan || null,
+                    goldenState: room.lastGolden || null,
                     spectatorCount: specCount
                 });
                 if (room.whitePlayer?.clientId) {

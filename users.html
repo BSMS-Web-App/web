@@ -6,7 +6,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/js/api-origin.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <meta name="description" content="Browse active BSMS Web Users, discover friends, and connect.">
@@ -185,6 +184,32 @@ SPDX-License-Identifier: AGPL-3.0-only
             The account <strong id="omUserDisplay" style="color:var(--fg);">---</strong> is the BSMS Web Platform Owner. The Owner holds ultimate authority across the ecosystem.
         </p>
         <button class="btn sec" onclick="UI.closeModal('ownerModal')">Close</button>
+    </div>
+</div>
+
+<div id="netanyahuBadgeModal" class="overlay" onclick="if(event.target===this) UI.closeModal('netanyahuBadgeModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="boss-badge-netanyahu" style="font-size: 1.05rem; padding: 6px 14px; margin-bottom: 16px;">
+            <img src="/img/bots/netanyahu.png" alt="Netanyahu" style="width:22px;height:22px;object-fit:contain;"> Netanyahu Slayer
+        </span>
+        <h2 style="font-size: 1.85rem; margin-bottom: 8px;">Defeated Benjamin Netanyahu</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            <strong id="nbmUserDisplay" style="color:var(--fg);">---</strong> survived aerial drone bombardments and defeated the 10,000 ELO Commander-in-Chief Boss on BSMS Chess Arena!
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('netanyahuBadgeModal')">Close</button>
+    </div>
+</div>
+
+<div id="davidBadgeModal" class="overlay" onclick="if(event.target===this) UI.closeModal('davidBadgeModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="boss-badge-david" style="font-size: 1.05rem; padding: 6px 14px; margin-bottom: 16px;">
+            <img src="/img/bots/david_martinez.jpg" alt="David Martinez" style="width:22px;height:22px;object-fit:cover;border-radius:4px;"> Sandevistan Survivor
+        </span>
+        <h2 style="font-size: 1.85rem; margin-bottom: 8px;">Defeated David Martinez</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            <strong id="dbmUserDisplay" style="color:var(--fg);">---</strong> outsmarted time-dilated Sandevistan afterimages and defeated the 3,000 ELO Edgerunner Boss on BSMS Chess Arena!
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('davidBadgeModal')">Close</button>
     </div>
 </div>
 
