@@ -3,16 +3,14 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: AGPL-3.0-only
  *
- * Routes application API requests through the production BSMS Web website/API origin.
- * The dev1 preview uses its own Vercel API functions, which connect to the configured
- * shared backend using Preview environment variables. Keeping those requests same-origin
- * avoids cross-origin preflight failures without changing production.
+ * Routes application API requests directly to the Mac-hosted Express API.
+ * The website remains hosted on Vercel, but application API traffic bypasses
+ * Vercel and reaches the Mac through the dedicated Cloudflare Tunnel hostname.
  */
 (() => {
     'use strict';
 
-    const IS_DEV1 = window.location.hostname === 'dev1.bsms-web.com';
-    const API_ORIGIN = IS_DEV1 ? window.location.origin : 'https://bsms-web.com';
+    const API_ORIGIN = 'https://dev-api.bsms-web.com';
     const MEDIA_ORIGIN = 'https://media.bsms-web.com';
     const API_PATH = /^\/(?:api(?:\/|$)|games\/saves(?:\/|$)|raw(?:\/|$))/;
     const originalFetch = window.fetch.bind(window);
