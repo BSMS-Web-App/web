@@ -18,7 +18,7 @@
     const REQUEST_TIMEOUT = 3000;
     const CLOUDFLARE_CHECK_URL = 'https://cloudflare-dns.com/dns-query?name=cloudflare.com&type=A';
     const API_ORIGIN = window.BSMS_API_ORIGIN || 'https://api.bsms-web.com';
-    const HEALTH_URL = new URL('/health', API_ORIGIN).href;
+    const HEALTH_URL = new URL('/api/version?name=connection-monitor', API_ORIGIN).href;
 
     let checking = false;
     let hadOutage = false;
@@ -99,13 +99,13 @@
     }
 
     async function checkServer() {
-        // This is a reachability probe, not an API data request. no-cors lets
-        // the browser confirm that the production API host responded without
-        // requiring the API to expose diagnostic JSON to every branch origin.
-        // An opaque response still proves the host was reached, even if a
-        // proxy returns a non-JSON response.
+        // This is a lightweight reachability probe against the production application
+        // API route. HEAD avoids reading database-backed version data, and
+        // no-cors prevents branch-origin CORS policy from being mistaken for
+        // an outage. An opaque response still proves the production API host
+        // responded.
         const response = await fetch(HEALTH_URL, {
-            method: 'GET',
+            method: 'HEAD',
             mode: 'no-cors',
             cache: 'no-store',
             credentials: 'omit',
