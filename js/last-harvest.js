@@ -1484,10 +1484,22 @@ function drawSentinelRaid(W,H){
  ctx.shadowBlur=0;
  ctx.restore();
 }
+/* The raid scene stays up through the Sentinel's own lines, so the village
+   never flashes back between the cutscene and the fight. */
+function holdRaidScene(){
+ let tries=0;
+ const tick=()=>{
+  const started=battle&&battle.phase!=='alert'&&battle.phase!=='swirl';
+  if(!started&&tries++<160){setTimeout(tick,50);return;}
+  document.body.classList.remove('lh-cinematic');
+  if(cinematic&&cinematic.phase==='sentinelRaid')cinematic=null;
+ };
+ setTimeout(tick,50);
+}
 async function playSentinelRaid(done){
  cinematic={phase:'sentinelRaid',t0:performance.now()};document.body.classList.add('lh-cinematic');sfx('warn');
  await sleep(6200);if(!cinematic||cinematic.phase!=='sentinelRaid')return;
- setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{document.body.classList.remove('lh-cinematic');cinematic=null;done();});
+ setDialogue([['ELDER MAPLE','The bell… no. That is not the harvest bell.'],['MILLIE','The Sentinel is inside the village! Everyone, run!'],['GUS','Get the children to the shelter! I’ll hold the gate!'],['ROWAN','I—I can’t fight that thing! I’m getting out of here!'],['YOU','Rowan! Wait! We can’t leave them behind!'],['ELDER MAPLE','Please… Hearthvale needs you. You are the only one who can stand against it.']],()=>{done();holdRaidScene();});
 }
 const BOSS_STAGE={
  1:{sky:['#1d1230','#5c2a18','#c86a26'],ground:'#33241c',prop:'field',part:'ember',t1:'THE GROUND SHAKES',t2:'THE PUMPKIN SENTINEL RISES'},
@@ -1852,7 +1864,7 @@ if(who==='HERO')actor(x,fy,CIV,0,k);else if(who==='ROWAN')actor(x,fy,1,0,k);else
 for(let r=0;r<2;r++)for(let c=0;c<4;c++)seat(c,r,r===1&&c===1?'HERO':r===1&&c===2?'ROWAN':'',0);
 sceneTitle('HEARTHVALE SCHOOL',W,H*.05);bars(W,H);}
 let lastArea='',stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
-const BOS=loadImg(['/img/last-harvest/bosses.png?v=11','/img/bosses.png?v=11']);
+const BOS=loadImg(['/img/bosses.png?v=11','/img/last-harvest/bosses.png?v=11']);
 const INT=loadImg(['/img/interior.png?v=11','/img/last-harvest/interior.png?v=11']);
 let CIV=4;function applyGender(){CIV=state.gender==='girl'?8:4;}
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
@@ -2379,7 +2391,7 @@ if(window.LH_GRID||/[?&]grid\b/.test(location.search)){ctx.font='10px monospace'
 ctx.fillStyle=C.cream;ctx.font='bold 15px ui-monospace';ctx.textAlign='center';ctx.fillText(R.t,W/2,g.oy-16);
 let tg=-1,dist=Infinity;R.npc.forEach((n,i)=>{const d=Math.hypot(insidePlayer.x-rcx(g,n[0]),insidePlayer.y-rcy(g,n[1]));if(d<U*3.3&&d<dist){tg=i;dist=d;}});
 if(tg>=0)drawWorldPrompt(rcx(g,R.npc[tg][0]),rcy(g,R.npc[tg][1])-U*1.05,'TAP / E · TALK');else if(insidePlayer.y>g.exitY)drawWorldPrompt(rcx(g,R.d),g.oy+(R.r-1)*U-6,'E · EXIT');}
-function drawWorldPrompt(x,y,label){const cv=ctx.canvas||{},dpr=(cv.width&&cv.clientWidth)?cv.width/cv.clientWidth:1,vw=cv.clientWidth||innerWidth,vh=cv.clientHeight||innerHeight,inset=6,m=ctx.getTransform(),sx=(m.a*x+m.c*y+m.e)/dpr,sy=(m.b*x+m.d*y+m.f)/dpr;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.font='bold 10px ui-monospace';ctx.textAlign='center';const w=Math.max(66,Math.round(ctx.measureText(label).width)+18),h=22,half=w/2,lo=inset+half,hi=vw-inset-half,cx=hi<lo?vw/2:Math.min(Math.max(sx,lo),hi),minTop=vw<520?112:inset;let cy=sy;if(cy-h-2<minTop)cy=minTop+h+2;if(cy-2>vh-inset)cy=vh-inset+2;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(cx-half-2),Math.round(cy-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(cx-half),Math.round(cy-h),w,h);ctx.fillStyle='#26334a';ctx.fillText(label,cx,cy-7);ctx.restore();}
+function drawWorldPrompt(x,y,label){const cv=ctx.canvas||{},dpr=(cv.width&&cv.clientWidth)?cv.width/cv.clientWidth:1,vw=cv.clientWidth||innerWidth,vh=cv.clientHeight||innerHeight,inset=6,m=ctx.getTransform(),sx=(m.a*x+m.c*y+m.e)/dpr,sy=(m.b*x+m.d*y+m.f)/dpr;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.font='bold 10px ui-monospace';ctx.textAlign='center';const w=Math.max(66,Math.round(ctx.measureText(label).width)+18),h=22,half=w/2,lo=inset+half,hi=vw-inset-half,cx=hi<lo?vw/2:Math.min(Math.max(sx,lo),hi),minTop=(()=>{const lb=document.getElementById('lh-location');if(!lb)return inset;const st=getComputedStyle(lb);if(st.display==='none'||st.visibility==='hidden')return inset;const r=lb.getBoundingClientRect();return r.height>0?Math.max(inset,Math.round(r.bottom)+6):inset;})();let cy=sy;if(cy-h-2<minTop)cy=minTop+h+2;if(cy-2>vh-inset)cy=vh-inset+2;ctx.fillStyle='#26334a';ctx.fillRect(Math.round(cx-half-2),Math.round(cy-h-2),w+4,h+4);ctx.fillStyle='#f3e6bf';ctx.fillRect(Math.round(cx-half),Math.round(cy-h),w,h);ctx.fillStyle='#26334a';ctx.fillText(label,cx,cy-7);ctx.restore();}
 function drawPlayer(x,y){drawSprite(heroRow(),facing,walking?1+alt:0,x,y);drawGear(x,y+8,2,facing,state.heroClass);}
 function askStoryChoice(speaker,prompt,options,onPick){
  setDialogue([[speaker,prompt]]);
