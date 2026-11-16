@@ -5,6 +5,7 @@
  */
 
 import dns from 'node:dns/promises';
+import { handleApiCors } from '../lib/api-cors.js';
 import http from 'node:http';
 import https from 'node:https';
 import { isIP } from 'node:net';
@@ -110,10 +111,7 @@ function extractMetadata(html, pageUrl) {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID');
-    if (req.method === 'OPTIONS') return res.status(204).end();
+    if (!handleApiCors(req, res)) return;
     if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed.' });
 
     let payload = req.body || {};
