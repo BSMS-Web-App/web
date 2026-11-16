@@ -46,6 +46,7 @@ app.get('/health', (_req, res) => {
 const allowedOrigins = new Set([
     'https://bsms-web.com',
     'https://www.bsms-web.com',
+    'https://dev1.bsms-web.com',
     'https://bsms-web.vercel.app',
     'https://bsms-web-dev2.vercel.app',
     'https://dev2.bsms-web.com',
