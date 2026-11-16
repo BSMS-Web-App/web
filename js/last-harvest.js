@@ -888,29 +888,24 @@ function openBlacksmith(){
  el.querySelectorAll('[data-pet]').forEach(btn=>btn.onclick=()=>{const id=btn.dataset.pet,P=PETS[id];if(!P)return;sfx('menu');if(state.pet&&state.pet.id===id){const lv=Math.max(1,Number(state.pet.level)||1),cost=lv*260;if(lv>=5){sfx('menu');return;}if(state.coins<cost)return;state.coins-=cost;state.pet={id,level:lv+1};contestPost({action:'save-loadout',character:state.heroClass,pet:contestPetName()});}else{if(state.coins<P.cost)return;state.coins-=P.cost;state.pet={id,level:1};contestPost({action:'save-loadout',character:state.heroClass,pet:contestPetName()});}sfx('forge');save();updateHud();el.close();openBlacksmith();});
 }
 /* ---------- item shop (city market, general store) ---------- */
-const SHOP_STOCK=[{id:'potion',cost:30,chip:'#d9534a',letter:'H'},{id:'ether',cost:26,chip:'#4a9ad9',letter:'M'},{id:'cider',cost:55,chip:'#4fa04a',letter:'G'},{id:'charm',cost:48,chip:'#d9a94e',letter:'O'},{id:'ember',cost:60,chip:'#9a6ad9',letter:'E'}];
 const SHOP_REPLENISH=45;
 function openShop(vendor){
- ensureBattleItems();
- const def=id=>BATTLE_ITEMS.find(x=>x.id===id)||{name:id,desc:'',count:1};
  const chip=(c,l)=>'<span class="lh-shop-art" style="display:grid;place-items:center;width:46px;height:46px;margin:4px 0 6px;border:3px solid #1a110c;background:'+c+';color:#fff6dc;font-size:13px">'+l+'</span>';
- const card=(name,sub,artHtml,price,attr,off)=>'<button class="lh-shop-card'+(off?' max':'')+'"'+(attr||'')+(off?' disabled':'')+'><span class="lh-shop-name">'+name+'</span><span class="lh-shop-sub">'+sub+'</span>'+artHtml+'<span class="lh-shop-price">'+price+'</span></button>';
- const items=SHOP_STOCK.map(s=>{const d=def(s.id),have=battleItemCount(s.id),poor=state.coins<s.cost;
-  return card(d.name,d.desc+' \u00B7 CARRY '+have,chip(s.chip,s.letter),s.cost+' C',' data-buy="'+s.id+'"',poor);}).join('');
- const short=SHOP_STOCK.some(s=>battleItemCount(s.id)<def(s.id).count),full=state.hp>=state.maxHp&&state.mp>=state.maxMp;
- const restock=card('REPLENISH',(short?'REFILL ITEMS TO STARTING COUNTS \u00B7 ':'')+'HEAL HP AND MP',chip('#c98b56','R'),SHOP_REPLENISH+' C',' data-restock="1"',state.coins<SHOP_REPLENISH||(full&&!short));
- const html='<div class="lh-shop"><header class="lh-shop-top"><h3>'+esc(vendor||'SHOP')+'</h3><button class="lh-shop-x" data-close aria-label="Close">\u2715</button></header>'
+ const card=(name,sub,art,price,attr,off)=>'<button class="lh-shop-card'+(off?' max':'')+'"'+(attr||'')+(off?' disabled':'')+'><span class="lh-shop-name">'+name+'</span><span class="lh-shop-sub">'+sub+'</span>'+art+'<span class="lh-shop-price">'+price+'</span></button>';
+ const items=BATTLE_ITEMS.map((it,i)=>card(it.name,it.desc+' \u00B7 CARRY '+battleItemCount(it.id),chip(ITEM_PAL[i%ITEM_PAL.length],it.name[0]),it.cost+' C',' data-buy="'+it.id+'"',state.coins<it.cost)).join('');
+ const short=BATTLE_ITEMS.some(it=>battleItemCount(it.id)<it.count),full=state.hp>=state.maxHp&&state.mp>=state.maxMp;
+ const restock=card('REPLENISH',(short?'REFILL ITEMS TO STARTING COUNTS \u00B7 ':'')+'HEAL HP AND MP',chip('#c98b56','R'),SHOP_REPLENISH+' C',' data-restock',state.coins<SHOP_REPLENISH||(full&&!short));
+ const el=ov('<div class="lh-shop"><header class="lh-shop-top"><h3>'+esc(vendor||'SHOP')+'</h3><button class="lh-shop-x" data-close aria-label="Close">\u2715</button></header>'
   +'<p class="lh-shop-coins">'+(state.coins||0)+' COINS</p>'
   +'<div class="lh-shop-grid">'+items+restock+'</div>'
-  +'<p class="lh-shop-note">Battle items are used in a fight. REPLENISH refills them to their starting counts and restores your HP and MP.</p></div>';
- const el=ov(html,'lh-shop-ov');
+  +'<p class="lh-shop-note">Battle items are used in a fight. REPLENISH refills them to their starting counts and restores your HP and MP.</p></div>','lh-shop-ov');
  el.querySelector('[data-close]').onclick=()=>{sfx('menu');el.close();};
- el.querySelectorAll('[data-buy]').forEach(btn=>btn.onclick=()=>{const s=SHOP_STOCK.find(x=>x.id===btn.dataset.buy);if(!s||state.coins<s.cost)return;
-  state.coins-=s.cost;ensureBattleItems();state.battleItems[s.id]=battleItemCount(s.id)+1;if(s.id==='potion')state.potions=state.battleItems.potion;
+ el.querySelectorAll('[data-buy]').forEach(btn=>btn.onclick=()=>{const it=BATTLE_ITEMS.find(x=>x.id===btn.dataset.buy);if(!it||state.coins<it.cost)return;
+  state.coins-=it.cost;state.battleItems[it.id]=battleItemCount(it.id)+1;if(it.id==='potion')state.potions=state.battleItems.potion;
   sfx('buy');save();updateHud();el.close();openShop(vendor);});
- el.querySelectorAll('[data-restock]').forEach(btn=>btn.onclick=()=>{if(state.coins<SHOP_REPLENISH)return;
-  state.coins-=SHOP_REPLENISH;ensureBattleItems();SHOP_STOCK.forEach(s=>{const d=def(s.id);if(battleItemCount(s.id)<d.count)state.battleItems[s.id]=d.count;});state.potions=state.battleItems.potion;
-  state.hp=state.maxHp;state.mp=state.maxMp;sfx('inn');save();updateHud();el.close();openShop(vendor);});
+ el.querySelector('[data-restock]').onclick=()=>{if(state.coins<SHOP_REPLENISH)return;
+  state.coins-=SHOP_REPLENISH;BATTLE_ITEMS.forEach(it=>{if(battleItemCount(it.id)<it.count)state.battleItems[it.id]=it.count;});state.potions=state.battleItems.potion;
+  state.hp=state.maxHp;state.mp=state.maxMp;sfx('inn');save();updateHud();el.close();openShop(vendor);};
 }
 function openTeleporter(){if(scene!=='outside'||dialogue||battle||cinematic)return;syncStageFromBeaten();sfx('teleporter');const options=[{id:'village',label:'Hearthvale Village',detail:'Return to the village square',open:true},{id:'wilds',label:'The Wildlands',detail:'Training grounds and Ranger Camp',open:!!(state.beaten&&state.beaten.north)},{id:'city',label:'Goldleaf City',detail:'The Tower and city shops',open:!!state.cityUnlocked}];for(let c=1;c<=9;c++)options.push({id:'region'+c,label:chapters[c].place,detail:'Chapter '+(c+1)+' · '+chapters[c].title,open:(Number(state.stage)||0)>=c});const menu=ov('<h3>HEARTHVALE TELEPORTER</h3><p>Choose a destination. Your journey will resume at its arrival point.</p><div class="col">'+options.map(o=>'<button class="lh-ob '+(o.open?'':'alt')+'" data-dest="'+o.id+'" '+(o.open?'':'disabled style="opacity:.42;cursor:not-allowed"')+'>'+o.label+'<br><small>'+o.detail+(o.open?'':' · LOCKED')+'</small></button>').join('')+'</div><div class="row"><button class="lh-ob alt" data-close> CLOSE </button></div>','lh-teleporter-menu');menu.querySelector('[data-close]').addEventListener('click',()=>{sfx('menu');menu.close();});menu.querySelectorAll('[data-dest]:not(:disabled)').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.dest;menu.close();teleportTo(id);}));}
  function teleportTo(id){state.teleUsed=true;save();syncStageFromBeaten();sfx('portal');if(id==='village'){if(scene==='area')leaveArea('village');else{scene='outside';AREA=null;state.x=25*TILE+16;state.y=15*TILE+56;updateHud();save();}return;}if(id==='wilds'){enterWilds();return;}if(id==='city'){enterArea('city');return;}const m=/^region(\d+)$/.exec(id);if(m){const c=Number(m[1]);if(c>=1&&c<=9&&(Number(state.stage)||0)>=c)enterRegion(c);}}
@@ -2002,12 +1997,12 @@ document.body.appendChild(el);
 el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.a)pkAct(b.dataset.a);else if(b.dataset.s!==undefined)pkSkillPick(+b.dataset.s);else if(b.dataset.i)useBattleItem(b.dataset.i);else if(b.dataset.m)pkMenu(b.dataset.m);});
 return el;}
 const BATTLE_ITEMS=[
-{id:'potion',name:'Harvest Potion',desc:'Restore 35 HP.',count:3},
-{id:'ether',name:'Moonmint Tea',desc:'Restore 8 MP.',count:2},
-{id:'cider',name:'Golden Cider',desc:'Restore 20% of your maximum HP.',count:1},
-{id:'charm',name:'Oakguard Charm',desc:'Reduce the next 2 turns of damage.',count:1},
-{id:'ember',name:'Ember Seed',desc:'Deal 28 damage to the opponent.',count:1}
-];
+{id:'potion',name:'Harvest Potion',desc:'Restore 35 HP.',count:3,cost:30},
+{id:'ether',name:'Moonmint Tea',desc:'Restore 8 MP.',count:2,cost:26},
+{id:'cider',name:'Golden Cider',desc:'Restore 20% of your maximum HP.',count:1,cost:55},
+{id:'charm',name:'Oakguard Charm',desc:'Reduce the next 2 turns of damage.',count:1,cost:48},
+{id:'ember',name:'Ember Seed',desc:'Deal 28 damage to the opponent.',count:1,cost:60}
+],ITEM_PAL=['#d9534a','#4a9ad9','#4fa04a','#d9a94e','#9a6ad9'];
 function ensureBattleItems(){state.battleItems=state.battleItems||{};BATTLE_ITEMS.forEach(it=>{if(!Number.isFinite(state.battleItems[it.id]))state.battleItems[it.id]=it.id==='potion'&&Number.isFinite(state.potions)?Math.max(0,state.potions):it.count;});if(!state.potionInventoryMigrated){state.battleItems.potion=Math.max(Number(state.battleItems.potion)||0,Number(state.potions)||0);state.potionInventoryMigrated=true;}state.potions=Math.max(0,Number(state.battleItems.potion)||0);}
  function addPotions(n){ensureBattleItems();state.battleItems.potion=Math.max(0,Number(state.battleItems.potion)||0)+Math.max(0,Number(n)||0);state.potions=state.battleItems.potion;return state.potions;}
 function battleItemCount(id){ensureBattleItems();return Math.max(0,Number(state.battleItems[id])||0);}
@@ -2666,7 +2661,7 @@ function renderRpgMenu(tab='status'){
   }else if(tab==='bag'){
     const wRow=state.heroClass==='Scout'?2:state.heroClass==='Mage'?1:0;
     const gearTier=Math.max(0,Math.min(8,Number(state.weaponTier)||0)),armorTier=Math.max(0,Math.min(8,Number(state.armorTier)||0)),gearNames={Guardian:[['Harvest Longsword','Ironroot Blade','Copperfall Greatsword','Embersteel Edge','Keeper’s Oath','Everfeast Relic','Sunforged Edge','Keeper Eternal','Mythic Harvest'],['Steel Plate Armor','Reinforced Plate','Guardian’s Bulwark','Runebound Armor','Sentinel Harness','First Keeper’s Aegis','Aegis of Dawn','Sunward Plate','Eternal Bulwark']],Scout:[['Hunter’s Longbow','Briarstring Bow','Windrunner Bow','Goldleaf Recurve','Frostfeather Bow','Wildheart Longbow','Goldleaf Warbow','Eternal Hunt','Worldroot Bow'],['Ranger Leather Armor','Hardened Trail Leathers','Thornweave Vest','Shadowstalker Gear','Frosthide Armor','Wildheart Mantle','Wildheart Garb','Moonshadow Vest','Eternal Vestment']],Mage:[['Amber Orb Staff','Moonlit Branch','Starfall Staff','Runesinger Rod','Frostglass Staff','Everfeast Scepter','Sunfall Rod','Eternal Star','Worldseed Staff'],['Spellbound Mantle','Apprentice Robes','Runesewn Robe','Stargazer Mantle','Frostweave Robe','Everfeast Vestments','Everfeast Regalia','Starlit Robe','Eternal Mantle']]},gn=gearNames[state.heroClass]||gearNames.Guardian,kit=[gn[0][gearTier]+' \u2014 weapon',gn[1][armorTier]+' \u2014 armor'];
-    const items=[...kit,...(Array.isArray(state.inventory)?state.inventory:[])],pal=['#d9534a','#4a9ad9','#4fa04a','#d9a94e','#9a6ad9'];
+    const items=[...kit,...(Array.isArray(state.inventory)?state.inventory:[])],pal=ITEM_PAL;
     const wIdx=(GEAR_W[state.heroClass]||GEAR_W.Guardian)[Math.min(8,gearTier)]??1,aIdx=(GEAR_A[state.heroClass]||GEAR_A.Guardian)[Math.min(8,armorTier)]??74;
     panel.innerHTML='<h3 class="lh-j-h">BATTLE ITEMS</h3><div class="lh-j-slots">'+BATTLE_ITEMS.map((it,i)=>'<div class="lh-j-slot"><span class="ic" style="background:'+pal[i%pal.length]+'">'+esc(it.name[0])+'</span><div><b>'+esc(it.name)+'</b><small>'+esc(it.desc)+'</small></div><em>\u00D7'+battleItemCount(it.id)+'</em></div>').join('')+'</div>'+(items.length?'<h3 class="lh-j-h">GEAR</h3><div class="lh-j-slots">'+items.map((item,idx)=>{const t=String(typeof item==='string'?item:(item.name||'Unknown item')).split(' \u2014 ');const gr=idx===0?(wIdx/12|0):idx===1?(aIdx/12|0):3,gc=idx===0?(wIdx%12):idx===1?(aIdx%12):5;return'<div class="lh-j-slot gear"><canvas class="ic" data-g="'+gr+','+gc+'" width="16" height="16"></canvas><div><b>'+esc(t[0])+'</b>'+(t[1]?'<small>'+esc(t[1].toUpperCase())+'</small>':'')+'</div></div>';}).join('')+'</div>':'');
     paintSheetIcons(panel);if(!GEAR.naturalWidth)GEAR.addEventListener('load',()=>paintSheetIcons(panel),{once:true});
