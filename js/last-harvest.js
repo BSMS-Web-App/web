@@ -508,7 +508,7 @@ function sessionId(){try{return localStorage.getItem('session_id')||localStorage
    loadout choices are mirrored to the contest API so the server keeps its own
    record of the run. Failures are silent: offline play must not break. */
 async function contestPost(payload){const sid=sessionId();if(!sid)return null;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify(payload)});if(!r.ok)return null;const d=await r.json();return d&&d.success?d:null;}catch(e){return null;}}
-function contestPetName(){return state&&state.pet&&PETS[state.pet.id]?PETS[state.pet.id].name:null;}
+function contestPetName(){return state&&state.pet&&PETS[state.pet.id]?PETS[state.pet.id].name:undefined;}
 let ACCOUNT_NAME=null,ACCOUNT_ASKED=false;
 async function accountName(){
  if(ACCOUNT_NAME!==null)return ACCOUNT_NAME;
@@ -2139,7 +2139,7 @@ while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.m
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
-if(B){state.stage=Math.max(state.stage||0,g.bi+1);contestPost({action:'complete-stage',stage:state.stage});if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
+if(B){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestPost({action:'complete-stage',stage:state.stage});if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
  const redeemed=state.rowanChoice==='forgive'||state.rowanTrust>=2;
  const mercy=state.finalChoice==='mercy';
  state.ending=redeemed?(mercy?'together':'guardian'):(mercy?'unfinished':'steadfast');

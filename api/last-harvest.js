@@ -153,7 +153,7 @@ export default async function handler(req,res){
   const body=reqBody,action=body.action;
   if(action==='save-loadout'){
    const patch={...state};
-   for(const key of ['character','sidekick','pet','equipped'])if(body[key]!==undefined)patch[key]=body[key];
+   for(const key of ['character','sidekick','pet','equipped'])if(body[key]!==undefined&&body[key]!==null)patch[key]=body[key];
    const next=cleanState(patch);
    await ref.set(next);return res.json({success:true,state:next});
   }
