@@ -17,7 +17,7 @@
     const CHECK_INTERVAL = 5000;
     const REQUEST_TIMEOUT = 3000;
     const CLOUDFLARE_CHECK_URL = 'https://cloudflare-dns.com/dns-query?name=cloudflare.com&type=A';
-    const API_ORIGIN = window.BSMS_API_ORIGIN || 'https://api.bsms-web.com';
+    const API_ORIGIN = window.BSMS_API_ORIGIN || 'https://bsms-web.com';
     const HEALTH_URL = new URL('/api/version?name=connection-monitor', API_ORIGIN).href;
 
     let checking = false;
@@ -149,7 +149,7 @@
                 showBanner(
                     'internet',
                     'No internet connection',
-                    'BSMS Web cannot reach the internet. Check your connection and try again.'
+                    'Your device cannot reach the internet. Check your connection and try again.'
                 );
             } else if (diagnosis === 'healthy') {
                 if (hadOutage && !recoveryDismissed) {
