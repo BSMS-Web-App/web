@@ -68,7 +68,7 @@ When the certificate files exist at `certs/fullchain.pem` and `certs/privkey.pem
 
 ## BSMS Web environment variables
 
-Set these in the root `.env` used by the Mac-hosted BSMS Web application API (`server.js`, normally port 4903). The existing `/js/api-origin.js` routes `/api/voice` requests through `https://dev-api.bsms-web.com`, so these values do not belong in Vercel environment settings.
+Set these in the root `.env` used by the Mac-hosted BSMS Web application API (`server.js`, normally port 4903). The browser routes `/api/voice` requests through the production application origin, `https://bsms-web.com`; the application API then connects to the Mac-hosted database API using its private server-side configuration. These values do not belong in Vercel environment settings.
 
 - `LIVEKIT_URL=wss://voice.bsms-web.com`
 - `LIVEKIT_API_KEY` — the same key configured in this LiveKit service.
