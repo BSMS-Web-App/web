@@ -1123,9 +1123,23 @@ const ChatManager = {
 
     open: function(cid) {
         try {
-            if (State.activeChannelId === cid && document.getElementById('dmBannedState').style.display !== 'flex') { 
-                if(window.innerWidth <= 768) SidebarManager.hideMobile(); 
-                return; 
+            const requestedChannel = State.channels[cid];
+            const requestedOtherUid = requestedChannel?._type === 'dms'
+                ? Object.keys(requestedChannel.members || {}).find(id => id !== State.user.uid)
+                : null;
+            const requestedTargetBanned = Boolean(
+                requestedOtherUid &&
+                requestedOtherUid !== BOT_UID &&
+                State.accountsCache[requestedOtherUid]?.account_status === 'banned'
+            );
+            const bannedScreenVisible = document.getElementById('dmBannedState')?.style.display === 'flex';
+
+            // Only skip reopening when the visible state already matches the
+            // account's current ban status. This also allows a live-open DM to
+            // switch into the unavailable screen after a sync detects a ban.
+            if (State.activeChannelId === cid && requestedTargetBanned === bannedScreenVisible) {
+                if (window.innerWidth <= 768) SidebarManager.hideMobile();
+                return;
             }
             this.close();
 
