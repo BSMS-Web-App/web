@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
-window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
-if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
-
 const BOT_UID = "bsms_web_system";
 const BOT_PFP = "https://uploads.onecompiler.io/44jajt6dm/1789516766282/bsms-web-pfp.png";
 
@@ -332,9 +328,9 @@ const PollingManager = {
                 // Dynamic UI Re-evaluation if actively open DM target gets banned
                 if (c._type === 'dms') {
                     const otherUid = Object.keys(c.members).find(id => id !== State.user.uid);
-                    if (otherUid !== BOT_UID && State.accountsCache[otherUid]?.account_status === 'banned') {
-                        ChatManager.open(State.activeChannelId); // Soft-reload to lock the UI
-                    }
+                    const shouldShowBannedState = otherUid !== BOT_UID && State.accountsCache[otherUid]?.account_status === 'banned';
+                    const isShowingBannedState = document.getElementById('dmBannedState')?.style.display === 'flex';
+                    if (shouldShowBannedState !== isShowingBannedState) ChatManager.open(State.activeChannelId);
                 }
             } else if (State.activeChannelId) {
                 ChatManager.close();
@@ -752,22 +748,28 @@ const SidebarManager = {
             }
 
             const lastM = c.lastMessage || null;
+            const dmTargetUid = c._type === 'dms' ? Object.keys(c.members || {}).find(u => u !== State.user.uid) : null;
+            const bannedDm = Boolean(dmTargetUid && dmTargetUid !== BOT_UID && State.accountsCache[dmTargetUid]?.account_status === 'banned');
+            const bannedLastSender = Boolean(lastM?.senderBanned || (lastM?.senderUid && State.accountsCache[lastM.senderUid]?.account_status === 'banned'));
             const msgCount = Number(c.messageCount || 0);
             if (msgCount === 0 && !lastM && State.activeChannelId !== id) continue;
 
             let sortTime = lastM?.timestamp || c.config?.createdAt || 0;
             let previewText = "New conversation";
             let unread = false;
-            if (lastM) {
-                if (lastM.status?.deletedByMod) previewText = "[Deleted by Moderator]";
+            if (bannedDm) {
+                previewText = "Conversation unavailable";
+            } else if (lastM) {
+                if (bannedLastSender) previewText = "Message unavailable";
+                else if (lastM.status?.deletedByMod) previewText = "[Deleted by Moderator]";
                 else if (lastM.status?.unsent) previewText = "Message unsent";
                 else if (lastM.contentType === 'audio') previewText = "Voice message";
                 else if (lastM.contentType === 'file' || lastM.contentType === 'image') previewText = "Attachment";
                 else if (lastM.contentType === 'poll') previewText = "Poll";
                 else previewText = String(lastM.content || '');
-                unread = lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true);
+                unread = !bannedLastSender && lastM.senderUid !== State.user.uid && (!lastM.readReceipts || lastM.readReceipts[State.user.uid] !== true);
             }
-            arr.push({ id, c, sortTime, preview: previewText, unread });
+            arr.push({ id, c, sortTime, preview: previewText, unread, bannedDm });
         }
 
         arr.sort((a, b) => b.sortTime - a.sortTime);
@@ -783,7 +785,11 @@ const SidebarManager = {
 
             if (c._type === 'dms') {
                 targetUid = Object.keys(c.members).find(u => u !== State.user.uid);
-                if (targetUid === BOT_UID) {
+                if (item.bannedDm) {
+                    title = "Unavailable conversation";
+                    avHtml = `<svg class="ic" style="width:22px;height:22px;fill:var(--fg2);"><use href="#ico-banned"></use></svg>`;
+                    targetUid = null;
+                } else if (targetUid === BOT_UID) {
                     title = "BSMS Web";
                     avHtml = `<img src="${BOT_PFP}">`;
                     isOfficial = true;
@@ -804,7 +810,7 @@ const SidebarManager = {
 
             const activeCls = State.activeChannelId === id ? 'active' : '';
             const unreadCls = item.unread ? 'unread' : '';
-            const dot = (c._type === 'dms' && !isOfficial) ? `<div class="status-dot ${isOnline ? 'online' : ''}"></div>` : '';
+            const dot = (c._type === 'dms' && !isOfficial && !item.bannedDm) ? `<div class="status-dot ${isOnline ? 'online' : ''}"></div>` : '';
             const badge = item.unread ? `<div class="unread-badge"></div>` : '';
             const offCls = isOfficial ? 'official' : '';
             const pfpAttr = (targetUid && !isOfficial) ? `class="c-av ${offCls} user-pfp-trigger" data-uid="${Utils.safeKey(targetUid)}" title="Click or hover to view profile"` : `class="c-av ${offCls}"`;
@@ -1113,9 +1119,23 @@ const ChatManager = {
 
     open: function(cid) {
         try {
-            if (State.activeChannelId === cid && document.getElementById('dmBannedState').style.display !== 'flex') { 
-                if(window.innerWidth <= 768) SidebarManager.hideMobile(); 
-                return; 
+            const requestedChannel = State.channels[cid];
+            const requestedOtherUid = requestedChannel?._type === 'dms'
+                ? Object.keys(requestedChannel.members || {}).find(id => id !== State.user.uid)
+                : null;
+            const requestedTargetBanned = Boolean(
+                requestedOtherUid &&
+                requestedOtherUid !== BOT_UID &&
+                State.accountsCache[requestedOtherUid]?.account_status === 'banned'
+            );
+            const bannedScreenVisible = document.getElementById('dmBannedState')?.style.display === 'flex';
+
+            // Only skip reopening when the visible state already matches the
+            // account's current ban status. This also allows a live-open DM to
+            // switch into the unavailable screen after a sync detects a ban.
+            if (State.activeChannelId === cid && requestedTargetBanned === bannedScreenVisible) {
+                if (window.innerWidth <= 768) SidebarManager.hideMobile();
+                return;
             }
             this.close();
 
@@ -1149,40 +1169,16 @@ const ChatManager = {
                 const otherAcc = State.accountsCache[otherUid] || {};
 
                 if (otherAcc.account_status === 'banned') {
-                    UI.hide('feedWrap'); UI.hide('composerWrap'); UI.hide('sysBotNotice'); UI.hide('pinnedBanner');
+                    UI.hide('feedWrap');
+                    UI.hide('composerWrap');
+                    UI.hide('sysBotNotice');
+                    UI.hide('pinnedBanner');
                     UI.show('dmBannedState');
-                    document.getElementById('dmBannedName').innerText = otherAcc.displayName || otherAcc.username || otherUid;
-
+                    if (typeof ProfileHoverManager !== 'undefined') ProfileHoverManager.hide();
+                    this.resetChatLog();
                     if (State.dmBanTimer) clearInterval(State.dmBanTimer);
-                    const timerEl = document.getElementById('dmBannedTimer');
-                    
-                    if (!otherAcc.ban_expires || otherAcc.ban_expires <= 0) {
-                        timerEl.innerText = "Permanent";
-                    } else {
-                        const updateTargetTimer = () => {
-                            const diff = otherAcc.ban_expires - Date.now();
-                            if (diff <= 0) {
-                                timerEl.innerText = "Expired (Refreshing...)";
-                                clearInterval(State.dmBanTimer);
-                                setTimeout(() => PollingManager.syncGlobal(), 1000);
-                                return;
-                            }
-                            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                            const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                            const m = Math.floor((diff / 1000 / 60) % 60);
-                            const s = Math.floor((diff / 1000) % 60);
-                            
-                            let str = [];
-                            if (d > 0) str.push(`${d}d`);
-                            if (h > 0) str.push(`${h}h`);
-                            str.push(`${m}m`);
-                            str.push(`${s}s`);
-                            timerEl.innerText = str.join(' ');
-                        };
-                        updateTargetTimer();
-                        State.dmBanTimer = setInterval(updateTargetTimer, 1000);
-                    }
-                    
+                    UI.hide('btnHideDM');
+                    UI.hide('btnGroupSettings');
                     this.updateHeader();
                     SidebarManager.render();
                     return;
@@ -1333,31 +1329,42 @@ const ChatManager = {
 
         if (c._type === 'dms') {
             const otherUid = Object.keys(c.members).find(id => id !== State.user.uid);
+            const otherAcc = State.accountsCache[otherUid] || {};
+            const isBannedDm = otherUid !== BOT_UID && otherAcc.account_status === 'banned';
             if (avWrap && avEl) {
                 avWrap.style.display = 'flex';
-                if (otherUid === BOT_UID) {
+                avWrap.removeAttribute('data-uid');
+                if (isBannedDm) {
+                    avWrap.classList.remove('user-pfp-trigger');
+                    avWrap.style.cursor = 'default';
+                    avEl.innerHTML = `<svg class="ic" style="width:24px;height:24px;fill:var(--fg2);"><use href="#ico-banned"></use></svg>`;
+                } else if (otherUid === BOT_UID) {
+                    avWrap.classList.add('user-pfp-trigger');
+                    avWrap.style.cursor = 'default';
                     avEl.innerHTML = `<img src="${BOT_PFP}">`;
-                    avWrap.removeAttribute('data-uid');
                 } else if (otherUid) {
-                    const acc = State.accountsCache[otherUid] || {};
-                    const avHtml = acc.avatar ? `<img src="${Utils.escapeHTML(acc.avatar)}">` : (acc.displayName || otherUid).charAt(0).toUpperCase();
+                    avWrap.classList.add('user-pfp-trigger');
+                    avWrap.style.cursor = 'pointer';
+                    const avHtml = otherAcc.avatar ? `<img src="${Utils.escapeHTML(otherAcc.avatar)}">` : (otherAcc.displayName || otherUid).charAt(0).toUpperCase();
                     avEl.innerHTML = avHtml;
                     avWrap.setAttribute('data-uid', otherUid);
                 }
             }
-            if (otherUid === BOT_UID) {
-                nEl.innerHTML = `BSMS Web ${Utils.getBadgesHTML(BOT_UID)}`;
-                sEl.innerText = "System Account";
+            if (isBannedDm) {
+                nEl.innerText = "Unavailable conversation";
+                sEl.innerText = "This conversation is unavailable.";
+                sEl.style.color = "var(--fg2)";
+                UI.hide('btnHideDM');
+                UI.hide('btnGroupSettings');
+                UI.hide('btnVoiceChat');
             } else {
-                const acc = State.accountsCache[otherUid] || { displayName: otherUid };
-                const nColor = Utils.nameColor(otherUid);
-                const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
-                nEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(acc.displayName || otherUid)}</span> ${Utils.getBadgesHTML(otherUid)}`;
-                
-                if (acc.account_status === 'banned') {
-                    sEl.innerText = "Account Banned";
-                    sEl.style.color = "#ef4444";
+                if (otherUid === BOT_UID) {
+                    nEl.innerHTML = `BSMS Web ${Utils.getBadgesHTML(BOT_UID)}`;
+                    sEl.innerText = "System Account";
                 } else {
+                    const nColor = Utils.nameColor(otherUid);
+                    const colorStyle = nColor ? `style="color:${Utils.escapeHTML(nColor)}; font-weight:bold;"` : '';
+                    nEl.innerHTML = `<span ${colorStyle}>${Utils.escapeHTML(otherAcc.displayName || otherUid)}</span> ${Utils.getBadgesHTML(otherUid)}`;
                     const isOnline = State.usersCache[otherUid]?.status === 'online' && (Date.now() - (State.usersCache[otherUid]?.lastSeen || 0) < 25000);
                     if (isOnline) {
                         sEl.innerText = "Online";
@@ -1367,10 +1374,11 @@ const ChatManager = {
                         sEl.style.color = "var(--fg2)";
                     }
                 }
+                UI.show('btnHideDM');
+                UI.show('btnGroupSettings');
+                UI.show('btnVoiceChat');
             }
-            UI.show('btnHideDM');
             UI.hide('btnLeaveGroup');
-            UI.show('btnGroupSettings');
             document.getElementById('activeChatInfo').classList.remove('clickable');
             document.getElementById('activeChatInfo').onclick = null;
         } else {

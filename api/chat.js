@@ -5,6 +5,7 @@
  */
 
 import { db, admin, requestMacApi } from './db.js';
+import { handleApiCors } from '../lib/api-cors.js';
 import crypto from 'crypto';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
@@ -51,6 +52,7 @@ async function getUserBySession(sessionId) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
     if (!db) return res.status(500).json({ error: "Database failed to initialize. Check environment variables." });
 

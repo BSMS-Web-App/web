@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { handleApiCors } from '../lib/api-cors.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
 async function getUserBySession(sessionId, uidHint) {
@@ -78,11 +79,7 @@ function validateGameSave(saveData) {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session-ID, X-UID');
-
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (!handleApiCors(req, res)) return;
     if (!db) return res.status(503).json({ error: 'Database unavailable.' });
 
     const sessionId = String(req.headers['x-session-id'] || req.query.sessionId || req.headers['x-device-id'] || '').trim();

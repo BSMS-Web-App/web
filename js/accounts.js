@@ -5,10 +5,6 @@
  */
 
 // Initialize standard offline checking
-window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
-window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
-if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
-
 // Establish global session ID (and primary device ID) on load if missing
 if (!localStorage.getItem('session_id')) {
     const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -74,12 +70,29 @@ async function apiFetch(endpoint, options = {}) {
         }
         
         if (!response.ok) {
-            throw new Error(data.error || `HTTP error ${response.status}`);
+            const error = new Error(data.error || `HTTP error ${response.status}`);
+            error.status = response.status;
+            error.code = response.status === 401 || response.status === 403
+                ? 'AUTHENTICATION_ERROR'
+                : response.status === 404
+                    ? 'NOT_FOUND'
+                    : response.status >= 500
+                        ? 'SERVER_ERROR'
+                        : 'HTTP_ERROR';
+            throw error;
         }
         
         return data;
     } catch (err) {
         console.error(`[BSMS Web :: API] Fetch failed for ${endpoint}:`, err);
+        if (!err.status && !err.code) {
+            const networkError = new Error(
+                err.name === 'AbortError' ? 'The request timed out.' : 'Unable to reach the server.'
+            );
+            networkError.code = err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR';
+            networkError.cause = err;
+            throw networkError;
+        }
         throw err;
     }
 }
@@ -100,11 +113,27 @@ async function fetchCloudProfile() {
             throw new Error("Invalid session data");
         }
     } catch(err) {
-        localStorage.removeItem(SESSION_KEY);
-        authSession = null;
-        handleHash();
+        // Only an explicit authentication rejection invalidates the local session.
+        // Network failures, timeouts, and server errors must never log the user out.
+        if (err && err.status === 401) {
+            localStorage.removeItem(SESSION_KEY);
+            authSession = null;
+            handleHash();
+            return;
+        }
+
+        console.warn("[BSMS Web :: Auth] Profile lookup failed; preserving the session.", err);
+        document.getElementById('initLoadingScreen')?.classList.remove('show');
+        showScreen('authScreen');
+        showAlert("BSMS Web couldn't load your account because the server is unavailable. Your session has been preserved. Try again when the connection returns.");
     }
 }
+
+window.addEventListener('bsms:connection-restored', () => {
+    if (authSession && authSession.loggedIn && !currentAccountData) {
+        fetchCloudProfile();
+    }
+});
 
 function handleHash() {
     const banScreen = document.getElementById('ban-screen');

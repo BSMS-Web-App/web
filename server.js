@@ -33,11 +33,20 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+// Public, read-only health endpoint used by the browser connection monitor.
+// This endpoint exposes no account or infrastructure details.
+app.get('/health', (_req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.status(200).json({ ok: true, service: 'bsms-web-api' });
+});
+
 // The application API runs behind Cloudflare Tunnel on the Mac mini.
 // Browser origins are explicitly allowlisted; no wildcard CORS is used.
 const allowedOrigins = new Set([
     'https://bsms-web.com',
     'https://www.bsms-web.com',
+    'https://dev1.bsms-web.com',
     'https://bsms-web.vercel.app',
     'https://bsms-web-dev2.vercel.app',
     'https://dev2.bsms-web.com',
@@ -112,6 +121,13 @@ const pageFileLimiter = rateLimit({
 // Apply CORS before body parsing and rate limiting so browser preflight requests terminate cleanly.
 app.use('/api', apiCors);
 app.use('/games/saves', apiCors);
+
+// Public, read-only health endpoint used by the global connection monitor.
+// CORS is applied above; this endpoint exposes no account or infrastructure details.
+app.get('/api/health', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.status(200).json({ ok: true, status: 'ok', service: 'bsms-web-api' });
+});
 app.use('/raw', apiCors);
 
 // Body parsers

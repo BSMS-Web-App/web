@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { handleApiCors } from '../lib/api-cors.js';
 import crypto from 'crypto';
 import { hashPassword } from './passwords.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
@@ -28,6 +29,7 @@ async function verifyStaff(sessionId) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
