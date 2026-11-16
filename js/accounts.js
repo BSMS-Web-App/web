@@ -5,10 +5,6 @@
  */
 
 // Initialize standard offline checking
-window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
-window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
-if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
-
 // Establish global session ID (and primary device ID) on load if missing
 if (!localStorage.getItem('session_id')) {
     const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
