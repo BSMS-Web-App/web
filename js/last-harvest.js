@@ -530,6 +530,25 @@ async function boardRows(){
  if(!rows||!rows.length)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
  return {rows,online,submissionsOpen,opensAt};
 }
+async function finisherBoard(){
+ const sid=sessionId();
+ if(!sid)return{rows:[],online:false,signedIn:false};
+ try{
+  const r=await fetch('/api/last-harvest?action=leaderboard',{headers:{'X-Session-ID':sid}});
+  if(r.status===401)return{rows:[],online:false,signedIn:false};
+  if(!r.ok)return{rows:[],online:false,signedIn:true};
+  const d=await r.json();
+  return{rows:(d&&d.rankings)||[],online:true,signedIn:true};
+ }catch(e){return{rows:[],online:false,signedIn:true};}
+}
+function finisherRows(rows){
+ if(!rows||!rows.length)return '<p class="lh-lb-empty">No one has finished all ten stages yet.</p>';
+ return '<ol class="lh-lb">'+rows.slice(0,20).map((r,i)=>'<li class="lh-lb-row'+(i<3?' p'+(i+1):'')+'">'
+  +'<span class="lh-lb-rank">'+(Number(r.rank)||i+1)+'</span>'
+  +'<span class="lh-lb-name">'+esc(r.displayName||'Player')+'</span>'
+  +'<span class="lh-lb-lv">'+new Date(Number(r.completedAt)||0).toLocaleDateString()+'</span>'
+  +'<span class="lh-lb-tower"><b>\u2714</b><small>CLEARED</small></span></li>').join('')+'</ol>';
+}
 function boardTable(rows,limit,who){
  if(!rows||!rows.length)return '<p class="lh-lb-empty">No climbers yet. Be the first to post a floor.</p>';
  const me=String(who||state.name||'').trim().toLowerCase(),shown=rows.slice(0,limit||20);
@@ -550,6 +569,13 @@ async function showLeaderboard(){
  const body=el.querySelector('#lb-body');if(!body)return;
  const closed=submissionsOpen===false?'<p class="note">Online scores are paused'+(opensAt?' until '+new Date(opensAt).toLocaleDateString():' now that the event has ended')+' \u2014 this run is still saved on your device.</p>':'';
  body.innerHTML=boardIdentity(who)+closed+'<p class="note">Floor scores are reported by the game client and are not server-verified.</p>'+boardTable(rows,20,who)+'<p class="note">'+(online?'Global ranking.':(who?'Saved on this device \u2014 the global board could not be reached.':'Local ranking only. Sign in to BSMS to join the global leaderboard.'))+'</p>';
+ body.insertAdjacentHTML('beforeend','<h4 class="lh-j-h">LAST HARVEST FINISHERS</h4><div id="lb-fin"><p class="note">Loading\u2026</p></div><p class="note">Recorded by the server when a player closes the tenth stage.</p>');
+ const fin=await finisherBoard(),finBox=el.querySelector('#lb-fin');
+ if(finBox){
+  if(!fin.signedIn)finBox.innerHTML='<p class="lh-lb-empty">Sign in to BSMS to see who has finished the harvest.</p>';
+  else if(!fin.online)finBox.innerHTML='<p class="lh-lb-empty">The finisher board could not be reached.</p>';
+  else finBox.innerHTML=finisherRows(fin.rows);
+ }
  if(!who){const row=el.querySelector('.row');if(row){const sb=document.createElement('button');sb.className='lh-ob alt';sb.textContent='SIGN IN TO BSMS';sb.onclick=()=>{location.href='/accounts';};row.insertBefore(sb,row.firstChild);}}
 }
 
@@ -1878,8 +1904,8 @@ if(who==='HERO')actor(x,fy,CIV,0,k);else if(who==='ROWAN')actor(x,fy,1,0,k);else
 for(let r=0;r<2;r++)for(let c=0;c<4;c++)seat(c,r,r===1&&c===1?'HERO':r===1&&c===2?'ROWAN':'',0);
 sceneTitle('HEARTHVALE SCHOOL',W,H*.05);bars(W,H);}
 let lastArea='',stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
-const BOS=loadImg(['/img/bosses.png?v=21','/img/last-harvest/bosses.png?v=21']);
-const INT=loadImg(['/img/interior.png?v=21','/img/last-harvest/interior.png?v=21']);
+const BOS=loadImg(['/img/bosses.png?v=21']);
+const INT=loadImg(['/img/interior.png?v=21']);
 let CIV=4;function applyGender(){CIV=state.gender==='girl'?8:4;}
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
 const BR={cottage:[0,0,97,92],inn:[101,0,96,106],store:[201,0,88,106],workshop:[293,0,66,81],tree:[530,0,58,76],pine:[592,0,54,72]},HOUSES=['cottage','inn','store','workshop'];
@@ -1895,7 +1921,7 @@ function monInfo(i){const g=(i/10)|0,a=i%10,boss=a===9;return{name:(boss?BOSS[g]
 function wildEncounter(){const g=Math.min(9,Math.floor(((state.level||1)-1)/2)),gg=Math.max(0,g-(Math.random()<.3?1:0)),i=gg*10+Math.floor(Math.random()*9),m=monInfo(i);return{id:'wild',wild:true,name:m.name,mi:i,hp:m.hp,atk:m.atk,reward:m.reward,win:[]};}
 function drawMon(i,x,fy,k){if(!MON.naturalWidth)return;const MC=Math.max(16,(MON.naturalWidth/10)|0);ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(Math.round(x-6*k),Math.round(fy-k),12*k,2*k);ctx.imageSmoothingEnabled=false;ctx.drawImage(MON,(i%10)*MC,((i/10)|0)*MC,MC,MC,Math.round(x-8*k),Math.round(fy-16*k),16*k,16*k);}
 
-const WLD=loadImg(['/img/last-harvest/wilds.png?v=30','/img/wilds.png?v=30']);
+const WLD=loadImg(['/img/last-harvest/wilds.png?v=30']);
 const WSP={"g0_0":[0,0,16,16],"g0_1":[16,0,16,16],"g0_2":[32,0,16,16],"g0_3":[48,0,16,16],"r0_0":[64,0,16,16],"r0_1":[80,0,16,16],"r0_2":[96,0,16,16],"wt0_0":[112,0,16,16],"wt0_1":[128,0,16,16],"tg0_0":[144,0,16,16],"tg0_1":[160,0,16,16],"g1_0":[176,0,16,16],"g1_1":[192,0,16,16],"g1_2":[208,0,16,16],"g1_3":[224,0,16,16],"r1_0":[240,0,16,16],"r1_1":[0,16,16,16],"r1_2":[16,16,16,16],"wt1_0":[32,16,16,16],"wt1_1":[48,16,16,16],"tg1_0":[64,16,16,16],"tg1_1":[80,16,16,16],"g2_0":[96,16,16,16],"g2_1":[112,16,16,16],"g2_2":[128,16,16,16],"g2_3":[144,16,16,16],"r2_0":[160,16,16,16],"r2_1":[176,16,16,16],"r2_2":[192,16,16,16],"wt2_0":[208,16,16,16],"wt2_1":[224,16,16,16],"tg2_0":[240,16,16,16],"tg2_1":[0,32,16,16],"g3_0":[16,32,16,16],"g3_1":[32,32,16,16],"g3_2":[48,32,16,16],"g3_3":[64,32,16,16],"r3_0":[80,32,16,16],"r3_1":[96,32,16,16],"r3_2":[112,32,16,16],"wt3_0":[128,32,16,16],"wt3_1":[144,32,16,16],"tg3_0":[160,32,16,16],"tg3_1":[176,32,16,16],"g4_0":[192,32,16,16],"g4_1":[208,32,16,16],"g4_2":[224,32,16,16],"g4_3":[240,32,16,16],"r4_0":[0,48,16,16],"r4_1":[16,48,16,16],"r4_2":[32,48,16,16],"wt4_0":[48,48,16,16],"wt4_1":[64,48,16,16],"tg4_0":[80,48,16,16],"tg4_1":[96,48,16,16],"bush":[0,64,16,16],"bushF":[16,64,16,16],"rockM":[32,64,16,16],"mossRock":[48,64,16,16],"boulder":[64,64,16,16],"iceRock":[80,64,16,16],"stump":[96,64,16,16],"hay":[112,64,16,16],"reeds":[128,64,16,16],"crystal":[144,64,16,16],"iceCr":[160,64,16,16],"snowM":[176,64,16,16],"flowerA":[192,64,16,16],"flowerB":[208,64,16,16],"tuft":[224,64,16,16],"mush":[240,64,16,16],"leaves":[0,80,16,16],"puddle":[16,80,16,16],"pebbles":[32,80,16,16],"bones":[48,80,16,16],"glow":[64,80,16,16],"flake":[80,80,16,16],"oak":[0,96,16,32],"maple":[16,96,16,32],"apple":[32,96,16,32],"willow":[48,96,16,32],"swampT":[64,96,16,32],"deadT":[80,96,16,32],"pine":[96,96,16,32],"spire":[112,96,16,32]};
 function wSprite(n,x,y){const r=WSP[n];if(!r||!WLD.naturalWidth)return false;ctx.imageSmoothingEnabled=false;ctx.drawImage(WLD,r[0],r[1],r[2],r[3],Math.round(x+(32-r[2]*2)/2),Math.round(y+32-r[3]*2),r[2]*2,r[3]*2);return true;}
 const KS={t:[0,0,12],f:[0,176,12],d:[0,352,12],b:[200,310,18]};
