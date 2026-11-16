@@ -384,5 +384,5 @@ html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialog
 .lh-toast{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:130;max-width:min(92vw,440px);padding:9px 13px;border:2px solid #ffd84a;border-radius:8px;background:rgba(63,26,36,.96);color:#ffe6a0;font:9px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;text-align:center;pointer-events:none;box-shadow:0 4px 0 rgba(0,0,0,.35);animation:lh-toast-in .16s ease-out}
 @keyframes lh-toast-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
 /* phone: keep the HUD name readable */
-@media(max-width:520px){.lh-hud-bars{width:70px}.lh-hud-avatar{width:40px;height:40px}.lh-hud-avatar canvas{width:28px;height:28px}.lh-hud-id b{max-width:none}}
-@media(max-width:430px){.lh-hud-id span{display:none}}
+@media(max-width:520px){.lh-hud{gap:6px;padding:6px}.lh-hud-bars{width:56px}.lh-hud-avatar{width:40px;height:40px}.lh-hud-avatar canvas{width:28px;height:28px}.lh-hud-id b{max-width:none}.lh-hud-coins{padding:5px 7px}.lh-hud .lh-menu-button{padding:6px}}
+@media(max-width:430px){.lh-hud-avatar{display:none}.lh-hud-hero{gap:0}.lh-hud-id span{display:none}}
