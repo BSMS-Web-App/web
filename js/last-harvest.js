@@ -2449,6 +2449,7 @@ if(found.act==='teleporter'){openTeleporter();return;}
  if(found.region!==undefined){enterRegion(found.region);return;}
 if(found.wilds){sfx('portal');enterWilds();return;}
 if(found.city){enterArea('city');return;}
+if(found.act==='blacksmith'){openBlacksmith();return;}
 if(found.trainer&&!state.beaten[found.trainer.id]){if(found.trainer.id==='south'&&!sentinelTrainingReady()){showTrainingGuide();return;}if(found.trainer.id==='south'&&!state.sentinelRaidSeen){state.sentinelRaidSeen=true;save();playSentinelRaid(()=>{setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));});return;}setDialogue(found.lines.map(t=>[found.name,t]),()=>startBattle(found.trainer));return;}
 if(found.name==='ELDER MAPLE'&&questStep===0){setQ(1);setDialogue([
   ['ELDER MAPLE','Ah. There you are. Do not sit on that bench \u2014 there is ash on it, and it has been there since dawn.'],
