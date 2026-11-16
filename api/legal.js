@@ -6,6 +6,7 @@
 
 import { db, requestMacApi } from './db.js';
 import { LEGAL_POLICY_VERSIONS, getLegalPolicyStatus } from './legal-policy.js';
+import { handleApiCors } from '../lib/api-cors.js';
 
 async function getAuthenticatedUser(sessionId) {
     if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 300) return null;
@@ -28,6 +29,8 @@ async function getAuthenticatedUser(sessionId) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
+
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
