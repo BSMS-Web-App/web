@@ -4,13 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 /* =========================================
-   OFFLINE & SESSION MGMT
+   SESSION MANAGEMENT
    ========================================= */
-const banner = document.getElementById('offlineBanner');
-window.addEventListener('offline', () => banner.classList.add('show'));
-window.addEventListener('online', () => banner.classList.remove('show'));
-if (!navigator.onLine) banner.classList.add('show');
-
 if (!localStorage.getItem('session_id')) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let sid = '';
@@ -134,14 +129,7 @@ function triggerMadness(clickedDogConfig) {
         hasUnleashedChaos = true;
         document.body.classList.add("chaos-bg");
         document.getElementById("classic-mode").classList.remove("active");
-        document.getElementById("chaos-mode").classList.add("active");
-        
-        banner.classList.add("comic-style"); 
-        if(!navigator.onLine) {
-           banner.innerText = "Dang! You are currently offline ✂️";
-        }
-        
-        // Make original floating dog way more jittery immediately!
+        document.getElementById("chaos-mode").classList.add("active");// Make original floating dog way more jittery immediately!
         bulldogs[0].vx *= 1.8; bulldogs[0].vy *= 1.8;
     }
 
