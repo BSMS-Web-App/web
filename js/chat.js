@@ -4,10 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
-window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
-if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
-
 const BOT_UID = "bsms_web_system";
 const BOT_PFP = "https://uploads.onecompiler.io/44jajt6dm/1789516766282/bsms-web-pfp.png";
 
