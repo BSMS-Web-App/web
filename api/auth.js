@@ -509,6 +509,7 @@ export default async function handler(req, res) {
                             followersList: followers,
                             followingList: following,
                             isFollowing,
+                            chessBadges: acc.chessBadges || {},
                             hiddenFromDirectory: acc.showInUsersList === false,
                             createdAt: acc.createdAt || null
                         });
@@ -516,6 +517,38 @@ export default async function handler(req, res) {
                 }
 
                 return res.status(200).json({ users: list, myUid });
+            }
+
+            case 'recordChessBadge': {
+                const user = legalUser || await getUserBySession(sessionId);
+                if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+
+                const ALLOWED_BADGES = new Set(['netanyahu', 'david_martinez']);
+                const incoming = [];
+                if (typeof payload.badge === 'string') incoming.push(payload.badge.trim());
+                if (Array.isArray(payload.badges)) {
+                    for (const b of payload.badges) {
+                        if (typeof b === 'string') incoming.push(b.trim());
+                    }
+                }
+                const valid = incoming.filter(b => ALLOWED_BADGES.has(b));
+                if (valid.length === 0) {
+                    return res.status(400).json({ error: 'Invalid badge identifier.' });
+                }
+
+                const existing = { ...(user.account.chessBadges || {}) };
+                const now = Date.now();
+                const updates = {};
+                for (const b of valid) {
+                    if (!existing[b]) {
+                        existing[b] = now;
+                        updates[`chessBadges/${b}`] = now;
+                    }
+                }
+                if (Object.keys(updates).length > 0) {
+                    await db.ref(`/accounts/${user.uid}`).update(updates);
+                }
+                return res.status(200).json({ success: true, chessBadges: existing });
             }
 
             case 'follow': {

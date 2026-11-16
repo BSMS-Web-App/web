@@ -25,17 +25,17 @@ export function registerWsSender(fn) {
 
 export function pushClientEvent(clientId, event) {
     if (!clientId) return;
+    if (wsSender) {
+        try {
+            if (wsSender(clientId, event) === true) return;
+        } catch {
+            // fallback to event queue if WS send failed
+        }
+    }
     const list = chessOnlineState.events.get(clientId) || [];
     list.push({ ...event, eventId: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}` });
     if (list.length > 50) list.splice(0, list.length - 50);
     chessOnlineState.events.set(clientId, list);
-    if (wsSender) {
-        try {
-            wsSender(clientId, event);
-        } catch {
-            // ignore dispatch error
-        }
-    }
 }
 
 export function drainClientEvents(clientId) {
@@ -240,6 +240,7 @@ export function getPublicLobbySnapshot(clientId) {
         draws: u.draws || 0,
         losses: u.losses || 0,
         streak: u.streak || 0,
+        badges: u.badges || {},
         online: true,
         status: u.status || 'online',
         lastSeen: u.lastSeen || Date.now()
@@ -278,6 +279,7 @@ export function processOnlineAction(action, body) {
             draws: typeof body.draws === 'number' ? body.draws : (client?.draws ?? 0),
             losses: typeof body.losses === 'number' ? body.losses : (client?.losses ?? 0),
             streak: typeof body.streak === 'number' ? body.streak : (client?.streak ?? 0),
+            badges: (body.badges && typeof body.badges === 'object') ? { ...(client?.badges || {}), ...body.badges } : (client?.badges || {}),
             status: existingStatus,
             roomId: body.roomId || existingRoomId,
             lastSeen: now
@@ -590,15 +592,81 @@ export function processOnlineAction(action, body) {
                     winner: room.winner
                 });
             }
-            room.spectators = [];
+            if (room.spectators instanceof Set) room.spectators.clear(); else room.spectators = [];
             const wClient = chessOnlineState.clients.get(room.whitePlayer?.clientId);
             if (wClient) wClient.status = 'online';
             const bClient = chessOnlineState.clients.get(room.blackPlayer?.clientId);
             if (bClient) bClient.status = 'online';
         }
+    } else if (action === 'draw:offer') {
+        const roomId = cleanRoomCode(body.roomId || client.roomId);
+        const room = chessOnlineState.rooms.get(roomId);
+        if (room && room.status === 'playing' && !room.isBotMatch) {
+            const isWhite = room.whitePlayer?.clientId === clientId;
+            const isBlack = room.blackPlayer?.clientId === clientId;
+            if (isWhite || isBlack) {
+                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
+                const fromUsername = (isWhite ? room.whitePlayer?.username : room.blackPlayer?.username) || 'Opponent';
+                if (targetId) {
+                    pushClientEvent(targetId, {
+                        type: 'draw:offered',
+                        roomId: room.roomId,
+                        fromClientId: clientId,
+                        fromUsername
+                    });
+                }
+            }
+        }
+    } else if (action === 'draw:response') {
+        const roomId = cleanRoomCode(body.roomId || client.roomId);
+        const room = chessOnlineState.rooms.get(roomId);
+        if (room && room.status === 'playing' && !room.isBotMatch) {
+            const isWhite = room.whitePlayer?.clientId === clientId;
+            const isBlack = room.blackPlayer?.clientId === clientId;
+            if (isWhite || isBlack) {
+                const targetId = isWhite ? room.blackPlayer?.clientId : room.whitePlayer?.clientId;
+                const byUsername = (isWhite ? room.whitePlayer?.username : room.blackPlayer?.username) || 'Opponent';
+                if (body.accepted) {
+                    room.status = 'finished';
+                    room.reason = 'agreement';
+                    room.winner = 'draw';
+                    room.updatedAt = now;
+                    const endPayload = {
+                        type: 'game:ended',
+                        roomId: room.roomId,
+                        reason: 'agreement',
+                        winner: 'draw'
+                    };
+                    if (room.whitePlayer?.clientId) pushClientEvent(room.whitePlayer.clientId, endPayload);
+                    if (room.blackPlayer?.clientId) pushClientEvent(room.blackPlayer.clientId, endPayload);
+                    for (const specId of ensureSpectatorList(room)) {
+                        pushClientEvent(specId, endPayload);
+                    }
+                    if (room.spectators instanceof Set) room.spectators.clear(); else room.spectators = [];
+                    const wClient = chessOnlineState.clients.get(room.whitePlayer?.clientId);
+                    if (wClient) { wClient.status = 'online'; wClient.roomId = null; }
+                    const bClient = chessOnlineState.clients.get(room.blackPlayer?.clientId);
+                    if (bClient) { bClient.status = 'online'; bClient.roomId = null; }
+                } else if (targetId) {
+                    pushClientEvent(targetId, {
+                        type: 'draw:declined',
+                        roomId: room.roomId,
+                        byUsername
+                    });
+                }
+            }
+        }
     } else if (action === 'bot_match:start') {
         for (const [rid, r] of chessOnlineState.rooms.entries()) {
             if (r.isBotMatch && r.whitePlayer?.clientId === clientId) {
+                for (const specId of ensureSpectatorList(r)) {
+                    pushClientEvent(specId, {
+                        type: 'game:ended',
+                        roomId: r.roomId,
+                        reason: 'ended',
+                        winner: 'draw'
+                    });
+                }
                 chessOnlineState.rooms.delete(rid);
             }
         }
@@ -623,6 +691,7 @@ export function processOnlineAction(action, body) {
             moves: [],
             lastBoard: body.board || null,
             lastMissile: null,
+            lastSandevistan: null,
             spectators: [],
             updatedAt: now
         };
@@ -642,6 +711,7 @@ export function processOnlineAction(action, body) {
             if (body.board) room.lastBoard = body.board;
             room.updatedAt = now;
             const nextTurn = body.turn || (room.moves.length % 2 === 0 ? 'w' : 'b');
+            room.turn = nextTurn;
             for (const specId of ensureSpectatorList(room)) {
                 pushClientEvent(specId, {
                     type: 'game:opponent_move',
@@ -665,6 +735,39 @@ export function processOnlineAction(action, body) {
                     roomId: room.roomId,
                     missileStrike: body.missileStrike || null,
                     missileDetonation: body.missileDetonation || null,
+                    board: body.board || null
+                });
+            }
+        }
+    } else if (action === 'bot_match:sandevistan') {
+        const roomId = cleanRoomCode(body.roomId || client.roomId);
+        const room = chessOnlineState.rooms.get(roomId);
+        if (room && room.isBotMatch && room.status === 'playing') {
+            room.lastSandevistan = body.sandevistanState || null;
+            if (body.turn) room.turn = body.turn;
+            room.updatedAt = now;
+            for (const specId of ensureSpectatorList(room)) {
+                pushClientEvent(specId, {
+                    type: 'spectate:sandevistan',
+                    roomId: room.roomId,
+                    sandevistanState: body.sandevistanState || null,
+                    trail: body.trail || null,
+                    turn: body.turn || null
+                });
+            }
+        }
+    } else if (action === 'bot_match:golden') {
+        const roomId = cleanRoomCode(body.roomId || client.roomId);
+        const room = chessOnlineState.rooms.get(roomId);
+        if (room && room.isBotMatch && room.status === 'playing') {
+            room.lastGolden = body.goldenState || null;
+            if (body.board) room.lastBoard = body.board;
+            room.updatedAt = now;
+            for (const specId of ensureSpectatorList(room)) {
+                pushClientEvent(specId, {
+                    type: 'spectate:golden',
+                    roomId: room.roomId,
+                    goldenState: body.goldenState || null,
                     board: body.board || null
                 });
             }
@@ -697,6 +800,11 @@ export function processOnlineAction(action, body) {
                 type: 'room:error',
                 message: 'That match has already finished or is unavailable to spectate.'
             });
+        } else if (room.whitePlayer?.clientId === clientId || (!room.isBotMatch && room.blackPlayer?.clientId === clientId)) {
+            pushClientEvent(clientId, {
+                type: 'room:error',
+                message: 'You are already playing in this match.'
+            });
         } else {
             for (const r of chessOnlineState.rooms.values()) {
                 removeSpectatorFromRoom(r, clientId);
@@ -714,8 +822,12 @@ export function processOnlineAction(action, body) {
                 botInfo: room.botInfo || null,
                 board: room.lastBoard || null,
                 moves: room.moves || [],
-                turn: (room.moves?.length || 0) % 2 === 0 ? 'w' : 'b',
+                turn: (room.lastSandevistan?.active && Date.now() < room.lastSandevistan.endsAt)
+                    ? 'b'
+                    : (room.turn || ((room.moves?.length || 0) % 2 === 0 ? 'w' : 'b')),
                 missileStrike: room.lastMissile || null,
+                sandevistanState: room.lastSandevistan || null,
+                goldenState: room.lastGolden || null,
                 spectatorCount: specCount
             });
         }
