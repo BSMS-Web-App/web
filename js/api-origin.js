@@ -3,13 +3,13 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: AGPL-3.0-only
  *
- * Routes application API requests through the production BSMS Web API.
+ * Routes application API requests through the production BSMS Web website/API origin.
  * Keep this public origin free of secrets; authentication uses session headers.
  */
 (() => {
     'use strict';
 
-    const API_ORIGIN = 'https://api.bsms-web.com';
+    const API_ORIGIN = 'https://bsms-web.com';
     const MEDIA_ORIGIN = 'https://media.bsms-web.com';
     const API_PATH = /^\/(?:api(?:\/|$)|games\/saves(?:\/|$)|raw(?:\/|$))/;
     const originalFetch = window.fetch.bind(window);
