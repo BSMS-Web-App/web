@@ -5,6 +5,7 @@
  */
 
 import { db } from './db.js';
+import { handleApiCors } from '../lib/api-cors.js';
 
 async function getUserBySession(sessionId) {
     if (!sessionId) return null;
@@ -20,6 +21,7 @@ async function getUserBySession(sessionId) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
