@@ -17,7 +17,7 @@
     const CHECK_INTERVAL = 5000;
     const REQUEST_TIMEOUT = 3000;
     const CLOUDFLARE_CHECK_URL = 'https://cloudflare-dns.com/dns-query?name=cloudflare.com&type=A';
-    const API_ORIGIN = window.BSMS_API_ORIGIN || 'https://dev-api.bsms-web.com';
+    const API_ORIGIN = window.BSMS_API_ORIGIN || 'https://api.bsms-web.com';
     const HEALTH_URL = new URL('/health', API_ORIGIN).href;
 
     let checking = false;
@@ -99,15 +99,19 @@
     }
 
     async function checkServer() {
+        // This is a reachability probe, not an API data request. no-cors lets
+        // the browser confirm that the production API host responded without
+        // requiring the API to expose diagnostic JSON to every branch origin.
+        // An opaque response still proves the host was reached, even if a
+        // proxy returns a non-JSON response.
         const response = await fetch(HEALTH_URL, {
             method: 'GET',
+            mode: 'no-cors',
             cache: 'no-store',
             credentials: 'omit',
             signal: AbortSignal.timeout(REQUEST_TIMEOUT)
         });
-        if (!response.ok) return false;
-        const data = await response.json();
-        return data.ok === true;
+        return response.type === 'opaque' || response.ok;
     }
 
     function diagnose(cloudflareUp, serverUp) {
