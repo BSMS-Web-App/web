@@ -7,8 +7,8 @@ const TILE=32,MAP_W=48,MAP_H=36;
 const P2_START='2026-11-19T12:00:00.000Z'; /* Thursday, 19 November 2026 */
 const P2_MS=Date.parse(P2_START);
 const P2_SERVANTS=[
- {name:'HOLLOW MOTHER',hp:300,atk:26,sbi:3,theme:['#1b0f22','#5a1b34','#ff7a9c'],sig:{n:'KNEADING HANDS',k:'heavy',t:'flexes hands that are not hands...'}},
- {name:'HOLLOW FATHER',hp:320,atk:24,sbi:7,theme:['#0f1a24','#1b3b5a','#7ac6ff'],sig:{n:'LANTERN GAZE',k:'multi',t:'lifts a lantern full of nothing...'}}
+ {name:'HOLLOW MOTHER',hp:270,atk:24,sbi:3,theme:['#1b0f22','#5a1b34','#ff7a9c'],sig:{n:'KNEADING HANDS',k:'heavy',t:'flexes hands that are not hands...'}},
+ {name:'HOLLOW FATHER',hp:290,atk:22,sbi:7,theme:['#0f1a24','#1b3b5a','#7ac6ff'],sig:{n:'LANTERN GAZE',k:'multi',t:'lifts a lantern full of nothing...'}}
 ];
 
 const story=[
@@ -50,12 +50,19 @@ function createFreshState(name='',heroClass='Guardian',gender){
  };
 }
 /* ---- save file version: oldest first, each step upgrades one version ---- */
-const SAVE_VERSION=3;
+const SAVE_VERSION=4;
 const SAVE_MIGRATIONS={
  /* 1 -> 2: one potion counter becomes a battle-item bag */
  1(s){if(!s.battleItems||typeof s.battleItems!=='object')s.battleItems={};if(!Number.isFinite(Number(s.battleItems.potion)))s.battleItems.potion=Math.max(0,Math.floor(Number(s.potions)||0));s.potionInventoryMigrated=true;},
  /* 2 -> 3: structure unchanged; values are clamped by sanitizeState below */
- 2(s){if(!s.battleItems||typeof s.battleItems!=='object')s.battleItems={};}
+ 2(s){if(!s.battleItems||typeof s.battleItems!=='object')s.battleItems={};},
+ /* 3 -> 4: health now grows 10/level, plus 12 per vitality and 8 per armor tier */
+ 3(s){
+  const lv=Math.max(1,Math.min(99,Math.floor(Number(s.level)||1))),vit=Math.max(0,Math.min(8,Math.floor(Number(s.vitalityTier)||0))),arm=Math.max(0,Math.min(8,Math.floor(Number(s.armorTier)||0)));
+  const floor=40+(lv-1)*10+vit*12+arm*8;
+  if(!(Number(s.maxHp)>=floor))s.maxHp=floor;
+  s.hp=Math.min(Number(s.maxHp)||floor,Math.max(1,Math.floor(Number(s.hp)||Number(s.maxHp)||floor)));
+ }
 };
 function migrateSave(s){
  if(!s||typeof s!=='object')return s;
@@ -977,7 +984,7 @@ function openBlacksmith(){
  const pets=Object.keys(PETS).map(id=>{const P=PETS[id],owned=state.pet&&state.pet.id===id,lv=owned?Math.max(1,Number(state.pet.level)||1):1,full=owned&&lv>=5,other=!!(state.pet&&state.pet.id&&state.pet.id!==id),lock=other||full;
   return card({name:'PET \u00B7 '+P.name,sub:other?('YOU ALREADY KEEP A '+PETS[state.pet.id].name):owned?('LEVEL '+lv+'/5 \u00B7 '+P.desc):(P.desc||'ADOPT'),art:monArt(P.mi),cost:other?'LOCKED':owned?lv*260:P.cost,pet:id,max:lock});}).join('');
  const wName=t=>kit.weapon[Math.min(t,kit.weapon.length-1)]||'MASTERED',aName=t=>kit.armor[Math.min(t,kit.armor.length-1)]||'MASTERED';
- const wSub=(w>=8?'MASTERED':wName(w+1))+(w>=5?' \u00B7 KEEPER\u2019S EDGE':''),aSub=(a>=8?'MASTERED':aName(a+1))+(a>=4?' \u00B7 AEGIS':'');
+ const wSub=(w>=8?'MASTERED':wName(w+1))+(w>=5?' \u00B7 KEEPER\u2019S EDGE':''),aSub=(a>=8?'MASTERED':aName(a+1))+' \u00B7 +8 MAX HP'+(a>=4?' \u00B7 AEGIS':'');
  const html='<div class="lh-shop">'
   +'<header class="lh-shop-top"><h3>SHOP</h3><button class="lh-shop-x" data-close aria-label="Close">\u2715</button></header>'
   +'<p class="lh-shop-coins">'+(state.coins||0)+' COINS</p>'
@@ -985,14 +992,14 @@ function openBlacksmith(){
   +card({name:'WEAPON',sub:wSub,art:gearArt(wRow,wCol),cost:costs.weapon,up:'weapon',max:w>=8})
   +card({name:'ARMOR',sub:aSub,art:gearArt(7,Math.min(11,a+1)),cost:costs.armor,up:'armor',max:a>=8})
   +card({name:'SKILL TRAINING',sub:'LEVEL '+k+'/8 \u00B7 +5% POWER',art:gearArt(1,7),cost:costs.skill,up:'skill',max:k>=8})
-  +card({name:'VITALITY',sub:'LEVEL '+v+'/8 \u00B7 +8 MAX HP',art:gearArt(3,8),cost:costs.vitality,up:'vitality',max:v>=8})
+  +card({name:'VITALITY',sub:'LEVEL '+v+'/8 \u00B7 +12 MAX HP',art:gearArt(3,8),cost:costs.vitality,up:'vitality',max:v>=8})
   +card({name:'FOCUS',sub:'LEVEL '+f+'/8 \u00B7 +4 MAX MP',art:gearArt(1,9),cost:costs.focus,up:'focus',max:f>=8})
   +pets
   +'</div><p class="lh-shop-note">Upgrades are permanent and saved to this device.</p></div>';
  const el=ov(html,'lh-shop-ov');
  paintSheetIcons(el);
  el.querySelector('[data-close]').onclick=()=>{sfx('menu');el.close();};
- el.querySelectorAll('[data-up]').forEach(btn=>btn.onclick=()=>{const type=btn.dataset.up,tier=type==='weapon'?w:type==='armor'?a:type==='vitality'?v:type==='focus'?f:k,cost=costs[type];if(tier>=8||state.coins<cost)return;state.coins-=cost;state[type+'Tier']=tier+1;if(type==='vitality'){state.maxHp+=8;state.hp+=8;}if(type==='focus'){state.maxMp+=4;state.mp+=4;}if(type==='armor'&&state.beaten&&state.beaten.north)state.firstArmorUpgrade=true;sfx('forge');save();updateHud();el.close();if(type==='armor'&&state.beaten&&state.beaten.north&&(Number(state.level)||1)>=3){const guide=ov('<h3>ARMOR UPGRADED!</h3><p>Your first armor upgrade is equipped. It reduces incoming damage. You have completed the Sentinel preparation lesson!</p><div class="row"><button class="lh-ob" data-ok>LET\u2019S GO</button></div>','lh-training-complete');guide.querySelector('[data-ok]').onclick=()=>{sfx('confirm');guide.close();};}else openBlacksmith();});
+ el.querySelectorAll('[data-up]').forEach(btn=>btn.onclick=()=>{const type=btn.dataset.up,tier=type==='weapon'?w:type==='armor'?a:type==='vitality'?v:type==='focus'?f:k,cost=costs[type];if(tier>=8||state.coins<cost)return;state.coins-=cost;state[type+'Tier']=tier+1;if(type==='vitality'){state.maxHp+=12;state.hp+=12;}if(type==='focus'){state.maxMp+=4;state.mp+=4;}if(type==='armor'){state.maxHp+=8;state.hp+=8;}if(type==='armor'&&state.beaten&&state.beaten.north)state.firstArmorUpgrade=true;sfx('forge');save();updateHud();el.close();if(type==='armor'&&state.beaten&&state.beaten.north&&(Number(state.level)||1)>=3){const guide=ov('<h3>ARMOR UPGRADED!</h3><p>Your first armor upgrade is equipped. It reduces incoming damage. You have completed the Sentinel preparation lesson!</p><div class="row"><button class="lh-ob" data-ok>LET\u2019S GO</button></div>','lh-training-complete');guide.querySelector('[data-ok]').onclick=()=>{sfx('confirm');guide.close();};}else openBlacksmith();});
  el.querySelectorAll('[data-pet]').forEach(btn=>btn.onclick=()=>{const id=btn.dataset.pet,P=PETS[id];if(!P)return;sfx('menu');if(state.pet&&state.pet.id===id){const lv=Math.max(1,Number(state.pet.level)||1),cost=lv*260;if(lv>=5){sfx('menu');return;}if(state.coins<cost)return;state.coins-=cost;state.pet={id,level:lv+1};contestPost({action:'save-loadout',character:state.heroClass,pet:contestPetName()});}else{if(state.coins<P.cost)return;state.coins-=P.cost;state.pet={id,level:1};contestPost({action:'save-loadout',character:state.heroClass,pet:contestPetName()});}sfx('forge');save();updateHud();el.close();openBlacksmith();});
 }
 /* ---------- item shop (city market, general store) ---------- */
@@ -2282,7 +2289,7 @@ if(a==='item'){b.busy=false;pkMenu('items');return;}
 await heroAttack(null);}
 async function pkSkill(i){const b=battle;if(!b||b.busy)return;const sk=knownSkills()[i];if(!sk||state.mp<sk.mp)return;b.busy=true;state.mp-=sk.mp;pkPanel();$b('pk-menu').innerHTML='';await heroAttack(sk);}
 async function heroAttack(sk){const b=battle,e=b.e,cls=state.heroClass,lv=state.level;
-if(!sk){const kind=cls==='Scout'?'arrow':cls==='Mage'?'magic':'melee';const crit=Math.random()<.1;let d=8+lv*2+(cls==='Guardian'?3:0)+Math.max(0,Math.min(8,Number(state.weaponTier)||0))*3+rnd(4);if(crit)d=Math.round(d*1.6);
+if(!sk){const kind=cls==='Scout'?'arrow':cls==='Mage'?'magic':'melee';const crit=Math.random()<.1;let d=8+lv*2+(cls==='Guardian'?3:0)+Math.max(0,Math.min(8,Number(state.weaponTier)||0))*4+rnd(4);if(crit)d=Math.round(d*1.6);
 await pkSay(crit?'A critical strike!':'You attack!',420);await heroStrike(kind,d,crit,cls==='Mage'?'#d29bff':'#e8d890');await pkSay('It deals '+d+' damage!',650);chargeUlt(crit?2:1);}
 else{await pkSay(sk.msg,650);
 if(sk.heal&&!sk.kind){const h=Math.round((sk.heal+(sk.per||0)*lv+Math.round(lv*2))*(1+Math.max(0,Math.min(8,Number(state.skillTier)||0))*.05));state.hp=Math.min(state.maxHp,state.hp+h);healFx(h,sk.color);pkPanel();await pkSay('You recover '+h+' HP!',800);}
@@ -2341,7 +2348,7 @@ async function pkWin(){
 await tween(B?1300:650,p=>{b.dead=p;if(B){if(Math.random()<.45)burst(G.fx+(Math.random()-.5)*G.fh*.8,G.fy-Math.random()*G.fh,9,['#ffffff','#ffd84a','#ff6a2e',bossTheme(b.e)[2]],230);if(p<.85)b.shake=Math.max(b.shake,8);}else if(p<.3)burst(G.fx,G.fy-G.fh*.5,3,['#ffffff','#ffd84a'],140);});
 b.dead=1;b.flashW=B?1:0;sfx('win');await pkSay(g.name+' was defeated!',1000);
 const reward=g.bossLike?(g.reward||0):(B?B.reward:g.reward);let xp=g.bossLike?(g.xp||0):(B?B.xp:(g.xp||40));if(g.wild){state.wildKills=(state.wildKills||0)+1;if(state.wildKills<=4)xp*=2;}state.coins+=reward;state.xp+=xp;let up=0;
-while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=6;state.maxMp+=2;state.hp=state.maxHp;up++;}
+while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=10;state.maxMp+=2;state.hp=state.maxHp;up++;}
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
