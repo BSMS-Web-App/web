@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { db } from './db.js';
+import { db, requestMacApi } from './db.js';
 import { handleApiCors } from '../lib/api-cors.js';
 import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
@@ -29,45 +29,38 @@ function validKey(value) {
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
 
-    const snap = await db.ref('/accounts').once('value');
-    const accounts = snap.val() || {};
+    // Resolve sessions through the Mac API's in-memory session index.
+    // Reading the entire /accounts tree here caused large responses and Vercel timeouts.
+    const sessionResult = await requestMacApi(
+        'GET',
+        '/v1/auth/session?sessionId=' + encodeURIComponent(sessionId)
+    );
+    if (!sessionResult?.uid) return null;
 
-    for (const [uid, account] of Object.entries(accounts)) {
-        const session = account?.sessions?.[sessionId];
-        if (!session) continue;
+    // Fetch only the matched account because announcements need staff profile,
+    // legal-acceptance, and device-session fields for authorization and attribution.
+    const accountSnap = await db.ref('/accounts/' + sessionResult.uid).once('value');
+    const account = accountSnap.val();
+    if (!account) return null;
 
-        if (account.account_status === 'deleted') return null;
+    const session = account.sessions?.[sessionId];
+    if (!session && account.creator_session_id !== sessionId) return null;
+    if (account.account_status === 'deleted' || account.account_status === 'banned') return null;
 
-        if (account.account_status === 'banned') {
-            if (account.ban_expires && Date.now() > Number(account.ban_expires)) {
-                await db.ref(`/accounts/${uid}`).update({
-                    account_status: 'active',
-                    ban_expires: null,
-                    ban_reason: null
-                });
-                account.account_status = 'active';
+    const deviceId = session?.deviceId || '';
+    if (deviceId) {
+        const deviceSnap = await db.ref('/banned_devices/' + deviceId).once('value');
+        const deviceBan = deviceSnap.val();
+        if (deviceBan) {
+            if (deviceBan.ban_expires && Date.now() > Number(deviceBan.ban_expires)) {
+                await db.ref('/banned_devices/' + deviceId).remove();
             } else {
                 return null;
             }
         }
-
-        const deviceId = session.deviceId || '';
-        if (deviceId) {
-            const deviceSnap = await db.ref(`/banned_devices/${deviceId}`).once('value');
-            const deviceBan = deviceSnap.val();
-            if (deviceBan) {
-                if (deviceBan.ban_expires && Date.now() > Number(deviceBan.ban_expires)) {
-                    await db.ref(`/banned_devices/${deviceId}`).remove();
-                } else {
-                    return null;
-                }
-            }
-        }
-
-        return { uid, account };
     }
 
-    return null;
+    return { uid: sessionResult.uid, account };
 }
 
 async function verifyStaff(sessionId) {
