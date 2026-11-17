@@ -41,8 +41,8 @@ function createFreshState(name='',heroClass='Guardian',gender){
   weaponTier:0,armorTier:0,skillTier:0,
   skills:[0],skipped:[],inventory:[],
   beaten:{},questStep:0,
-  /* a stage clear the contest API refused, kept so the next load can still record it */
-  pendingStage:null,
+  /* stage clears the contest API refused, oldest first, replayed on the next load */
+  pendingStages:[],
   cityUnlocked:false,firstWildDefeated:false,
   sentinelTrainingStarted:false,firstArmorUpgrade:false,sentinelRaidSeen:false,
   regionScenes:{},mainQuests:{},sideQuests:{},storyArcs:{},storyReactions:{},chests:{},
@@ -91,8 +91,13 @@ function sanitizeState(s){
  s.weaponTier=clampInt(s.weaponTier,0,8,0);
  s.armorTier=clampInt(s.armorTier,0,8,0);
  s.skillTier=clampInt(s.skillTier,0,8,0);
- const pend=s.pendingStage,pendStage=pend&&typeof pend==='object'?clampInt(pend.stage,0,10,0):0;
- s.pendingStage=pendStage>=1?{stage:pendStage,at:Number(pend.at)||Date.now()}:null;
+ const pendRaw=Array.isArray(s.pendingStages)?s.pendingStages:(s.pendingStage?[s.pendingStage]:[]);
+ const pendList=[];
+ for(const item of pendRaw){const st=Math.floor(Number(item&&item.stage));
+  if(!(st>=1&&st<=10)||pendList.some(p=>p.stage===st))continue;
+  pendList.push({stage:st,at:Number(item&&item.at)||Date.now()});}
+ pendList.sort((a,b)=>a.stage-b.stage);
+ s.pendingStages=pendList.slice(0,10);delete s.pendingStage;
  return s;
 }
 let resetting=false,stateRepaired=false;
@@ -579,7 +584,12 @@ async function contestPost(payload){const r=await contestPostFull(payload);retur
    server refuses is retried where it makes sense and said out loud where it does not. */
 function contestNotice(text){try{const old=document.getElementById('lh-toast');if(old)old.remove();
  const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent=text;
- document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},6500);}catch(e){}}
+ document.body.appendChild(el);
+ try{const card=document.querySelector('.lh-dialogue');const r=card&&card.getBoundingClientRect();
+  if(r&&r.height&&r.top>80){const lift=Math.round(window.innerHeight-r.top+10);
+   if(lift+el.offsetHeight<window.innerHeight-6)el.style.bottom=lift+'px';}}
+ catch(e){}
+ setTimeout(()=>{if(el.parentNode)el.remove();},6500);}catch(e){}}
 let contestPending=0;
 /* A signed-out player has no contest credit to lose, so stay quiet for them. */
 async function contestCompleteStage(stage,token){
@@ -591,7 +601,9 @@ async function contestCompleteStage(stage,token){
    const t=(stageRun&&stageRun.stage===stage)?stageRun.token:token||null;
    const r=await contestPostFull({action:'complete-stage',stage,token:t});
    if(r.status>=200&&r.status<300){
-    if(state.pendingStage&&Number(state.pendingStage.stage)<=stage){state.pendingStage=null;save();}
+    if(Array.isArray(state.pendingStages)&&state.pendingStages.length){
+     const left=state.pendingStages.filter(p=>Number(p.stage)>stage);
+     if(left.length!==state.pendingStages.length){state.pendingStages=left;save();}}
     return true;}
    if(!r.status)break;
    const code=r.body&&r.body.code,left=Number(r.body&&r.body.retryAfterMs)||60000;
@@ -607,7 +619,8 @@ async function contestCompleteStage(stage,token){
     await sleep(wait);continue;}
    break;}
   /* Keep the clear on the save: a closed tab must not cost the player the stage. */
-  if(!(state.pendingStage&&Number(state.pendingStage.stage)<=stage)){state.pendingStage={stage,at:Date.now()};save();}
+  const queue=Array.isArray(state.pendingStages)?state.pendingStages:[];
+  if(!queue.some(p=>Number(p.stage)===stage)){queue.push({stage,at:Date.now()});queue.sort((a,b)=>a.stage-b.stage);state.pendingStages=queue.slice(-10);save();}
   contestNotice('CONTEST \u00B7 STAGE '+stage+' NOT RECORDED \u2014 WILL RETRY ON NEXT LOAD');
   return false;
  }finally{contestPending=0;}}
@@ -618,15 +631,18 @@ async function contestCompleteStage(stage,token){
 /* A stage clear the API refused is replayed on the next load, once there is a
    session to replay it with. */
 async function flushPendingStage(){
- const p=state.pendingStage;
- if(!p||!p.stage||!sessionId())return;
- /* If the server already has this stage, the queue entry is stale, not owed. */
+ const queued=()=>(Array.isArray(state.pendingStages)?state.pendingStages.slice():[]).sort((a,b)=>a.stage-b.stage);
+ if(!queued().length||!sessionId())return;
+ /* Anything the server already has is stale, not owed. */
  try{const r=await fetch('/api/last-harvest',{headers:{'X-Session-ID':sessionId()}});
   if(r.ok){const d=await r.json(),srv=d&&d.state;
-   if(srv&&Number(srv.stage)>=Number(p.stage)){state.pendingStage=null;save();return;}}}
+   if(srv){const have=Number(srv.stage)||0,left=queued().filter(p=>Number(p.stage)>have);
+    if(left.length!==queued().length){state.pendingStages=left;save();}
+    if(!left.length)return;}}}
  catch(e){}
  await sleep(1200);
- await contestCompleteStage(Number(p.stage));
+ /* In order: the API only accepts the next stage, so one refusal stops the line. */
+ for(const p of queued()){if(!await contestCompleteStage(Number(p.stage)))break;}
 }
 async function syncContestState(){
  const sid=sessionId();
