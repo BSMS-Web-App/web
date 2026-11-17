@@ -742,6 +742,14 @@ const Admin = {
         this.updateAnnouncementPreview();
     },
 
+    setAnnouncementStatus: function(message, type = 'error') {
+        const status = document.getElementById('ann-form-status');
+        if (!status) return;
+        status.textContent = message || '';
+        status.dataset.type = type;
+        status.hidden = !message;
+    },
+
     togglePollBuilder: function() {
         const enabled = Boolean(document.getElementById('ann-poll-enabled')?.checked);
         const builder = document.getElementById('ann-poll-builder');
@@ -753,9 +761,10 @@ const Admin = {
         const container = document.getElementById('ann-poll-options');
         if (!container) return;
         if (container.querySelectorAll('.ann-poll-option-row').length >= 10) {
-            alert('Polls can have a maximum of 10 options.');
+            this.setAnnouncementStatus('Polls can have a maximum of 10 options.');
             return;
         }
+        this.setAnnouncementStatus('');
         const index = container.querySelectorAll('.ann-poll-option-row').length + 1;
         const row = document.createElement('div');
         row.className = 'ann-poll-option-row';
@@ -770,10 +779,11 @@ const Admin = {
         const container = document.getElementById('ann-poll-options');
         if (!container) return;
         if (container.querySelectorAll('.ann-poll-option-row').length <= 2) {
-            alert('A poll must have at least 2 answer options.');
+            this.setAnnouncementStatus('A poll must have at least 2 answer options.');
             return;
         }
         button?.closest('.ann-poll-option-row')?.remove();
+        this.setAnnouncementStatus('');
         this.updateAnnouncementPreview();
     },
 
@@ -840,8 +850,10 @@ const Admin = {
     },
 
     publishAnnouncement: async function() {
+        this.setAnnouncementStatus('');
+
         if (this.callerRole === 'mod') {
-            alert("Moderators have read-only access. Only Administrators and Owners can publish announcements.");
+            this.setAnnouncementStatus('Moderators have read-only access. Only Administrators and Owners can publish announcements.');
             return;
         }
 
@@ -849,11 +861,11 @@ const Admin = {
         const content = document.getElementById('ann-content')?.value.trim();
 
         if (!title) {
-            alert("Please enter an announcement title.");
+            this.setAnnouncementStatus('Please enter an announcement title.');
             return;
         }
         if (!content) {
-            alert("Please write the announcement content.");
+            this.setAnnouncementStatus('Please write the announcement content.');
             return;
         }
 
@@ -861,7 +873,7 @@ const Admin = {
         try {
             poll = this.collectAnnouncementPoll();
         } catch (error) {
-            alert(error.message);
+            this.setAnnouncementStatus(error.message);
             return;
         }
 
@@ -893,10 +905,10 @@ const Admin = {
             this.resetPollBuilder();
             this.updateAnnouncementPreview();
 
-            alert("Announcement published successfully! It will now appear on the homepage.");
+            this.setAnnouncementStatus('Announcement published successfully. It will now appear on the homepage.', 'success');
             this.loadAnnouncements();
         } catch (e) {
-            alert("Error publishing announcement: " + e.message);
+            this.setAnnouncementStatus('Error publishing announcement: ' + e.message);
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
