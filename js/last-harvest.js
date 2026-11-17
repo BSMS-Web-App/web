@@ -8,8 +8,8 @@ const P2_START='2026-11-19T12:00:00.000Z'; /* Thursday, 19 November 2026 */
 const P2_MS=Date.parse(P2_START);
 /* names, sprites and tells only - p2Stats() is the single source of the fight's numbers */
 const P2_SERVANTS=[
- {name:'HOLLOW MOTHER',sbi:3,theme:['#1b0f22','#5a1b34','#ff7a9c'],sig:{n:'KNEADING HANDS',k:'heavy',t:'flexes hands that are not hands...'}},
- {name:'HOLLOW FATHER',sbi:7,theme:['#0f1a24','#1b3b5a','#7ac6ff'],sig:{n:'LANTERN GAZE',k:'multi',t:'lifts a lantern full of nothing...'}}
+ {name:'HOLLOW MOTHER',sbi:10,theme:['#1b0f22','#5a1b34','#ff7a9c'],sig:{n:'KNEADING HANDS',k:'heavy',t:'flexes hands that are not hands...'}},
+ {name:'HOLLOW FATHER',sbi:11,theme:['#0f1a24','#1b3b5a','#7ac6ff'],sig:{n:'LANTERN GAZE',k:'multi',t:'lifts a lantern full of nothing...'}}
 ];
 
 const story=[
@@ -2025,7 +2025,7 @@ if(who==='HERO')actor(x,fy,CIV,0,k);else if(who==='ROWAN')actor(x,fy,1,0,k);else
 for(let r=0;r<2;r++)for(let c=0;c<4;c++)seat(c,r,r===1&&c===1?'HERO':r===1&&c===2?'ROWAN':'',0);
 sceneTitle('HEARTHVALE SCHOOL',W,H*.05);bars(W,H);}
 let lastArea='',stepper=null,alt=0,stepCount=0,turnWait=0,facing=0,walking=false,typing=false,typer=null,fullText='';
-const BOS=loadImg(['/img/bosses.png?v=21']);
+const BOS=loadImg(['/img/bosses.png?v=22']);
 const INT=loadImg(['/img/interior.png?v=21']);
 let CIV=4;function applyGender(){CIV=state.gender==='girl'?8:4;}
 const BLD=new Image();BLD.src='/img/last-harvest/buildings.png';
