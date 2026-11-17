@@ -76,7 +76,7 @@ async function getCloud() {
 }
 
 async function sync(keep = false) {
-  if (!cloud || !ready || !id) return;
+  if (!cloud || !cloudRestoreAvailable || !ready || !id) return;
   if (busy) { again = true; return; }
   busy = true;
   setSaveStatus("Saving to your account…", "saving");
@@ -235,7 +235,7 @@ async function load() {
       clearTimeout(frameLoadTimer);
       frameLoadTimer = null;
       loading.classList.add("is-hidden");
-      if (cloud) syncInterval = setInterval(() => sync(), 20000);
+      if (cloud && cloudRestoreAvailable) syncInterval = setInterval(() => sync(), 20000);
     }, { once: true });
 
     // Avoid leaving the player on an endless spinner if the document or one
