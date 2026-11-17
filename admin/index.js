@@ -746,6 +746,7 @@ const Admin = {
         const enabled = Boolean(document.getElementById('ann-poll-enabled')?.checked);
         const builder = document.getElementById('ann-poll-builder');
         if (builder) builder.hidden = !enabled;
+        this.updateAnnouncementPreview();
     },
 
     addPollOption: function() {
@@ -761,6 +762,7 @@ const Admin = {
         row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + index + '" oninput="Admin.updateAnnouncementPreview()"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
         row.querySelector('button').addEventListener('click', () => this.removePollOption(row.querySelector('button')));
         container.appendChild(row);
+        this.updateAnnouncementPreview();
         row.querySelector('input').focus();
     },
 
@@ -772,6 +774,7 @@ const Admin = {
             return;
         }
         button?.closest('.ann-poll-option-row')?.remove();
+        this.updateAnnouncementPreview();
     },
 
     collectAnnouncementPoll: function() {
