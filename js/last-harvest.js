@@ -865,10 +865,10 @@ const BIO={
 2:{g:[['t',0],['t',1],['t',0],['t',2]],tint:'rgba(255,200,70,.14)',ob:[{a:3,b:15,two:1},{a:27},{a:3,b:15,two:1},{a:5}],dec:[['f',96],['f',85],['f',6],['f',20],['f',44]]},
 3:{g:[['t',0],['t',1]],tint:'rgba(20,120,110,.38)',ob:[{a:5},{a:28},{sh:'b',a:37},{sh:'b',a:38},{sh:'b',a:36}],dec:[['f',64],['f',65]]},
 4:{g:[['d',48],['d',49],['d',50],['d',48]],tint:'rgba(40,10,70,.38)',ob:[{sh:'d',a:40},{sh:'d',a:64},{sh:'d',a:58},{sh:'d',a:28},{sh:'d',a:40},{sh:'f',a:85}],dec:[['d',113],['d',115]]},
-5:{hall:1,tint:'rgba(70,20,20,.3)',ob:[{i:[0,2,1,1]},{i:[1,2,1,1]},{i:[7,4,1,1]},{sh:'f',a:85},{i:[20,17,1,1]}],dec:[['d',113],['f',74]]},
+5:{hall:1,tint:'rgba(70,20,20,.3)',obP:.45,ob:[{i:[0,2,1,1]},{i:[1,2,1,1]},{i:[7,4,1,1]},{sh:'f',a:85},{i:[20,17,1,1]}],dec:[['d',113],['f',74]]},
 6:{g:[['t',0],['t',1],['t',2]],tint:'rgba(205,230,255,.2)',ob:[{a:4,b:16,two:1},{a:28},{a:4,b:16,two:1},{sh:'f',a:77}]},
 7:{g:[['d',0],['d',1],['d',0],['d',12]],tint:'rgba(20,0,30,.4)',ob:[{sh:'d',a:28},{sh:'d',a:40},{sh:'d',a:64},{sh:'d',a:58}]},
-8:{g:[['t',25],['t',39],['t',40],['t',25]],tint:'rgba(140,20,40,.32)',obP:.42,ob:[{sh:'f',a:79},{sh:'f',a:67},{a:28},{sh:'f',a:89}],dec:[['f',79],['f',67]]},
+8:{g:[['t',25],['t',39],['t',40],['t',25]],tint:'rgba(140,20,40,.32)',obP:.55,ob:[{sh:'f',a:79},{sh:'f',a:67},{a:28},{sh:'f',a:89}],dec:[['f',79],['f',67]]},
 9:{g:[['t',0],['t',2],['t',1]],tint:'rgba(255,220,120,.24)',ob:[{a:3,b:15,two:1},{a:5},{a:4,b:16,two:1}],dec:[['f',83],['f',8],['t',2]]}};
 const STORY={
 1:{intro:['AUTUMNWOOD FOREST. The golden leaves drift upward here, as if pointing the way.','Your mother\u2019s journal says the Keepers marked this wood with the First Seal.'],
@@ -1368,8 +1368,15 @@ function areaShadows(A,x0,y0,x1,y1,U){if(A.bio&&A.bio.hall&&!A.bio.g)return;
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*A.w+x;if(!A.solid[i])continue;
   if(y+1<A.h&&!A.solid[i+A.w])ctx.drawImage(st,x*U,y*U+U);
   if(y===0||!A.solid[i-A.w]){ctx.fillStyle='rgba(255,246,220,.10)';ctx.fillRect(x*U,y*U,U,2);}}}
+function rubbleProp(A,x,y){const U=32,cols=[(A.bio&&A.bio.rubble)||'#7d7278','#9a8f92','#5d5259'];
+ ctx.fillStyle='rgba(8,5,10,.30)';ctx.fillRect(x*U+7,y*U+23,18,4);
+ for(let i=0;i<3;i++){const r=rand(x*11+i*13+2,y*17+i*7+5),w=5+Math.floor(r*5),h=4+Math.floor(r*3);
+  const sx=x*U+7+Math.floor(rand(x*5+i+1,y*9+i+3)*11),sy=y*U+21-h-Math.floor(rand(x*3+i*2+2,y*3+i+1)*5);
+  ctx.fillStyle=cols[i%3];ctx.fillRect(sx,sy,w,h);
+  ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(sx,sy,w,1);
+  ctx.fillStyle='rgba(0,0,0,.32)';ctx.fillRect(sx,sy+h-1,w,1);}}
 function areaObstacle(A,x,y,k){const U=32;let o=A.bio.ob[k];if(!o)return;
- if(A.bio.obP!==undefined&&rand(x*7+3,y*13+5)>A.bio.obP)return;if(o.w){if(WLD.naturalWidth){wSprite(o.w,x*U,y*U);return;}o=o.fb;if(!o)return;}if(o.i){kBlock(o.i[0],o.i[1],o.i[2],o.i[3],x*U,y*U,2);return;}const sh=o.sh||'t';if(o.two){kTile(sh,o.a,x*U,(y-1)*U);kTile(sh,o.b,x*U,y*U);}else kTile(sh,o.a,x*U,y*U);}
+ if(A.bio.obP!==undefined&&rand(x*7+3,y*13+5)>A.bio.obP){rubbleProp(A,x,y);return;}if(o.w){if(WLD.naturalWidth){wSprite(o.w,x*U,y*U);return;}o=o.fb;if(!o)return;}if(o.i){kBlock(o.i[0],o.i[1],o.i[2],o.i[3],x*U,y*U,2);return;}const sh=o.sh||'t';if(o.two){kTile(sh,o.a,x*U,(y-1)*U);kTile(sh,o.b,x*U,y*U);}else kTile(sh,o.a,x*U,y*U);}
 function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000,zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;
 const cx=A.w*U<=vw?-(vw-A.w*U)/2:Math.max(0,Math.min(A.w*U-vw,areaPlayer.x-vw/2)),cy=A.h*U<=vh?-(vh-A.h*U)/2:Math.max(0,Math.min(A.h*U-vh,areaPlayer.y-vh/2));
 ctx.clearRect(0,0,W,H);px(0,0,W,H,'#0d0a14');ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(cx),-Math.floor(cy));
