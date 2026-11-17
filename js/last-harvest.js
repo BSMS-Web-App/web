@@ -236,6 +236,12 @@ const BOSS_NPC={};BOSSES.forEach((b,i)=>{if(b.name!=='ROWAN')BOSS_NPC[b.name]=i;
 
 
 const POS={'ELDER MAPLE':[12,12],'ROWAN':[21,12],'MILLIE':[16,20],'GUS':[12,24],'PIPER':[30,13]};
+/* he dies in the banquet hall: no sprite, no talk prompt and no marker afterwards */
+function dropDeadRowanFromWorld(){
+ if(!state||!state.rowanDead)return;
+ npcs=npcs.filter(n=>n.name!=='ROWAN');
+ roomNPCs.forEach(list=>{for(let i=list.length-1;i>=0;i--)if(list[i].name==='ROWAN')list.splice(i,1);});
+}
 function rebuildVillageEntities(){
  state.beaten=state.beaten||{};
  GUARDS=BASE_GUARDS.map(g=>({...g,gate:{...g.gate}}));
@@ -246,6 +252,7 @@ function rebuildVillageEntities(){
  if(p2Ready()){npcs.push({x:21*TILE+16,y:16*TILE+24,name:'MUM',act:'p2',color:'#d89aa8',lines:[]});npcs.push({x:23*TILE+16,y:16*TILE+24,name:'DAD',act:'p2',color:'#9aa8d8',lines:[]});}
  npcs.forEach(n=>{const p=POS[n.name];if(p){n.x=p[0]*TILE;n.y=p[1]*TILE;}});
  npcs.forEach(n=>{n.x=Math.round(n.x/TILE)*TILE+16;n.y=Math.round(n.y/TILE)*TILE+24;});
+ dropDeadRowanFromWorld();
 }
 function ensureSouthBossGate(){if(!state.beaten.north||state.beaten.south||GUARDS.some(g=>g.id==='south'))return;const g={id:'south',name:BOSSES[0].name,tx:16,ty:30,gate:{x:15,y:30,w:4,h:1},block:{x:15,y:26,w:4,h:5},bi:0,lines:BOSSES[0].lines,win:BOSSES[0].win};GUARDS.push(g);npcs.push({x:g.tx*TILE+16,y:g.ty*TILE+24,name:g.name,color:'#000',lines:g.lines,trainer:g});}
 function syncStageFromBeaten(){
@@ -1157,7 +1164,7 @@ function openShop(vendor){
 }
 function openTeleporter(){if(scene!=='outside'||dialogue||battle||cinematic)return;syncStageFromBeaten();sfx('teleporter');const options=[{id:'village',label:'Hearthvale Village',detail:'Return to the village square',open:true},{id:'wilds',label:'The Wildlands',detail:'Training grounds and Ranger Camp',open:!!(state.beaten&&state.beaten.north)},{id:'city',label:'Goldleaf City',detail:'The Tower and city shops',open:!!state.cityUnlocked}];for(let c=1;c<=9;c++)options.push({id:'region'+c,label:chapters[c].place,detail:'Chapter '+(c+1)+' · '+chapters[c].title,open:(Number(state.stage)||0)>=c});const menu=ov('<h3>HEARTHVALE TELEPORTER</h3><p>Choose a destination. Your journey will resume at its arrival point.</p><div class="col">'+options.map(o=>'<button class="lh-ob '+(o.open?'':'alt')+'" data-dest="'+o.id+'" '+(o.open?'':'disabled style="opacity:.42;cursor:not-allowed"')+'>'+o.label+'<br><small>'+o.detail+(o.open?'':' · LOCKED')+'</small></button>').join('')+'</div><div class="row"><button class="lh-ob alt" data-close> CLOSE </button></div>','lh-teleporter-menu');menu.querySelector('[data-close]').addEventListener('click',()=>{sfx('menu');menu.close();});menu.querySelectorAll('[data-dest]:not(:disabled)').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.dest;menu.close();teleportTo(id);}));}
  function teleportTo(id){state.teleUsed=true;save();syncStageFromBeaten();sfx('portal');if(id==='village'){if(scene==='area')leaveArea('village');else{scene='outside';AREA=null;state.x=25*TILE+16;state.y=15*TILE+56;updateHud();save();}return;}if(id==='wilds'){enterWilds();return;}if(id==='city'){enterArea('city');return;}const m=/^region(\d+)$/.exec(id);if(m){const c=Number(m[1]);if(c>=1&&c<=9&&(Number(state.stage)||0)>=c)enterRegion(c);}}
-function startArea(A,tx,ty){AREA=A;
+function startArea(A,tx,ty){AREA=A;if(state.rowanDead&&A&&Array.isArray(A.npcs))A.npcs=A.npcs.filter(n=>n.name!=='ROWAN');
 /* Entering the chapter is when the stage run starts, so the server's clock covers
    the chapter you actually have to play rather than the moment the page loaded. */
 if(A&&A.chapter&&A.chapter===Number(state.stage||0)+1&&!(stageRun&&stageRun.stage===A.chapter))contestStartStage(A.chapter);
@@ -1981,7 +1988,7 @@ function clueTargetBuilding(){const have=(state.clues||[]).map(String);for(let i
 function questTarget(){
  if(scene==='inside')return null;
  if(scene==='outside'){
-  const step=Math.max(0,Number(questStep)||0),elder={x:16*TILE+16,y:12*TILE+24,label:'ELDER MAPLE'};
+  const step=Math.max(0,Number(questStep)||0),elder={x:16*TILE+16,y:12*TILE+24,label:state.rowanDead?'CLUES':'ELDER MAPLE'};
   if(step<=1)return elder;
   if(step===2){const i=clueTargetBuilding();if(i<0)return elder;const d=VILLAGE_DOORS[i];return{x:d[0]*TILE,y:d[1]*TILE,label:'CLUE'};}
   if(step===3)return elder;
@@ -2575,7 +2582,7 @@ while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.m
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
-if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestCompleteStage(state.stage);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);if(g.bi===5&&!state.rowanDead){state.rowanDead=true;save();}
+if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestCompleteStage(state.stage);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);if(g.bi===5&&!state.rowanDead){state.rowanDead=true;save();dropDeadRowanFromWorld();}
 const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.push(..._ep);}else {
  state.ending=state.wish||'refuse';
  const endings={
@@ -3011,7 +3018,7 @@ cinematic=null;document.body.classList.remove('lh-cinematic');scene='outside';st
 
 function areaName(){if(scene==='area'&&AREA)return AREA.routeName||AREA.name;return(state.stage>0&&state.y>=31*TILE)?chapters[Math.min(state.stage,9)].place:chapters[0].place;}
 function updateQuest(){if(questStep===2&&(state.clues||[]).length>=4){questStep=3;state.questStep=3;save();}state.sideQuests=state.sideQuests||{};if(scene==='area'&&AREA&&AREA.trap){const left=3-trapSealsDone();$('lh-quest-text').textContent=left?'Break the seals of the Gilded Snare · '+left+' remaining':'The doors are open · Walk to the western door';return;}const active=Object.entries(state.sideQuests).find(([id,q])=>q&&q.accepted&&!q.done);if(state.beaten&&state.beaten.north&&!state.beaten.south){$('lh-quest-text').textContent=sentinelTrainingReady()?'Return to the south road and challenge the Pumpkin Sentinel':'Training for the Pumpkin Sentinel · '+trainingHint();return;}if(scene==='area'&&AREA&&AREA.chapter&&!state.beaten['boss'+AREA.chapter]&&!mainQuestReady(AREA.chapter)){const q=mainQuestData(AREA.chapter);$('lh-quest-text').textContent='Chapter '+(AREA.chapter+1)+' trial · Talk to '+(q.talked||[]).length+'/2 locals · Defeat '+(q.kills||0)+'/3 creatures';return;}if(state.beaten&&state.beaten.south){syncStageFromBeaten();const next=currentTargetChapter();$('lh-quest-text').textContent=next>=BOSSES.length?'Hearthvale is saved!':'Defeat the '+BOSSES[next].name+' in '+chapters[next].place;return;}const storyActive=Object.entries(state.storyArcs||{}).find(([id,q])=>q&&!q.done);if(storyActive){const names={market_truth:'A Name Left Behind',frost_lanterns:'Lanterns for the Lost',fortress_oath:'The Oath Beneath the Gate'};$('lh-quest-text').textContent=names[storyActive[0]]+(storyActive[1].stage===2?' · Return to the quest giver':' · Find the next character');return;}if(active){const labels={woodland:'Hunter’s Request',orchard:'Last Good Apples',pantry:'A Light Below'};$('lh-quest-text').textContent=labels[active[0]]+' · '+(active[1].kills||0)+'/3 wild creatures';return;}if((questStep||0)>=4&&!(state.beaten&&state.beaten.south)){$('lh-quest-text').textContent=state.beaten&&state.beaten.north?'Hunt monsters in the Wildlands (north road), then face the south road':'Defeat Gatekeeper Brawn to open the Wildlands (north road)';return;}
-const q=['Speak with Elder Maple','Visit Rowan in the village square',(state.clues&&state.clues.length?'Search the village for clues · '+state.clues.length+'/4 found':'Enter a building and search for clues'),'Return to Elder Maple with what you found','Follow the golden leaves \u00B7 use the teleporter by the market'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
+const q=['Speak with Elder Maple',state.rowanDead?'Search the village for clues':'Visit Rowan in the village square',(state.clues&&state.clues.length?'Search the village for clues · '+state.clues.length+'/4 found':'Enter a building and search for clues'),'Return to Elder Maple with what you found','Follow the golden leaves \u00B7 use the teleporter by the market'];$('lh-quest-text').textContent=q[Math.min(questStep,q.length-1)];}
 function drawAvatarTo(cv){if(!cv||!CHARS.naturalWidth)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,16,16);c.drawImage(CHARS,0,((cinematic&&cinematic.phase!=='outside')?CIV:heroRow())*16,16,16,0,0,16,16);const wt=Math.max(0,Math.min(8,Number(state.weaponTier)||0)),at=Math.max(0,Math.min(8,Number(state.armorTier)||0));if(wt>0){c.fillStyle=GEAR_COL[wt];c.fillRect(13,6,2,7);}if(at>0){c.globalAlpha=.55;c.fillStyle=GEAR_COL[at];c.fillRect(5,8,6,2);c.globalAlpha=1;}}
 CHARS.addEventListener('load',()=>drawAvatarTo($('lh-hud-avatar')));
 function updateHud(){const mh=state.maxHp||40,mm=state.maxMp||20,mp=state.mp??mm,hp=Math.max(0,state.hp);
