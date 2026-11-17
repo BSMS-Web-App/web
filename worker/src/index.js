@@ -84,11 +84,17 @@ async function readToken(token, secret) {
  * for authentication; destination HTML/images are fetched separately below
  * by the Worker runtime and are never relayed through the Mac.
  */
-async function dbGet(env, path) {
-  const base = (env.BSMS_WEB_API_URL || "").replace(/\\/+$/, "");
+async function accountValid(env, uid, sid) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid) ||
+      typeof sid !== "string" || sid.length < 16 || sid.length > 300) return false;
+
+  const base = (env.BSMS_WEB_API_URL || "").replace(/\/+$/, "");
   if (!base || !env.BSMS_WEB_API_KEY) throw Error("Account verification is not configured");
+
+  // Use the Mac API's narrow session-validation endpoint. Do not retrieve
+  // the full account record or its private fields into the Worker.
   const response = await fetch(
-    base + "/v1/db?path=" + encodeURIComponent(path),
+    base + "/v1/auth/session?sessionId=" + encodeURIComponent(sid),
     {
       headers: {
         Authorization: "Bearer " + env.BSMS_WEB_API_KEY,
@@ -98,29 +104,14 @@ async function dbGet(env, path) {
     }
   );
   if (!response.ok) throw Error("Account verification service unavailable");
-  const data = await response.json();
-  return data.value ?? null;
-}
 
-async function accountValid(env, uid, sid) {
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid) ||
-      typeof sid !== "string" || sid.length < 16 || sid.length > 300) return false;
-
-  const account = await dbGet(env, "/accounts/" + uid);
-  const hasSession = Boolean(
-    account &&
-    (
-      (account.sessions && Object.prototype.hasOwnProperty.call(account.sessions, sid)) ||
-      account.creator_session_id === sid
-    )
-  );
-
+  const result = await response.json();
   return Boolean(
-    hasSession &&
-    account.account_status !== "banned" &&
-    account.account_status !== "deleted" &&
-    account.legalAcceptance?.terms?.version === "1.0.1" &&
-    account.legalAcceptance?.privacy?.version === "1.0.2"
+    result.authenticated === true &&
+    result.uid === uid &&
+    result.account &&
+    result.account.account_status !== "banned" &&
+    result.account.account_status !== "deleted"
   );
 }
 
