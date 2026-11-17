@@ -153,10 +153,13 @@ function rewriteGameHtml(html, base) {
   if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + bridge);
   else html = bridge + html;
 
-  if (base) {
+  // Keep the base URL supplied by the game itself. It points to the exact
+  // asset directory/version and is more reliable than guessing from a thumbnail.
+  // Only inject a fallback when the source HTML has no base element.
+  if (base && !/<base\b[^>]*>/i.test(html)) {
     const baseTag = '<base href="' + base.replace(/"/g, "&quot;") + '">';
-    if (/<base\b[^>]*>/i.test(html)) html = html.replace(/<base\b[^>]*>/i, baseTag);
-    else if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + baseTag);
+    if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + baseTag);
+    else html = baseTag + html;
   }
   return html;
 }
@@ -215,7 +218,12 @@ async function load() {
       if (cloud) syncInterval = setInterval(() => sync(), 20000);
     }, { once: true });
 
-    frame.srcdoc = rewriteGameHtml(html, assetBase(game.image));
+    // Prefer the exact base URL embedded in the source HTML. If it is absent,
+    // use the catalog image directory as a fallback, then the launch file's folder.
+    const launchDirectory = sourceUrl.pathname.slice(0, sourceUrl.pathname.lastIndexOf("/") + 1);
+    const launchBase = ASSET_ORIGIN + "/game-assets/55gms/55GMS/main" + launchDirectory;
+    const fallbackBase = assetBase(game.image) || launchBase;
+    frame.srcdoc = rewriteGameHtml(html, fallbackBase);
   } catch (error) {
     console.error("[BSMS Web :: Game Player]", error);
     showError(error.message);
