@@ -387,3 +387,24 @@ html,body,#lh-game,#lh-world,#lh-dialogue,#lh-dialogue *,.lh-dialogue,.lh-dialog
 /* phone: keep the HUD name readable */
 @media(max-width:520px){.lh-hud{gap:4px;padding:5px}.lh-hud-bars{width:56px}.lh-hud-avatar{width:40px;height:40px}.lh-hud-avatar canvas{width:28px;height:28px}.lh-hud-id b{max-width:none}.lh-hud-coins{padding:4px 6px}.lh-hud .lh-menu-button{padding:5px}}
 @media(max-width:430px){.lh-hud-avatar{display:none}.lh-hud-hero{gap:0}.lh-hud-sub{display:none}.lh-lvl-chip{display:block}}
+
+/* ---------- boot loading screen and title arrival ---------- */
+.lh-loading{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:26px;text-align:center;font-family:"Press Start 2P",ui-monospace,monospace;color:#fff4d8;background:radial-gradient(circle at 50% 38%,#2f5744,#17251c 74%);transition:opacity .55s ease}
+.lh-loading.out{opacity:0;pointer-events:none}
+.lh-loading-in{width:min(88vw,430px);animation:lh-load-in .7s ease-out both}
+.lh-loading-eyebrow{margin:0 0 18px;font-size:7px;letter-spacing:.2em;color:#8fd9ae}
+.lh-loading-title{margin:0;font-size:clamp(17px,4.4vw,26px);line-height:1.4;text-shadow:3px 3px #0d1913}
+.lh-loading-title span{color:#f1ca77}
+.lh-loading-bar{position:relative;height:16px;margin:26px 0 14px;border:3px solid #d2a65a;background:#0f1c16;box-shadow:inset 0 0 0 2px #2b4232;overflow:hidden}
+.lh-loading-bar i{display:block;width:8%;height:100%;background:linear-gradient(#f4dc9c,#c98f3d);box-shadow:0 0 12px #f8d48970;transition:width .22s linear}
+.lh-loading-bar:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,#ffffff55,transparent);transform:translateX(-100%);animation:lh-shimmer 1.6s linear infinite}
+.lh-loading-note{margin:0;min-height:10px;font-size:7px;letter-spacing:.16em;color:#bdd7c0}
+@keyframes lh-load-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes lh-shimmer{to{transform:translateX(100%)}}
+#lh-title.enter{animation:lh-title-in .8s ease-out}
+#lh-title.enter canvas{animation:lh-title-zoom .9s ease-out}
+@keyframes lh-title-zoom{from{transform:scale(1.05)}to{transform:none}}
+#lh-title.press .lh-title-menu{animation:lh-menu-in .35s ease-out both}
+@keyframes lh-title-in{from{opacity:0}}
+@keyframes lh-menu-in{from{opacity:0}}
+@media(prefers-reduced-motion:reduce){.lh-loading,.lh-loading-in,.lh-loading-bar:after,#lh-title.enter,#lh-title.enter canvas,#lh-title.press .lh-title-menu{animation:none!important;transition:none!important}}

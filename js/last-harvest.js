@@ -179,7 +179,8 @@ rebuildVillageEntities();
 state.x=Math.floor(state.x/TILE)*TILE+16;state.y=Math.floor(state.y/TILE)*TILE+24;
 spawnLair();
 /* ================= v10 SYSTEMS: art loading, audio, title, skills, regions, city, tower, leaderboard ================= */
-function loadImg(list){const im=new Image();let i=0;im.onerror=()=>{if(++i<list.length)im.src=list[i];};im.src=list[0];return im;}
+let bootDone=false;const BOOT_TRACK=[];
+function loadImg(list){const im=new Image();if(!bootDone)BOOT_TRACK.push(im);let i=0;im.onerror=()=>{if(++i<list.length)im.src=list[i];};im.src=list[0];return im;}
 const VIL=loadImg(['/img/last-harvest/village.png?v=21']);
 const VR={cottage:[0,0,112,80],inn:[120,0,128,80],store:[256,0,128,80],workshop:[0,90,80,64],house1:[100,90,80,64],house2:[190,90,80,64],house3:[280,90,96,64],tower:[380,0,96,144],fountain0:[0,180,64,40],fountain1:[70,180,64,40],journal:[150,180,16,16]};
 function drawFountainSprite(){if(!VIL.naturalWidth)return;const r=VR['fountain'+(Math.floor(performance.now()/380)%2)];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*TILE-16,14*TILE-r[3]*2+4,r[2]*2,r[3]*2);}
@@ -611,11 +612,25 @@ async function towerEnd(f){AREA=getCity();scene='area';stepper=null;resetRoamers
  const el=ov('<h3>TOWER RESULT</h3><p>You reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
  el.querySelector('#tr-x').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tr-b').onclick=()=>{el.close();showLeaderboard();};}
 
+function bootScreen(){
+ const ov=$('lh-loading');if(!ov)return Promise.resolve();
+ const fill=$('lh-loading-fill'),note=$('lh-loading-note'),t0=performance.now();
+ const imgs=BOOT_TRACK,total=Math.max(1,imgs.length);
+ const paint=()=>{let done=0;for(let i=0;i<imgs.length;i++)if(imgs[i].complete)done++;const p=Math.min(1,done/total);if(fill)fill.style.width=(8+p*92).toFixed(1)+'%';return p;};
+ paint();
+ const settle=imgs.filter(im=>!im.complete).map(im=>new Promise(r=>{im.addEventListener('load',r,{once:true});im.addEventListener('error',r,{once:true});}));
+ const fonts=(document.fonts&&document.fonts.ready)?document.fonts.ready.catch(()=>{}):Promise.resolve();
+ const progress=new Promise(r=>{const iv=setInterval(()=>{if(paint()>=1){clearInterval(iv);r();}},110);setTimeout(()=>{clearInterval(iv);r();},6000);});
+ const ready=Promise.all([Promise.all(settle),fonts,progress]);
+ return Promise.race([ready,new Promise(r=>setTimeout(r,6500))])
+  .then(()=>new Promise(r=>setTimeout(r,Math.max(0,650-(performance.now()-t0)))))
+  .then(()=>{if(note)note.textContent='WELCOME TO HEARTHVALE';ov.classList.add('out');return new Promise(r=>setTimeout(()=>{ov.remove();r();},560));});
+}
 async function fillTitleBoard(){const {rows}=await boardRows();const who=await accountName();const b=$('lh-title-board');if(!b||!rows||!rows.length)return;
  b.hidden=false;b.innerHTML='<b class="tb-h">TOP CLIMBERS \u00B7 TOWERS</b>'+rows.slice(0,3).map((r,i)=>'<span class="tb-r"><i>'+(i+1)+'</i><span class="tb-n">'+esc(r.displayName||r.name||'Adventurer')+'</span><em>'+Math.max(0,Number(r.floor)||0)+'</em></span>').join('')+(who?'<span class="tb-you">YOU \u00B7 '+esc(who)+'</span>':'');}
 /* ---------- title screen ---------- */
 let titleOpen=false;
-function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro';setTimeout(()=>el.classList.remove('intro'),1700);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div><div class="lh-title-board" id="lh-title-board" hidden></div>';document.body.appendChild(el);
+function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro enter';setTimeout(()=>el.classList.remove('intro'),1700);setTimeout(()=>el.classList.remove('enter'),900);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div><div class="lh-title-board" id="lh-title-board" hidden></div>';document.body.appendChild(el);
  const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
  let sel=0;const menu=$b('lh-title-menu');const render=()=>{menu.innerHTML=items.map((it,i)=>'<button class="lh-tbtn'+(i===sel?' sel':'')+'" data-i="'+i+'">'+it[0]+'</button>').join('');};render();
  function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();musicTick(true);}
@@ -2709,5 +2724,5 @@ initSfx();initRows();addEventListener('pagehide',save);document.addEventListener
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
 {/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore)save();
-{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();if(skip)startNaming();else showTitle(hasSave);}
+{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);});}
 })();
