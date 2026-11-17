@@ -256,6 +256,10 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 .lh-story-choices{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 2px 78px;position:relative;z-index:4}
 .lh-story-choices .lh-gold-button{white-space:normal;text-align:left;min-height:42px;padding:8px 12px;cursor:pointer}
 @media(max-width:700px){.lh-story-choices{margin-left:0;display:grid;grid-template-columns:1fr}.lh-story-choices .lh-gold-button{width:100%}}
+/* .lh-dialogue button{display:none} above would swallow the story choices, which are
+   buttons inside the dialogue box - the Rowan / Hollow King decisions were invisible. */
+.lh-dialogue .lh-story-choices .lh-gold-button{display:block}
+.lh-dialogue:has(.lh-story-choices):after{content:none!important;animation:none!important}
 
 /* ===================== v30: new top bar + Field Journal ===================== */
 :root{--lh-top:calc(env(safe-area-inset-top,0px) + 8px);--ink:#3a2418}

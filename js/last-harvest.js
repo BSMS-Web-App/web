@@ -6,9 +6,10 @@ const TILE=32,MAP_W=48,MAP_H=36;
 /* ---- PHASE TWO: the Hollow Servants (unlocks Thursday, epilogue only) ---- */
 const P2_START='2026-11-19T12:00:00.000Z'; /* Thursday, 19 November 2026 */
 const P2_MS=Date.parse(P2_START);
+/* names, sprites and tells only - p2Stats() is the single source of the fight's numbers */
 const P2_SERVANTS=[
- {name:'HOLLOW MOTHER',hp:270,atk:24,sbi:3,theme:['#1b0f22','#5a1b34','#ff7a9c'],sig:{n:'KNEADING HANDS',k:'heavy',t:'flexes hands that are not hands...'}},
- {name:'HOLLOW FATHER',hp:290,atk:22,sbi:7,theme:['#0f1a24','#1b3b5a','#7ac6ff'],sig:{n:'LANTERN GAZE',k:'multi',t:'lifts a lantern full of nothing...'}}
+ {name:'HOLLOW MOTHER',sbi:3,theme:['#1b0f22','#5a1b34','#ff7a9c'],sig:{n:'KNEADING HANDS',k:'heavy',t:'flexes hands that are not hands...'}},
+ {name:'HOLLOW FATHER',sbi:7,theme:['#0f1a24','#1b3b5a','#7ac6ff'],sig:{n:'LANTERN GAZE',k:'multi',t:'lifts a lantern full of nothing...'}}
 ];
 
 const story=[
