@@ -2111,6 +2111,11 @@ function drawRegionScene(W,H){
  ctx.fillStyle='#08080c';ctx.fillRect(0,0,W,H*.085);ctx.fillRect(0,H*.915,W,H*.085);ctx.textAlign='center';ctx.font='bold '+Math.max(12,Math.min(22,W/28))+'px "Press Start 2P",monospace';ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillText(chapters[c].place.toUpperCase(),W/2+2,H*.145+2);ctx.fillStyle=pal[2];ctx.fillText(chapters[c].place.toUpperCase(),W/2,H*.145);
  if(cinematic.flash>0){ctx.fillStyle='rgba(255,245,210,'+cinematic.flash+')';ctx.fillRect(0,0,W,H);cinematic.flash=Math.max(0,cinematic.flash-.045);}
 }
+/* Rowan dies in the Broken Banquet Hall: later chapters cannot stage him beside you */
+function noRowan(lines){
+ if(!lines||!state.rowanDead||!lines.some(l=>l[0]==='ROWAN'))return lines;
+ return [['JOURNAL','You catch yourself turning to say something to him, and there is nobody there.'],...lines.filter(l=>l[0]!=='ROWAN')];
+}
 const REGION_CUTSCENES = {
 2: {title:'THE ORCHARD REMEMBERS', lines:[['ROWAN','This place used to smell like cinnamon and apples. Your mother brought us here every autumn.'],['YOU','I remember. She said every tree had a story.'],['ROWAN','Then look. That tree has the same golden mark as her journal.']], after:[['JOURNAL','A warm light gathers beneath the oldest tree.'],['MARA','If you are seeing this, do not mistake a broken harvest for a broken home.'],['THOMAS','The people who care for one another are the roots.'],['YOU','They left this for me.'],['ROWAN','Then we keep following. Together.']]},
 3: {title:'THE PANTRY OF MEMORIES', lines:[['ROWAN','These jars are labeled with dates. One has the day we first met.'],['YOU','We hid here during the thunderstorm.'],['ROWAN','You said we should leave a lantern for anyone who was scared.']], after:[['JOURNAL','A jar glows blue. Inside is a tiny lantern and a note.'],['THOMAS','A promise is not a chain. It is a light we choose to carry.'],['ROWAN','I wish I could ask my mother what she would have done.'],['YOU','We will find the answers.']]},
@@ -2125,8 +2130,9 @@ function playRegionIntro(c){
  const data=STORY[c]||{intro:[],npcs:[]};
  state.regionScenes=state.regionScenes||{};
  if(state.regionScenes[c])return;
- const first=c===1&&!state.rowanWoodsScene,sceneData=REGION_CUTSCENES[c],guide=data.npcs.length?data.npcs[0][0]:'JOURNAL';
- cinematic={phase:'region',chapter:c,zoom:0,panX:0,flash:.85,actors:{HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0},ROWAN:{x:innerWidth*.72,y:innerHeight*.78,face:2,step:0}}};
+ const first=c===1&&!state.rowanWoodsScene,rawScene=REGION_CUTSCENES[c],sceneData=rawScene&&state.rowanDead?{...rawScene,lines:noRowan(rawScene.lines),after:noRowan(rawScene.after)}:rawScene,guide=data.npcs.length?data.npcs[0][0]:'JOURNAL';
+ const cast={HERO:{x:innerWidth*.28,y:innerHeight*.78,face:3,step:0}};if(!state.rowanDead)cast.ROWAN={x:innerWidth*.72,y:innerHeight*.78,face:2,step:0};
+ cinematic={phase:'region',chapter:c,zoom:0,panX:0,flash:.85,actors:cast};
  document.body.classList.add('lh-cinematic');
  const say=items=>new Promise(resolve=>setDialogue(items,resolve));
  const walk=(name,to,duration=720)=>new Promise(resolve=>{
@@ -2145,11 +2151,11 @@ function playRegionIntro(c){
    state.rowanWoodsScene=true;
   } else if(sceneData) {
    await say([['JOURNAL',sceneData.title],...sceneData.lines]);
-   await Promise.all([walk('HERO',{x:.43,y:.73},850),walk('ROWAN',{x:.57,y:.73},850)]);
+   if(state.rowanDead)await walk('HERO',{x:.5,y:.73},850);else await Promise.all([walk('HERO',{x:.43,y:.73},850),walk('ROWAN',{x:.57,y:.73},850)]);
    await say(sceneData.after);
   } else {
    await say(data.intro.map(t=>['JOURNAL',t]));
-   await walk('ROWAN',{x:.59,y:.74},620);
+   if(!state.rowanDead)await walk('ROWAN',{x:.59,y:.74},620);
    await say([[guide,'I have been waiting for someone who could follow the Keepers’ trail. The path ahead will not be easy.'],['YOU','We did not come this far to turn back. Tell us what happened here.']]);
   }
   state.regionScenes[c]=true;save();cinematic=null;document.body.classList.remove('lh-cinematic');
@@ -2443,7 +2449,7 @@ function p2Approach(){
  ],()=>startBattle(p2Foe()));
 }
 function p2End(won){
- if(!won){setDialogue([['ROWAN','They leave you face-down in the square. Whatever they are, they were holding back.'],['JOURNAL','Talk to them again when you are ready.']]);return;}
+ if(!won){setDialogue([...(state.rowanDead?[['JOURNAL','You come to on the cobbles, alone. Whatever they are, they were holding back.']]:[['ROWAN','They leave you face-down in the square. Whatever they are, they were holding back.']]),['JOURNAL','Talk to them again when you are ready.']]);return;}
  state.p2Done=true;save();updateHud();
  setDialogue([
   ['HOLLOW MOTHER','So that is what a heart feels like. It is very loud.'],
