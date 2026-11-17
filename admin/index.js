@@ -758,7 +758,7 @@ const Admin = {
         const index = container.querySelectorAll('.ann-poll-option-row').length + 1;
         const row = document.createElement('div');
         row.className = 'ann-poll-option-row';
-        row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + index + '"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
+        row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + index + '" oninput="Admin.updateAnnouncementPreview()"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
         row.querySelector('button').addEventListener('click', () => this.removePollOption(row.querySelector('button')));
         container.appendChild(row);
         row.querySelector('input').focus();
@@ -802,7 +802,7 @@ const Admin = {
             for (let i = 1; i <= 2; i++) {
                 const row = document.createElement('div');
                 row.className = 'ann-poll-option-row';
-                row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + i + '"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
+                row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + i + '" oninput="Admin.updateAnnouncementPreview()"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
                 row.querySelector('button').addEventListener('click', () => this.removePollOption(row.querySelector('button')));
                 container.appendChild(row);
             }
@@ -817,7 +817,7 @@ const Admin = {
 
         if (!preview) return;
 
-        if (!content.trim() && !title.trim()) {
+        if (!content.trim() && !title.trim() && !document.getElementById('ann-poll-enabled')?.checked) {
             preview.innerHTML = '<span style="color:var(--fg2); font-style:italic;">Live preview will appear here as you type...</span>';
             return;
         }
