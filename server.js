@@ -53,6 +53,8 @@ const allowedOrigins = new Set([
     'https://bsms-web-beta.vercel.app',
     'https://bsms-web-development.vercel.app',
     'https://bsms-web-dev3.vercel.app',
+    'https://dev7.bsms-web.com',
+    'https://bsms-web-dev7.vercel.app',
     'http://localhost:3000',
     ...String(process.env.APP_ALLOWED_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean)
 ]);
