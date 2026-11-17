@@ -1,7 +1,11 @@
 name = "bsms-web-reader-dev1"
 main = "src/index.js"
 compatibility_date = "2026-11-17"
-workers_dev = true
+workers_dev = false
+
+routes = [
+  { pattern = "reader-dev1.bsms-web.com", custom_domain = true }
+]
 
 [vars]
 BSMS_WEB_API_URL = "https://dev-api.bsms-web.com"
