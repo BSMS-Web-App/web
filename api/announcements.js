@@ -19,7 +19,7 @@ const MIN_POLL_OPTIONS = 2;
  */
 const IS_DEV7_PREVIEW = process.env.VERCEL_ENV === 'preview'
     && process.env.VERCEL_GIT_COMMIT_REF === 'dev7';
-const ANNOUNCEMENTS_PATH = IS_DEV7_PREVIEW ? '/dev7/announcements' : ANNOUNCEMENTS_PATH;
+const ANNOUNCEMENTS_PATH = IS_DEV7_PREVIEW ? '/dev7/announcements' : '/announcements';
 const POLL_VOTES_PATH = IS_DEV7_PREVIEW ? '/dev7/announcementPollVotes' : '/announcementPollVotes';
 
 function validKey(value) {
