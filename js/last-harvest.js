@@ -638,6 +638,35 @@ function boardTable(rows,limit,who){
  return '<ol class="lh-lb">'+body+'</ol>'+yours;
 }
 function boardIdentity(who){return who?'<p class="lh-lb-id">Signed in as <b>'+esc(who)+'</b> \u00B7 BSMS account</p>':'<p class="lh-lb-id">Not signed in \u2014 this run is saved on this device as <b>'+esc(state.name||'Adventurer')+'</b>. <b>Sign in to BSMS</b> to post under your account name.</p>';}
+/* ---------- contest rules (the event window lives in api/last-harvest.js) ---------- */
+function showEventRules(){
+ const el=ov('<h3>THE LAST HARVEST \u00B7 EVENT RULES</h3>'
+  +'<p class="note">THE AUTUMN CONTEST \u00B7 ONE SAVE, ONE RUN, TEN CHAPTERS</p>'
+  +'<h3>WHEN IT RUNS</h3>'
+  +'<p>From Monday 16 November 2026, 7:00 AM EST to Sunday 20 December 2026, 12:00 AM EST.</p>'
+  +'<p class="note">The server itself refuses progress and scores outside that window, so changing the clock on your device does not buy you time.</p>'
+  +'<h3>WHO CAN ENTER</h3>'
+  +'<p>Anyone playing while signed in to a BSMS Web account. One account is one entry \u2014 the account holds a single contest save, so you cannot run two attempts side by side. Accounts that are banned, or that still owe us a terms acceptance, cannot post progress.</p>'
+  +'<h3>HOW THE WINNER IS DECIDED</h3>'
+  +'<p>First place goes to the first verified finish of chapter ten. That is the moment the server records your tenth chapter, not the timer on your phone, so the ranking cannot be gamed by a slow connection or a stopped watch.</p>'
+  +'<p>Chapters must be cleared in order; the server rejects any stage that skips ahead. You can retry a fight as often as you like \u2014 a loss only sends you back \u2014 but progress never rewinds, so once a chapter is cleared it stays cleared.</p>'
+  +'<h3>TIE-BREAKS</h3>'
+  +'<p>Two finishers recorded in the same second are separated by their highest Goldleaf Tower floor, and then by whoever posted that floor first. That is the only tie-break used; finishing sooner always beats it.</p>'
+  +'<h3>GOLDLEAF TOWER</h3>'
+  +'<p>The tower is a second board ranked purely by the highest floor you have reached. Your best floor is kept, never your latest, and the board carries bragging rights rather than a prize. Posts that jump more than 40 floors at once, or land within 8 seconds of each other, are refused as impossible.</p>'
+  +'<h3>FAIR PLAY</h3>'
+  +'<p>One account per person. No editing save files, injecting stats or editing network calls, and no bots or macros playing turns for you. Sharing an account to post for someone else is the same as cheating on your own. Breaking any of this removes you from both boards and from the prizes, and can cost you the account.</p>'
+  +'<h3>PRIZES</h3>'
+  +'<table><tr><th>PLACE</th><th>PRIZE</th></tr>'
+  +'<tr><td>1st</td><td><b>$10 in real money</b> and a <b>special BSMS Web role</b></td></tr>'
+  +'<tr><td>2nd &amp; 3rd</td><td>To be announced during the event</td></tr>'
+  +'<tr><td>Tower board</td><td>Bragging rights</td></tr></table>'
+  +'<p class="note">Prize money is handed over through the contact details on the winning account.</p>'
+  +'<h3>AFTER THE CLOSE</h3>'
+  +'<p>Scores lock when the window ends. The top finishers are checked against their saves before winners are announced; if we cannot reach a winner, the place passes to the next finisher on the board.</p>'
+  +'<div class="row"><button class="lh-ob" data-ok>GOT IT</button></div>','lh-rules-ov');
+ const ok=el.querySelector('[data-ok]');if(ok)ok.onclick=()=>{sfx('confirm');el.close();};
+}
 async function showLeaderboard(){
  const el=ov('<h3>TOWER LEADERBOARD</h3><p class="note">Every floor of the Goldleaf Tower you clear counts as one tower. Highest total wins.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
  el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
@@ -707,13 +736,14 @@ async function fillTitleBoard(){const {rows}=await boardRows();const who=await a
 /* ---------- title screen ---------- */
 let titleOpen=false;
 function showTitle(hasSave){titleOpen=true;const old=$b('lh-title');if(old)old.remove();const el=document.createElement('div');el.id='lh-title';el.className='press intro enter';setTimeout(()=>el.classList.remove('intro'),1700);setTimeout(()=>el.classList.remove('enter'),900);el.innerHTML='<canvas id="lh-title-cv"></canvas><div class="lh-title-menu" id="lh-title-menu"></div><div class="lh-title-board" id="lh-title-board" hidden></div>';document.body.appendChild(el);
- const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
+ const items=[];if(hasSave)items.push(['CONTINUE','continue']);items.push(['NEW GAME','new']);items.push(['TOWER LEADERBOARD','board']);items.push(['EVENT RULES','rules']);items.push(['SOUND: '+(muted?'OFF':'ON'),'sound']);
  let sel=0;const menu=$b('lh-title-menu');const render=()=>{menu.innerHTML=items.map((it,i)=>'<button class="lh-tbtn'+(i===sel?' sel':'')+'" data-i="'+i+'">'+it[0]+'</button>').join('');};render();
  function closeTitle(){titleOpen=false;removeEventListener('keydown',kd,true);el.classList.add('out');setTimeout(()=>el.remove(),500);if(state.name)updateHud();musicTick(true);}
  const choose=i=>{const k=items[i][1];sfx(k==='continue'?'confirm':'select');
   if(k==='continue'){closeTitle();}
   else if(k==='new'){if(hasSave){if(!confirm('Start a new adventure? Your saved progress on this device will be replaced.'))return;resetLocalSave(true);location.reload();return;}try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}state=createFreshState('','Guardian');questStep=0;Object.keys(AREAS).forEach(k2=>delete AREAS[k2]);rebuildVillageEntities();closeTitle();startNaming();}
   else if(k==='board'){showLeaderboard();}
+  else if(k==='rules'){showEventRules();}
   else if(k==='sound'){setMuted(!muted);items[i][0]='SOUND: '+(muted?'OFF':'ON');render();if(!muted)playMusic('title');}};
  menu.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b){sel=+b.dataset.i;choose(sel);}});
  function kd(e){if(!titleOpen)return;if(el.classList.contains('press')){if(e.key==='m'||e.key==='M')return;el.classList.remove('press');audio();sfx('select');if(!muted)musicTick(true);e.preventDefault();e.stopPropagation();return;}if(e.key==='ArrowDown'||e.key==='s'){sel=(sel+1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='ArrowUp'||e.key==='w'){sel=(sel+items.length-1)%items.length;sfx('menu');render();e.preventDefault();e.stopPropagation();}else if(e.key==='Enter'||e.key===' '||e.key==='e'){choose(sel);e.preventDefault();e.stopPropagation();}}
@@ -2852,9 +2882,10 @@ function renderRpgMenu(tab='status'){
   if(tab==='status'){
     const loc=scene==='inside'?['Maple Cottage','Village Inn','General Store','Old Workshop'][interiorId]:areaName(),items=BATTLE_ITEMS.reduce((a,it)=>a+battleItemCount(it.id),0),sk=Array.isArray(state.skills)?state.skills.length:Object.keys(state.skills||{}).length;
     const trackKey=desiredMusicTrack(),trackMeta=MUS[trackKey],trackLabel=((trackMeta&&trackMeta.title)||'Hearthvale Theme')+' \u00B7 CC0-1.0';
-    panel.innerHTML='<div class="lh-j-hero"><div class="lh-j-portrait"><canvas id="lh-j-avatar" width="16" height="16"></canvas></div><div class="lh-j-info"><b class="lh-j-name">'+esc(state.name||'Adventurer')+'</b><span class="lh-j-sub">LV '+lv+' \u00B7 '+esc((state.heroClass||'Guardian').toUpperCase())+'</span>'+jBar('hp','HP',state.hp,mh,state.hp+'/'+mh)+jBar('mp','MP',mp,mm,mp+'/'+mm)+jBar('xp','XP',xp,xn,xp+'/'+xn)+'</div></div><div class="lh-j-chips">'+jChip('COINS',state.coins||0)+jChip('ITEMS',items)+jChip('CHAPTER',(stage+1)+' / 10')+jChip('SKILLS',sk)+jChip('LOCATION',loc,true)+jChip('SOUNDTRACK',trackLabel,true)+'</div><div style="margin-top:10px;display:flex;justify-content:flex-end"><button id="lh-j-sound" type="button" class="lh-j-btn '+(muted?'red':'gold')+'" style="width:100%">AUDIO: '+(muted?'OFF':'ON')+' (M)</button></div>';
+    panel.innerHTML='<div class="lh-j-hero"><div class="lh-j-portrait"><canvas id="lh-j-avatar" width="16" height="16"></canvas></div><div class="lh-j-info"><b class="lh-j-name">'+esc(state.name||'Adventurer')+'</b><span class="lh-j-sub">LV '+lv+' \u00B7 '+esc((state.heroClass||'Guardian').toUpperCase())+'</span>'+jBar('hp','HP',state.hp,mh,state.hp+'/'+mh)+jBar('mp','MP',mp,mm,mp+'/'+mm)+jBar('xp','XP',xp,xn,xp+'/'+xn)+'</div></div><div class="lh-j-chips">'+jChip('COINS',state.coins||0)+jChip('ITEMS',items)+jChip('CHAPTER',(stage+1)+' / 10')+jChip('SKILLS',sk)+jChip('LOCATION',loc,true)+jChip('SOUNDTRACK',trackLabel,true)+'</div><div style="margin-top:10px;display:flex;gap:8px"><button id="lh-j-rules" type="button" class="lh-j-btn gold" style="width:100%">EVENT RULES</button><button id="lh-j-sound" type="button" class="lh-j-btn '+(muted?'red':'gold')+'" style="width:100%">AUDIO: '+(muted?'OFF':'ON')+' (M)</button></div>';
     drawAvatarTo($('lh-j-avatar'));
     const sb=$('lh-j-sound');if(sb)sb.addEventListener('click',()=>{setMuted(!muted);sfx('select');renderRpgMenu('status');});
+    const rb=$('lh-j-rules');if(rb)rb.addEventListener('click',()=>{sfx('select');showEventRules();});
   }else if(tab==='bag'){
     const wRow=state.heroClass==='Scout'?2:state.heroClass==='Mage'?1:0;
     const gearTier=Math.max(0,Math.min(8,Number(state.weaponTier)||0)),armorTier=Math.max(0,Math.min(8,Number(state.armorTier)||0)),gearNames={Guardian:[['Harvest Longsword','Ironroot Blade','Copperfall Greatsword','Embersteel Edge','Keeper’s Oath','Everfeast Relic','Sunforged Edge','Keeper Eternal','Mythic Harvest'],['Steel Plate Armor','Reinforced Plate','Guardian’s Bulwark','Runebound Armor','Sentinel Harness','First Keeper’s Aegis','Aegis of Dawn','Sunward Plate','Eternal Bulwark']],Scout:[['Hunter’s Longbow','Briarstring Bow','Windrunner Bow','Goldleaf Recurve','Frostfeather Bow','Wildheart Longbow','Goldleaf Warbow','Eternal Hunt','Worldroot Bow'],['Ranger Leather Armor','Hardened Trail Leathers','Thornweave Vest','Shadowstalker Gear','Frosthide Armor','Wildheart Mantle','Wildheart Garb','Moonshadow Vest','Eternal Vestment']],Mage:[['Amber Orb Staff','Moonlit Branch','Starfall Staff','Runesinger Rod','Frostglass Staff','Everfeast Scepter','Sunfall Rod','Eternal Star','Worldseed Staff'],['Spellbound Mantle','Apprentice Robes','Runesewn Robe','Stargazer Mantle','Frostweave Robe','Everfeast Vestments','Everfeast Regalia','Starlit Robe','Eternal Mantle']]},gn=gearNames[state.heroClass]||gearNames.Guardian,kit=[gn[0][gearTier]+' \u2014 weapon',gn[1][armorTier]+' \u2014 armor'];
