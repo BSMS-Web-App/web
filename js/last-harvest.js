@@ -559,6 +559,12 @@ function sessionId(){try{return localStorage.getItem('session_id')||localStorage
 /* Contest sync: the adventure is still played locally, but stage clears and
    loadout choices are mirrored to the contest API so the server keeps its own
    record of the run. Failures are silent: offline play must not break. */
+/* A stage is only completable inside a run the server issued, so the fight
+   starts one and its token travels with the completion. */
+let stageRun=null;
+async function contestStartStage(stage){const d=await contestPost({action:'start-stage',stage});
+ if(d&&d.run&&d.run.stage===stage)stageRun={stage,token:d.run.token,startedAt:d.run.startedAt};
+ return stageRun;}
 async function contestPost(payload){const sid=sessionId();if(!sid)return null;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify(payload)});if(!r.ok)return null;const d=await r.json();return d&&d.success?d:null;}catch(e){return null;}}
 /* The contest keeps its own copy of the run. On boot we take it back where it
    is ahead of this device a cleared save or a second browser.
@@ -571,6 +577,10 @@ async function syncContestState(){
   if(!r.ok)return;
   const d=await r.json(),srv=d&&d.state;
   if(!srv||typeof srv!=='object')return;
+  /* Start the next uncleared stage's run on boot so the server's clock is already
+     running when its boss falls; start-stage is idempotent per stage. */
+  const nextStage=Number(srv.stage||0)+1;
+  if(nextStage>=1&&nextStage<=BOSSES.length)contestStartStage(nextStage);
   let changed=false;
   const serverStage=clampInt(srv.stage,0,BOSSES.length,0);
   if(serverStage>state.stage){
@@ -2342,7 +2352,10 @@ function p2End(won){
   ['REWARD','+600 XP \u00b7 +500 COINS']
  ]);
 }
-function startBattle(g){if(dialogue)closeDialogue(true);ensureBattleItems();state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
+function startBattle(g){if(dialogue)closeDialogue(true);
+/* Chapter fights start the server-side stage run the completion is checked against. */
+if(g&&g.bi!==undefined&&!g.bossLike)contestStartStage(Number(g.bi)+1);
+ensureBattleItems();state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
 const B=g.bi!==undefined?BOSSES[g.bi]:(g.bossLike?g:null),hp=B?B.hp:g.hp,atk=B?B.atk:g.atk;
 battle={g,B,e:{name:g.foeName||g.name,hp,max:hp,atk,row:g.row,mi:g.mi,bi:g.bi,boss:!!B,theme:g.theme,sbi:g.sbi,sig:g.sig,status:{},turn:0,charging:false,enraged:false},ward:0,evade:false,guard:false,busy:true,sel:-1,phase:'alert',t0:performance.now(),last:performance.now(),
 hox:0,hoy:0,fox:0,foy:0,ult:0,shake:0,flashF:0,flashH:0,flashR:0,flashW:0,shield:0,dead:0,hdead:0,parts:[],pops:[],proj:null};if(g.bossLike&&g.twin){const t=g.twin;battle.twin={name:t.name,hp:t.hp,max:t.hp,atk:t.atk,row:t.row,mi:t.mi,bi:undefined,boss:true,theme:t.theme,sbi:t.sbi,sig:t.sig,status:{},turn:1,charging:false,enraged:false};}
@@ -2454,7 +2467,7 @@ while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.m
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
-if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestPost({action:'complete-stage',stage:state.stage});if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
+if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestPost({action:'complete-stage',stage:state.stage,token:(stageRun&&stageRun.stage===state.stage)?stageRun.token:null});if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
  const redeemed=state.rowanChoice==='forgive'||state.rowanTrust>=2;
  const mercy=state.finalChoice==='mercy';
  state.ending=redeemed?(mercy?'together':'guardian'):(mercy?'unfinished':'steadfast');

@@ -10,6 +10,7 @@
  * and an environment cannot describe an end date the server can enforce.
  * Every write is rejected before EVENT_START and at/after EVENT_END.
  */
+import crypto from 'node:crypto';
 import { db } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
@@ -44,6 +45,13 @@ function normalizePet(value){return PET_ALIASES[String(value||'').trim().toLower
 /* ---- event schedule (edit here; deliberately not environment-driven) ---- */
 export const EVENT_START = '2026-11-16T12:00:00.000Z'; // Nov 16, 2026, 7:00 AM EST
 export const EVENT_END   = '2026-12-20T05:00:00.000Z'; // Dec 20, 2026, 12:00 AM EST
+/* A stage can only be completed inside a run the server handed out, and never
+   faster than a player can actually play it. A client that posts stages 1..10 in
+   a loop has no run to finish, and a client that starts a run and finishes it in
+   two seconds is refused. This is the strongest signal available without running
+   the battle on the server; the numbers are deliberately generous. */
+const STAGE_MIN_MS = 60 * 1000;
+const STAGE_MAX_MS = 3 * 60 * 60 * 1000;
 const START_MS = Date.parse(EVENT_START);
 const END_MS = Date.parse(EVENT_END);
 if(!Number.isFinite(START_MS)||!Number.isFinite(END_MS)||END_MS<=START_MS)throw new Error('[Last Harvest] EVENT_START/EVENT_END are invalid.');
@@ -97,7 +105,7 @@ function freshState(){
  return {version:1,character:'Harvest Guardian',sidekick:'Rowan',pet:'Pumpkin Pup',stage:0,
   inventory:['wooden_sword','pumpkin_armor','acorn_helmet','autumn_boots'],
   equipped:{weapon:'wooden_sword',armor:'pumpkin_armor',helmet:'acorn_helmet',boots:'autumn_boots'},
-  coins:100,xp:0,health:40,maxHealth:40,completedAt:null,updatedAt:Date.now()};
+  coins:100,xp:0,health:40,maxHealth:40,run:null,lastStageMs:null,completedAt:null,updatedAt:Date.now()};
 }
 function cleanState(value){
  const base=freshState(),v=value&&typeof value==='object'?value:{};
@@ -112,6 +120,9 @@ function cleanState(value){
   equipped,coins:Math.max(0,Math.min(1000000,Math.floor(Number(v.coins)||0))),
   xp:Math.max(0,Math.min(1000000,Math.floor(Number(v.xp)||0))),
   health:Math.max(1,Math.min(100,Math.floor(Number(v.health)||base.health))),maxHealth:Math.max(1,Math.min(100,Math.floor(Number(v.maxHealth)||base.maxHealth))),
+  lastStageMs:Number.isFinite(v.lastStageMs)?Math.max(0,Math.floor(v.lastStageMs)):null,
+  run:(v.run&&Number.isInteger(v.run.stage)&&Number.isFinite(v.run.startedAt)&&typeof v.run.token==='string')
+   ?{stage:v.run.stage,startedAt:v.run.startedAt,token:v.run.token}:null,
   completedAt:typeof v.completedAt==='number'?v.completedAt:null,updatedAt:Date.now()};
 }
 export default async function handler(req,res){
@@ -157,6 +168,21 @@ export default async function handler(req,res){
    const next=cleanState(patch);
    await ref.set(next);return res.json({success:true,state:next});
   }
+  if(action==='start-stage'){
+   /* The run clock starts when the boss fight does. Re-entering the same stage
+      keeps the existing run so a reload does not restart or reset it. */
+   const stage=Math.floor(Number(body.stage));
+   if(!Number.isInteger(stage)||stage<1||stage>STAGES.length)return res.status(400).json({error:'Stages must be started in order.'});
+   if(stage>openStage)return res.status(423).json({error:'This stage has not unlocked yet.'});
+   if(stage!==state.stage+1)return res.status(400).json({error:'Stages must be started in order.'});
+   const now=Date.now();
+   if(state.run&&state.run.stage===stage&&now-state.run.startedAt<STAGE_MAX_MS)
+    return res.json({success:true,run:{stage,startedAt:state.run.startedAt,token:state.run.token,earliestFinish:state.run.startedAt+STAGE_MIN_MS}});
+   const run={stage,startedAt:now,token:crypto.randomUUID()};
+   const next=cleanState({...state,run});
+   await ref.set(next);
+   return res.json({success:true,run:{stage,startedAt:run.startedAt,token:run.token,earliestFinish:run.startedAt+STAGE_MIN_MS}});
+  }
   if(action==='complete-stage'){
    const stage=Math.floor(Number(body.stage));
    if(!Number.isInteger(stage)||stage<1||stage>STAGES.length)return res.status(400).json({error:'Stages must be completed in order.'});
@@ -168,8 +194,15 @@ export default async function handler(req,res){
     return res.json({success:true,state,finished:true,finisher:repaired});
    }
    if(stage!==state.stage+1)return res.status(400).json({error:'Stages must be completed in order.'});
-   const now=Date.now(),finished=stage===STAGES.length;
-   const next=cleanState({...state,stage,xp:state.xp+stage*100,coins:state.coins+stage*25,health:40,completedAt:finished?now:state.completedAt});
+   const run=state.run;
+   if(!run||run.stage!==stage)return res.status(409).json({error:'This stage has not been started. Start it from the chapter before completing it.',code:'stage-not-started'});
+   if(String(body.token||'')!==run.token)return res.status(409).json({error:'That stage run is not the one in progress.',code:'stage-token'});
+   const now=Date.now(),elapsed=now-run.startedAt;
+   if(elapsed<STAGE_MIN_MS)return res.status(429).json({error:'That stage cannot be finished that quickly.',code:'stage-too-fast',retryAfterMs:STAGE_MIN_MS-elapsed});
+   if(elapsed>STAGE_MAX_MS)return res.status(410).json({error:'That stage run expired. Start the stage again.',code:'stage-expired'});
+   const finished=stage===STAGES.length;
+   /* The run is spent, so the same token can never finish a second stage. */
+   const next=cleanState({...state,stage,run:null,lastStageMs:elapsed,xp:state.xp+stage*100,coins:state.coins+stage*25,health:40,completedAt:finished?now:state.completedAt});
    await ref.set(next);
    if(finished)await ensureFinisher(user,now);
    return res.json({success:true,state:next,finished});
