@@ -68,9 +68,18 @@ html, body {
 }
 .vault-back svg { width: 20px; height: 20px; color: var(--player-red-bright); flex: none; }
 .vault-back:hover { color: #ffb7c2; transform: translateX(-2px); }
-.player-title {
+.player-heading {
   grid-column: 2;
   grid-row: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.player-title {
+  width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -79,6 +88,20 @@ html, body {
   font-size: 22px;
   font-weight: 700;
 }
+.player-save-status {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--player-muted);
+  font-family: var(--bsms-font-body, 'Patrick Hand', cursive);
+  font-size: 12px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .18s ease;
+}
+.player-save-status[data-state="saved"] { color: #8ed9a5; }
+.player-save-status[data-state="saving"] { color: #f1d28a; }
+.player-save-status[data-state="error"] { color: #ff9aa9; }
 .player-brand {
   justify-self: end;
   color: rgba(255,255,255,.86);
@@ -178,11 +201,15 @@ html, body {
   }
   .vault-back { gap: 7px; font-size: 15px; }
   .vault-back svg { width: 18px; height: 18px; }
-  .player-title {
+  .player-heading {
     grid-column: 2;
+    align-items: flex-end;
+  }
+  .player-title {
     font-size: 17px;
     text-align: right;
   }
+  .player-save-status { font-size: 11px; }
   .player-brand { display: none; }
   .player-stage { inset: 58px 0 0; }
   .loading-card { padding: 28px 22px 24px; }

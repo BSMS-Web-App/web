@@ -4,12 +4,12 @@
 const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() || "");
 const frame = document.getElementById("gameFrame");
 const title = document.getElementById("playerTitle");
+const saveStatus = document.getElementById("saveStatus");
 const loading = document.getElementById("playerLoading");
 const loadingTitle = document.getElementById("loadingTitle");
 const loadingCaption = document.getElementById("loadingCaption");
 const back = document.getElementById("vaultBack");
-const ASSET_ORIGIN = "https://assets.bsms-web.com";
-const MAIN = ASSET_ORIGIN + "/game-assets/55gms/55GMS/main/static/";
+const CDN_MAIN = "https://cdn.jsdelivr.net/gh/55gms/55GMS@main/static/";
 
 const sid = localStorage.getItem("session_id") || "";
 let auth = null;
@@ -25,6 +25,8 @@ let again = false;
 let last = "";
 let timer = null;
 let syncInterval = null;
+let frameLoadTimer = null;
+let cloudRestoreAvailable = false;
 
 function gameSlug(game) {
   try {
@@ -37,7 +39,14 @@ function gameSlug(game) {
 
 function assetBase(image) {
   const match = String(image || "").match(/^https:\/\/raw\.githubusercontent\.com\/55gms\/assets\/([^/]+)\/(misc\/[^/]+\/)/i);
-  return match ? ASSET_ORIGIN + "/game-assets/55gms/assets/" + match[1] + "/" + match[2] : "";
+  return match ? "https://cdn.jsdelivr.net/gh/55gms/assets@" + match[1] + "/" + match[2] : "";
+}
+
+function setSaveStatus(message, state = "idle", detail = "") {
+  if (!saveStatus) return;
+  saveStatus.textContent = message;
+  saveStatus.dataset.state = state;
+  saveStatus.title = detail || message;
 }
 
 function saveData() {
@@ -67,9 +76,10 @@ async function getCloud() {
 }
 
 async function sync(keep = false) {
-  if (!cloud || !ready || !id) return;
+  if (!cloud || !cloudRestoreAvailable || !ready || !id) return;
   if (busy) { again = true; return; }
   busy = true;
+  setSaveStatus("Saving to your account…", "saving");
   try {
     const data = saveData();
     const serialized = JSON.stringify(data);
@@ -90,8 +100,10 @@ async function sync(keep = false) {
       if (!response.ok) throw Error(result.error || "Cloud save failed");
       last = serialized;
     }
+    setSaveStatus("Saved to your account", "saved", "Your supported game save data is synced to your BSMS Web account.");
   } catch (error) {
     console.warn("[BSMS Web :: Game Player] Save sync failed", error);
+    setSaveStatus("Cloud save unavailable — retrying", "error", error.message || "Cloud save failed.");
   } finally {
     busy = false;
     if (again) { again = false; sync(); }
@@ -123,40 +135,42 @@ function saveBridge() {
 function rewriteGameHtml(html, base) {
   html = html
     .replace(/<script\b[^>]*src=["'][^"']*save-agent\.js[^"']*["'][^>]*>\s*<\/script>/gi, "")
-    .replace(/<script\b[^>]*src=["'][^"']*gms-ads[^"']*["'][^>]*>\s*<\/script>/gi, "");
+    .replace(/<script\b[^>]*src=["'][^"']*(?:gms-ads|poki-sdk(?:-core)?\.js)[^"']*["'][^>]*>\s*<\/script>/gi, "");
 
-  // Drive Mad expects PokiSDK even when hosted outside Poki. Supply a no-ad
-  // compatibility layer so its gameplay code can initialize without ad scripts.
+  // Many 55GMS titles include Poki's advertising SDK. It is not needed to run
+  // the game itself and can fail outside Poki's hosted environment. Remove
+  // those SDK loaders and provide a compatible no-ad API instead.
   const pokiShim = '<script>(function(){var noop=function(){};var done=function(v){return Promise.resolve(v)};window.PokiSDK={init:function(){return done()},initWithVideoHB:function(){return done()},gameLoadingStart:noop,gameLoadingFinished:noop,gameInteractive:noop,gameplayStart:noop,gameplayStop:noop,roundStart:noop,roundEnd:noop,muteAd:noop,disableProgrammatic:noop,customEvent:noop,destroyAd:noop,commercialBreak:function(){return done()},rewardedBreak:function(){return done(false)},getLeaderboard:function(){return done([])},setDebug:noop,gameLoadingProgress:noop,happyTime:noop,setPlayerAge:noop,togglePlayerAdvertisingConsent:noop,toggleNonPersonalized:noop,setConsentString:noop,logError:noop,sendHighscore:noop};})();<\/script>';
   if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + pokiShim);
   else html = pokiShim + html;
 
-  // Route raw GitHub files from the two approved 55GMS repositories through BSMS Web.
+  // Send game files directly to jsDelivr. No game HTML or asset request is
+  // proxied through Vercel or the BSMS asset server.
   html = html.replace(
-    /https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi,
-    ASSET_ORIGIN + "/game-assets/$1/$2/$3/$4"
-  ).replace(
-    /https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi,
-    ASSET_ORIGIN + "/game-assets/55gms/$1/$2/$3"
+    /https?:\/\/raw\.githubusercontent\.com\/55gms\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi,
+    "https://cdn.jsdelivr.net/gh/55gms/$1@$2/$3"
   );
 
-  // Rewrite old 55GMS absolute URLs to the same-origin static mirror.
+  // Rewrite legacy 55GMS paths to the public 55GMS CDN.
   html = html
-    .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, MAIN + "assets/")
-    .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, MAIN + "img/")
-    .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, MAIN + "misc/")
-    .replace(/(["'(=])\/assets\//g, "$1" + MAIN + "assets/")
-    .replace(/(["'(=])\/img\//g, "$1" + MAIN + "img/")
-    .replace(/(["'(=])\/misc\//g, "$1" + MAIN + "misc/");
+    .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, CDN_MAIN + "assets/")
+    .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, CDN_MAIN + "img/")
+    .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, CDN_MAIN + "misc/")
+    .replace(/(["'(=])\/assets\//g, "$1" + CDN_MAIN + "assets/")
+    .replace(/(["'(=])\/img\//g, "$1" + CDN_MAIN + "img/")
+    .replace(/(["'(=])\/misc\//g, "$1" + CDN_MAIN + "misc/");
 
   const bridge = saveBridge();
   if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + bridge);
   else html = bridge + html;
 
-  if (base) {
+  // Keep the base URL supplied by the game itself. It points to the exact
+  // asset directory/version and is more reliable than guessing from a thumbnail.
+  // Only inject a fallback when the source HTML has no base element.
+  if (base && !/<base\b[^>]*>/i.test(html)) {
     const baseTag = '<base href="' + base.replace(/"/g, "&quot;") + '">';
-    if (/<base\b[^>]*>/i.test(html)) html = html.replace(/<base\b[^>]*>/i, baseTag);
-    else if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + baseTag);
+    if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + baseTag);
+    else html = baseTag + html;
   }
   return html;
 }
@@ -192,30 +206,53 @@ async function load() {
     document.title = game.name + " | BSMS Web";
     title.textContent = game.name;
     loadingTitle.textContent = "Loading " + game.name;
-    loadingCaption.textContent = "Fetching game files through BSMS Web…";
+    loadingCaption.textContent = "Connecting directly to the game CDN…";
 
     if (cloud) {
-      try { restore((await getCloud()).saveData || {}); }
-      catch (error) { console.warn("[BSMS Web] Cloud restore failed", error); }
+      setSaveStatus("Loading your cloud save…", "saving");
+      try {
+        restore((await getCloud()).saveData || {});
+        cloudRestoreAvailable = true;
+        setSaveStatus("Cloud save ready", "saved", "Your account save has been loaded. Changes will sync automatically.");
+      } catch (error) {
+        console.warn("[BSMS Web] Cloud restore failed", error);
+        setSaveStatus("Cloud save unavailable — using device save", "error", error.message || "Could not load the account save.");
+      }
+    } else {
+      setSaveStatus("Saved on this device", "idle", "Sign in to BSMS Web to sync supported game saves across devices.");
     }
 
     last = JSON.stringify(saveData());
     ready = true;
 
-    const sameOriginPath = sourceUrl.pathname.replace(
-      /^\/55gms\/55GMS\//,
-      ASSET_ORIGIN + "/game-assets/55gms/55GMS/"
-    );
-    const gameResponse = await fetch(sameOriginPath, { cache: "force-cache" });
+    // Retrieve the HTML straight from GitHub. Game resources load directly
+    // from their jsDelivr base URL or the CDN fallback below.
+    const gameResponse = await fetch(sourceUrl.href, { cache: "force-cache" });
     if (!gameResponse.ok) throw Error("The game HTML could not be retrieved.");
     const html = await gameResponse.text();
 
     frame.addEventListener("load", () => {
+      clearTimeout(frameLoadTimer);
+      frameLoadTimer = null;
       loading.classList.add("is-hidden");
-      if (cloud) syncInterval = setInterval(() => sync(), 20000);
+      if (cloud && cloudRestoreAvailable) syncInterval = setInterval(() => sync(), 20000);
     }, { once: true });
 
-    frame.srcdoc = rewriteGameHtml(html, assetBase(game.image));
+    // Avoid leaving the player on an endless spinner if the document or one
+    // of its required resources never finishes loading.
+    frameLoadTimer = setTimeout(() => {
+      if (!loading.classList.contains("is-hidden")) {
+        showError("The game files did not finish loading. A required asset may be unavailable. Please return to the Game Vault and try again.");
+      }
+    }, 60000);
+
+    // Prefer the exact base URL embedded in the source HTML. If it is absent,
+    // use the catalog image directory as a fallback, then the launch file's folder.
+    const launchPath = sourceUrl.pathname.replace(/^\/55gms\/55GMS\/main\/static\//i, "");
+    const launchDirectory = launchPath.slice(0, launchPath.lastIndexOf("/") + 1);
+    const launchBase = CDN_MAIN + launchDirectory;
+    const fallbackBase = assetBase(game.image) || launchBase;
+    frame.srcdoc = rewriteGameHtml(html, fallbackBase);
   } catch (error) {
     console.error("[BSMS Web :: Game Player]", error);
     showError(error.message);
@@ -229,6 +266,7 @@ addEventListener("message", event => {
 });
 addEventListener("pagehide", () => sync(true));
 addEventListener("beforeunload", () => sync(true));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") sync(true); });
 
 back.addEventListener("click", event => {
   event.preventDefault();
