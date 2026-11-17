@@ -897,9 +897,17 @@ const Admin = {
                 body: JSON.stringify({ action: 'create', title, content, poll })
             });
 
-            const data = await res.json();
+            const responseText = await res.text();
+            let data = {};
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch {
+                throw new Error(!res.ok
+                    ? `The server returned HTTP ${res.status} without a valid error response.`
+                    : 'The server returned an invalid response.');
+            }
             if (!res.ok) {
-                throw new Error(data.error || "Failed to publish announcement");
+                throw new Error(data.error || `Failed to publish announcement (HTTP ${res.status}).`);
             }
 
             // Clear inputs
