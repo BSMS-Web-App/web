@@ -807,34 +807,46 @@ async function showLeaderboard(){
 
 /* ---------- the Goldleaf Tower ---------- */
 let tower=null;
-function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Every floor is a gauntlet. Early floors are a single foe, but from floor seven you face <b>several in a row</b> \u2014 up to four on the deepest floors \u2014 and the guardian of every tenth floor always closes the run of them. Your HP and MP carry between every fight, with a sip of health after each cleared wave.</p><p>Every fifth floor is an <b>elite</b>, every tenth a <b>guardian</b>. If you fall, your highest floor is posted on the leaderboard.</p><p>Your best: <b>floor '+best+'</b> \u00B7 you climb from <b>floor '+Math.min(500,best+1)+'</b>.</p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
- el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();state.hp=state.maxHp;state.mp=state.maxMp;updateHud();save();tower={floor:Math.min(500,best+1),best,wave:0,waves:1};towerFloor();};}
+function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Every floor you clear counts as one <b>tower</b>. A run ends when you fall, so the only question is how many towers you can conquer in one run.</p><p>Every blow a challenger lands costs a fixed slice of your health, so no floor can one-shot you. Your HP and MP carry between fights: a sip of both after each wave, a proper rest after each floor, and a full restore on every tenth <b>guardian</b> floor. Every fifth floor is an <b>elite</b>.</p><p>Your best: <b>floor '+best+'</b> \u00B7 you climb from <b>floor '+Math.min(500,best+1)+'</b>.</p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
+ el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();state.hp=state.maxHp;state.mp=state.maxMp;updateHud();save();tower={floor:Math.min(500,best+1),best,wave:0,waves:1,cleared:0};towerFloor();};}
 function banner(t,sub,cb){const el=document.createElement('div');el.className='lh-banner';el.innerHTML='<div><h2>'+esc(t)+'</h2><p>'+esc(sub||'')+'</p></div>';document.body.appendChild(el);sfx('alert');setTimeout(()=>{el.remove();cb&&cb();},1500);}
-function towerWavesFor(f){let w=Math.min(4,1+Math.floor((f-1)/6));if(f%10===0)w=Math.min(4,w+1);return w;}
+function towerWavesFor(f){let w=f<=8?1:f<=20?2:3;if(f%10===0)w=Math.min(3,w+1);return w;}
 function towerFloor(){tower.wave=0;tower.waves=towerWavesFor(tower.floor);towerStartWave();}
 function towerStartWave(){const f=tower.floor;tower.wave++;
  const g=Math.min(9,Math.floor((f-1)/5)),boss=f%10===0,elite=!boss&&f%5===0,last=tower.wave>=tower.waves,isBoss=boss&&last;
  const i=g*10+(isBoss?9:rnd(9)),m=monInfo(i);
- const sc=1+f*.085,asc=1+f*.05,em=elite&&last?1.28:1,bm=isBoss?1.8:1,am=isBoss?1.3:(elite&&last?1.12:1);
- const softer=last?1:(tower.waves>1?.66:1),cut=Math.max(1,tower.waves);
- const enc={id:'tower',tower:true,wild:true,floor:f,wave:tower.wave,waves:tower.waves,name:((elite&&last)?'ELITE ':'')+m.name,mi:i,
-  hp:Math.round(m.hp*sc*bm*em*softer),atk:Math.round(m.atk*asc*am*(last?1:.9)),
-  reward:Math.round((8*f+(boss?80:elite?25:0))/cut),xp:Math.round((14+f*4+(boss?50:elite?15:0))/cut),
+ /* Fair climb: a floor's strength comes from the floor, never from a campaign monster's own
+    inflated stats, so the chamber changing tier can no longer spike or dip the difficulty. */
+ const hpBase=24+f*11,hpMul=(isBoss?1.7:elite?1.2:1)*(last?1:.6);
+ const dmgPct=Math.min(.16,.07+(f-1)*.0018)+(isBoss?.015:elite?.008:0);
+ const enc={id:'tower',tower:true,wild:true,floor:f,wave:tower.wave,waves:tower.waves,cleared:tower.cleared||0,
+  dmgPct:+(dmgPct*(last?1:.85)).toFixed(4),name:((elite&&last)?'ELITE ':'')+m.name,mi:i,
+  hp:Math.max(1,Math.round(hpBase*hpMul)),atk:Math.round(8+f*.6+(state.level||1)*.4),
+  reward:Math.round((8*f+(boss?80:elite?25:0))/Math.max(1,tower.waves)),
+  xp:Math.round((14+f*4+(boss?50:elite?15:0))/Math.max(1,tower.waves)),
   win:[],onEnd:won=>towerWaveResult(won)};
- const title=tower.waves>1?('WAVE '+tower.wave+' / '+tower.waves):('FLOOR '+f);
+ const title=(tower.waves>1?('WAVE '+tower.wave+' / '+tower.waves):('FLOOR '+f))+(tower.cleared?(' \u00B7 '+tower.cleared+(tower.cleared===1?' TOWER':' TOWERS')):'');
  const sub=(isBoss?'GUARDIAN FLOOR':elite?'ELITE FLOOR':GENS[g].toUpperCase()+' CHAMBER')+' \u00B7 '+enc.name;
  banner(title,sub,()=>startBattle(enc));}
 function towerWaveResult(won){
  if(!tower)return;
- if(!won){const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f));return;}
- if(tower.wave<tower.waves){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.1));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.15));updateHud();save();whenFree(towerStartWave);return;}
+ const cleared=tower.cleared||0;
+ if(!won){const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f,cleared));return;}
+ if(tower.wave<tower.waves){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.15));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.2));updateHud();save();whenFree(towerStartWave);return;}
  towerResult(true);}
 
-function towerResult(won){if(!tower)return;if(won){tower.best=tower.floor;tower.floor++;state.towerBest=Math.max(Number(state.towerBest)||0,tower.best);state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.2));state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*.3));save();whenFree(towerMenu);}else{const f=Math.max(tower.best,tower.floor-1);tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f));}}
-function towerMenu(){if(!tower)return;updateHud();const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00b7 MP '+state.mp+'/'+state.maxMp+' \u00b7 '+state.coins+' coins</p><p>Next: floor '+tower.floor+' \u00B7 '+towerWavesFor(tower.floor)+' foe'+(towerWavesFor(tower.floor)>1?'s':'')+'</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+tower.floor+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
- el.querySelector('#tw-up').onclick=()=>{sfx('select');el.close();towerFloor();};el.querySelector('#tw-out').onclick=()=>{sfx('menu');el.close();const f=tower.best;tower=null;towerEnd(f);};}
-async function towerEnd(f){AREA=getCity();scene='area';stepper=null;resetRoamers();areaPlayer={x:20*32+16,y:11*32+24};state.hp=Math.max(state.hp,Math.min(state.maxHp,Math.ceil(state.maxHp*.5)));updateHud();save();const ok=f>0?await submitTower(f):false;
- const el=ov('<h3>TOWER RESULT</h3><p>You reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
+function towerResult(won){if(!tower)return;
+ if(won){tower.best=tower.floor;tower.floor++;tower.cleared=(tower.cleared||0)+1;state.towerBest=Math.max(Number(state.towerBest)||0,tower.best);
+  const guardian=tower.best%10===0;
+  state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*(guardian?1:.3)));
+  state.mp=Math.min(state.maxMp,state.mp+Math.round(state.maxMp*(guardian?1:.4)));
+  save();whenFree(towerMenu);}
+ else{const f=Math.max(tower.best,tower.floor-1),cleared=tower.cleared||0;tower=null;state.towerBest=Math.max(Number(state.towerBest)||0,f);save();whenFree(()=>towerEnd(f,cleared));}}
+function towerMenu(){if(!tower)return;updateHud();const next=tower.floor,nw=towerWavesFor(next),gd=next%10===0;
+ const el=ov('<h3>FLOOR '+tower.best+' CLEARED!</h3><p>Towers conquered this run: <b>'+(tower.cleared||0)+'</b></p><p>You rest briefly. HP '+state.hp+'/'+state.maxHp+' \u00B7 MP '+state.mp+'/'+state.maxMp+' \u00B7 '+state.coins+' coins</p><p>Next: floor '+next+' \u00B7 '+(gd?'GUARDIAN \u00B7 ':'')+nw+' foe'+(nw>1?'s':'')+'</p><div class="row"><button class="lh-ob" id="tw-up">CLIMB TO '+next+'</button><button class="lh-ob alt" id="tw-out">LEAVE</button></div>');
+ el.querySelector('#tw-up').onclick=()=>{sfx('select');el.close();towerFloor();};el.querySelector('#tw-out').onclick=()=>{sfx('menu');el.close();const f=tower.best,cl=tower.cleared||0;tower=null;towerEnd(f,cl);};}
+async function towerEnd(f,cleared){const cl=Math.max(0,cleared||0);AREA=getCity();scene='area';stepper=null;resetRoamers();areaPlayer={x:20*32+16,y:11*32+24};state.hp=Math.max(state.hp,Math.min(state.maxHp,Math.ceil(state.maxHp*.5)));updateHud();save();const ok=f>0?await submitTower(f):false;
+ const el=ov('<h3>TOWER RESULT</h3><p>You conquered <b>'+cl+'</b> tower'+(cl===1?'':'s')+' this run \u00B7 reached floor <b>'+f+'</b>.</p><p class="note">'+(f<1?'Climb at least one floor to post a score.':ok?'Score posted to the global leaderboard!':'Saved locally. Sign in to BSMS to post globally.')+'</p><div class="row"><button class="lh-ob" id="tr-b">LEADERBOARD</button><button class="lh-ob alt" id="tr-x">OK</button></div>');
  el.querySelector('#tr-x').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tr-b').onclick=()=>{el.close();showLeaderboard();};}
 
 function bootScreen(){
@@ -2650,7 +2662,9 @@ const dx=-(G.fx-G.hx)*(e.boss?.5:.6);await tween(e.boss?300:240,p=>{b.fox=dx*eas
 let total=0;
 for(let h=0;h<mv.hits&&state.hp>0;h++){
 if(b.evade){pop('MISS',G.hx,G.hy-G.hk*12,'#d8d8e0',20);sfx('dodge');b.evade=h===mv.hits-1?b.evade:true;await sleep(260);continue;}
-let d=Math.max(2,Math.round(e.atk*(e.status.weaken>0?.7:1)*mv.m-Math.floor(lv/2)+rnd(3)));d=Math.max(1,d-Math.max(0,Math.min(8,Number(state.armorTier)||0)));
+let d;
+if(b.g&&b.g.tower&&b.g.dmgPct){/* tower blows cost a fixed slice of your health: readable, and never a one-shot */d=Math.max(1,Math.round((state.maxHp||state.hp)*b.g.dmgPct*(e.status.weaken>0?.7:1)*mv.m*(e.enraged?1.15:1)*(0.92+Math.random()*0.16)));}
+else{d=Math.max(2,Math.round(e.atk*(e.status.weaken>0?.7:1)*mv.m-Math.floor(lv/2)+rnd(3)));d=Math.max(1,d-Math.max(0,Math.min(8,Number(state.armorTier)||0)));}
 if(b.ward>0)d=Math.ceil(d*.3);else if(b.guard)d=Math.ceil(d*.35);
 // Rowan's duel is a skill check, not a surprise one-shot: cap each hit and his total turn damage.
 if(e.name==='ROWAN'){const perHitCap=Math.max(4,Math.ceil((state.maxHp||state.hp)*(b.g.friendly ? 0.12 : 0.22)));const turnCap=Math.max(8,Math.ceil((state.maxHp||state.hp)*(b.g.friendly ? 0.20 : 0.35)));d=Math.min(d,perHitCap,Math.max(0,turnCap-total));if(d<=0)break;}
@@ -2674,10 +2688,10 @@ async function pkWin(){
  }if(g.friendly){b.phase='dying';b.busy=true;await pkSay(g.name+' yields!',900);pkEnd(false);return;}b.phase='dying';b.busy=true;sfx(B?'boom':'hit');const G=geo();
 await tween(B?1300:650,p=>{b.dead=p;if(B){if(Math.random()<.45)burst(G.fx+(Math.random()-.5)*G.fh*.8,G.fy-Math.random()*G.fh,9,['#ffffff','#ffd84a','#ff6a2e',bossTheme(b.e)[2]],230);if(p<.85)b.shake=Math.max(b.shake,8);}else if(p<.3)burst(G.fx,G.fy-G.fh*.5,3,['#ffffff','#ffd84a'],140);});
 b.dead=1;b.flashW=B?1:0;sfx('win');await pkSay(g.name+' was defeated!',1000);
-const reward=g.bossLike?(g.reward||0):(B?B.reward:g.reward);let xp=g.bossLike?(g.xp||0):(B?B.xp:(g.xp||40));if(g.wild){state.wildKills=(state.wildKills||0)+1;if(state.wildKills<=4)xp*=2;}state.coins+=reward;state.xp+=xp;let up=0;
+const reward=g.bossLike?(g.reward||0):(B?B.reward:g.reward);let xp=g.bossLike?(g.xp||0):(B?B.xp:(g.xp||40));if(g.wild&&!g.tower){state.wildKills=(state.wildKills||0)+1;if(state.wildKills<=4)xp*=2;}state.coins+=reward;state.xp+=xp;let up=0;
 while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=2;state.maxMp+=2;state.hp=state.maxHp;up++;}
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
-if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
+if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&!g.tower&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
 if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestCompleteStage(state.stage);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);if(g.bi===5&&!state.rowanDead)killRowanForGood();
 const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.push(..._ep);}else {
