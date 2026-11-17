@@ -667,8 +667,11 @@ const Admin = {
             const res = await fetch('/api/announcements', {
                 headers: { 'X-Session-ID': localStorage.getItem('session_id') || '' }
             });
-            const data = await res.json();
-            this.announcementsCache = data.announcements || [];
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'The announcements service is unavailable.');
+            }
+            this.announcementsCache = Array.isArray(data.announcements) ? data.announcements : [];
             this.renderAnnouncements();
         } catch (e) {
             list.innerHTML = `<div style="color:var(--danger); text-align:center; padding:20px;">Failed to load announcements: ${e.message}</div>`;
