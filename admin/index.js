@@ -664,7 +664,9 @@ const Admin = {
         }
 
         try {
-            const res = await fetch('/api/announcements');
+            const res = await fetch('/api/announcements', {
+                headers: { 'X-Session-ID': localStorage.getItem('session_id') || '' }
+            });
             const data = await res.json();
             this.announcementsCache = data.announcements || [];
             this.renderAnnouncements();
@@ -688,6 +690,12 @@ const Admin = {
             const timeStr = a.createdAt ? new Date(a.createdAt).toLocaleString() : 'Unknown date';
             const parsedContent = this.parseMarkdown(a.content || '');
             const pfpHtml = a.authorAvatar ? `<img src="${a.authorAvatar}" style="width:100%; height:100%; object-fit:cover;">` : (a.authorDisplayName || a.authorUsername || 'A').charAt(0).toUpperCase();
+            const pollHtml = a.poll ? `
+                <div class="admin-poll-summary">
+                    <div class="admin-poll-summary-head"><strong>${this.escapeHTML(a.poll.question || 'Poll')}</strong><span>${a.poll.votingType === 'multiple' ? 'Multiple choice' : 'Single choice'}</span></div>
+                    <div class="admin-poll-summary-meta">${Number(a.poll.totalVotes || 0)} participating account(s)</div>
+                    ${(a.poll.options || []).map(option => `<div class="admin-poll-result"><div><span>${this.escapeHTML(option.text || '')}</span><strong>${Number(option.votes || 0)} · ${Number(option.percentage || 0)}%</strong></div><div class="admin-poll-track"><span style="width:${Math.max(0, Math.min(100, Number(option.percentage || 0)))}%"></span></div></div>`).join('')}
+                </div>` : '';
 
             return `
             <div style="background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:12px; position:relative;">
@@ -709,6 +717,7 @@ const Admin = {
                 <div style="background:var(--panel-alt); border-radius:10px; padding:14px; color:var(--fg); font-size:13px; line-height:1.6; border-left:3px solid var(--red);">
                     ${parsedContent}
                 </div>
+                ${pollHtml}
             </div>
             `;
         }).join('');
@@ -733,6 +742,74 @@ const Admin = {
         this.updateAnnouncementPreview();
     },
 
+    togglePollBuilder: function() {
+        const enabled = Boolean(document.getElementById('ann-poll-enabled')?.checked);
+        const builder = document.getElementById('ann-poll-builder');
+        if (builder) builder.hidden = !enabled;
+    },
+
+    addPollOption: function() {
+        const container = document.getElementById('ann-poll-options');
+        if (!container) return;
+        if (container.querySelectorAll('.ann-poll-option-row').length >= 10) {
+            alert('Polls can have a maximum of 10 options.');
+            return;
+        }
+        const index = container.querySelectorAll('.ann-poll-option-row').length + 1;
+        const row = document.createElement('div');
+        row.className = 'ann-poll-option-row';
+        row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + index + '"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
+        row.querySelector('button').addEventListener('click', () => this.removePollOption(row.querySelector('button')));
+        container.appendChild(row);
+        row.querySelector('input').focus();
+    },
+
+    removePollOption: function(button) {
+        const container = document.getElementById('ann-poll-options');
+        if (!container) return;
+        if (container.querySelectorAll('.ann-poll-option-row').length <= 2) {
+            alert('A poll must have at least 2 answer options.');
+            return;
+        }
+        button?.closest('.ann-poll-option-row')?.remove();
+    },
+
+    collectAnnouncementPoll: function() {
+        if (!document.getElementById('ann-poll-enabled')?.checked) return null;
+
+        const question = document.getElementById('ann-poll-question')?.value.trim() || '';
+        const votingType = document.getElementById('ann-poll-voting-type')?.value === 'multiple' ? 'multiple' : 'single';
+        const options = [...document.querySelectorAll('#ann-poll-options .ann-poll-option-input')].map(input => input.value.trim());
+
+        if (!question) throw new Error('Please enter a poll question.');
+        if (options.length < 2 || options.length > 10) throw new Error('A poll must have between 2 and 10 answer options.');
+        if (options.some(option => !option)) throw new Error('Please fill in every poll answer option.');
+        if (options.some(option => option.length > 120)) throw new Error('Poll options must be 120 characters or fewer.');
+
+        return { question, votingType, options };
+    },
+
+    resetPollBuilder: function() {
+        const enabled = document.getElementById('ann-poll-enabled');
+        const question = document.getElementById('ann-poll-question');
+        const type = document.getElementById('ann-poll-voting-type');
+        const container = document.getElementById('ann-poll-options');
+        if (enabled) enabled.checked = false;
+        if (question) question.value = '';
+        if (type) type.value = 'single';
+        if (container) {
+            container.innerHTML = '';
+            for (let i = 1; i <= 2; i++) {
+                const row = document.createElement('div');
+                row.className = 'ann-poll-option-row';
+                row.innerHTML = '<input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option ' + i + '"><button type="button" class="btn sec sm" aria-label="Remove option">Remove</button>';
+                row.querySelector('button').addEventListener('click', () => this.removePollOption(row.querySelector('button')));
+                container.appendChild(row);
+            }
+        }
+        this.togglePollBuilder();
+    },
+
     updateAnnouncementPreview: function() {
         const preview = document.getElementById('ann-preview');
         const content = document.getElementById('ann-content')?.value || '';
@@ -750,6 +827,12 @@ const Admin = {
             html += `<h2 style="font-family:var(--font-brand); font-size:24px; margin:0 0 10px; color:var(--fg);">${this.escapeHTML(title)}</h2>`;
         }
         html += this.parseMarkdown(content);
+        if (document.getElementById('ann-poll-enabled')?.checked) {
+            const question = document.getElementById('ann-poll-question')?.value.trim() || 'Poll question';
+            const options = [...document.querySelectorAll('#ann-poll-options .ann-poll-option-input')].map(input => input.value.trim()).filter(Boolean);
+            const mode = document.getElementById('ann-poll-voting-type')?.value === 'multiple' ? 'Multiple choice' : 'Single choice';
+            html += '<div class="ann-poll-preview"><strong>' + this.escapeHTML(question) + '</strong><small>' + mode + '</small>' + options.map(option => '<div class="ann-poll-preview-option">' + this.escapeHTML(option) + '</div>').join('') + '</div>';
+        }
         preview.innerHTML = html;
     },
 
@@ -771,6 +854,14 @@ const Admin = {
             return;
         }
 
+        let poll = null;
+        try {
+            poll = this.collectAnnouncementPoll();
+        } catch (error) {
+            alert(error.message);
+            return;
+        }
+
         const sid = localStorage.getItem('session_id') || "";
         const submitBtn = document.getElementById('ann-submit-btn');
         if (submitBtn) {
@@ -785,7 +876,7 @@ const Admin = {
                     'Content-Type': 'application/json',
                     'X-Session-ID': sid
                 },
-                body: JSON.stringify({ action: 'create', title, content })
+                body: JSON.stringify({ action: 'create', title, content, poll })
             });
 
             const data = await res.json();
@@ -796,6 +887,7 @@ const Admin = {
             // Clear inputs
             document.getElementById('ann-title').value = '';
             document.getElementById('ann-content').value = '';
+            this.resetPollBuilder();
             this.updateAnnouncementPreview();
 
             alert("Announcement published successfully! It will now appear on the homepage.");
