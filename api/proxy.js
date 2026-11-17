@@ -132,6 +132,28 @@ function validateTarget(input, base) {
     return url;
 }
 
+
+async function readLimitedBody(response) {
+    if (!response.body) return Buffer.alloc(0);
+    const reader = response.body.getReader();
+    const chunks = [];
+    let total = 0;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_BODY_BYTES) {
+            await reader.cancel();
+            const error = new Error('BODY_TOO_LARGE');
+            throw error;
+        }
+        chunks.push(Buffer.from(value));
+    }
+
+    return Buffer.concat(chunks, total);
+}
+
 function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, character => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -265,8 +287,7 @@ export default async function handler(req, res) {
         const declaredLength = Number(upstream.headers.get('content-length') || 0);
         if (declaredLength > MAX_BODY_BYTES) return res.status(413).json({ error: 'This page is too large for the reader.' });
 
-        const bytes = Buffer.from(await upstream.arrayBuffer());
-        if (bytes.length > MAX_BODY_BYTES) return res.status(413).json({ error: 'This page is too large for the reader.' });
+        const bytes = await readLimitedBody(upstream);
 
         if (contentType.startsWith('image/')) {
             if (!/^image\/(png|jpeg|gif|webp|avif)$/.test(contentType.split(';')[0])) {
@@ -295,6 +316,9 @@ export default async function handler(req, res) {
 
         return res.status(415).json({ error: 'This content type is not supported in reader mode.' });
     } catch (error) {
+        if (error.message === 'BODY_TOO_LARGE') {
+            return res.status(413).json({ error: 'This page is too large for the reader.' });
+        }
         console.error('[BSMS Web :: Proxy] Destination request failed:', error);
         return res.status(502).json({ error: 'The destination could not be loaded.' });
     }
