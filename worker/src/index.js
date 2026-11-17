@@ -4,6 +4,10 @@
  * The Mac API is used only to validate the existing BSMS account session.
  */
 const ORIGINS = new Set([
+  "https://bsms-web.com",
+  "https://www.bsms-web.com",
+  "https://bsms-web.vercel.app",
+  // Keep the active development frontend available for testing.
   "https://dev1.bsms-web.com",
   "https://bsms-web-dev1.vercel.app"
 ]);
