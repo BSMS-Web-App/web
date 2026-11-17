@@ -1368,13 +1368,25 @@ function areaShadows(A,x0,y0,x1,y1,U){if(A.bio&&A.bio.hall&&!A.bio.g)return;
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*A.w+x;if(!A.solid[i])continue;
   if(y+1<A.h&&!A.solid[i+A.w])ctx.drawImage(st,x*U,y*U+U);
   if(y===0||!A.solid[i-A.w]){ctx.fillStyle='rgba(255,246,220,.10)';ctx.fillRect(x*U,y*U,U,2);}}}
-function rubbleProp(A,x,y){const U=32,cols=[(A.bio&&A.bio.rubble)||'#7d7278','#9a8f92','#5d5259'];
- ctx.fillStyle='rgba(8,5,10,.30)';ctx.fillRect(x*U+7,y*U+23,18,4);
- for(let i=0;i<3;i++){const r=rand(x*11+i*13+2,y*17+i*7+5),w=5+Math.floor(r*5),h=4+Math.floor(r*3);
-  const sx=x*U+7+Math.floor(rand(x*5+i+1,y*9+i+3)*11),sy=y*U+21-h-Math.floor(rand(x*3+i*2+2,y*3+i+1)*5);
-  ctx.fillStyle=cols[i%3];ctx.fillRect(sx,sy,w,h);
-  ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(sx,sy,w,1);
-  ctx.fillStyle='rgba(0,0,0,.32)';ctx.fillRect(sx,sy+h-1,w,1);}}
+const RUBBLE={};
+function rubbleSprite(pal){
+ if(RUBBLE[pal])return RUBBLE[pal];
+ const cols=[pal,'#9a8f92','#5d5259'],out=[];
+ for(let v=0;v<6;v++){
+  let seed=((v+1)*2654435761)%4294967296;
+  const rnd=()=>{seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296;};
+  const c=document.createElement('canvas');c.width=32;c.height=32;const g=c.getContext('2d');
+  g.fillStyle='rgba(8,5,10,.30)';g.fillRect(7,23,18,4);
+  for(let i=0;i<3;i++){
+   const w=5+Math.floor(rnd()*5),h=4+Math.floor(rnd()*3),sx=7+Math.floor(rnd()*11),sy=21-h-Math.floor(rnd()*5);
+   g.fillStyle=cols[i%3];g.fillRect(sx,sy,w,h);
+   g.fillStyle='rgba(255,255,255,.22)';g.fillRect(sx,sy,w,1);
+   g.fillStyle='rgba(0,0,0,.32)';g.fillRect(sx,sy+h-1,w,1);}
+  out.push(c);}
+ RUBBLE[pal]=out;return out;}
+function rubbleProp(A,x,y){const U=32,v=rubbleSprite((A.bio&&A.bio.rubble)||'#7d7278');
+ ctx.imageSmoothingEnabled=false;
+ ctx.drawImage(v[Math.floor(rand(x*7+1,y*13+3)*v.length)%v.length],x*U,y*U);}
 function areaObstacle(A,x,y,k){const U=32;let o=A.bio.ob[k];if(!o)return;
  if(A.bio.obP!==undefined&&rand(x*7+3,y*13+5)>A.bio.obP){rubbleProp(A,x,y);return;}if(o.w){if(WLD.naturalWidth){wSprite(o.w,x*U,y*U);return;}o=o.fb;if(!o)return;}if(o.i){kBlock(o.i[0],o.i[1],o.i[2],o.i[3],x*U,y*U,2);return;}const sh=o.sh||'t';if(o.two){kTile(sh,o.a,x*U,(y-1)*U);kTile(sh,o.b,x*U,y*U);}else kTile(sh,o.a,x*U,y*U);}
 function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000,zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;
