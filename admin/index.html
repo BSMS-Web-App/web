@@ -68,19 +68,19 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <div id="ann-poll-builder" class="ann-poll-fields" hidden>
                     <div class="form-group">
                         <label for="ann-poll-question">Poll question</label>
-                        <input type="text" id="ann-poll-question" maxlength="200" placeholder="What would you like to ask?">
+                        <input type="text" id="ann-poll-question" maxlength="200" oninput="Admin.updateAnnouncementPreview()" placeholder="What would you like to ask?">
                     </div>
                     <div class="form-group">
                         <label for="ann-poll-voting-type">Voting type</label>
-                        <select id="ann-poll-voting-type">
+                        <select id="ann-poll-voting-type" onchange="Admin.updateAnnouncementPreview()">
                             <option value="single">Single choice — select one answer</option>
                             <option value="multiple">Multiple choice — select multiple answers</option>
                         </select>
                     </div>
                     <div class="ann-poll-options-head"><label>Answer options</label><span>2–10 options</span></div>
                     <div id="ann-poll-options">
-                        <div class="ann-poll-option-row"><input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option 1"><button type="button" class="btn sec sm" onclick="Admin.removePollOption(this)" aria-label="Remove option">Remove</button></div>
-                        <div class="ann-poll-option-row"><input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option 2"><button type="button" class="btn sec sm" onclick="Admin.removePollOption(this)" aria-label="Remove option">Remove</button></div>
+                        <div class="ann-poll-option-row"><input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option 1" oninput="Admin.updateAnnouncementPreview()"><button type="button" class="btn sec sm" onclick="Admin.removePollOption(this)" aria-label="Remove option">Remove</button></div>
+                        <div class="ann-poll-option-row"><input class="ann-poll-option-input" type="text" maxlength="120" placeholder="Option 2" oninput="Admin.updateAnnouncementPreview()"><button type="button" class="btn sec sm" onclick="Admin.removePollOption(this)" aria-label="Remove option">Remove</button></div>
                     </div>
                     <button type="button" class="btn sec sm ann-poll-add" onclick="Admin.addPollOption()">+ Add option</button>
                 </div>
