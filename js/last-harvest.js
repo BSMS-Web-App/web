@@ -70,6 +70,9 @@ function sanitizeState(s){
  s.level=clampInt(s.level,1,99,1);
  s.stage=clampInt(s.stage,0,10,0);
  s.potions=clampInt(s.potions,0,9,0);
+ s.weaponTier=clampInt(s.weaponTier,0,8,0);
+ s.armorTier=clampInt(s.armorTier,0,8,0);
+ s.skillTier=clampInt(s.skillTier,0,8,0);
  return s;
 }
 let resetting=false,stateRepaired=false;
@@ -540,6 +543,30 @@ function sessionId(){try{return localStorage.getItem('session_id')||localStorage
    loadout choices are mirrored to the contest API so the server keeps its own
    record of the run. Failures are silent: offline play must not break. */
 async function contestPost(payload){const sid=sessionId();if(!sid)return null;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify(payload)});if(!r.ok)return null;const d=await r.json();return d&&d.success?d:null;}catch(e){return null;}}
+/* The contest keeps its own copy of the run. On boot we take it back where it
+   is ahead of this device a cleared save or a second browser.
+   Only forward: a local save that is further along is never rewound. */
+async function syncContestState(){
+ const sid=sessionId();
+ if(!sid||!state.name)return;
+ try{
+  const r=await fetch('/api/last-harvest',{headers:{'X-Session-ID':sid}});
+  if(!r.ok)return;
+  const d=await r.json(),srv=d&&d.state;
+  if(!srv||typeof srv!=='object')return;
+  let changed=false;
+  const serverStage=clampInt(srv.stage,0,BOSSES.length,0);
+  if(serverStage>state.stage){
+   state.stage=serverStage;changed=true;
+   /* the stage payouts rode along with those clears; keep them together */
+   const sxp=clampInt(srv.xp,0,10000000,0),sc=clampInt(srv.coins,0,1000000,0);
+   if(sxp>Number(state.xp||0)){state.xp=sxp;changed=true;}
+   if(sc>Number(state.coins||0)){state.coins=sc;changed=true;}
+  }
+  if(srv.completedAt&&!state.completedAt){state.completedAt=Number(srv.completedAt)||null;changed=true;}
+  if(changed){updateHud();save();}
+ }catch(e){}
+}
 function contestPetName(){return state&&state.pet&&PETS[state.pet.id]?PETS[state.pet.id].name:undefined;}
 let ACCOUNT_NAME=null,ACCOUNT_ASKED=false;
 async function accountName(){
@@ -2756,5 +2783,5 @@ initSfx();initRows();addEventListener('pagehide',save);document.addEventListener
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
 {/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore||stateRepaired)save();
-{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);});}
+{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);if(hasSave)syncContestState();});}
 })();
