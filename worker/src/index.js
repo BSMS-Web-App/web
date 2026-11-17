@@ -87,6 +87,7 @@ async function readToken(token, secret) {
 async function dbGet(env, path) {
   let base = env.BSMS_WEB_API_URL || "";
   while (base.endsWith("/")) base = base.slice(0, -1);
+  if (!base || !env.BSMS_WEB_API_KEY) throw Error("Account verification is not configured");
   const response = await fetch(
     base + "/v1/db?path=" + encodeURIComponent(path),
     {
