@@ -26,7 +26,7 @@ async function macRequest(method, route, body) {
                 ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
             },
             ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-            signal: AbortSignal.timeout(15000)
+            signal: AbortSignal.timeout(60000)
         });
     } catch (error) {
         throw new Error('[BSMS Web :: DB] Mac database API is unavailable: ' + error.message);
