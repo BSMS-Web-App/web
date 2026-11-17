@@ -30,6 +30,19 @@
             return originalFetch(input, init);
         }
 
+        /*
+         * Announcement polls are implemented in the Vercel API function.
+         * Keep this endpoint same-origin on dev7 so its preview-only database
+         * namespace and poll voting implementation are actually used. The
+         * Mac-hosted API remains the destination for every other API route.
+         */
+        if (
+            window.location.hostname === 'dev7.bsms-web.com' &&
+            requestUrl.pathname === '/api/announcements'
+        ) {
+            return originalFetch(requestUrl.href, init);
+        }
+
         const destination = new URL(
             requestUrl.pathname + requestUrl.search + requestUrl.hash,
             API_ORIGIN
