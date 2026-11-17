@@ -8,8 +8,7 @@ const loading = document.getElementById("playerLoading");
 const loadingTitle = document.getElementById("loadingTitle");
 const loadingCaption = document.getElementById("loadingCaption");
 const back = document.getElementById("vaultBack");
-const ASSET_ORIGIN = "https://assets.bsms-web.com";
-const MAIN = ASSET_ORIGIN + "/game-assets/55gms/55GMS/main/static/";
+const CDN_MAIN = "https://cdn.jsdelivr.net/gh/55gms/55GMS@main/static/";
 
 const sid = localStorage.getItem("session_id") || "";
 let auth = null;
@@ -38,7 +37,7 @@ function gameSlug(game) {
 
 function assetBase(image) {
   const match = String(image || "").match(/^https:\/\/raw\.githubusercontent\.com\/55gms\/assets\/([^/]+)\/(misc\/[^/]+\/)/i);
-  return match ? ASSET_ORIGIN + "/game-assets/55gms/assets/" + match[1] + "/" + match[2] : "";
+  return match ? "https://cdn.jsdelivr.net/gh/55gms/assets@" + match[1] + "/" + match[2] : "";
 }
 
 function saveData() {
@@ -132,23 +131,21 @@ function rewriteGameHtml(html, base) {
   if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + pokiShim);
   else html = pokiShim + html;
 
-  // Route raw GitHub files from the two approved 55GMS repositories through BSMS Web.
+  // Send game files directly to jsDelivr. No game HTML or asset request is
+  // proxied through Vercel or the BSMS asset server.
   html = html.replace(
-    /https?:\/\/raw\.githubusercontent\.com\/(55gms)\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi,
-    ASSET_ORIGIN + "/game-assets/$1/$2/$3/$4"
-  ).replace(
-    /https?:\/\/cdn\.jsdelivr\.net\/gh\/55gms\/(55GMS|assets)@([^/"'\s)]+)\/([^"'\s)]+)/gi,
-    ASSET_ORIGIN + "/game-assets/55gms/$1/$2/$3"
+    /https?:\\/\\/raw\\.githubusercontent\\.com\\/55gms\\/(55GMS|assets)\\/([^/"'\\s)]+)\\/([^"'\\s)]+)/gi,
+    "https://cdn.jsdelivr.net/gh/55gms/$1@$2/$3"
   );
 
-  // Rewrite old 55GMS absolute URLs to the same-origin static mirror.
+  // Rewrite legacy 55GMS paths to the public 55GMS CDN.
   html = html
-    .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, MAIN + "assets/")
-    .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, MAIN + "img/")
-    .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, MAIN + "misc/")
-    .replace(/(["'(=])\/assets\//g, "$1" + MAIN + "assets/")
-    .replace(/(["'(=])\/img\//g, "$1" + MAIN + "img/")
-    .replace(/(["'(=])\/misc\//g, "$1" + MAIN + "misc/");
+    .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/assets\\//gi, CDN_MAIN + "assets/")
+    .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/img\\//gi, CDN_MAIN + "img/")
+    .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/misc\\//gi, CDN_MAIN + "misc/")
+    .replace(/(["'(=])\\/assets\\//g, "$1" + CDN_MAIN + "assets/")
+    .replace(/(["'(=])\\/img\\//g, "$1" + CDN_MAIN + "img/")
+    .replace(/(["'(=])\\/misc\\//g, "$1" + CDN_MAIN + "misc/");
 
   const bridge = saveBridge();
   if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + bridge);
@@ -196,7 +193,7 @@ async function load() {
     document.title = game.name + " | BSMS Web";
     title.textContent = game.name;
     loadingTitle.textContent = "Loading " + game.name;
-    loadingCaption.textContent = "Fetching game files through BSMS Web…";
+    loadingCaption.textContent = "Connecting directly to the game CDN…";
 
     if (cloud) {
       try { restore((await getCloud()).saveData || {}); }
@@ -206,11 +203,9 @@ async function load() {
     last = JSON.stringify(saveData());
     ready = true;
 
-    const sameOriginPath = sourceUrl.pathname.replace(
-      /^\/55gms\/55GMS\//,
-      ASSET_ORIGIN + "/game-assets/55gms/55GMS/"
-    );
-    const gameResponse = await fetch(sameOriginPath, { cache: "force-cache" });
+    // Retrieve the HTML straight from GitHub. Game resources load directly
+    // from their jsDelivr base URL or the CDN fallback below.
+    const gameResponse = await fetch(sourceUrl.href, { cache: "force-cache" });
     if (!gameResponse.ok) throw Error("The game HTML could not be retrieved.");
     const html = await gameResponse.text();
 
@@ -231,8 +226,9 @@ async function load() {
 
     // Prefer the exact base URL embedded in the source HTML. If it is absent,
     // use the catalog image directory as a fallback, then the launch file's folder.
-    const launchDirectory = sourceUrl.pathname.slice(0, sourceUrl.pathname.lastIndexOf("/") + 1);
-    const launchBase = ASSET_ORIGIN + "/game-assets/55gms/55GMS/main" + launchDirectory;
+    const launchPath = sourceUrl.pathname.replace(/^\\/55gms\\/55GMS\\/main\\/static\\//i, "");
+    const launchDirectory = launchPath.slice(0, launchPath.lastIndexOf("/") + 1);
+    const launchBase = CDN_MAIN + launchDirectory;
     const fallbackBase = assetBase(game.image) || launchBase;
     frame.srcdoc = rewriteGameHtml(html, fallbackBase);
   } catch (error) {
