@@ -25,6 +25,7 @@ let again = false;
 let last = "";
 let timer = null;
 let syncInterval = null;
+let frameLoadTimer = null;
 
 function gameSlug(game) {
   try {
@@ -214,9 +215,19 @@ async function load() {
     const html = await gameResponse.text();
 
     frame.addEventListener("load", () => {
+      clearTimeout(frameLoadTimer);
+      frameLoadTimer = null;
       loading.classList.add("is-hidden");
       if (cloud) syncInterval = setInterval(() => sync(), 20000);
     }, { once: true });
+
+    // Avoid leaving the player on an endless spinner if the document or one
+    // of its required resources never finishes loading.
+    frameLoadTimer = setTimeout(() => {
+      if (!loading.classList.contains("is-hidden")) {
+        showError("The game files did not finish loading. A required asset may be unavailable. Please return to the Game Vault and try again.");
+      }
+    }, 60000);
 
     // Prefer the exact base URL embedded in the source HTML. If it is absent,
     // use the catalog image directory as a fallback, then the launch file's folder.
