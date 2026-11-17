@@ -87,6 +87,16 @@ function removeSpectatorFromRoom(room, clientId) {
     return false;
 }
 
+export function resolveMatchColors(prefA, prefB) {
+    const a = prefA === 'w' || prefA === 'b' ? prefA : 'any';
+    const b = prefB === 'w' || prefB === 'b' ? prefB : 'any';
+    if (a === 'w' && b !== 'w') return { first: 'w', second: 'b' };
+    if (a === 'b' && b !== 'b') return { first: 'b', second: 'w' };
+    if (b === 'w' && a !== 'w') return { first: 'b', second: 'w' };
+    if (b === 'b' && a !== 'b') return { first: 'w', second: 'b' };
+    return Math.random() < 0.5 ? { first: 'w', second: 'b' } : { first: 'b', second: 'w' };
+}
+
 export function pruneStaleOnlineState() {
     const now = Date.now();
     for (const [cid, client] of chessOnlineState.clients.entries()) {
@@ -100,7 +110,8 @@ export function pruneStaleOnlineState() {
     });
     for (const [rid, room] of chessOnlineState.rooms.entries()) {
         if (room.isBotMatch && room.status === 'playing') {
-            const ownerAlive = chessOnlineState.clients.has(room.whitePlayer?.clientId);
+            const ownerId = room.humanClientId || room.whitePlayer?.clientId;
+            const ownerAlive = chessOnlineState.clients.has(ownerId);
             if (!ownerAlive || now - (room.updatedAt || 0) > 120000) {
                 chessOnlineState.rooms.delete(rid);
                 continue;
@@ -315,24 +326,33 @@ export function processOnlineAction(action, body) {
         const mode = body.mode || 'classic';
         const mins = Number(body.mins) || 10;
         const inc = Number(body.inc) || 0;
+        const preferredColor = body.preferredColor === 'w' || body.preferredColor === 'b' ? body.preferredColor : 'any';
 
         chessOnlineState.queue = chessOnlineState.queue.filter((q) => q.clientId !== clientId);
-        const matchIdx = chessOnlineState.queue.findIndex(
-            (q) => q.mode === mode && q.clientId !== clientId && chessOnlineState.clients.has(q.clientId)
+        let matchIdx = chessOnlineState.queue.findIndex(
+            (q) => q.mode === mode && q.clientId !== clientId && chessOnlineState.clients.has(q.clientId) && (preferredColor === 'any' || q.preferredColor !== preferredColor)
         );
+        if (matchIdx === -1) {
+            matchIdx = chessOnlineState.queue.findIndex(
+                (q) => q.mode === mode && q.clientId !== clientId && chessOnlineState.clients.has(q.clientId)
+            );
+        }
 
         if (matchIdx !== -1) {
             const opponentQueue = chessOnlineState.queue.splice(matchIdx, 1)[0];
             const opponent = chessOnlineState.clients.get(opponentQueue.clientId);
             if (opponent) {
                 const roomId = cleanRoomCode(Math.random().toString(36).substring(2, 7));
+                const colors = resolveMatchColors(opponentQueue.preferredColor, preferredColor);
+                const whitePlayer = colors.first === 'w' ? opponent : client;
+                const blackPlayer = colors.first === 'w' ? client : opponent;
                 const room = {
                     roomId,
                     mode,
                     baseMinutes: opponentQueue.mins || mins,
                     incrementSeconds: opponentQueue.inc ?? inc,
-                    whitePlayer: opponent,
-                    blackPlayer: client,
+                    whitePlayer,
+                    blackPlayer,
                     status: 'playing',
                     moves: [],
                     updatedAt: now
@@ -343,23 +363,23 @@ export function processOnlineAction(action, body) {
                 client.status = 'in_game';
                 client.roomId = roomId;
 
-                pushClientEvent(opponent.clientId, {
+                pushClientEvent(whitePlayer.clientId, {
                     type: 'match:started',
                     roomId,
                     color: 'w',
                     mode: room.mode,
                     mins: room.baseMinutes,
                     inc: room.incrementSeconds,
-                    opponent: client
+                    opponent: blackPlayer
                 });
-                pushClientEvent(client.clientId, {
+                pushClientEvent(blackPlayer.clientId, {
                     type: 'match:started',
                     roomId,
                     color: 'b',
                     mode: room.mode,
                     mins: room.baseMinutes,
                     inc: room.incrementSeconds,
-                    opponent
+                    opponent: whitePlayer
                 });
             }
         } else {
@@ -369,6 +389,7 @@ export function processOnlineAction(action, body) {
                 mode,
                 mins,
                 inc,
+                preferredColor,
                 joinedAt: now
             });
             pushClientEvent(clientId, { type: 'queue:waiting' });
@@ -380,11 +401,14 @@ export function processOnlineAction(action, body) {
         }
     } else if (action === 'room:create') {
         const roomId = cleanRoomCode(body.roomId || Math.random().toString(36).substring(2, 7));
+        const creatorColorPref = body.preferredColor === 'w' || body.preferredColor === 'b' ? body.preferredColor : 'any';
         const room = {
             roomId,
             mode: body.mode || 'classic',
             baseMinutes: Number(body.mins) || 10,
             incrementSeconds: Number(body.inc) || 0,
+            creatorClientId: clientId,
+            creatorColorPref,
             whitePlayer: client,
             blackPlayer: null,
             status: 'waiting',
@@ -403,22 +427,26 @@ export function processOnlineAction(action, body) {
                 type: 'room:error',
                 message: `Room code "${roomId || body.roomId}" not found or expired.`
             });
-        } else if (room.whitePlayer.clientId === clientId) {
+        } else if ((room.creatorClientId || room.whitePlayer?.clientId) === clientId) {
             pushClientEvent(clientId, {
                 type: 'room:error',
                 message: 'You created this room! Share the code with another player or open a new tab to join.'
             });
         } else {
-            room.blackPlayer = client;
+            const creator = room.whitePlayer;
+            const joinerPref = body.preferredColor === 'w' || body.preferredColor === 'b' ? body.preferredColor : 'any';
+            const colors = resolveMatchColors(room.creatorColorPref, joinerPref);
+            room.whitePlayer = colors.first === 'w' ? creator : client;
+            room.blackPlayer = colors.first === 'w' ? client : creator;
             room.status = 'playing';
             room.updatedAt = now;
             client.status = 'in_game';
             client.roomId = room.roomId;
 
-            const whiteClient = chessOnlineState.clients.get(room.whitePlayer.clientId);
-            if (whiteClient) {
-                whiteClient.status = 'in_game';
-                whiteClient.roomId = room.roomId;
+            const creatorClient = chessOnlineState.clients.get(creator.clientId);
+            if (creatorClient) {
+                creatorClient.status = 'in_game';
+                creatorClient.roomId = room.roomId;
             }
 
             pushClientEvent(room.whitePlayer.clientId, {
@@ -428,9 +456,9 @@ export function processOnlineAction(action, body) {
                 mode: room.mode,
                 mins: room.baseMinutes,
                 inc: room.incrementSeconds,
-                opponent: client
+                opponent: room.blackPlayer
             });
-            pushClientEvent(client.clientId, {
+            pushClientEvent(room.blackPlayer.clientId, {
                 type: 'match:started',
                 roomId: room.roomId,
                 color: 'b',
@@ -457,7 +485,8 @@ export function processOnlineAction(action, body) {
                 fromUser: client,
                 mode: body.mode || 'classic',
                 mins: Number(body.mins) || 10,
-                inc: Number(body.inc) || 0
+                inc: Number(body.inc) || 0,
+                preferredColor: body.preferredColor === 'w' || body.preferredColor === 'b' ? body.preferredColor : 'any'
             });
         } else {
             pushClientEvent(clientId, {
@@ -466,48 +495,51 @@ export function processOnlineAction(action, body) {
             });
         }
     } else if (action === 'challenge:accept') {
-        const whiteClient = chessOnlineState.clients.get(body.challengerClientId);
-        if (!whiteClient) {
+        const challengerClient = chessOnlineState.clients.get(body.challengerClientId);
+        if (!challengerClient) {
             pushClientEvent(clientId, {
                 type: 'room:error',
                 message: 'Challenger is no longer online.'
             });
         } else {
             const roomId = cleanRoomCode(Math.random().toString(36).substring(2, 7));
+            const colors = resolveMatchColors(body.challengerPreferredColor, body.preferredColor);
+            const whitePlayer = colors.first === 'w' ? challengerClient : client;
+            const blackPlayer = colors.first === 'w' ? client : challengerClient;
             const room = {
                 roomId,
                 mode: body.mode || 'classic',
                 baseMinutes: Number(body.mins) || 10,
                 incrementSeconds: Number(body.inc) || 0,
-                whitePlayer: whiteClient,
-                blackPlayer: client,
+                whitePlayer,
+                blackPlayer,
                 status: 'playing',
                 moves: [],
                 updatedAt: now
             };
             chessOnlineState.rooms.set(roomId, room);
-            whiteClient.status = 'in_game';
-            whiteClient.roomId = roomId;
+            challengerClient.status = 'in_game';
+            challengerClient.roomId = roomId;
             client.status = 'in_game';
             client.roomId = roomId;
 
-            pushClientEvent(whiteClient.clientId, {
+            pushClientEvent(whitePlayer.clientId, {
                 type: 'match:started',
                 roomId,
                 color: 'w',
                 mode: room.mode,
                 mins: room.baseMinutes,
                 inc: room.incrementSeconds,
-                opponent: client
+                opponent: blackPlayer
             });
-            pushClientEvent(client.clientId, {
+            pushClientEvent(blackPlayer.clientId, {
                 type: 'match:started',
                 roomId,
                 color: 'b',
                 mode: room.mode,
                 mins: room.baseMinutes,
                 inc: room.incrementSeconds,
-                opponent: whiteClient
+                opponent: whitePlayer
             });
         }
     } else if (action === 'game:move') {
@@ -658,7 +690,8 @@ export function processOnlineAction(action, body) {
         }
     } else if (action === 'bot_match:start') {
         for (const [rid, r] of chessOnlineState.rooms.entries()) {
-            if (r.isBotMatch && r.whitePlayer?.clientId === clientId) {
+            const ownerId = r.humanClientId || r.whitePlayer?.clientId;
+            if (r.isBotMatch && ownerId === clientId) {
                 for (const specId of ensureSpectatorList(r)) {
                     pushClientEvent(specId, {
                         type: 'game:ended',
@@ -672,26 +705,32 @@ export function processOnlineAction(action, body) {
         }
         const roomId = cleanRoomCode(body.roomId || `BOT${Math.random().toString(36).substring(2, 6)}`);
         const botInfo = body.bot || {};
+        const humanColor = body.playerColor === 'b' ? 'b' : 'w';
+        const botSeat = {
+            clientId: `bot_${botInfo.id || 'ai'}`,
+            username: botInfo.name || 'Chess Bot',
+            elo: Number(botInfo.elo) || 0,
+            avatar: botInfo.avatar || '/img/pfp.png',
+            title: botInfo.title || 'BOT'
+        };
         const room = {
             roomId,
             isBotMatch: true,
+            humanClientId: clientId,
+            humanColor,
             botInfo,
             mode: body.mode || 'classic',
             baseMinutes: Number(body.mins) || 10,
             incrementSeconds: Number(body.inc) || 0,
-            whitePlayer: { ...client },
-            blackPlayer: {
-                clientId: `bot_${botInfo.id || 'ai'}`,
-                username: botInfo.name || 'Chess Bot',
-                elo: Number(botInfo.elo) || 0,
-                avatar: botInfo.avatar || '/img/pfp.png',
-                title: botInfo.title || 'BOT'
-            },
+            whitePlayer: humanColor === 'w' ? { ...client } : botSeat,
+            blackPlayer: humanColor === 'w' ? botSeat : { ...client },
             status: 'playing',
             moves: [],
             lastBoard: body.board || null,
             lastMissile: null,
             lastSandevistan: null,
+            lastGolden: null,
+            lastPirate: null,
             spectators: [],
             updatedAt: now
         };
@@ -772,6 +811,24 @@ export function processOnlineAction(action, body) {
                 });
             }
         }
+    } else if (action === 'bot_match:pirate') {
+        const roomId = cleanRoomCode(body.roomId || client.roomId);
+        const room = chessOnlineState.rooms.get(roomId);
+        if (room && room.isBotMatch && room.status === 'playing') {
+            room.lastPirate = body.pirateState || null;
+            if (body.board) room.lastBoard = body.board;
+            if (body.turn) room.turn = body.turn;
+            room.updatedAt = now;
+            for (const specId of ensureSpectatorList(room)) {
+                pushClientEvent(specId, {
+                    type: 'spectate:pirate',
+                    roomId: room.roomId,
+                    pirateState: body.pirateState || null,
+                    board: body.board || null,
+                    turn: body.turn || null
+                });
+            }
+        }
     } else if (action === 'bot_match:end') {
         const roomId = cleanRoomCode(body.roomId || client.roomId);
         const room = chessOnlineState.rooms.get(roomId);
@@ -800,7 +857,7 @@ export function processOnlineAction(action, body) {
                 type: 'room:error',
                 message: 'That match has already finished or is unavailable to spectate.'
             });
-        } else if (room.whitePlayer?.clientId === clientId || (!room.isBotMatch && room.blackPlayer?.clientId === clientId)) {
+        } else if ((room.isBotMatch && (room.humanClientId || room.whitePlayer?.clientId) === clientId) || (!room.isBotMatch && (room.whitePlayer?.clientId === clientId || room.blackPlayer?.clientId === clientId))) {
             pushClientEvent(clientId, {
                 type: 'room:error',
                 message: 'You are already playing in this match.'
@@ -810,10 +867,14 @@ export function processOnlineAction(action, body) {
                 removeSpectatorFromRoom(r, clientId);
             }
             const specCount = addSpectatorToRoom(room, clientId);
+            const activeSandySide = (room.lastSandevistan?.active && Date.now() < room.lastSandevistan.endsAt)
+                ? (room.lastSandevistan.botSide || (room.humanColor === 'b' ? 'w' : 'b'))
+                : null;
             pushClientEvent(clientId, {
                 type: 'spectate:state',
                 roomId: room.roomId,
                 isBotMatch: Boolean(room.isBotMatch),
+                humanColor: room.humanColor || 'w',
                 mode: room.mode,
                 mins: room.baseMinutes,
                 inc: room.incrementSeconds,
@@ -822,12 +883,11 @@ export function processOnlineAction(action, body) {
                 botInfo: room.botInfo || null,
                 board: room.lastBoard || null,
                 moves: room.moves || [],
-                turn: (room.lastSandevistan?.active && Date.now() < room.lastSandevistan.endsAt)
-                    ? 'b'
-                    : (room.turn || ((room.moves?.length || 0) % 2 === 0 ? 'w' : 'b')),
+                turn: activeSandySide || room.turn || ((room.moves?.length || 0) % 2 === 0 ? 'w' : 'b'),
                 missileStrike: room.lastMissile || null,
                 sandevistanState: room.lastSandevistan || null,
                 goldenState: room.lastGolden || null,
+                pirateState: room.lastPirate || null,
                 spectatorCount: specCount
             });
         }

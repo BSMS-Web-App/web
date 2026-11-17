@@ -28,6 +28,7 @@ async function getUserBySession(sessionId) {
     const accounts = snap.val() || {};
     
     for (const [uid, acc] of Object.entries(accounts)) {
+        if (!acc || acc.account_status === 'deleted') continue;
         if (acc.sessions && acc.sessions[sessionId]) {
             return { uid, account: acc };
         }
@@ -244,7 +245,8 @@ export default async function handler(req, res) {
                 });
 
                 const { password: _, ...safeProfile } = targetAcc;
-                safeProfile.avatar = mediaUrl(safeProfile.avatar);
+                const resolvedAv = mediaUrl(safeProfile.avatar);
+                safeProfile.avatar = typeof resolvedAv === 'string' ? resolvedAv : '';
                 return res.status(200).json({ success: true, sessionId: newSessionId, uid: targetUid, profile: safeProfile });
             }
 
@@ -286,7 +288,8 @@ export default async function handler(req, res) {
                 if (banCheck.isBanned) return res.status(403).json({ error: 'Banned.', account_status: 'banned', banType: banCheck.banType, reason: banCheck.banReason, ban_expires: banCheck.banExpires });
                 
                 const { password: _, ...safeProfile } = user.account;
-                safeProfile.avatar = mediaUrl(safeProfile.avatar);
+                const resolvedAv = mediaUrl(safeProfile.avatar);
+                safeProfile.avatar = typeof resolvedAv === 'string' ? resolvedAv : '';
                 return res.status(200).json({ profile: safeProfile });
             }
 
@@ -482,9 +485,9 @@ export default async function handler(req, res) {
 
                 const list = [];
                 for (const [id, acc] of Object.entries(accounts)) {
-                    // Never include banned or deleted accounts
-                    if (bannedOrDeletedUids.has(id)) continue;
-                    if (acc.account_status === 'active' || (!acc.account_status && acc.username)) {
+                    // Never include banned, deleted, or malformed accounts
+                    if (bannedOrDeletedUids.has(id) || !acc || !acc.username) continue;
+                    if (acc.account_status === 'active' || !acc.account_status) {
                         const rawFollowers = acc.followers ? Object.keys(acc.followers) : [];
                         const rawFollowing = acc.following ? Object.keys(acc.following) : [];
 
@@ -492,13 +495,14 @@ export default async function handler(req, res) {
                         const followers = rawFollowers.filter(u => !bannedOrDeletedUids.has(u));
                         const following = rawFollowing.filter(u => !bannedOrDeletedUids.has(u));
                         const isFollowing = myUid ? followers.includes(myUid) : false;
+                        const resolvedAvatar = mediaUrl(acc.avatar || '');
 
                         list.push({
                             uid: id,
-                            username: acc.username,
-                            displayName: acc.displayName || acc.username,
-                            avatar: mediaUrl(acc.avatar || ''),
-                            bio: acc.bio || '',
+                            username: String(acc.username),
+                            displayName: String(acc.displayName || acc.username),
+                            avatar: (typeof resolvedAvatar === 'string' && resolvedAvatar) ? resolvedAvatar : '',
+                            bio: typeof acc.bio === 'string' ? acc.bio : '',
                             role: acc.role || 'user',
                             verified: Boolean(acc.verified),
                             isDeveloper: Boolean(acc.isDeveloper),
@@ -509,7 +513,7 @@ export default async function handler(req, res) {
                             followersList: followers,
                             followingList: following,
                             isFollowing,
-                            chessBadges: acc.chessBadges || {},
+                            chessBadges: (acc.chessBadges && typeof acc.chessBadges === 'object') ? acc.chessBadges : {},
                             hiddenFromDirectory: acc.showInUsersList === false,
                             createdAt: acc.createdAt || null
                         });
