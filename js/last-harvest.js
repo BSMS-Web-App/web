@@ -2188,9 +2188,16 @@ function p2Open(){return Date.now()>=P2_MS;}
 function p2Eligible(){return!!(state&&(state.ending||(Number(state.stage)||0)>=BOSSES.length));}
 function p2Ready(){return p2Open()&&p2Eligible()&&!state.p2Done;}
 function bossTheme(e){if(e&&e.theme)return e.theme;const d=e&&e.bi!==undefined?BOSSES[e.bi]:null;return (d&&d.theme)||['#1d1230','#7a3b1a','#ff9a2e'];}
-function p2Foe(){const m=P2_SERVANTS[0],f=P2_SERVANTS[1];
- return{id:'hollow',bossLike:true,name:'THE HOLLOW SERVANTS',foeName:m.name,hp:m.hp,atk:m.atk,reward:500,xp:600,theme:m.theme,sbi:m.sbi,sig:m.sig,
-  twin:{name:f.name,hp:f.hp,atk:f.atk,theme:f.theme,sbi:f.sbi,sig:f.sig},lines:[],win:[],onEnd:p2End};}
+/* The servants are the same size as the hero standing in front of them: a level 12
+   keeper meets 274 / 278 HP at 24 / 22 attack, and a level 16 keeper meets 322 / 326
+   at 26 / 24, so coming back overlevelled does not turn the last fight into a walk. */
+function p2Stats(){
+ const lv=Math.max(1,Math.min(99,Math.floor(Number(state.level)||1))),half=Math.round(lv/2);
+ return{hpM:130+12*lv,hpF:134+12*lv,atkM:18+half,atkF:16+half};
+}
+function p2Foe(){const m=P2_SERVANTS[0],f=P2_SERVANTS[1],st=p2Stats();
+ return{id:'hollow',bossLike:true,name:'THE HOLLOW SERVANTS',foeName:m.name,hp:st.hpM,atk:st.atkM,reward:500,xp:600,theme:m.theme,sbi:m.sbi,sig:m.sig,
+  twin:{name:f.name,hp:st.hpF,atk:st.atkF,theme:f.theme,sbi:f.sbi,sig:f.sig},lines:[],win:[],onEnd:p2End};}
 function p2Letter(){
  const el=ov('<h3>A LETTER FROM HOME</h3><p class="note">The road north opened at dawn. We are back. Come to the square tonight \u2014 there is so much we have to tell you.</p><p class="note">\u2014 Mum &amp; Dad</p><div class="row"><button class="lh-ob" id="p2-ok">TO THE SQUARE</button></div>');
  const ok=el.querySelector('#p2-ok');if(ok)ok.onclick=()=>{sfx('menu');el.close();};
