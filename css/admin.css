@@ -218,3 +218,32 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .support-admin-reply>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #support-admin-reply-status{font-size:11px;color:var(--fg2)}
 @media(max-width:900px){.support-admin-layout{grid-template-columns:1fr}.support-admin-list{max-height:300px}.support-admin-thread-head{flex-wrap:wrap}}
+
+
+/* Announcement poll builder */
+.ann-poll-builder{border:1px solid var(--border);border-radius:14px;padding:15px;background:var(--panel-alt);display:flex;flex-direction:column;gap:14px}
+.ann-poll-enable{display:flex;align-items:center;gap:11px;cursor:pointer;color:var(--fg);font-size:14px}
+.ann-poll-enable input{width:18px;height:18px;accent-color:var(--red)}
+.ann-poll-enable span{display:flex;flex-direction:column;gap:2px}
+.ann-poll-enable small,.ann-poll-options-head span{font-size:11px;color:var(--fg2);font-weight:400}
+.ann-poll-fields{display:flex;flex-direction:column;gap:13px;border-top:1px solid var(--border);padding-top:14px}
+.ann-poll-fields[hidden]{display:none}
+.ann-poll-fields .form-group{margin:0}
+.ann-poll-options-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ann-poll-options-head label{margin:0}
+.ann-poll-option-row{display:flex;gap:8px;margin-bottom:8px}
+.ann-poll-option-row input{flex:1;min-width:0}
+.ann-poll-add{align-self:flex-start}
+.ann-poll-preview{margin-top:14px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--panel-alt);display:flex;flex-direction:column;gap:8px}
+.ann-poll-preview>small{color:var(--fg2);font-size:11px}
+.ann-poll-preview-option{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px}
+.admin-poll-summary{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--panel-alt);display:flex;flex-direction:column;gap:10px}
+.admin-poll-summary-head,.admin-poll-result>div:first-child{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.admin-poll-summary-head strong{font-size:14px;color:var(--fg)}
+.admin-poll-summary-head span,.admin-poll-summary-meta{font-size:11px;color:var(--fg2)}
+.admin-poll-result{display:flex;flex-direction:column;gap:5px}
+.admin-poll-result>div:first-child{font-size:12px;color:var(--fg2)}
+.admin-poll-result strong{color:var(--fg);white-space:nowrap}
+.admin-poll-track{height:6px;border-radius:99px;background:rgba(127,127,127,.18);overflow:hidden}
+.admin-poll-track span{display:block;height:100%;border-radius:inherit;background:var(--red)}
+@media(max-width:600px){.ann-poll-option-row{align-items:stretch}.ann-poll-option-row button{padding:8px}}
