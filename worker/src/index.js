@@ -135,7 +135,8 @@ function targetUrl(value, base) {
       url.hostname.includes("%")
     ) return null;
 
-    const host = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const hostname = url.hostname.toLowerCase();
+    const host = hostname.endsWith(".") ? hostname.slice(0, -1) : hostname;
     if (!HOSTS.some(domain => host === domain || host.endsWith("." + domain))) return null;
     url.hostname = host;
     url.hash = "";
