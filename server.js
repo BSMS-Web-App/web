@@ -115,7 +115,18 @@ const pageFileLimiter = rateLimit({
     limit: 300,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    message: { error: 'Too many page requests. Please try again shortly.' }
+    message: { error: 'Too many page requests. Please try again shortly.' },
+    skip: (req) => req.path.startsWith('/game-assets/')
+});
+
+// Games can request hundreds of separate files while initializing. Keep them
+// protected from abuse, but do not apply the much smaller general page limit.
+const gameAssetLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 1800,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many game asset requests. Please try again shortly.' }
 });
 
 // Apply CORS before body parsing and rate limiting so browser preflight requests terminate cleanly.
@@ -175,6 +186,9 @@ app.get('/raw/api/db.js', (req, res) => res.type('text/plain').sendFile(path.joi
 app.get('/raw/package.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'package.json')));
 app.get('/raw/vercel.json', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'vercel.json')));
 app.get('/raw/server.js', (req, res) => res.type('text/plain').sendFile(path.join(__dirname, 'server.js')));
+
+// Apply a dedicated limit to game assets before the general page-file limit.
+app.use('/game-assets', gameAssetLimiter);
 
 // Rate-limit routes that read and serve individual page files.
 app.use(pageFileLimiter);
