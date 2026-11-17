@@ -5,10 +5,6 @@
  */
 
 // Offline Banner Handlers
-window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
-window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
-if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
-
 async function apiFetch(endpoint, options = {}) {
     const sid = localStorage.getItem('session_id') || "";
     if (!options.headers) options.headers = {};

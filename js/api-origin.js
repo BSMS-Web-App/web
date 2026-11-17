@@ -3,8 +3,9 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: AGPL-3.0-only
  *
- * Routes application API requests directly to the dev2 Mac-hosted API.
- * Keep this public origin free of secrets; authentication uses session headers.
+ * Routes application API requests directly to the Mac-hosted Express API.
+ * The website remains hosted on Vercel, but application API traffic bypasses
+ * Vercel and reaches the Mac through the dedicated Cloudflare Tunnel hostname.
  */
 (() => {
     'use strict';
@@ -36,4 +37,10 @@
 
         return originalFetch(destination.href, init);
     };
+
+    // Load the shared connection monitor on every page using the API bootstrap.
+    const monitorScript = document.createElement('script');
+    monitorScript.src = '/js/connection-monitor.js';
+    monitorScript.defer = true;
+    document.head.appendChild(monitorScript);
 })();

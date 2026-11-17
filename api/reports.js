@@ -5,6 +5,7 @@
  */
 
 import crypto from 'node:crypto';
+import { handleApiCors } from '../lib/api-cors.js';
 import { db } from './db.js';
 import { moderateContent } from './moderation.js';
 
@@ -43,6 +44,7 @@ async function moderateSubmission(values) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
     if (!db) return res.status(500).json({ error: 'The database is unavailable.' });
 

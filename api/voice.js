@@ -7,6 +7,7 @@
  */
 
 import crypto from 'node:crypto';
+import { handleApiCors } from '../lib/api-cors.js';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { db, requestMacApi } from './db.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
@@ -102,6 +103,7 @@ async function expireCall(callId, call, reason = 'ended') {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'POST') return response(res, 405, { error: 'Method not allowed.' });
     if (!db) return response(res, 503, { error: 'Voice services are not configured.' });
 

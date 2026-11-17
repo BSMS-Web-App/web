@@ -736,19 +736,22 @@ async function migrateLegacyDataUrl(dataUrl, storagePath) {
 }
 
 function publicAccount(uid, account) {
-  const avatar = account?.account_status === 'banned' ? null : account?.avatar;
+  const isBanned = account?.account_status === 'banned';
+  const avatar = isBanned ? null : account?.avatar;
   return {
-    username: account?.username || uid,
-    displayName: account?.displayName || account?.username || uid,
+    // The client only needs the status flag to show a generic unavailable state.
+    // Do not expose a banned account's username, display name, avatar, or badges.
+    username: isBanned ? 'Unavailable user' : (account?.username || uid),
+    displayName: isBanned ? 'Unavailable user' : (account?.displayName || account?.username || uid),
     avatar: avatar && typeof avatar === 'object' && avatar.type === 'media' && /^[a-f0-9]{64}$/.test(avatar.mediaId || '')
       ? signedPublicMediaUrl(avatar.mediaId) : (typeof avatar === 'string' && avatar.startsWith('data:') ? '' : (avatar || '')),
     account_status: account?.account_status || 'active',
     ban_expires: account?.ban_expires || null,
-    role: account?.role || null,
-    verified: Boolean(account?.verified),
-    isDeveloper: Boolean(account?.isDeveloper),
-    nameColor: account?.nameColor || account?.chatColor || null,
-    chatColor: account?.nameColor || account?.chatColor || null
+    role: isBanned ? null : (account?.role || null),
+    verified: !isBanned && Boolean(account?.verified),
+    isDeveloper: !isBanned && Boolean(account?.isDeveloper),
+    nameColor: isBanned ? null : (account?.nameColor || account?.chatColor || null),
+    chatColor: isBanned ? null : (account?.nameColor || account?.chatColor || null)
   };
 }
 
@@ -845,7 +848,15 @@ app.get('/v1/chat/sync', requireApiKey, async (req, res) => {
       if (!channel?.members || !channel.members[uid]) continue;
       const members = {};
       for (const [memberUid, memberData] of Object.entries(channel.members)) {
-        if (allAccounts[memberUid]?.account_status !== 'banned') members[memberUid] = memberData;
+        const isBannedMember = allAccounts[memberUid]?.account_status === 'banned';
+        if (!isBannedMember) {
+          members[memberUid] = memberData;
+        } else if (type === 'dms' && memberUid !== uid) {
+          // Keep only the identity key needed for the DM unavailable-state check.
+          // The matching public account record is sanitized below, and group
+          // conversations continue to omit banned members from their member lists.
+          members[memberUid] = { role: 'member', banned: true };
+        }
       }
       const messageMap = channel.messages || {};
       const indexedKeys = messageKeyIndex.get(messageIndexKey(type, cid)) || [];

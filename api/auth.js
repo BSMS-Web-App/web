@@ -10,6 +10,7 @@ import { hashPassword, verifyPassword, needsPasswordRehash } from './passwords.j
 import { moderateContent } from './moderation.js';
 import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
 import { mediaUrl } from '../lib/media-url.js';
+import { handleApiCors } from '../lib/api-cors.js';
 
 async function rejectFlaggedContent(res, value, label) {
     const result = await moderateContent(value);
@@ -84,6 +85,8 @@ async function evaluateAndClearBans(uid, deviceId, accountObj) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }

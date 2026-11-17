@@ -7,8 +7,10 @@
  */
 
 import { mediaUrl } from '../lib/media-url.js';
+import { handleApiCors } from '../lib/api-cors.js';
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
         res.setHeader('Allow', 'GET, HEAD');
         return res.status(405).json({ error: 'Method not allowed.' });

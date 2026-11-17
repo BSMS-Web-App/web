@@ -5,6 +5,7 @@
  */
 
 import crypto from 'node:crypto';
+import { handleApiCors } from '../lib/api-cors.js';
 import { db } from './db.js';
 import { moderateContent } from './moderation.js';
 
@@ -44,6 +45,7 @@ function publicConversation(conversation) {
 }
 
 export default async function handler(req, res) {
+    if (!handleApiCors(req, res)) return;
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
     if (!db) return res.status(503).json({ error: 'Support is temporarily unavailable.' });
 
