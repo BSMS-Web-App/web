@@ -31,6 +31,7 @@ function syncAuthSession() {
         isGuest = true;
     }
     renderUserIcon();
+    if (window.__homeRecentAnnouncement) renderAnnouncementPoll(window.__homeRecentAnnouncement);
 }
 
 window.addEventListener('storage', (e) => {
@@ -418,6 +419,7 @@ async function fetchRecentAnnouncement() {
         const data = await res.json();
         
         const a = data.recent || (data.announcements && data.announcements[0]);
+        window.__homeRecentAnnouncement = a;
         const titleEl = document.getElementById('homeAnnTitle');
         const contentEl = document.getElementById('homeAnnContent');
         const authorNameEl = document.getElementById('homeAnnAuthorName');
