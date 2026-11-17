@@ -247,3 +247,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .admin-poll-track{height:6px;border-radius:99px;background:rgba(127,127,127,.18);overflow:hidden}
 .admin-poll-track span{display:block;height:100%;border-radius:inherit;background:var(--red)}
 @media(max-width:600px){.ann-poll-option-row{align-items:stretch}.ann-poll-option-row button{padding:8px}}
+
+.ann-form-status{margin:0;padding:10px 12px;border:1px solid rgba(220,38,38,.28);border-radius:10px;background:rgba(220,38,38,.08);color:var(--danger,#ef4444);font-size:12px;line-height:1.5}
+.ann-form-status[data-type="success"]{border-color:rgba(22,163,74,.28);background:rgba(22,163,74,.08);color:var(--success,#16a34a)}
+.ann-form-status[hidden]{display:none}
