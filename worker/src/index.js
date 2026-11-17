@@ -44,7 +44,7 @@ function cors(req) {
 function b64(bytes) {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+  return btoa(s).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
 }
 function un64(s) {
   s = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -85,8 +85,8 @@ async function readToken(token, secret) {
  * by the Worker runtime and are never relayed through the Mac.
  */
 async function dbGet(env, path) {
-  const base = (env.BSMS_WEB_API_URL || "").replace(/\\/+$/, "");
-  if (!base || !env.BSMS_WEB_API_KEY) throw Error("Account verification is not configured");
+  let base = env.BSMS_WEB_API_URL || "";
+  while (base.endsWith("/")) base = base.slice(0, -1);
   const response = await fetch(
     base + "/v1/db?path=" + encodeURIComponent(path),
     {
@@ -260,7 +260,7 @@ async function fetchPage(req, env, url, token) {
   if (bytes === null) return reply({ error: "Page exceeds reader size limit." }, 413);
 
   if (type.startsWith("image/")) {
-    if (!/^image\\/(png|jpeg|gif|webp|avif)/.test(type)) {
+    if (!["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"].includes(type.split(";")[0].trim())) {
       return reply({ error: "Image type unsupported." }, 415);
     }
     return new Response(bytes, {
