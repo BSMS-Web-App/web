@@ -2,10 +2,6 @@
 
 Describe what this pull request changes and why.
 
-## Linked issue
-
-Closes #
-
 ## Testing
 
 Describe the testing performed and its results.
