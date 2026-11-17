@@ -41,10 +41,41 @@ function createFreshState(name='',heroClass='Guardian',gender){
   cutscene:0,seenIntro:false
  };
 }
-let resetting=false;
+/* ---- save file version: oldest first, each step upgrades one version ---- */
+const SAVE_VERSION=3;
+const SAVE_MIGRATIONS={
+ /* 1 -> 2: one potion counter becomes a battle-item bag */
+ 1(s){if(!s.battleItems||typeof s.battleItems!=='object')s.battleItems={};if(!Number.isFinite(Number(s.battleItems.potion)))s.battleItems.potion=Math.max(0,Math.floor(Number(s.potions)||0));s.potionInventoryMigrated=true;},
+ /* 2 -> 3: structure unchanged; values are clamped by sanitizeState below */
+ 2(s){if(!s.battleItems||typeof s.battleItems!=='object')s.battleItems={};}
+};
+function migrateSave(s){
+ if(!s||typeof s!=='object')return s;
+ const raw=Math.floor(Number(s.saveVersion)||0),from=raw>=1?raw:1;
+ if(from>SAVE_VERSION)return s; /* written by a newer build: keep it, do not walk it backwards */
+ for(let v=from;v<SAVE_VERSION;v++){const step=SAVE_MIGRATIONS[v];if(typeof step==='function'){try{const out=step(s);if(out&&typeof out==='object')s=out;}catch(e){}}}
+ s.saveVersion=SAVE_VERSION;
+ return s;
+}
+/* saves are the only copy of player progress, so nothing reaches the game unclamped */
+function clampInt(value,min,max,fallback){const n=Math.round(Number(value));return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
+function sanitizeState(s){
+ if(!s||typeof s!=='object')return s;
+ s.maxHp=clampInt(s.maxHp,1,999,40);
+ s.hp=clampInt(s.hp,1,s.maxHp,Math.min(s.maxHp,40));
+ s.maxMp=clampInt(s.maxMp,0,999,20);
+ s.mp=clampInt(s.mp,0,s.maxMp,Math.min(s.maxMp,20));
+ s.coins=clampInt(s.coins,0,1000000,100);
+ s.xp=clampInt(s.xp,0,10000000,0);
+ s.level=clampInt(s.level,1,99,1);
+ s.stage=clampInt(s.stage,0,10,0);
+ s.potions=clampInt(s.potions,0,9,0);
+ return s;
+}
+let resetting=false,stateRepaired=false;
 let state=createFreshState('','Guardian');
 state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;
-try{const old=restoreLocalSave();if(old&&old.name)state={...state,...old};}catch(e){}
+try{const old=restoreLocalSave();if(old&&old.name){const merged={...state,...old};const raw=JSON.stringify(merged);state=sanitizeState(migrateSave(merged));if(JSON.stringify(state)!==raw)stateRepaired=true;}}catch(e){}
 let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalked=false,questStep=0,dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13,cinematic=null;
 questStep=state.questStep!==undefined?state.questStep:((state.cityUnlocked||(state.beaten&&(state.beaten.north||state.beaten.east||state.beaten.south)))?4:0);
 function setQ(n){const prev=questStep;questStep=n;state.questStep=n;if(n>prev)sfx('quest');try{save();}catch(e){}}
@@ -110,7 +141,7 @@ const CHAPTER_EPILOGUE=[
 
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
 function resetLocalSave(skipTitle){resetting=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}try{if(skipTitle)sessionStorage.setItem('lh_skip_title','1');else sessionStorage.removeItem('lh_skip_title');}catch(e){}state=createFreshState('','Guardian');state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;}
-let saveWarning=false;function save(){if(resetting)return false;const stamp=Number(state.savedAt||0);try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name){if(Number(valid.savedAt||0)>stamp){staleSaveNotice();return false;}localStorage.setItem(BACKUP,previous);}}catch(e){}}state.saveVersion=2;state.savedAt=Date.now();localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){let best=null;for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(!data||!data.name)continue;const stamp=Number(data.savedAt)||0;if(!best||stamp>best.stamp)best={stamp,data};}catch(e){}}return best?best.data:null;}let staleNoticeAt=0;function staleSaveNotice(){const now=Date.now();if(now-staleNoticeAt<10000)return;staleNoticeAt=now;try{const old=document.getElementById('lh-toast');if(old)old.remove();const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent='NOT SAVED \u00B7 ANOTHER TAB HAS NEWER PROGRESS \u2014 RELOAD TO KEEP IT';document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},5200);}catch(e){}}
+let saveWarning=false;function save(){if(resetting)return false;const stamp=Number(state.savedAt||0);try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name){if(Number(valid.savedAt||0)>stamp){staleSaveNotice();return false;}localStorage.setItem(BACKUP,previous);}}catch(e){}}if(!(Number(state.saveVersion)>SAVE_VERSION))state.saveVersion=SAVE_VERSION;state.savedAt=Date.now();localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){let best=null;for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(!data||!data.name)continue;const stamp=Number(data.savedAt)||0;if(!best||stamp>best.stamp)best={stamp,data};}catch(e){}}return best?best.data:null;}let staleNoticeAt=0;function staleSaveNotice(){const now=Date.now();if(now-staleNoticeAt<10000)return;staleNoticeAt=now;try{const old=document.getElementById('lh-toast');if(old)old.remove();const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent='NOT SAVED \u00B7 ANOTHER TAB HAS NEWER PROGRESS \u2014 RELOAD TO KEEP IT';document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},5200);}catch(e){}}
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
@@ -522,13 +553,13 @@ async function accountName(){
  }catch(e){}
  ACCOUNT_NAME='';return '';
 }
-function localBoard(){try{return JSON.parse(localStorage.getItem('lh_tower_scores')||'[]');}catch(e){return[];}}
+function localBoard(){try{const v=JSON.parse(localStorage.getItem('lh_tower_scores')||'[]');return Array.isArray(v)?v:[];}catch(e){return[];}}
 function addLocalScore(f){const r=localBoard();r.push({name:(ACCOUNT_NAME||state.name||'Adventurer'),floor:f,cls:state.heroClass,level:state.level||1,t:Date.now()});r.sort((a,b)=>b.floor-a.floor||a.t-b.t);try{localStorage.setItem('lh_tower_scores',JSON.stringify(r.slice(0,20)));}catch(e){}}
 async function submitTower(f){addLocalScore(f);const sid=sessionId();if(!sid)return false;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify({action:'tower-score',floor:f,cls:state.heroClass,level:state.level||1})});return r.ok;}catch(e){return false;}}
 async function boardRows(){
  let rows=null,online=false,submissionsOpen=null,opensAt=null;
  try{const sid=sessionId();const r=await fetch('/api/last-harvest?action=tower-leaderboard',{headers:sid?{'X-Session-ID':sid}:{}});if(r.ok){const d=await r.json();rows=d.leaderboard||[];online=true;submissionsOpen=d.submissionsOpen!==false;opensAt=d.phase==='upcoming'?(Number(d.startsAt)||null):null;}}catch(e){}
- if(!rows||!rows.length)rows=localBoard().map(x=>({displayName:x.name,floor:x.floor,cls:x.cls,level:x.level}));
+ if(!Array.isArray(rows)||!rows.length)rows=localBoard().filter(x=>x&&typeof x==='object').map(x=>({displayName:x.displayName||x.name||'Adventurer',floor:Number(x.floor)||0,cls:x.cls,level:Number(x.level)||1}));
  return {rows,online,submissionsOpen,opensAt};
 }
 async function finisherBoard(){
@@ -539,11 +570,11 @@ async function finisherBoard(){
   if(r.status===401)return{rows:[],online:false,signedIn:false};
   if(!r.ok)return{rows:[],online:false,signedIn:true};
   const d=await r.json();
-  return{rows:(d&&d.rankings)||[],online:true,signedIn:true};
+  return{rows:Array.isArray(d&&d.rankings)?d.rankings:[],online:true,signedIn:true};
  }catch(e){return{rows:[],online:false,signedIn:true};}
 }
 function finisherRows(rows){
- if(!rows||!rows.length)return '<p class="lh-lb-empty">No one has finished all ten stages yet.</p>';
+ if(!Array.isArray(rows)||!rows.length)return '<p class="lh-lb-empty">No one has finished all ten stages yet.</p>';
  return '<ol class="lh-lb">'+rows.slice(0,20).map((r,i)=>'<li class="lh-lb-row'+(i<3?' p'+(i+1):'')+'">'
   +'<span class="lh-lb-rank">'+(Number(r.rank)||i+1)+'</span>'
   +'<span class="lh-lb-name">'+esc(r.displayName||'Player')+'</span>'
@@ -566,12 +597,13 @@ function boardIdentity(who){return who?'<p class="lh-lb-id">Signed in as <b>'+es
 async function showLeaderboard(){
  const el=ov('<h3>TOWER LEADERBOARD</h3><p class="note">Every floor of the Goldleaf Tower you clear counts as one tower. Highest total wins.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
  el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
- const {rows,online,submissionsOpen,opensAt}=await boardRows();const who=await accountName();
+ let rows=[],online=false,submissionsOpen=null,opensAt=null,who='';
+ try{({rows,online,submissionsOpen,opensAt}=await boardRows());who=await accountName();}catch(e){const fb=el.querySelector('#lb-body');if(fb)fb.innerHTML='<p class="lh-lb-empty">The leaderboard could not be loaded.</p>';return;}
  const body=el.querySelector('#lb-body');if(!body)return;
  const closed=submissionsOpen===false?'<p class="note">Online scores are paused'+(opensAt?' until '+new Date(opensAt).toLocaleDateString():' now that the event has ended')+' \u2014 this run is still saved on your device.</p>':'';
  body.innerHTML=boardIdentity(who)+closed+'<p class="note">Floor scores are reported by the game client and are not server-verified.</p>'+boardTable(rows,20,who)+'<p class="note">'+(online?'Global ranking.':(who?'Saved on this device \u2014 the global board could not be reached.':'Local ranking only. Sign in to BSMS to join the global leaderboard.'))+'</p>';
  body.insertAdjacentHTML('beforeend','<h4 class="lh-j-h">LAST HARVEST FINISHERS</h4><div id="lb-fin"><p class="note">Loading\u2026</p></div><p class="note">Recorded by the server when a player closes the tenth stage.</p>');
- const fin=await finisherBoard(),finBox=el.querySelector('#lb-fin');
+ const fin=await finisherBoard().catch(()=>({rows:[],online:false,signedIn:false})),finBox=el.querySelector('#lb-fin');
  if(finBox){
   if(!fin.signedIn)finBox.innerHTML='<p class="lh-lb-empty">Sign in to BSMS to see who has finished the harvest.</p>';
   else if(!fin.online)finBox.innerHTML='<p class="lh-lb-empty">The finisher board could not be reached.</p>';
@@ -2723,6 +2755,6 @@ $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new 
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;}};
-{/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore)save();
+{/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore||stateRepaired)save();
 {const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);});}
 })();
