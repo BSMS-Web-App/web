@@ -47,6 +47,8 @@ function createFreshState(name='',heroClass='Guardian',gender){
   sentinelTrainingStarted:false,firstArmorUpgrade:false,sentinelRaidSeen:false,
   regionScenes:{},mainQuests:{},sideQuests:{},storyArcs:{},storyReactions:{},chests:{},
   rowanChoice:null,rowanTrust:0,finalChoice:null,ending:null,
+  /* v13: Rowan dies in the Broken Banquet Hall; the final wish decides who comes back */
+  rowanDead:false,wish:null,
   trapSeals:[0,0,0],trapEscaped:false,rowanLore:0,
   elderKey:'',elderTalks:0,rowanWoodsScene:false,tutorialDone:false,
   cutscene:0,seenIntro:false,p2Seen:false,p2Done:false
@@ -166,6 +168,30 @@ const CHAPTER_EPILOGUE=[
  [['ROWAN','Every banner in here has a promise on it. Mine is the only one with a lie in it.']],
  [['ROWAN','I can hear them through the door. Your parents. They sound like they did when we were small.']]
 ];
+/* after the banquet hall Rowan is gone, so chapters 7-9 close without him */
+const DEAD_EPILOGUE={
+ 5:[['JOURNAL','Rowan does not get up. The dark blade goes out first, and then the rest of him follows.'],
+    ['YOU','You were supposed to be at the feast.'],
+    ['JOURNAL','You carry him out of the hall yourself. The doors do not argue this time.']],
+ 6:[['JOURNAL','The cold is the same as it was on the road in. There is no one beside you to complain about it.']],
+ 7:[['JOURNAL','Every banner in the fortress has a promise stitched on it. None of them mention who paid.']],
+ 8:[['JOURNAL','Through the door you can hear your parents\u2019 voices. Nobody is standing at your shoulder this time.']]
+};
+/* the Hollow King's crown holds the last wish in the valley: four ways to end the harvest */
+function askFinalWish(){
+ const opts=[{label:'ASK FOR MY PARENTS',value:'parents'},{label:'ASK FOR ROWAN',value:'rowan'},
+  {label:'END THE HUNGER FOR GOOD',value:'hunger'},{label:'REFUSE THE WISH',value:'refuse'}];
+ askStoryChoice('THE HOLLOW KING','The crown splits open in your hands. One wish is left inside it. What do you ask for?',opts,v=>{
+  state.wish=v;state.finalChoice=v;save();
+  const after={
+   parents:[['YOU','Bring them back. My mother and my father.'],['THE HOLLOW KING','As you ask. Remember who paid for it.'],['JOURNAL','The crown goes quiet. Somewhere beyond the door, two voices start arguing about dinner.']],
+   rowan:[['YOU','Bring Rowan back.'],['THE HOLLOW KING','You would spend a wish on the one who sold you?'],['YOU','Yes.'],['JOURNAL','The crown goes quiet. In the broken hall, a body takes a breath.']],
+   hunger:[['YOU','End it. No more hunger. Not for anyone, ever again.'],['THE HOLLOW KING','That is not a wish a Keeper has ever made.'],['JOURNAL','The crown goes quiet. Something older than the King starts to come apart.']],
+   refuse:[['YOU','No. I did not come this far to be handed anything.'],['THE HOLLOW KING','Then you leave with exactly what you brought.'],['JOURNAL','The crown cracks and goes dark in your hand.']]
+  };
+  setTimeout(()=>{if(!dialogue)setDialogue(after[v]);},400);
+ });
+}
 
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
 function resetLocalSave(skipTitle){resetting=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}try{if(skipTitle)sessionStorage.setItem('lh_skip_title','1');else sessionStorage.removeItem('lh_skip_title');}catch(e){}state=createFreshState('','Guardian');state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;}
@@ -1322,15 +1348,15 @@ function chapterEpilogue(c,n){
  const list=lines[c];if(!list||!state.beaten['boss'+c])return false;
  const key='epilogue_'+c+'_'+n.name;if(state.storyReactions&&state.storyReactions[key]){setDialogue([[n.name,'The road is open, and the lights are still shining.']]);return true;}
  state.storyReactions=state.storyReactions||{};state.storyReactions[key]=true;save();
- const endings={together:'The Everfeast is now a place where nobody is turned away. Rowan is helping the Hollow King learn how to live among the people he once feared.',guardian:'The First Seal shines above the valley. Rowan is helping the Keepers restore the roads, and the people have promised to guard one another.',unfinished:'The valley has welcomed the Hollow King to begin again, but Rowan knows your friendship will need time. The towns are learning that healing can take patience.',steadfast:'The First Seal protects Hearthvale once more. Rowan is working quietly to make amends, and the people respect the boundaries you chose.'};
- const rowanLine=state.rowanChoice==='forgive'?'Rowan has been helping every town rebuild. He says he will never take your friendship for granted.':'Rowan is still earning the trust he lost. The people have noticed that he keeps showing up to help.';
+ const endings={parents:'The Everfeast is a place where nobody is turned away. Your parents are back at the table, and the valley has decided that is reason enough to celebrate.',rowan:'The First Seal shines above the valley. Rowan is helping the Keepers restore the roads, and the people have promised to guard one another.',hunger:'The valley does not need the Everfeast to eat any more. The lanterns are enough, and nobody is turned away.',refuse:'The First Seal shines above an empty hall. Hearthvale keeps its feast anyway, and the road home is long.'};
+ const rowanLine=!state.rowanDead?(state.rowanTrust>=2?'Rowan cannot stop talking about the last fight. He says he will never take your friendship for granted.':'Rowan keeps his distance, but he keeps showing up to help.'):(state.wish==='rowan'?'Rowan came back with the wish, and he spends every daylight hour trying to earn it.':'Rowan is gone. Someone still leaves a lantern burning on the fountain for him.');
  const extra=state.ending?[['JOURNAL',endings[state.ending]],[n.name,rowanLine]]:[];
  setDialogue([[n.name,list[0]],['JOURNAL',list[1]],...extra]);return true;
 }
 function drawRestoredRoute(A,t){
  if(!A.chapter||!state.beaten['boss'+A.chapter])return;
  const U=32,points=[10,22,34],pulse=.45+.25*Math.sin(t*3);
- const palettes={together:{glow:'rgba(255,224,130,',core:'#fff0b0',base:'#b86b37'},guardian:{glow:'rgba(140,205,255,',core:'#d9f2ff',base:'#527f9c'},unfinished:{glow:'rgba(210,165,255,',core:'#f0d9ff',base:'#805b9a'},steadfast:{glow:'rgba(135,225,190,',core:'#d5ffed',base:'#477d68'}};
+ const palettes={parents:{glow:'rgba(255,224,130,',core:'#fff0b0',base:'#b86b37'},rowan:{glow:'rgba(135,225,190,',core:'#d5ffed',base:'#477d68'},hunger:{glow:'rgba(210,165,255,',core:'#f0d9ff',base:'#805b9a'},refuse:{glow:'rgba(140,205,255,',core:'#d9f2ff',base:'#527f9c'}};
  const palette=palettes[state.ending]||{glow:'rgba(255,224,130,',core:'#ffe6a0',base:'#b86b37'};
  ctx.save();ctx.globalAlpha=.8;
  for(const x of points){const y=(A.pathY&&A.pathY[x]||13)-3,px=x*U+16,py=y*U+16;
@@ -2326,7 +2352,7 @@ async function sparBeat(b,n){
  const lines=n===1
   ? [['ROWAN','Ha! Nice one. Keep your feet moving though!'],['INSTRUCTOR','Good form. Guard up, both of you.']]
   : [['ROWAN','Careful, I am actually trying now!'],['INSTRUCTOR','One clean hit left in this round.']];
- await new Promise(res=>setDialogue(lines,res));
+ await new Promise(res=>setDialogue(lines,res,true));
  b.spar=0;b.busy=false;
  const ui2=$('pk-ui');if(ui2&&battle===b)ui2.hidden=false;
 }
@@ -2340,7 +2366,7 @@ async function rowanBeat(b,n){
  const two2=[['ROWAN','THE HOLLOW KING WAS THE ONLY ONE WHO EVER SAID HE COULD BRING HER BACK.','red'],
   ['ROWAN','I KNEW HE WAS LYING. I STILL SAID YES. THAT IS THE PART I CANNOT FORGIVE MYSELF FOR.','red'],
   ['JOURNAL','The dark blade shakes in its hands. Underneath all that anger, something is still your friend.']];
- await new Promise(res=>setDialogue(n===1?one1:two2,res));
+ await new Promise(res=>setDialogue(n===1?one1:two2,res,true));
  b.story=0;b.busy=false;const ui2=$('pk-ui');if(ui2&&battle===b)ui2.hidden=false;
 }
 function pkPanel(){const b=battle;if(!b)return;const e=b.e,pc=e.hp/e.max;$b('pk-fn').textContent=(e.boss?'\u2620 ':'')+e.name;const fl=[];if(b.g&&b.g.tower&&b.g.floor)fl.push('FLOOR '+b.g.floor);if(b.g&&b.g.waves>1)fl.push('WAVE '+b.g.wave+'/'+b.g.waves);if(e.boss)fl.push('BOSS'+(e.bi!==undefined?' \u00B7 CH '+(e.bi+1):''));if(e.enraged)fl.push('ENRAGED');fl.push(e.hp+' / '+e.max+' HP');
@@ -2413,7 +2439,7 @@ function p2Approach(){
   ['JOURNAL','There is a sigil stitched inside his collar. A hollow crown, in black thread.'],
   ['MUM','You always did notice too much.'],
   ['HOLLOW MOTHER','The King missed his servants. He sent us to fetch what he left behind.'],
-  ['ROWAN','WREN \u2014 those are NOT your parents.'],
+  ...(state.rowanDead?[['JOURNAL','No one is beside you this time. You are alone with them.']]:[['ROWAN','WREN \u2014 those are NOT your parents.']]),
  ],()=>startBattle(p2Foe()));
 }
 function p2End(won){
@@ -2543,21 +2569,32 @@ while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.m
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
-if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestCompleteStage(state.stage);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
- const redeemed=state.rowanChoice==='forgive'||state.rowanTrust>=2;
- const mercy=state.finalChoice==='mercy';
- state.ending=redeemed?(mercy?'together':'guardian'):(mercy?'unfinished':'steadfast');
+if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestCompleteStage(state.stage);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);if(g.bi===5&&!state.rowanDead){state.rowanDead=true;save();}
+const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.push(..._ep);}else {
+ state.ending=state.wish||'refuse';
  const endings={
- together:[['THE LAST HARVEST','You offer the Hollow King a place at the table. Rowan steps forward and offers his hand. The King’s shadow loosens, and the first warm sunrise in years reaches Hearthvale.'],['ROWAN','I cannot undo what I did. But I can help rebuild. If you will let me.'],['JOURNAL','The Everfeast becomes a festival of second chances. Rowan stays by your side, and the valley welcomes those who once stood outside its gates.']],
- guardian:[['THE LAST HARVEST','The Hollow King is sealed away, but Rowan chooses to stay and help repair the old roads. Your friendship survives, changed by honesty and hard-earned trust.'],['ROWAN','I will spend as long as it takes proving I can be trusted again.'],['JOURNAL','Hearthvale names you a Keeper of the First Light. The valley is safe, and Rowan helps lead its restoration.']],
- unfinished:[['THE LAST HARVEST','You spare the Hollow King, but Rowan cannot yet decide whether he is ready to stand beside you. The Everfeast returns, though some old wounds will take time to heal.'],['ROWAN','I hope one day we can talk like we used to. I will be here when you are ready.'],['JOURNAL','Hearthvale rebuilds with a cautious hope. Your choice leaves the door open for a future reunion.']],
- steadfast:[['THE LAST HARVEST','You seal the darkness away. Rowan accepts that trust cannot be demanded, and promises to help Hearthvale from a distance until he has earned his place back.'],['ROWAN','I understand. I will make things right, even if it takes years.'],['JOURNAL','The Everfeast shines brighter than ever. Hearthvale is safe, and its people remember that kindness and boundaries can stand together.']]
+ parents:[['THE LAST HARVEST','You ask for your parents. The crown drinks the wish and the air folds open \u2014 Mara and Thomas step out of the dark, alive, warm, already arguing about whose fault it was.'],
+  ['MARA','You look like you have not slept since we left.'],
+  ['JOURNAL','Rowan does not come back. His name goes on the fountain beside the other Keepers, and the village learns to say it without flinching.'],
+  ['JOURNAL','The Everfeast returns, and there is an empty chair at your table that nobody ever moves.']],
+ rowan:[['THE LAST HARVEST','You ask for Rowan. The crown drinks the wish and he falls out of the dark breathing \u2014 thinner, older, and very quiet.'],
+  ['ROWAN','You should have asked for them instead.'],
+  ['YOU','I know.'],
+  ['JOURNAL','Your parents do not come back. Every autumn you leave a lantern at the sealed door of the sanctuary, and every autumn it goes out before dawn.'],
+  ['JOURNAL','Rowan spends the rest of his life rebuilding what he broke. He never jokes about the feast again.']],
+ hunger:[['THE LAST HARVEST','You ask for nothing except an end to the hunger. The crown crumbles, the Hollow King\u2019s shadow thins to nothing, and the valley feels its own weight for the first time in a generation.'],
+  ['JOURNAL','No one comes back. Your parents stay lost behind the sealed door, and Rowan stays on the floor of the broken hall.'],
+  ['JOURNAL','But nothing in Hearthvale goes hungry again. They carve two names into the fountain and keep the lanterns lit all winter.']],
+ refuse:[['THE LAST HARVEST','You close your hand and let the wish die in it. The crown goes dark, and the last of the old magic seals the Hollow King where he stands.'],
+  ['JOURNAL','Your parents are not coming back. Neither is Rowan.'],
+  ['JOURNAL','You walk home with nothing but the road, and Hearthvale keeps its feast anyway \u2014 smaller, quieter, honest.'],
+  ['JOURNAL','Some years you can hear the two of them laughing in the square. Some years you cannot.']]
  };
  extra.push(...endings[state.ending]);
 }spawnLair();}
 pkEnd();if(up){sfx('levelup');offerSkillsWhenReady();}
 const lines=(g.win||[]).map(t=>[g.name,t]);lines.push(...progressSideQuests(g));lines.push(['REWARD','You earned '+reward+' coins'+(B?' and 2 potions':'')+(up?' and reached level '+state.level+'!':'.')]);
-if(!g.tower)setDialogue([...lines,...extra]);}
+if(!g.tower)setDialogue([...lines,...extra],g.bi===8?askFinalWish:null);}
 
 /* ================= v11: roaming monsters, pets, level 10 powers ================= */
 const PETS={
@@ -2797,7 +2834,7 @@ function askStoryChoice(speaker,prompt,options,onPick){
 }
 const PENDING_LINES=[];
 function drainPendingDialogue(){if(PENDING_LINES.timer)return;PENDING_LINES.timer=setInterval(()=>{if(battle)return;if(dialogue||cinematic||transitioning||titleOpen||!$('lh-create').hidden||document.querySelector('.lh-ov'))return;clearInterval(PENDING_LINES.timer);PENDING_LINES.timer=0;const n=PENDING_LINES.shift();if(n)setDialogue(n[0],n[1]);},300);}
-function setDialogue(lines,done){if(battle){PENDING_LINES.push([lines,done]);drainPendingDialogue();return;}clearShout();const opening=!dialogue;dialogue=lines;dialogueIndex=0;dialogueDone=done||null;if(opening)sfx('talkOpen');showLine();}
+function setDialogue(lines,done,now){if(battle&&!now){PENDING_LINES.push([lines,done]);drainPendingDialogue();return;}clearShout();const opening=!dialogue;dialogue=lines;dialogueIndex=0;dialogueDone=done||null;if(opening)sfx('talkOpen');showLine();}
 let dialogueDone=null,lineReady=0;
 function showLine(){if(!dialogue||dialogueIndex>=dialogue.length){closeDialogue();return;}const line=dialogue[dialogueIndex];
  {const el=$('lh-dialogue-text');if(el){if(line[2]==='red'){el.style.setProperty('color','#ff3b30','important');el.style.setProperty('text-shadow','0 0 12px rgba(255,50,35,.9)','important');el.style.setProperty('font-weight','700','important');}else{el.style.removeProperty('color');el.style.removeProperty('text-shadow');el.style.removeProperty('font-weight');}}}const speaker=line[0]==='NARRATOR'?'ROWAN':line[0];$('lh-speaker').textContent=speaker;typeText(line[1]);drawDialoguePortrait(speaker);$('lh-dialogue').hidden=false;positionSpeechBubble(line[0]);armLineGate(line[1]);if(line[0]==='REWARD'){clearTimeout(showLine._rt);showLine._rt=setTimeout(()=>{if(dialogue&&dialogue[dialogueIndex]&&dialogue[dialogueIndex][0]==='REWARD')advanceDialogue();},2200);}}
@@ -2853,6 +2890,7 @@ const key=questStep+'|'+(b.north?1:0)+(b.south?1:0)+'|'+(state.stage||0);if(stat
 function interact(){if(titleOpen)return;if(transitioning||battle)return;if(scene==='area'&&AREA){areaInteract();return;}if(scene==='inside'){if(dialogue){advanceDialogue();return;}if(insidePlayer.y>roomGeom(interiorId).exitY){exitBuilding();return;}const W=innerWidth,H=innerHeight,pxp=insidePlayer.x,pyp=insidePlayer.y;let target=null,dist=Infinity,best=Infinity;const qWho=(VILLAGE_CLUES[interiorId]||{}).who;for(let i=0;i<roomNPCs[interiorId].length;i++){const n=roomNPCs[interiorId][i],spot=roomNPCSpots[interiorId][i];const d=Math.hypot(pxp-W*spot.x,pyp-H*spot.y);if(d>=roomGeom(interiorId).U*3.3)continue;const score=(n.name===qWho?0:1)*1e6+d;if(score<best){target=n;dist=d;best=score;}}if(target){if(villageClueGate(interiorId,target))return;if(target.name==='OLD CRAFTSMAN ORIN'){if(interiorId===3&&questStep===2){const cn=(state.clues||[]).length;setQ(3);updateQuest();setDialogue([['OLD CRAFTSMAN ORIN','The map is yours now. Read it slowly \u2014 that seal is older than my forge.'],['OLD CRAFTSMAN ORIN','Wren says I am a sentimental old man. Wren is right.'],['JOURNAL','Clues found: '+cn+' of 4. Elder Maple is waiting in the square.']]);return;}openBlacksmith();return;}if(target.name==='INNKEEPER BRAM'){openInn();return;}if(target.name==='SHOPKEEPER TILLY'){openStore();return;}setDialogue(target.lines.map(t=>[target.name,t]));return;}if(pyp>roomGeom(interiorId).exitY){scene='outside';state.x=([10.5,34,22,5.5][interiorId])*TILE;state.y=([10.9,10.9,22.9,29.9][interiorId])*TILE;updateHud();save();return;}setDialogue([['ROWAN','There is no one close enough to talk to. Walk closer and tap the game world to interact.']]);return;}if(dialogue){advanceDialogue();return;}if(cinematic)return;if($('lh-create').hidden===false||!$('lh-game-menu').hidden)return;
 let found=null,dist=Infinity,best=Infinity;for(const n of npcs){const d=Math.hypot(state.x-n.x,state.y-n.y),rc=(n.trainer&&n.trainer.bi!==undefined)?190:(n.trainer?104:(n.act==='teleporter'?72:64));if(d>=rc)continue;const score=(n.trainer?0:n.act==='teleporter'?1:2)*1e6+d;if(score<best){found=n;dist=d;best=score;}}
 if(found){
+if(found.name==='ROWAN'&&state.rowanDead){setDialogue([['JOURNAL','Rowan is gone. The square is quieter than it should be.']]);return;}
 if(found.act==='teleporter'){openTeleporter();return;}
  if(found.region!==undefined){enterRegion(found.region);return;}
 if(found.wilds){sfx('portal');enterWilds();return;}
@@ -3062,7 +3100,7 @@ $('lh-resume').addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidde
 $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){resetLocalSave(false);location.reload();}});
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
-if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,areaHit,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,twin:battle.twin?{name:battle.twin.name,hp:battle.twin.hp,max:battle.twin.max}:null,ult:battle.ult,ultUsed:!!battle.ultUsed,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),bossTalk:()=>{const b=(AREA&&AREA.npcs||[]).find(n=>n.boss);if(!b)return null;areaBossIntro(b);return b.name;},areaNpcs:()=>(AREA&&AREA.npcs||[]).map(n=>({x:n.x,y:n.y,name:n.name,boss:!!n.boss,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,p2:{open:p2Open,eligible:p2Eligible,ready:p2Ready,start:()=>startBattle(p2Foe()),letter:p2Letter,talk:p2Approach},offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;},damage(n){if(!battle)return null;battle.e.hp=Math.max(0,battle.e.hp-(n||0));return{hp:battle.e.hp,twin:battle.twin?battle.twin.hp:null};}};
+if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,askFinalWish,areaHit,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,twin:battle.twin?{name:battle.twin.name,hp:battle.twin.hp,max:battle.twin.max}:null,ult:battle.ult,ultUsed:!!battle.ultUsed,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),bossTalk:()=>{const b=(AREA&&AREA.npcs||[]).find(n=>n.boss);if(!b)return null;areaBossIntro(b);return b.name;},areaNpcs:()=>(AREA&&AREA.npcs||[]).map(n=>({x:n.x,y:n.y,name:n.name,boss:!!n.boss,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,p2:{open:p2Open,eligible:p2Eligible,ready:p2Ready,start:()=>startBattle(p2Foe()),letter:p2Letter,talk:p2Approach},offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;},damage(n){if(!battle)return null;battle.e.hp=Math.max(0,battle.e.hp-(n||0));return{hp:battle.e.hp,twin:battle.twin?battle.twin.hp:null};}};
 {/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore||stateRepaired)save();
 {const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);if(hasSave)syncContestState();if(hasSave)flushPendingStage();
  if(hasSave&&p2Ready()){rebuildVillageEntities();if(!state.p2Seen)p2Announce();}});}
