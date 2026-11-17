@@ -10,6 +10,8 @@ import { moderateContent } from './moderation.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 import { mediaUrl } from '../lib/media-url.js';
 
+export const config = { maxDuration: 60 };
+
 const MAX_POLL_OPTIONS = 10;
 const MIN_POLL_OPTIONS = 2;
 
@@ -300,7 +302,20 @@ export default async function handler(req, res) {
             timestamp: now
         };
 
-        await newRef.set(announcement);
+        console.info('[BSMS Web :: Announcements] Persisting announcement:', JSON.stringify({
+            announcementBytes: Buffer.byteLength(JSON.stringify(announcement)),
+            titleLength: title.length,
+            contentLength: content.length,
+            pollOptionCount: poll ? Object.keys(poll.options).length : 0
+        }));
+        try {
+            await newRef.set(announcement);
+        } catch (error) {
+            console.error('[BSMS Web :: Announcements] Announcement database write failed:', error);
+            return res.status(502).json({
+                error: 'The announcement could not be saved to the database. Please try again shortly.'
+            });
+        }
         return res.status(200).json({
             success: true,
             announcement: { ...announcement, ...(poll ? { poll: { ...poll, totalVotes: 0, userOptionIds: [], options: Object.entries(poll.options).map(([optionId, option]) => ({ id: optionId, text: option.text, votes: 0, percentage: 0 })) } } : {}), authorAvatar: mediaUrl(announcement.authorAvatar) }
