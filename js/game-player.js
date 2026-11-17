@@ -134,18 +134,18 @@ function rewriteGameHtml(html, base) {
   // Send game files directly to jsDelivr. No game HTML or asset request is
   // proxied through Vercel or the BSMS asset server.
   html = html.replace(
-    /https?:\\/\\/raw\\.githubusercontent\\.com\\/55gms\\/(55GMS|assets)\\/([^/"'\\s)]+)\\/([^"'\\s)]+)/gi,
+    /https?:\/\/raw\.githubusercontent\.com\/55gms\/(55GMS|assets)\/([^/"'\s)]+)\/([^"'\s)]+)/gi,
     "https://cdn.jsdelivr.net/gh/55gms/$1@$2/$3"
   );
 
   // Rewrite legacy 55GMS paths to the public 55GMS CDN.
   html = html
-    .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/assets\\//gi, CDN_MAIN + "assets/")
-    .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/img\\//gi, CDN_MAIN + "img/")
-    .replace(/https?:\\/\\/(?:www\\.)?55gms\\.com\\/misc\\//gi, CDN_MAIN + "misc/")
-    .replace(/(["'(=])\\/assets\\//g, "$1" + CDN_MAIN + "assets/")
-    .replace(/(["'(=])\\/img\\//g, "$1" + CDN_MAIN + "img/")
-    .replace(/(["'(=])\\/misc\\//g, "$1" + CDN_MAIN + "misc/");
+    .replace(/https?:\/\/(?:www\.)?55gms\.com\/assets\//gi, CDN_MAIN + "assets/")
+    .replace(/https?:\/\/(?:www\.)?55gms\.com\/img\//gi, CDN_MAIN + "img/")
+    .replace(/https?:\/\/(?:www\.)?55gms\.com\/misc\//gi, CDN_MAIN + "misc/")
+    .replace(/(["'(=])\/assets\//g, "$1" + CDN_MAIN + "assets/")
+    .replace(/(["'(=])\/img\//g, "$1" + CDN_MAIN + "img/")
+    .replace(/(["'(=])\/misc\//g, "$1" + CDN_MAIN + "misc/");
 
   const bridge = saveBridge();
   if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, head => head + bridge);
@@ -226,7 +226,7 @@ async function load() {
 
     // Prefer the exact base URL embedded in the source HTML. If it is absent,
     // use the catalog image directory as a fallback, then the launch file's folder.
-    const launchPath = sourceUrl.pathname.replace(/^\\/55gms\\/55GMS\\/main\\/static\\//i, "");
+    const launchPath = sourceUrl.pathname.replace(/^\/55gms\/55GMS\/main\/static\//i, "");
     const launchDirectory = launchPath.slice(0, launchPath.lastIndexOf("/") + 1);
     const launchBase = CDN_MAIN + launchDirectory;
     const fallbackBase = assetBase(game.image) || launchBase;
