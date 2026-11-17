@@ -41,6 +41,54 @@ const DirectoryApp = {
         await this.fetchUsers();
     },
 
+    getSessionId: function() {
+        const direct = localStorage.getItem('session_id');
+        if (direct) return direct;
+        for (const key of ['bsms_auth_session', 'bsms_session']) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && (parsed.sessionId || parsed.sid)) {
+                        return parsed.sessionId || parsed.sid;
+                    }
+                }
+            } catch(e) {}
+        }
+        return '';
+    },
+
+    findUserByUid: function(uid) {
+        if (!uid) return null;
+        if (this.currentUserObj && this.currentUserObj.uid === uid) return this.currentUserObj;
+        return this.users.find(x => x.uid === uid) || null;
+    },
+
+    openByUid: function(uid) {
+        const u = this.findUserByUid(uid);
+        if (u && u.username) Router.setHash(u.username);
+    },
+
+    openBadgeModal: function(ev, type, uid) {
+        if (ev) ev.stopPropagation();
+        const u = this.findUserByUid(uid);
+        const name = (u && (u.displayName || u.username)) || 'User';
+        if (type === 'verified') UI.showVerifiedModal(name);
+        else if (type === 'owner') UI.showOwnerModal(name);
+        else if (type === 'admin') UI.showAdminModal(name);
+        else if (type === 'mod') UI.showModModal(name);
+        else if (type === 'dev') UI.showDevModal(name);
+        else if (type === 'netanyahu') UI.showNetanyahuModal(name);
+        else if (type === 'david') UI.showDavidModal(name);
+    },
+
+    buildAvatarHTML: function(u, eager = false) {
+        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
+        if (!u.avatar) return this.escapeHTML(initial);
+        const loadingAttrs = eager ? 'loading="eager" decoding="async" fetchpriority="high"' : 'loading="lazy" decoding="async"';
+        return `<img src="${this.escapeHTML(u.avatar)}" alt="${this.escapeHTML(u.displayName || u.username)}" ${loadingAttrs} data-initial="${this.escapeHTML(initial)}" onerror="const p=this.parentElement;if(p){p.textContent=this.dataset.initial||'?';}">`;
+    },
+
     renderCurrentSession: function() {
         try {
             const sessStr = localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session');
@@ -48,11 +96,12 @@ const DirectoryApp = {
                 const sess = JSON.parse(sessStr);
                 const pfpEl = document.getElementById('headerAvatar');
                 if (pfpEl) {
+                    const initial = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
                     if (sess.avatar) {
-                        pfpEl.innerHTML = `<img src="${this.escapeHTML(sess.avatar)}" style="width:100%;height:100%;object-fit:cover;">`;
+                        pfpEl.innerHTML = `<img src="${this.escapeHTML(sess.avatar)}" style="width:100%;height:100%;object-fit:cover;" data-initial="${this.escapeHTML(initial)}" onerror="const p=this.parentElement;if(p){p.className='fallback-initial';p.textContent=this.dataset.initial||'?';}">`;
                         pfpEl.className = '';
                     } else {
-                        pfpEl.innerText = ((sess.displayName || sess.username || '?').charAt(0)).toUpperCase();
+                        pfpEl.innerText = initial;
                         pfpEl.className = 'fallback-initial';
                     }
                     const sessColor = (sess.nameColor || sess.chatColor || '').trim();
@@ -67,7 +116,7 @@ const DirectoryApp = {
 
     fetchUsers: async function() {
         try {
-            const sid = localStorage.getItem('session_id') || "";
+            const sid = this.getSessionId();
             const res = await fetch('/api/auth?action=getPublicUsers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Session-ID': sid }
@@ -75,8 +124,9 @@ const DirectoryApp = {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to load users");
 
-            this.users = data.users || [];
+            this.users = Array.isArray(data.users) ? data.users : [];
             this.myUid = data.myUid || null;
+            this.currentUserObj = null;
             
             if (this.myUid) {
                 const myIdx = this.users.findIndex(u => u.uid === this.myUid);
@@ -118,10 +168,12 @@ const DirectoryApp = {
     },
 
     updateCounts: function() {
-        const visible = this.users.filter(u => !u.hiddenFromDirectory);
-        document.getElementById('count-all').innerText = visible.length;
-        document.getElementById('count-team').innerText = visible.filter(u => u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper).length;
-        document.getElementById('count-following').innerText = visible.filter(u => u.isFollowing).length;
+        const allAccounts = this.currentUserObj ? [this.currentUserObj, ...this.users] : this.users;
+        const visibleAll = allAccounts.filter(u => !u.hiddenFromDirectory);
+        const visibleOthers = this.users.filter(u => !u.hiddenFromDirectory);
+        document.getElementById('count-all').innerText = visibleAll.length;
+        document.getElementById('count-team').innerText = visibleAll.filter(u => u.role === 'owner' || u.role === 'admin' || u.role === 'mod' || u.isDeveloper).length;
+        document.getElementById('count-following').innerText = visibleOthers.filter(u => u.isFollowing).length;
     },
 
     setFilter: function(filter, btnEl) {
@@ -137,7 +189,9 @@ const DirectoryApp = {
     },
 
     getFilteredUsers: function() {
-        let list = this.users.filter(u => {
+        const showWideCard = Boolean(this.currentUserObj && !this.searchQuery && this.activeFilter === 'all');
+        const pool = (!showWideCard && this.currentUserObj) ? [this.currentUserObj, ...this.users] : this.users;
+        let list = pool.filter(u => {
             if (u.hiddenFromDirectory) return false;
             
             if (this.activeFilter === 'following' && !u.isFollowing) return false;
@@ -162,19 +216,19 @@ const DirectoryApp = {
 
     getBadgesHTML: function(u) {
         let b = '';
-        const safeName = this.escapeHTML(u.displayName);
+        const uidAttr = this.escapeHTML(u.uid);
         if (u.verified) {
-            b += `<svg class="ic verified-icon" title="Verified" onclick="event.stopPropagation(); UI.showVerifiedModal('${safeName}')"><use href="#ico-verified"></use></svg>`;
+            b += `<svg class="ic verified-icon" title="Verified" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'verified',this.dataset.uid)"><use href="#ico-verified"></use></svg>`;
         }
         if (u.role === 'owner') {
-            b += `<span class="owner-badge" onclick="event.stopPropagation(); UI.showOwnerModal('${safeName}')">Owner</span>`;
+            b += `<span class="owner-badge" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'owner',this.dataset.uid)">Owner</span>`;
         } else if (u.role === 'admin') {
-            b += `<span class="admin-badge" onclick="event.stopPropagation(); UI.showAdminModal('${safeName}')">Admin</span>`;
+            b += `<span class="admin-badge" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'admin',this.dataset.uid)">Admin</span>`;
         } else if (u.role === 'mod') {
-            b += `<span class="mod-badge" onclick="event.stopPropagation(); UI.showModModal('${safeName}')">Mod</span>`;
+            b += `<span class="mod-badge" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'mod',this.dataset.uid)">Mod</span>`;
         }
         if (u.isDeveloper) {
-            b += `<div class="dev-badge" title="Developer" onclick="event.stopPropagation(); UI.showDevModal('${safeName}')"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
+            b += `<div class="dev-badge" title="Developer" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'dev',this.dataset.uid)"><svg class="ic"><use href="#ico-hammer"></use></svg></div>`;
         }
         let localBadges = {};
         if (this.myUid && u.uid === this.myUid) {
@@ -182,17 +236,16 @@ const DirectoryApp = {
         }
         const badges = { ...localBadges, ...(u.chessBadges || {}) };
         if (badges.netanyahu) {
-            b += `<span class="boss-badge-netanyahu" title="Defeated Benjamin Netanyahu (10,000 ELO)" onclick="event.stopPropagation(); UI.showNetanyahuModal('${safeName}')"><img src="/img/bots/netanyahu.png" alt="" style="width:13px;height:13px;object-fit:contain;"> Netanyahu Slayer</span>`;
+            b += `<span class="boss-badge-netanyahu" title="Defeated Benjamin Netanyahu (10,000 ELO)" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'netanyahu',this.dataset.uid)"><img src="/img/bots/netanyahu.png" alt="" style="width:13px;height:13px;object-fit:contain;"> Netanyahu Slayer</span>`;
         }
         if (badges.david_martinez) {
-            b += `<span class="boss-badge-david" title="Defeated David Martinez (3,000 ELO)" onclick="event.stopPropagation(); UI.showDavidModal('${safeName}')"><img src="/img/bots/david_martinez.jpg" alt="" style="width:13px;height:13px;object-fit:cover;border-radius:3px;"> Sandevistan</span>`;
+            b += `<span class="boss-badge-david" title="Defeated David Martinez (3,000 ELO)" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'david',this.dataset.uid)"><img src="/img/bots/david_martinez.jpg" alt="" style="width:13px;height:13px;object-fit:cover;border-radius:3px;"> Sandevistan</span>`;
         }
         return b;
     },
 
     renderUserCard: function(u, isWide = false) {
-        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-        const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" loading="lazy" decoding="async">` : initial;
+        const avatarHtml = this.buildAvatarHTML(u, false);
         const badgesHtml = this.getBadgesHTML(u);
         const wideClass = isWide ? 'wide' : '';
         const tagLine = isWide ? `<span style="font-size:0.9rem; color:var(--accent); font-weight:bold; margin-bottom:4px; display:block;">Your Profile</span>` : '';
@@ -202,7 +255,7 @@ const DirectoryApp = {
         const colorDot = nameColor ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${this.escapeHTML(nameColor)}; box-shadow:0 0 6px ${this.escapeHTML(nameColor)}; flex-shrink:0;" title="Color: ${this.escapeHTML(nameColor)}"></span>` : '';
 
         return `
-        <div class="user-card ${wideClass}" onclick="Router.setHash('${u.username}')">
+        <div class="user-card ${wideClass}" data-uid="${this.escapeHTML(u.uid)}" onclick="DirectoryApp.openByUid(this.dataset.uid)">
             <div class="c-av" ${avBorderStyle}>${avatarHtml}</div>
             <div class="u-info">
                 ${tagLine}
@@ -232,6 +285,25 @@ const DirectoryApp = {
         const list = this.getFilteredUsers();
 
         if (list.length === 0) {
+            if (!this.searchQuery && this.activeFilter === 'all' && this.currentUserObj) {
+                grid.innerHTML = `
+                    <div class="state-container" style="grid-column: 1 / -1;">
+                        <p style="font-size:1.3rem; color:var(--fg); margin-bottom:8px;">You're the first active member listed</p>
+                        <p>As more BSMS Web members register, their profiles will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+            if (!this.searchQuery && this.activeFilter === 'all' && this.users.length === 0 && !this.currentUserObj) {
+                grid.innerHTML = `
+                    <div class="state-container" style="grid-column: 1 / -1;">
+                        <p style="font-size:1.4rem; color:var(--fg); margin-bottom:8px;">No registered users yet</p>
+                        <p>Create an account to claim your profile and show up in the directory.</p>
+                        <button class="btn" style="width:auto; margin: 16px auto 0; padding: 10px 22px;" onclick="location.href='/accounts'">Create Account / Sign In</button>
+                    </div>
+                `;
+                return;
+            }
             grid.innerHTML = `
                 <div class="state-container" style="grid-column: 1 / -1;">
                     <p style="font-size:1.4rem; color:var(--fg); margin-bottom:8px;">No users found</p>
@@ -261,7 +333,10 @@ const DirectoryApp = {
             this.closeProfile(false);
             return;
         }
-        let clean = decodeURIComponent(hash);
+        let clean = hash;
+        try {
+            clean = decodeURIComponent(hash);
+        } catch(e) {}
         clean = clean.replace(/^#+/, '').replace(/^\/+/, '').trim();
         clean = clean.replace(/^\[/, '').replace(/\]$/, '').trim();
         clean = clean.replace(/^\/+/, '').replace(/\/+$/, '').trim();
@@ -302,14 +377,13 @@ const DirectoryApp = {
 
         const isMe = this.myUid && this.myUid === u.uid;
         
-        const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
         const pvColor = (u.nameColor || u.chatColor || '').trim();
         const pvColorStyle = pvColor ? `style="color:${this.escapeHTML(pvColor)} !important; font-weight:bold;"` : '';
         const pvColorBadge = pvColor ? `<span style="display:inline-flex; align-items:center; gap:5px; background:${this.escapeHTML(pvColor)}1a; color:${this.escapeHTML(pvColor)}; border:1px solid ${this.escapeHTML(pvColor)}55; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold; font-family:var(--font-mono); vertical-align:middle; text-transform:uppercase;"><span style="width:7px; height:7px; border-radius:50%; background:${this.escapeHTML(pvColor)};"></span>${this.escapeHTML(pvColor)}</span>` : '';
 
         const pvAvEl = document.getElementById('pvAvatar');
         if (pvAvEl) {
-            pvAvEl.innerHTML = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" loading="eager" decoding="async" fetchpriority="high">` : initial;
+            pvAvEl.innerHTML = this.buildAvatarHTML(u, true);
             if (pvColor) {
                 pvAvEl.style.borderColor = pvColor;
                 pvAvEl.style.boxShadow = `0 0 16px ${pvColor}44`;
@@ -399,19 +473,17 @@ const DirectoryApp = {
 
         let html = '';
         uidArray.forEach(mId => {
-            let u = this.users.find(x => x.uid === mId);
-            if (!u && this.currentUserObj && this.currentUserObj.uid === mId) u = this.currentUserObj;
+            const u = this.findUserByUid(mId);
             if (!u) return;
 
-            const initial = ((u.displayName || u.username || '?').charAt(0)).toUpperCase();
-            const avatarHtml = u.avatar ? `<img src="${this.escapeHTML(u.avatar)}" loading="lazy" decoding="async">` : initial;
+            const avatarHtml = this.buildAvatarHTML(u, false);
             const uColor = (u.nameColor || u.chatColor || '').trim();
             const uColorStyle = uColor ? `style="color:${this.escapeHTML(uColor)} !important; font-weight:bold;"` : 'style="color:var(--fg); font-weight:bold;"';
             const uAvStyle = uColor ? `style="border-color:${this.escapeHTML(uColor)};"` : '';
             const uDot = uColor ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${this.escapeHTML(uColor)}; box-shadow:0 0 4px ${this.escapeHTML(uColor)}; flex-shrink:0;"></span>` : '';
 
             html += `
-            <div class="user-list-item" onclick="Router.setHash('${u.username}')">
+            <div class="user-list-item" data-uid="${this.escapeHTML(u.uid)}" onclick="DirectoryApp.openByUid(this.dataset.uid)">
                 <div class="c-av uli-av" ${uAvStyle}>${avatarHtml}</div>
                 <div style="flex:1; overflow:hidden;">
                     <div style="display:flex; align-items:center; gap:6px;">
@@ -427,11 +499,10 @@ const DirectoryApp = {
     },
 
     toggleFollow: async function(targetUid) {
-        let u = this.users.find(x => x.uid === targetUid);
-        if (!u && this.currentUserObj && this.currentUserObj.uid === targetUid) u = this.currentUserObj;
+        const u = this.findUserByUid(targetUid);
         if (!u) return;
 
-        const sid = localStorage.getItem('session_id');
+        const sid = this.getSessionId();
         if (!sid) {
             UI.showToast("Please log in to follow users.", "error");
             location.href = '/accounts';
@@ -453,14 +524,24 @@ const DirectoryApp = {
             if (!res.ok) throw new Error(data.error || "Action failed");
 
             u.isFollowing = !isFollowing;
-            u.followersCount += isFollowing ? -1 : 1;
+            u.followersCount = Math.max(0, (u.followersCount || 0) + (isFollowing ? -1 : 1));
             
-            if (u.followersList) {
-                if (u.isFollowing) u.followersList.push(this.myUid);
-                else u.followersList = u.followersList.filter(id => id !== this.myUid);
+            if (Array.isArray(u.followersList) && this.myUid) {
+                if (u.isFollowing && !u.followersList.includes(this.myUid)) u.followersList.push(this.myUid);
+                else if (!u.isFollowing) u.followersList = u.followersList.filter(id => id !== this.myUid);
+            }
+            if (this.currentUserObj && Array.isArray(this.currentUserObj.followingList)) {
+                if (u.isFollowing && !this.currentUserObj.followingList.includes(targetUid)) {
+                    this.currentUserObj.followingList.push(targetUid);
+                    this.currentUserObj.followingCount = (this.currentUserObj.followingCount || 0) + 1;
+                } else if (!u.isFollowing) {
+                    this.currentUserObj.followingList = this.currentUserObj.followingList.filter(id => id !== targetUid);
+                    this.currentUserObj.followingCount = Math.max(0, (this.currentUserObj.followingCount || 1) - 1);
+                }
             }
             
             this.updateCounts();
+            if (this.activeFilter === 'following') this.renderUsers();
             
             if (btn) {
                 const followText = u.isFollowing ? 'Unfollow' : 'Follow';
@@ -482,20 +563,19 @@ const DirectoryApp = {
     startDM: async function(targetUid) {
         let isAuth = false;
         try {
-            const sessStr = localStorage.getItem('bsms_auth_session');
+            const sessStr = localStorage.getItem('bsms_auth_session') || localStorage.getItem('bsms_session');
             if (sessStr) {
                 const sess = JSON.parse(sessStr);
                 if (sess.loggedIn && (sess.uid || sess.username)) isAuth = true;
             }
         } catch(e) {}
 
-        if (!isAuth) {
+        const sid = this.getSessionId();
+        if (!isAuth && !sid) {
             UI.showToast("Please log in to message users.", "error");
             setTimeout(() => { location.href = '/accounts'; }, 900);
             return;
         }
-
-        const sid = localStorage.getItem('session_id') || "";
         UI.showToast("Opening conversation...", "info");
         try {
             const res = await fetch('/api/chat?action=startDM', {
