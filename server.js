@@ -25,7 +25,7 @@ import supportConversationsHandler from './api/support-conversations.js';
 import legalHandler from './api/legal.js';
 import mediaHandler from './api/media.js';
 import voiceHandler from './api/voice.js';
-import chessHandler, { chessOnlineState, cleanRoomCode, pushClientEvent, registerWsSender } from './api/chess.js';
+import chessHandler, { chessOnlineState, cleanRoomCode, pushClientEvent, registerWsSender, resolveMatchColors } from './api/chess.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -360,22 +360,31 @@ wss.on('connection', (ws) => {
             } else if (msg.type === 'queue:join') {
                 const entry = clients.get(currentClientId);
                 if (!entry) return;
+                const preferredColor = msg.preferredColor === 'w' || msg.preferredColor === 'b' ? msg.preferredColor : 'any';
                 chessOnlineState.queue = chessOnlineState.queue.filter((q) => q.clientId !== currentClientId);
-                const matchIdx = chessOnlineState.queue.findIndex(
-                    (q) => q.mode === msg.mode && q.clientId !== currentClientId && (clients.has(q.clientId) || chessOnlineState.clients.has(q.clientId))
+                let matchIdx = chessOnlineState.queue.findIndex(
+                    (q) => q.mode === msg.mode && q.clientId !== currentClientId && (clients.has(q.clientId) || chessOnlineState.clients.has(q.clientId)) && (preferredColor === 'any' || q.preferredColor !== preferredColor)
                 );
+                if (matchIdx === -1) {
+                    matchIdx = chessOnlineState.queue.findIndex(
+                        (q) => q.mode === msg.mode && q.clientId !== currentClientId && (clients.has(q.clientId) || chessOnlineState.clients.has(q.clientId))
+                    );
+                }
                 if (matchIdx !== -1) {
                     const opponentQueue = chessOnlineState.queue.splice(matchIdx, 1)[0];
                     const opponentUser = clients.get(opponentQueue.clientId)?.user || chessOnlineState.clients.get(opponentQueue.clientId);
                     if (opponentUser) {
                         const roomId = cleanRoomCode(Math.random().toString(36).substring(2, 7));
+                        const colors = resolveMatchColors(opponentQueue.preferredColor, preferredColor);
+                        const whitePlayer = colors.first === 'w' ? opponentUser : entry.user;
+                        const blackPlayer = colors.first === 'w' ? entry.user : opponentUser;
                         const room = {
                             roomId,
                             mode: msg.mode,
                             baseMinutes: opponentQueue.mins,
                             incrementSeconds: opponentQueue.inc,
-                            whitePlayer: opponentUser,
-                            blackPlayer: entry.user,
+                            whitePlayer,
+                            blackPlayer,
                             status: 'playing',
                             moves: [],
                             updatedAt: Date.now(),
@@ -390,23 +399,23 @@ wss.on('connection', (ws) => {
                         upsertMemberFromUser(opponentUser);
                         upsertMemberFromUser(entry.user);
 
-                        sendToClient(opponentUser.clientId, {
+                        sendToClient(whitePlayer.clientId, {
                             type: 'match:started',
                             roomId,
                             color: 'w',
                             mode: room.mode,
                             mins: room.baseMinutes,
                             inc: room.incrementSeconds,
-                            opponent: entry.user
+                            opponent: blackPlayer
                         });
-                        sendToClient(entry.user.clientId, {
+                        sendToClient(blackPlayer.clientId, {
                             type: 'match:started',
                             roomId,
                             color: 'b',
                             mode: room.mode,
                             mins: room.baseMinutes,
                             inc: room.incrementSeconds,
-                            opponent: opponentUser
+                            opponent: whitePlayer
                         });
                         broadcastPresence();
                         return;
@@ -419,6 +428,7 @@ wss.on('connection', (ws) => {
                     mode: msg.mode || 'classic',
                     mins: msg.mins || 10,
                     inc: msg.inc || 0,
+                    preferredColor,
                     joinedAt: Date.now()
                 });
                 sendToClient(currentClientId, { type: 'queue:waiting' });
@@ -435,11 +445,14 @@ wss.on('connection', (ws) => {
                 const entry = clients.get(currentClientId);
                 if (!entry) return;
                 const roomId = cleanRoomCode(msg.roomId || Math.random().toString(36).substring(2, 7));
+                const creatorColorPref = msg.preferredColor === 'w' || msg.preferredColor === 'b' ? msg.preferredColor : 'any';
                 const room = {
                     roomId,
                     mode: msg.mode || 'classic',
                     baseMinutes: msg.mins || 10,
                     incrementSeconds: msg.inc || 0,
+                    creatorClientId: currentClientId,
+                    creatorColorPref,
                     whitePlayer: entry.user,
                     blackPlayer: null,
                     status: 'waiting',
@@ -463,24 +476,28 @@ wss.on('connection', (ws) => {
                     });
                     return;
                 }
-                if (room.whitePlayer.clientId === currentClientId) {
+                if ((room.creatorClientId || room.whitePlayer?.clientId) === currentClientId) {
                     sendToClient(currentClientId, {
                         type: 'room:error',
                         message: 'You created this room! Share the code with another player or open a new tab to join.'
                     });
                     return;
                 }
-                room.blackPlayer = entry.user;
+                const creator = room.whitePlayer;
+                const joinerPref = msg.preferredColor === 'w' || msg.preferredColor === 'b' ? msg.preferredColor : 'any';
+                const colors = resolveMatchColors(room.creatorColorPref, joinerPref);
+                room.whitePlayer = colors.first === 'w' ? creator : entry.user;
+                room.blackPlayer = colors.first === 'w' ? entry.user : creator;
                 room.status = 'playing';
                 room.updatedAt = Date.now();
                 entry.user.status = 'in_game';
                 entry.user.roomId = room.roomId;
 
-                const whiteEntry = clients.get(room.whitePlayer.clientId);
-                if (whiteEntry) {
-                    whiteEntry.user.status = 'in_game';
-                    whiteEntry.user.roomId = room.roomId;
-                    upsertMemberFromUser(whiteEntry.user);
+                const creatorEntry = clients.get(creator.clientId);
+                if (creatorEntry) {
+                    creatorEntry.user.status = 'in_game';
+                    creatorEntry.user.roomId = room.roomId;
+                    upsertMemberFromUser(creatorEntry.user);
                 }
                 upsertMemberFromUser(entry.user);
 
@@ -491,9 +508,9 @@ wss.on('connection', (ws) => {
                     mode: room.mode,
                     mins: room.baseMinutes,
                     inc: room.incrementSeconds,
-                    opponent: entry.user
+                    opponent: room.blackPlayer
                 });
-                sendToClient(entry.user.clientId, {
+                sendToClient(room.blackPlayer.clientId, {
                     type: 'match:started',
                     roomId: room.roomId,
                     color: 'b',
@@ -511,52 +528,56 @@ wss.on('connection', (ws) => {
                     fromUser: fromEntry.user,
                     mode: msg.mode || 'classic',
                     mins: msg.mins || 10,
-                    inc: msg.inc || 0
+                    inc: msg.inc || 0,
+                    preferredColor: msg.preferredColor === 'w' || msg.preferredColor === 'b' ? msg.preferredColor : 'any'
                 });
             } else if (msg.type === 'challenge:accept') {
-                const blackEntry = clients.get(currentClientId);
-                const whiteUser = clients.get(msg.challengerClientId)?.user || chessOnlineState.clients.get(msg.challengerClientId);
-                if (!blackEntry || !whiteUser) return;
+                const acceptorEntry = clients.get(currentClientId);
+                const challengerUser = clients.get(msg.challengerClientId)?.user || chessOnlineState.clients.get(msg.challengerClientId);
+                if (!acceptorEntry || !challengerUser) return;
 
                 const roomId = cleanRoomCode(Math.random().toString(36).substring(2, 7));
+                const colors = resolveMatchColors(msg.challengerPreferredColor, msg.preferredColor);
+                const whitePlayer = colors.first === 'w' ? challengerUser : acceptorEntry.user;
+                const blackPlayer = colors.first === 'w' ? acceptorEntry.user : challengerUser;
                 const room = {
                     roomId,
                     mode: msg.mode || 'classic',
                     baseMinutes: msg.mins || 10,
                     incrementSeconds: msg.inc || 0,
-                    whitePlayer: whiteUser,
-                    blackPlayer: blackEntry.user,
+                    whitePlayer,
+                    blackPlayer,
                     status: 'playing',
                     moves: [],
                     updatedAt: Date.now(),
                     spectators: new Set()
                 };
                 rooms.set(roomId, room);
-                whiteUser.status = 'in_game';
-                whiteUser.roomId = roomId;
-                blackEntry.user.status = 'in_game';
-                blackEntry.user.roomId = roomId;
+                challengerUser.status = 'in_game';
+                challengerUser.roomId = roomId;
+                acceptorEntry.user.status = 'in_game';
+                acceptorEntry.user.roomId = roomId;
 
-                upsertMemberFromUser(whiteUser);
-                upsertMemberFromUser(blackEntry.user);
+                upsertMemberFromUser(challengerUser);
+                upsertMemberFromUser(acceptorEntry.user);
 
-                sendToClient(whiteUser.clientId, {
+                sendToClient(whitePlayer.clientId, {
                     type: 'match:started',
                     roomId,
                     color: 'w',
                     mode: room.mode,
                     mins: room.baseMinutes,
                     inc: room.incrementSeconds,
-                    opponent: blackEntry.user
+                    opponent: blackPlayer
                 });
-                sendToClient(blackEntry.user.clientId, {
+                sendToClient(blackPlayer.clientId, {
                     type: 'match:started',
                     roomId,
                     color: 'b',
                     mode: room.mode,
                     mins: room.baseMinutes,
                     inc: room.incrementSeconds,
-                    opponent: whiteUser
+                    opponent: whitePlayer
                 });
                 broadcastPresence();
             } else if (msg.type === 'game:move') {
@@ -728,7 +749,8 @@ wss.on('connection', (ws) => {
                 const entry = clients.get(currentClientId);
                 if (!entry) return;
                 for (const [rid, r] of rooms.entries()) {
-                    if (r.isBotMatch && r.whitePlayer?.clientId === currentClientId) {
+                    const ownerId = r.humanClientId || r.whitePlayer?.clientId;
+                    if (r.isBotMatch && ownerId === currentClientId) {
                         ensureSpectatorSet(r).forEach((specId) => {
                             sendToClient(specId, {
                                 type: 'game:ended',
@@ -742,26 +764,32 @@ wss.on('connection', (ws) => {
                 }
                 const roomId = cleanRoomCode(msg.roomId || `BOT${Math.random().toString(36).substring(2, 6)}`);
                 const botInfo = msg.bot || {};
+                const humanColor = msg.playerColor === 'b' ? 'b' : 'w';
+                const botSeat = {
+                    clientId: `bot_${botInfo.id || 'ai'}`,
+                    username: botInfo.name || 'Chess Bot',
+                    elo: Number(botInfo.elo) || 0,
+                    avatar: botInfo.avatar || '/img/pfp.png',
+                    title: botInfo.title || 'BOT'
+                };
                 const room = {
                     roomId,
                     isBotMatch: true,
+                    humanClientId: currentClientId,
+                    humanColor,
                     botInfo,
                     mode: msg.mode || 'classic',
                     baseMinutes: Number(msg.mins) || 10,
                     incrementSeconds: Number(msg.inc) || 0,
-                    whitePlayer: { ...entry.user },
-                    blackPlayer: {
-                        clientId: `bot_${botInfo.id || 'ai'}`,
-                        username: botInfo.name || 'Chess Bot',
-                        elo: Number(botInfo.elo) || 0,
-                        avatar: botInfo.avatar || '/img/pfp.png',
-                        title: botInfo.title || 'BOT'
-                    },
+                    whitePlayer: humanColor === 'w' ? { ...entry.user } : botSeat,
+                    blackPlayer: humanColor === 'w' ? botSeat : { ...entry.user },
                     status: 'playing',
                     moves: [],
                     lastBoard: msg.board || null,
                     lastMissile: null,
                     lastSandevistan: null,
+                    lastGolden: null,
+                    lastPirate: null,
                     updatedAt: Date.now(),
                     spectators: new Set()
                 };
@@ -844,6 +872,24 @@ wss.on('connection', (ws) => {
                         board: msg.board || null
                     });
                 });
+            } else if (msg.type === 'bot_match:pirate') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (!room || !room.isBotMatch || room.status !== 'playing') return;
+                room.lastPirate = msg.pirateState || null;
+                if (msg.board) room.lastBoard = msg.board;
+                if (msg.turn) room.turn = msg.turn;
+                room.updatedAt = Date.now();
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'spectate:pirate',
+                        roomId: room.roomId,
+                        pirateState: msg.pirateState || null,
+                        board: msg.board || null,
+                        turn: msg.turn || null
+                    });
+                });
             } else if (msg.type === 'bot_match:end') {
                 const entry = clients.get(currentClientId);
                 const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
@@ -879,7 +925,7 @@ wss.on('connection', (ws) => {
                     });
                     return;
                 }
-                if (room.whitePlayer?.clientId === currentClientId || (!room.isBotMatch && room.blackPlayer?.clientId === currentClientId)) {
+                if ((room.isBotMatch && (room.humanClientId || room.whitePlayer?.clientId) === currentClientId) || (!room.isBotMatch && (room.whitePlayer?.clientId === currentClientId || room.blackPlayer?.clientId === currentClientId))) {
                     sendToClient(currentClientId, {
                         type: 'room:error',
                         message: 'You are already playing in this match.'
@@ -892,10 +938,14 @@ wss.on('connection', (ws) => {
                 const specs = ensureSpectatorSet(room);
                 specs.add(currentClientId);
                 const specCount = specs.size;
+                const activeSandySide = (room.lastSandevistan?.active && Date.now() < room.lastSandevistan.endsAt)
+                    ? (room.lastSandevistan.botSide || (room.humanColor === 'b' ? 'w' : 'b'))
+                    : null;
                 sendToClient(currentClientId, {
                     type: 'spectate:state',
                     roomId: room.roomId,
                     isBotMatch: Boolean(room.isBotMatch),
+                    humanColor: room.humanColor || 'w',
                     mode: room.mode,
                     mins: room.baseMinutes,
                     inc: room.incrementSeconds,
@@ -904,20 +954,19 @@ wss.on('connection', (ws) => {
                     botInfo: room.botInfo || null,
                     board: room.lastBoard || null,
                     moves: room.moves || [],
-                    turn: (room.lastSandevistan?.active && Date.now() < room.lastSandevistan.endsAt)
-                        ? 'b'
-                        : (room.turn || ((room.moves?.length || 0) % 2 === 0 ? 'w' : 'b')),
+                    turn: activeSandySide || room.turn || ((room.moves?.length || 0) % 2 === 0 ? 'w' : 'b'),
                     missileStrike: room.lastMissile || null,
                     sandevistanState: room.lastSandevistan || null,
                     goldenState: room.lastGolden || null,
+                    pirateState: room.lastPirate || null,
                     spectatorCount: specCount
                 });
-                if (room.whitePlayer?.clientId) {
-                    sendToClient(room.whitePlayer.clientId, { type: 'spectate:count', roomId: room.roomId, spectatorCount: specCount });
-                }
-                if (!room.isBotMatch && room.blackPlayer?.clientId) {
-                    sendToClient(room.blackPlayer.clientId, { type: 'spectate:count', roomId: room.roomId, spectatorCount: specCount });
-                }
+                const notifyIds = room.isBotMatch
+                    ? [room.humanClientId || room.whitePlayer?.clientId]
+                    : [room.whitePlayer?.clientId, room.blackPlayer?.clientId];
+                notifyIds.filter(Boolean).forEach((pid) => {
+                    sendToClient(pid, { type: 'spectate:count', roomId: room.roomId, spectatorCount: specCount });
+                });
                 broadcastPresence();
             } else if (msg.type === 'spectate:leave') {
                 const roomId = msg.roomId ? cleanRoomCode(msg.roomId) : null;
@@ -955,7 +1004,7 @@ wss.on('connection', (ws) => {
             }
             for (const [rid, r] of rooms.entries()) {
                 ensureSpectatorSet(r).delete(currentClientId);
-                if (r.isBotMatch && r.whitePlayer?.clientId === currentClientId) {
+                if (r.isBotMatch && (r.humanClientId || r.whitePlayer?.clientId) === currentClientId) {
                     ensureSpectatorSet(r).forEach((specId) => {
                         sendToClient(specId, {
                             type: 'game:ended',
