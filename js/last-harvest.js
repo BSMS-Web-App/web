@@ -178,7 +178,7 @@ const DEAD_EPILOGUE={
  8:[['JOURNAL','Through the door you can hear your parents\u2019 voices. Nobody is standing at your shoulder this time.']]
 };
 /* the Hollow King's crown holds the last wish in the valley: four ways to end the harvest */
-function askFinalWish(){
+function askFinalWish(done){
  const opts=[{label:'ASK FOR MY PARENTS',value:'parents'},{label:'ASK FOR ROWAN',value:'rowan'},
   {label:'END THE HUNGER FOR GOOD',value:'hunger'},{label:'REFUSE THE WISH',value:'refuse'}];
  askStoryChoice('THE HOLLOW KING','The crown splits open in your hands. One wish is left inside it. What do you ask for?',opts,v=>{
@@ -189,7 +189,9 @@ function askFinalWish(){
    hunger:[['YOU','End it. No more hunger. Not for anyone, ever again.'],['THE HOLLOW KING','That is not a wish a Keeper has ever made.'],['JOURNAL','The crown goes quiet. Something older than the King starts to come apart.']],
    refuse:[['YOU','No. I did not come this far to be handed anything.'],['THE HOLLOW KING','Then you leave with exactly what you brought.'],['JOURNAL','The crown cracks and goes dark in your hand.']]
   };
-  setTimeout(()=>{if(!dialogue)setDialogue(after[v]);},400);
+  /* the area post-scene can be talking when the wish resolves: wait for it instead of dropping the outcome */
+  const showAfter=()=>{if(dialogue||cinematic){setTimeout(showAfter,300);return;}setDialogue(after[v],done?()=>done():null);};
+  setTimeout(showAfter,800);
  });
 }
 
@@ -1353,7 +1355,9 @@ function playRowanConfrontation(done){
   cinematic=null;document.body.classList.remove('lh-cinematic');done();})();
 }
 function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});});return;}playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();A.bossTalk=0;startBattle(g);});});}
-function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();},600);}}
+function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!cinematic&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};
+ const show=()=>{if(dialogue||cinematic||battle){setTimeout(show,300);return;}if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();};
+ show();},600);}}
 function chapterEpilogue(c,n){
  const lines={1:['The First Seal is glowing again. The forest feels warmer, and villagers are leaving lanterns along the trail.','The road east is open now. Maplebrook has been waiting for someone to bring back the light.'],2:['The orchard trees have begun to bloom again. The fruit is sweet instead of bitter.','A path beneath the old roots has appeared.'],3:['The pantry lanterns are burning again. People have started bringing food to share.','The restored signal has reached the mountain pass.'],4:['The mountain paths are calmer now. Travelers are returning.','The market has opened its eastern gate.'],5:['The empty banquet hall is no longer silent. Music has returned to the village.','The frost lanterns have awakened.'],6:['The watchtower signal is clear. Supplies are moving safely through the snow.','The old fortress gate has opened.'],7:['The fortress banners have been raised again. Its people are returning.','A golden doorway has appeared beyond the ruins.'],8:['The voices beyond the door are no longer distant. The sanctuary is awake.','The final road is open.'],9:['The last light has reached every corner of the valley.','Hearthvale will remember what you did here.']};
  const list=lines[c];if(!list||!state.beaten['boss'+c])return false;
@@ -1982,6 +1986,95 @@ function playBossScene(g,next){
   next(()=>{document.body.classList.remove('lh-cinematic');cinematic=null;});},5400);
 }
 
+/* ---- the Everfeast: the valley sits down to eat after each of the last three guardians ---- */
+const FEAST_LINES={
+ 8:[['JOURNAL','The fortress gates stand open. By the time you reach Hearthvale, somebody has already dragged the long table out of the inn.'],
+    ['ELDER MAPLE','Sit down, child. Every chair at this table is somebody who came home because of you.'],
+    ['JOURNAL','For one night the valley eats the way it used to: too much, too loud, nobody counting the plates.']],
+ 9:[['JOURNAL','Nobody plans it. Tables come out of the sanctuary storerooms, and the lanterns along the wall light themselves.'],
+    ['MILLIE','Marigolds on every plate. Your mother would have called that showing off.'],
+    ['JOURNAL','Hearthvale eats under the Hollow King\u2019s empty throne, and the room is louder than it has ever been.']],
+ 10:[['JOURNAL','The last table is set end to end with the fountain, and there is not one empty chair left in the village.'],
+    ['GUS','We kept your seat. We always keep your seat.'],
+    ['JOURNAL','The Everfeast begins the way it should: somebody burns the bread, somebody laughs, and the harvest goes on.']]
+};
+function drawEverfeastScene(W,H){
+ const t=(performance.now()-(cinematic.t0||performance.now()))/1000;
+ const dl=$('lh-dialogue'),dlgH=(dl&&!dl.hidden)?Math.min(H*.58,dl.offsetHeight||0):0;
+ const SH=Math.max(150,H-dlgH-6);
+ const horizon=SH*.47,ty=SH*.585,by=SH*.79,k=Math.max(2,Math.round(Math.min(W,SH)/150));
+ ctx.save();
+ const sky=ctx.createLinearGradient(0,0,0,horizon);
+ sky.addColorStop(0,'#170f26');sky.addColorStop(.42,'#4d2438');sky.addColorStop(.74,'#a94f39');sky.addColorStop(1,'#e9a65a');
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizon+1);
+ for(let i=0;i<46;i++){const sx=(i*149)%W,sy=(i*67)%Math.max(20,horizon*.72);
+  ctx.globalAlpha=.18+.42*(.5+.5*Math.sin(t*1.4+i*.7));ctx.fillStyle='#ffe7bd';ctx.fillRect(sx,sy,2,2);}
+ ctx.globalAlpha=1;
+ const glow=ctx.createRadialGradient(W*.74,horizon*.94,4,W*.74,horizon*.94,W*.52);
+ glow.addColorStop(0,'rgba(255,202,130,.5)');glow.addColorStop(1,'rgba(255,150,80,0)');
+ ctx.fillStyle=glow;ctx.fillRect(0,0,W,horizon+2);
+ ctx.fillStyle='rgba(26,14,24,.72)';ctx.beginPath();ctx.moveTo(0,horizon);
+ for(let x=0;x<=W+40;x+=40)ctx.lineTo(x,horizon-SH*.07-Math.sin(x*.008+1.2)*SH*.05);
+ ctx.lineTo(W,horizon);ctx.closePath();ctx.fill();
+ const roofH=SH*.12;
+ for(let i=0;i<6;i++){const bx=W*.03+i*W*.175,bw=W*.115;
+  ctx.fillStyle='rgba(36,19,26,.92)';ctx.fillRect(bx,horizon-roofH,bw,roofH+2);
+  ctx.beginPath();ctx.moveTo(bx-7,horizon-roofH);ctx.lineTo(bx+bw*.5,horizon-roofH-SH*.07);ctx.lineTo(bx+bw+7,horizon-roofH);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,196,110,'+(.55+.25*Math.sin(t*3+i)).toFixed(2)+')';
+  ctx.fillRect(bx+bw*.22,horizon-roofH*.72,3,3);ctx.fillRect(bx+bw*.68,horizon-roofH*.72,3,3);}
+ const gd=ctx.createLinearGradient(0,horizon,0,SH);gd.addColorStop(0,'#3a2118');gd.addColorStop(1,'#150d0b');
+ ctx.fillStyle=gd;ctx.fillRect(0,horizon,W,SH-horizon);
+ const far=['ELDER MAPLE','MILLIE','GUS','PIPER','OLD CRAFTSMAN ORIN'];
+ const farX=[.13,.265,.40,.60,.735];
+ far.forEach((nm,i)=>{const x=W*farX[i],fy=ty+Math.sin(t*2.2+i)*1.2;drawSpriteK(npcRow(nm),0,0,x,fy,k);});
+ const hx=W*.50,hy=ty+Math.sin(t*2.1)*1.2;
+ drawSpriteK(heroRow(),0,0,hx,hy,k);
+ ctx.fillStyle='#d7b169';ctx.fillRect(hx+3*k,hy-10*k,2*k,3*k);
+ ctx.fillStyle='#2b1a12';ctx.fillRect(W*.02,ty,W*.96,Math.max(3,SH*.028));
+ ctx.fillStyle='#6d4426';ctx.beginPath();ctx.moveTo(W*.03,ty+SH*.022);ctx.lineTo(W*.97,ty+SH*.022);ctx.lineTo(W*.995,by);ctx.lineTo(W*.005,by);ctx.closePath();ctx.fill();
+ ctx.fillStyle='rgba(0,0,0,.16)';for(let i=1;i<8;i++){const yy=ty+SH*.022+(by-ty-SH*.022)*(i/8);ctx.fillRect(0,yy,W,2);}
+ ctx.fillStyle='rgba(255,210,150,.10)';ctx.fillRect(0,ty+SH*.022,W,4);
+ for(let i=0;i<7;i++){
+  const px=W*(.09+i*.135),py=ty+SH*.07+(i%2)*SH*.015;
+  ctx.fillStyle='#efe2c2';ctx.beginPath();ctx.ellipse(px,py,W*.032,Math.max(2,SH*.011),0,0,7);ctx.fill();
+  ctx.fillStyle='#c8a06a';ctx.beginPath();ctx.ellipse(px,py,W*.021,Math.max(1.5,SH*.007),0,0,7);ctx.fill();
+  if(i%2===0){ctx.fillStyle='#d7b169';ctx.fillRect(px+W*.042,py-SH*.026,W*.012,SH*.02);}
+  if(i%3===0){const fl=.6+.4*Math.sin(t*6+i);
+   ctx.fillStyle='rgba(255,196,110,'+(.18*fl).toFixed(3)+')';ctx.beginPath();ctx.arc(px-W*.03,py-SH*.02,W*.02,0,7);ctx.fill();
+   ctx.fillStyle='#ffe7b0';ctx.fillRect(px-W*.032,py-SH*.034,2,Math.max(3,SH*.012));}
+ }
+ const near=['MARA THE NEIGHBOR','INNKEEPER BRAM','SHOPKEEPER TILLY'];
+ near.forEach((nm,i)=>{const x=W*(.18+i*.24),fy=SH*.975+Math.sin(t*2.4+i*1.7)*1;drawSpriteK(npcRow(nm),1,0,x,fy,k);});
+ for(let i=0;i<26;i++){
+  const sp=.25+(i%5)*.05,px=(i*167+t*22)%(W+60)-30;
+  const py=ty+((i*97)%Math.max(40,by-ty))+((t*26*sp)%40)-20;
+  ctx.globalAlpha=.35+.35*Math.sin(t*2+i);
+  ctx.fillStyle=i%3?'#ffd06a':'#ff9a3c';ctx.fillRect(px,py,3,3);
+ }
+ ctx.globalAlpha=1;
+ const vig=ctx.createRadialGradient(W*.5,SH*.5,SH*.2,W*.5,SH*.55,Math.max(SH,H)*.95);
+ vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.55)');
+ ctx.fillStyle=vig;ctx.fillRect(0,0,W,SH);
+ ctx.textAlign='center';
+ const fs=Math.max(10,Math.round(W/26));
+ ctx.font='bold '+fs+'px "Press Start 2P",ui-monospace,monospace';
+ ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillText('THE EVERFEAST',W/2+3,SH*.10+3);
+ ctx.fillStyle='#ffe6a4';ctx.fillText('THE EVERFEAST',W/2,SH*.10);
+ ctx.font='bold '+Math.max(7,Math.round(fs*.42))+'px "Press Start 2P",ui-monospace,monospace';
+ ctx.fillStyle='rgba(255,230,180,.78)';
+ ctx.fillText(cinematic.ch===8?'THE HOLLOW FORTRESS IS OPEN':cinematic.ch===9?'THE SANCTUARY IS FULL':'THE LAST HARVEST',W/2,SH*.10+fs*1.6);
+ ctx.restore();
+}
+
+function playEverfeastScene(ch,done){
+ cinematic={phase:'everfeast',ch:Number(ch)||8,t0:performance.now()};
+ document.body.classList.add('lh-cinematic');sfx('win');
+ const say=lines=>new Promise(resolve=>setDialogue(lines,resolve));
+ (async()=>{try{await sleep(1500);await say(FEAST_LINES[Number(ch)]||FEAST_LINES[8]);}
+  catch(err){console.error('[LH] everfeast cutscene failed:',err);}
+  cinematic=null;document.body.classList.remove('lh-cinematic');if(done)done();})();
+}
+
 /* ---------------- quest markers: where the next objective actually is ---------------- */
 const VILLAGE_MAP_ROWS=['FFFFFFFFFFFF','FHH...F...HF','FHH...F...HF','pppppppppppp','...ppp......','...ppp......','HHH.ppp.....','HHH.ppp.....','FFFFFFFFFFFF'];
 const VILLAGE_MAP_COL={F:'#315f48',H:'#b87849',p:'#e2d6b0','.':'#79b66c'};
@@ -2014,7 +2107,7 @@ function drawVillageMini(W,H){if(W<560||dialogue||battle||cinematic||titleOpen)r
  const tgt=questTarget();if(tgt){const[tx,ty]=bt(tgt.x,tgt.y);miniMarker(ctx,mx+tx*cell+cell/2,my+ty*cell+cell/2,cell*.42);}
  const[px,py]=bt(state.x,state.y);ctx.fillStyle=Math.floor(performance.now()/300)%2?'#ffffff':'#e03838';ctx.fillRect(mx+px*cell+cell/2-1,my+py*cell+cell/2-1,3,3);}
 
-function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='bossScene'){drawBossScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='rowanScene'){drawRowanScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
+function drawWorld(){const W=innerWidth,H=innerHeight;if(battle&&battle.phase!=='alert'&&battle.phase!=='swirl'){drawBattleScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='dream'){drawDreamScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='wake'){drawWakeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='school'){drawSchoolScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='home'){drawHomeScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='lore'){drawLoreScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='region'){drawRegionScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='sentinelRaid'){drawSentinelRaid(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='bossScene'){drawBossScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='rowanScene'){drawRowanScene(W,H);return{camX:0,camY:0};}if(cinematic&&cinematic.phase==='everfeast'){drawEverfeastScene(W,H);return{camX:0,camY:0};}if(scene==='area'&&AREA){return drawArea(W,H);}if(scene==='inside'){drawInterior(W,H);return{camX:0,camY:0};}
 const focus=cinematic?cinematic.camera:{x:state.x,y:state.y};const zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;const camX=Math.max(0,Math.min(MAP_W*TILE-vw,focus.x-vw/2)),camY=Math.max(0,Math.min(MAP_H*TILE-vh,focus.y-vh/2));
 ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(camX),-Math.floor(camY));
 for(let y=Math.max(0,Math.floor(camY/TILE));y<Math.min(MAP_H,Math.ceil((camY+H)/TILE)+1);y++)for(let x=Math.max(0,Math.floor(camX/TILE));x<Math.min(MAP_W,Math.ceil((camX+W)/TILE)+1);x++){
@@ -2611,7 +2704,7 @@ const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.pu
 }spawnLair();}
 pkEnd();if(up){sfx('levelup');offerSkillsWhenReady();}
 const lines=(g.win||[]).map(t=>[g.name,t]);lines.push(...progressSideQuests(g));lines.push(['REWARD','You earned '+reward+' coins'+(B?' and 2 potions':'')+(up?' and reached level '+state.level+'!':'.')]);
-if(!g.tower)setDialogue([...lines,...extra],g.bi===8?askFinalWish:null);}
+if(!g.tower){const feast=g.bi>=7?()=>playEverfeastScene(g.bi+1):null;setDialogue([...lines,...extra],g.bi===8?(()=>askFinalWish(feast)):feast);}}
 
 /* ================= v11: roaming monsters, pets, level 10 powers ================= */
 const PETS={
@@ -3117,7 +3210,7 @@ $('lh-resume').addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidde
 $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){resetLocalSave(false);location.reload();}});
 initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
-if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,askFinalWish,killRowanForGood,enterTrap,areaHit,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get flags(){return{titleOpen:!!titleOpen,transitioning:!!transitioning,cinematic:cinematic?{phase:cinematic.phase,ch:cinematic.ch,t0:cinematic.t0}:null,stepper:!!stepper};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,twin:battle.twin?{name:battle.twin.name,hp:battle.twin.hp,max:battle.twin.max}:null,ult:battle.ult,ultUsed:!!battle.ultUsed,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),bossTalk:()=>{const b=(AREA&&AREA.npcs||[]).find(n=>n.boss);if(!b)return null;areaBossIntro(b);return b.name;},areaNpcs:()=>(AREA&&AREA.npcs||[]).map(n=>({x:n.x,y:n.y,name:n.name,boss:!!n.boss,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,p2:{open:p2Open,eligible:p2Eligible,ready:p2Ready,start:()=>startBattle(p2Foe()),letter:p2Letter,talk:p2Approach},offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;},damage(n){if(!battle)return null;battle.e.hp=Math.max(0,battle.e.hp-(n||0));return{hp:battle.e.hp,twin:battle.twin?battle.twin.hp:null};}};
+if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,askFinalWish,playEverfeastScene,killRowanForGood,enterTrap,areaHit,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get flags(){return{titleOpen:!!titleOpen,transitioning:!!transitioning,cinematic:cinematic?{phase:cinematic.phase,ch:cinematic.ch,t0:cinematic.t0}:null,stepper:!!stepper};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,twin:battle.twin?{name:battle.twin.name,hp:battle.twin.hp,max:battle.twin.max}:null,ult:battle.ult,ultUsed:!!battle.ultUsed,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),bossTalk:()=>{const b=(AREA&&AREA.npcs||[]).find(n=>n.boss);if(!b)return null;areaBossIntro(b);return b.name;},areaNpcs:()=>(AREA&&AREA.npcs||[]).map(n=>({x:n.x,y:n.y,name:n.name,boss:!!n.boss,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,p2:{open:p2Open,eligible:p2Eligible,ready:p2Ready,start:()=>startBattle(p2Foe()),letter:p2Letter,talk:p2Approach},offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;},damage(n){if(!battle)return null;battle.e.hp=Math.max(0,battle.e.hp-(n||0));return{hp:battle.e.hp,twin:battle.twin?battle.twin.hp:null};}};
 {/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore||stateRepaired)save();
 {const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);if(hasSave)syncContestState();if(hasSave)flushPendingStage();
  if(hasSave&&p2Ready()){rebuildVillageEntities();if(!state.p2Seen)p2Announce();}});}
