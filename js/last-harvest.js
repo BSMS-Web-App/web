@@ -1335,15 +1335,50 @@ function areaGround(A,x,y){if(A.wilds){wildGround(A,x,y);return;}const U=32,B=A.
  if(A.ground){const k=A.ground[y*A.w+x];if(k===1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}if(k===2){kTile('t',43,x*U,y*U);return;}}
  else if(A.pathY&&Math.abs(y-A.pathY[x])<=1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);return;}
  const g=B.g[Math.floor(rand(x+11,y+7)*B.g.length)%B.g.length];kTile(g[0],g[1],x*U,y*U);}
+
+/* ---------- map polish: seam shading, wall shadows, zone atmosphere ---------- */
+const RIM={};
+function rimStrip(dir){if(RIM[dir])return RIM[dir];const U=32,c=document.createElement('canvas');c.width=U;c.height=U;const g=c.getContext('2d');
+ const lg=dir===0?g.createLinearGradient(0,0,0,11):dir===1?g.createLinearGradient(U,0,U-11,0):dir===2?g.createLinearGradient(0,U,0,U-11):g.createLinearGradient(0,0,11,0);
+ lg.addColorStop(0,'rgba(18,12,8,.34)');lg.addColorStop(.55,'rgba(18,12,8,.14)');lg.addColorStop(1,'rgba(18,12,8,0)');
+ g.fillStyle=lg;g.fillRect(0,0,U,U);RIM[dir]=c;return c;}
+const DROPSH={};
+function dropStrip(){if(DROPSH.c)return DROPSH.c;const U=32,c=document.createElement('canvas');c.width=U;c.height=16;const g=c.getContext('2d');
+ const lg=g.createLinearGradient(0,0,0,16);lg.addColorStop(0,'rgba(6,4,10,.55)');lg.addColorStop(.55,'rgba(6,4,10,.22)');lg.addColorStop(1,'rgba(6,4,10,0)');
+ g.fillStyle=lg;g.fillRect(0,0,U,16);DROPSH.c=c;return c;}
+function tileKind(A,x,y){if(x<0||y<0||x>=A.w||y>=A.h)return -1;const i=y*A.w+x;if(A.solid[i])return -2;
+ if(A.wilds)return A.ground[i];if(A.ground)return A.ground[i];if(A.pathY)return Math.abs(y-A.pathY[x])<=1?1:0;return 0;}
+function edgeTufts(x,y,d,U){const cols=['#5f9c36','#79b846','#8ecb52'];
+ for(let i=0;i<7;i++){const r=rand(x*3+i*7,y*11+i*5),s2=r*.9+.04,bh=3+Math.floor(r*4),c=cols[(i+x+y)%3];let bx,by;
+  if(d===0){bx=x*U+Math.floor(s2*U);by=y*U+1;}
+  else if(d===2){bx=x*U+Math.floor(s2*U);by=y*U+U-bh-1;}
+  else if(d===1){bx=x*U+U-4;by=y*U+Math.floor(s2*U);}
+  else {bx=x*U+2;by=y*U+Math.floor(s2*U);}
+  ctx.fillStyle=c;ctx.fillRect(bx,by,2,bh);}}
+function areaSeams(A,x0,y0,x1,y1,U){if(A.bio&&A.bio.hall)return;
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const k=tileKind(A,x,y);if(k<0)continue;
+  for(let d=0;d<4;d++){const nx=x+(d===1?1:d===3?-1:0),ny=y+(d===0?-1:d===2?1:0),m=tileKind(A,nx,ny);
+   if(m<0||m===k)continue;
+   const soil=k===1,water=k===3;
+   if(soil&&m===0)ctx.drawImage(rimStrip(d),x*U,y*U);
+   else if(!soil&&!water&&m===3)ctx.drawImage(rimStrip(d),x*U,y*U);
+   else if(!soil&&!water&&m===1&&k!==3)edgeTufts(x,y,d,U);}}}
+function areaShadows(A,x0,y0,x1,y1,U){if(A.bio&&A.bio.hall&&!A.bio.g)return;
+ const st=dropStrip();
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*A.w+x;if(!A.solid[i])continue;
+  if(y+1<A.h&&!A.solid[i+A.w])ctx.drawImage(st,x*U,y*U+U);
+  if(y===0||!A.solid[i-A.w]){ctx.fillStyle='rgba(255,246,220,.10)';ctx.fillRect(x*U,y*U,U,2);}}}
 function areaObstacle(A,x,y,k){const U=32;let o=A.bio.ob[k];if(!o)return;if(o.w){if(WLD.naturalWidth){wSprite(o.w,x*U,y*U);return;}o=o.fb;if(!o)return;}if(o.i){kBlock(o.i[0],o.i[1],o.i[2],o.i[3],x*U,y*U,2);return;}const sh=o.sh||'t';if(o.two){kTile(sh,o.a,x*U,(y-1)*U);kTile(sh,o.b,x*U,y*U);}else kTile(sh,o.a,x*U,y*U);}
 function drawArea(W,H){const A=AREA,U=32,t=performance.now()/1000,zoom=W<700?Math.min(1.65,Math.max(1.22,700/W)):1,vw=W/zoom,vh=H/zoom;
 const cx=A.w*U<=vw?-(vw-A.w*U)/2:Math.max(0,Math.min(A.w*U-vw,areaPlayer.x-vw/2)),cy=A.h*U<=vh?-(vh-A.h*U)/2:Math.max(0,Math.min(A.h*U-vh,areaPlayer.y-vh/2));
 ctx.clearRect(0,0,W,H);px(0,0,W,H,'#0d0a14');ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-Math.floor(cx),-Math.floor(cy));
  const x0=Math.max(0,Math.floor(cx/U)-1),y0=Math.max(0,Math.floor(cy/U)-1),x1=Math.min(A.w-1,Math.ceil((cx+vw)/U)),y1=Math.min(A.h-1,Math.ceil((cy+vh)/U)+1);
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)areaGround(A,x,y);
+ areaSeams(A,x0,y0,x1,y1,U);
  for(const d of A.dec){if(d.x>=x0&&d.x<=x1&&d.y>=y0&&d.y<=y1)(d.d[0]==='w'?wSprite(d.d[1],d.x*U,d.y*U):kTile(d.d[0],d.d[1],d.x*U,d.y*U));}
  if(A.wilds){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(A.enc[y*A.w+x]&&!A.solid[y*A.w+x])tallGrass(A,x,y,t);wildCamp(A,t);}
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*A.w+x;if(A.ob[i])areaObstacle(A,x,y,A.ob[i]-1);}
+ areaShadows(A,x0,y0,x1,y1,U);
  if(A.bld)for(const b of A.bld){if(!VIL.naturalWidth)continue;const r=VR[b.n];ctx.imageSmoothingEnabled=false;ctx.drawImage(VIL,r[0],r[1],r[2],r[3],b.x*U,(b.y+b.h)*U-r[3]*2,r[2]*2,r[3]*2);}
  if(A.city&&VIL.naturalWidth){const r=VR['fountain'+(Math.floor(t*2.6)%2)];ctx.drawImage(VIL,r[0],r[1],r[2],r[3],18*U,17*U-r[3]*2+4,r[2]*2,r[3]*2);}
  ctx.fillStyle=A.bio.tint||'rgba(0,0,0,0)';ctx.fillRect(Math.floor(cx),Math.floor(cy),W,H);drawRestoredRoute(A,t);
@@ -1372,11 +1407,20 @@ function openChest(f){state.chests=state.chests||{};if(state.chests[f.chest]){se
 function wildEdge(A,x,y,kind){const U=32,nb=(dx,dy)=>{const xx=x+dx,yy=y+dy;return(xx<0||yy<0||xx>=A.w||yy>=A.h)?kind:A.ground[yy*A.w+xx];};
  ctx.fillStyle=kind===3?'rgba(232,248,255,.85)':'rgba(40,20,20,.32)';
  if(nb(0,-1)!==kind)ctx.fillRect(x*U,y*U,U,4);if(nb(0,1)!==kind)ctx.fillRect(x*U,y*U+U-4,U,4);if(nb(-1,0)!==kind)ctx.fillRect(x*U,y*U,4,U);if(nb(1,0)!==kind)ctx.fillRect(x*U+U-4,y*U,4,U);}
+function wildTint(z,x,y){const A=AREA,U=32;if(!A||!A.zone)return;const zg=(dx,dy)=>{const xx=x+dx,yy=y+dy;return(xx<0||yy<0||xx>=A.w||yy>=A.h)?z:A.zone[yy*A.w+xx];};
+ const near=zg(0,1)!==z||zg(1,0)!==z||zg(-1,0)!==z||zg(0,-1)!==z;
+ ctx.save();ctx.globalAlpha=near?.22:.55;ctx.fillStyle=WZ[z].tint;ctx.fillRect(x*U,y*U,U,U);ctx.restore();}
 function wildGround(A,x,y){const U=32,i=y*A.w+x,k=A.ground[i],z=A.zone[i];
  if(WLD.naturalWidth){const q=Math.floor(rand(x+11,y+7)*4)%4;
-  if(k===3){wSprite('wt'+z+'_'+((Math.floor(performance.now()/550)+x+y)&1),x*U,y*U);wildEdge(A,x,y,3);return;}
-  if(k===1){wSprite('r'+z+'_'+(q%3),x*U,y*U);wildEdge(A,x,y,1);return;}
-  wSprite('g'+z+'_'+q,x*U,y*U);return;}
+  if(k===3){wSprite('wt'+z+'_'+((Math.floor(performance.now()/550)+x+y)&1),x*U,y*U);wildEdge(A,x,y,3);wildTint(z,x,y);return;}
+  if(k===1){wSprite('r'+z+'_'+(q%3),x*U,y*U);wildEdge(A,x,y,1);wildTint(z,x,y);return;}
+  wSprite('g'+z+'_'+q,x*U,y*U);
+  const nz=(dx,dy)=>{const xx=x+dx,yy=y+dy;return(xx<0||yy<0||xx>=A.w||yy>=A.h)?z:A.zone[yy*A.w+xx];};
+  const bl=[[0,-1],[1,0],[0,1],[-1,0]].filter(([dx,dy])=>nz(dx,dy)!==z&&A.ground[(y+dy)*A.w+(x+dx)]===0);
+  if(bl.length){const [bdx,bdy]=bl[0];ctx.save();ctx.globalAlpha=.38;wSprite('g'+nz(bdx,bdy)+'_'+(Math.floor(rand(x*7,y*5)*4)%4),x*U,y*U);ctx.restore();}
+  const hh=rand(x*17+3,y*29+11);
+  if(hh<.05)wSprite(['tuft','flowerA','pebbles','leaves','flowerB'][(x*3+y)%5],x*U,y*U);
+  wildTint(z,x,y);return;}
  if(k===3){const t=performance.now()/1000,o=Math.floor((Math.sin(t*1.6+x*.9+y*.5)+1)*4);ctx.fillStyle='#4aa8d8';ctx.fillRect(x*U,y*U,U,U);ctx.fillStyle='#8fd4f4';ctx.fillRect(x*U+4+o,y*U+10,10,3);ctx.fillRect(x*U+16-o,y*U+22,10,3);return;}
  if(k===1){const q=rand(x+5,y+2);kTile('t',q<.15?39:q<.25?40:25,x*U,y*U);}
  else{const B=BIO[A.zb[z]],g=B.g[Math.floor(rand(x+11,y+7)*B.g.length)%B.g.length];kTile(g[0],g[1],x*U,y*U);}
