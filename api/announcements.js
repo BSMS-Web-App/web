@@ -13,6 +13,15 @@ import { mediaUrl } from '../lib/media-url.js';
 const MAX_POLL_OPTIONS = 10;
 const MIN_POLL_OPTIONS = 2;
 
+/*
+ * Keep dev7 preview announcement data separate from production.
+ * Authentication still uses the shared BSMS Web account/session records.
+ */
+const IS_DEV7_PREVIEW = process.env.VERCEL_ENV === 'preview'
+    && process.env.VERCEL_GIT_COMMIT_REF === 'dev7';
+const ANNOUNCEMENTS_PATH = IS_DEV7_PREVIEW ? '/dev7/announcements' : ANNOUNCEMENTS_PATH;
+const POLL_VOTES_PATH = IS_DEV7_PREVIEW ? '/dev7/announcementPollVotes' : '/announcementPollVotes';
+
 function validKey(value) {
     return typeof value === 'string' && value.length > 0 && ![...value].some(char => '.#$[]/'.includes(char));
 }
@@ -127,7 +136,7 @@ function normalizePollInput(input) {
         if (!text || text.length > 120) {
             return { error: 'Every poll option must contain 1–120 characters.' };
         }
-        const optionId = db.ref('/announcements').push().key;
+        const optionId = db.ref(ANNOUNCEMENTS_PATH).push().key;
         options[optionId] = { text };
     }
 
@@ -157,7 +166,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
         try {
             const [announcementsSnap, user] = await Promise.all([
-                db.ref('/announcements').once('value'),
+                db.ref(ANNOUNCEMENTS_PATH).once('value'),
                 getUserBySession(req.headers['x-session-id'] || req.query.sessionId)
             ]);
 
@@ -165,7 +174,7 @@ export default async function handler(req, res) {
             const announcements = await Promise.all(Object.entries(data).map(async ([id, item]) => {
                 const announcement = { ...item, id };
                 if (item?.poll) {
-                    const votesSnap = await db.ref(`/announcementPollVotes/${id}`).once('value');
+                    const votesSnap = await db.ref(`${POLL_VOTES_PATH}/${id}`).once('value');
                     announcement.poll = normalizePollForResponse(item.poll, votesSnap.val() || {}, user?.uid || null);
                 } else {
                     delete announcement.poll;
@@ -207,7 +216,7 @@ export default async function handler(req, res) {
         const announcementId = payload.announcementId || payload.id;
         if (!validKey(announcementId)) return res.status(400).json({ error: 'Invalid announcement.' });
 
-        const announcementSnap = await db.ref(`/announcements/${announcementId}`).once('value');
+        const announcementSnap = await db.ref(`${ANNOUNCEMENTS_PATH}/${announcementId}`).once('value');
         const announcement = announcementSnap.val();
         if (!announcement) return res.status(404).json({ error: 'Announcement not found.' });
         if (!announcement.poll) return res.status(400).json({ error: 'This announcement does not have a poll.' });
@@ -227,12 +236,12 @@ export default async function handler(req, res) {
         }
 
         try {
-            await db.ref(`/announcementPollVotes/${announcementId}/${user.uid}`).transaction(current => ({
+            await db.ref(`${POLL_VOTES_PATH}/${announcementId}/${user.uid}`).transaction(current => ({
                 optionIds,
                 updatedAt: Date.now()
             }));
 
-            const votesSnap = await db.ref(`/announcementPollVotes/${announcementId}`).once('value');
+            const votesSnap = await db.ref(`${POLL_VOTES_PATH}/${announcementId}`).once('value');
             const poll = normalizePollForResponse(announcement.poll, votesSnap.val() || {}, user.uid);
             return res.status(200).json({ success: true, poll });
         } catch (err) {
@@ -281,7 +290,7 @@ export default async function handler(req, res) {
             if (pollModeration) return res.status(400).json(pollModeration);
         }
 
-        const newRef = db.ref('/announcements').push();
+        const newRef = db.ref(ANNOUNCEMENTS_PATH).push();
         const id = newRef.key;
         const now = Date.now();
         const announcement = {
@@ -310,8 +319,8 @@ export default async function handler(req, res) {
         if (!validKey(id)) return res.status(400).json({ error: 'Missing or invalid announcement id to delete.' });
 
         await Promise.all([
-            db.ref(`/announcements/${id}`).remove(),
-            db.ref(`/announcementPollVotes/${id}`).remove()
+            db.ref(`${ANNOUNCEMENTS_PATH}/${id}`).remove(),
+            db.ref(`${POLL_VOTES_PATH}/${id}`).remove()
         ]);
         return res.status(200).json({ success: true, deletedId: id });
     }
