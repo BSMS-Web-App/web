@@ -14,7 +14,7 @@ const MAX_POLL_OPTIONS = 10;
 const MIN_POLL_OPTIONS = 2;
 
 function validKey(value) {
-    return typeof value === 'string' && value.length > 0 && !/[.#$\[\]/]/.test(value);
+    return typeof value === 'string' && value.length > 0 && ![...value].some(char => '.#$[]/'.includes(char));
 }
 
 async function getUserBySession(sessionId) {
