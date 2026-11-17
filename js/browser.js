@@ -1,136 +1,23 @@
 (() => {
-    'use strict';
-
-    const $ = id => document.getElementById(id);
-    const form = $('addressForm');
-    const input = $('addressInput');
-    const frame = $('readerFrame');
-    const empty = $('emptyState');
-    const status = $('statusText');
-    const toast = $('toast');
-
-    let readerToken = null;
-    let currentUrl = '';
-    let historyStack = [];
-    let historyIndex = -1;
-    let toastTimer = null;
-
-    function notify(message) {
-        toast.textContent = message;
-        toast.classList.add('show');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
-    }
-
-    function updateNavigation() {
-        $('backButton').disabled = historyIndex <= 0;
-        $('forwardButton').disabled = historyIndex >= historyStack.length - 1;
-    }
-
-    function normalizeAddress(value) {
-        let raw = String(value || '').trim();
-        if (!raw) throw new Error('Enter a website address first.');
-        if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) raw = 'https://' + raw;
-        const url = new URL(raw);
-        if (url.protocol !== 'https:') throw new Error('Only secure HTTPS websites are supported.');
-        return url.href;
-    }
-
-    async function getReaderToken() {
-        const stored = localStorage.getItem('bsms_auth_session');
-        const sessionId = localStorage.getItem('session_id');
-        let auth;
-        try { auth = JSON.parse(stored || 'null'); } catch { auth = null; }
-        if (!sessionId || !auth || !auth.loggedIn || !auth.uid) {
-            throw new Error('Sign in to your BSMS Web account before using the reader.');
-        }
-
-        const response = await fetch('/api/proxy?action=token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Session-ID': sessionId,
-                'X-Device-ID': sessionId
-            },
-            body: JSON.stringify({ action: 'token' })
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok || !data.token) throw new Error(data.error || 'Could not start a reader session.');
-        return data.token;
-    }
-
-    function loadUrl(url, addHistory = true) {
-        currentUrl = url;
-        input.value = url;
-        const proxyAddress = '/api/proxy?url=' + encodeURIComponent(url)
-            + '&token=' + encodeURIComponent(readerToken);
-        frame.src = proxyAddress;
-        frame.hidden = false;
-        empty.hidden = true;
-        status.textContent = 'Loading through the BSMS Web cloud reader…';
-        if (addHistory) {
-            historyStack = historyStack.slice(0, historyIndex + 1);
-            historyStack.push(url);
-            historyIndex = historyStack.length - 1;
-        }
-        updateNavigation();
-    }
-
-    form.addEventListener('submit', event => {
-        event.preventDefault();
-        try {
-            const url = normalizeAddress(input.value);
-            if (!readerToken) {
-                notify('Your reader session is still starting. Try again in a moment.');
-                return;
-            }
-            loadUrl(url);
-        } catch (error) {
-            notify(error.message || 'That address is not valid.');
-        }
-    });
-
-    $('backButton').addEventListener('click', () => {
-        if (historyIndex <= 0) return;
-        historyIndex -= 1;
-        loadUrl(historyStack[historyIndex], false);
-        updateNavigation();
-    });
-
-    $('forwardButton').addEventListener('click', () => {
-        if (historyIndex >= historyStack.length - 1) return;
-        historyIndex += 1;
-        loadUrl(historyStack[historyIndex], false);
-        updateNavigation();
-    });
-
-    $('reloadButton').addEventListener('click', () => {
-        if (currentUrl && readerToken) loadUrl(currentUrl, false);
-    });
-
-    frame.addEventListener('load', () => {
-        if (!frame.hidden) status.textContent = currentUrl || 'Ready';
-        updateNavigation();
-    });
-
-    frame.addEventListener('error', () => {
-        status.textContent = 'The page could not be displayed.';
-    });
-
-    getReaderToken()
-        .then(token => {
-            readerToken = token;
-            status.textContent = 'Signed in · Cloud reader ready';
-        })
-        .catch(error => {
-            status.textContent = error.message;
-            notify(error.message);
-            if (error.message.includes('Sign in')) {
-                const link = document.createElement('a');
-                link.href = '/accounts';
-                link.textContent = 'Open account sign-in';
-                link.style.cssText = 'margin-top:16px;color:#fff;text-decoration:underline;font-size:13px';
-                empty.appendChild(link);
-            }
-        });
+'use strict';
+const $=id=>document.getElementById(id),form=$('addressForm'),input=$('addressInput'),frame=$('readerFrame'),empty=$('emptyState'),status=$('statusText'),toast=$('toast');
+const proxy=String(window.BSMS_READER_PROXY_ORIGIN||'').replace(/\/+$/,'');
+let token=null,current='',history=[],index=-1,timer;
+function notify(s){toast.textContent=s;toast.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove('show'),3200);}
+function nav(){ $('backButton').disabled=index<=0;$('forwardButton').disabled=index>=history.length-1; }
+function normalize(v){let s=String(v||'').trim();if(!s)throw Error('Enter a website address.');if(!/^[a-z][a-z0-9+.-]*:\/\//i.test(s))s='https://'+s;const u=new URL(s);if(u.protocol!=='https:')throw Error('Only HTTPS websites are supported.');return u.href;}
+async function start(){
+ if(!proxy)throw Error('Cloudflare Reader endpoint has not been configured yet.');
+ let auth;try{auth=JSON.parse(localStorage.getItem('bsms_auth_session')||'null');}catch{}
+ const sid=localStorage.getItem('session_id');if(!sid||!auth?.loggedIn||!auth?.uid)throw Error('Sign in to your BSMS Web account first.');
+ const r=await fetch(proxy+'/session',{method:'POST',mode:'cors',credentials:'omit',headers:{'Content-Type':'application/json','X-Session-ID':sid,'X-UID':auth.uid},body:'{}'});
+ const d=await r.json().catch(()=>({}));if(!r.ok||!d.token)throw Error(d.error||'Could not start reader session.');return d.token;
+}
+function load(url,push=true){current=url;input.value=url;const u=new URL(proxy+'/page');u.searchParams.set('url',url);u.searchParams.set('token',token);frame.src=u.href;frame.hidden=false;empty.hidden=true;status.textContent='Loading through Cloudflare…';if(push){history=history.slice(0,index+1);history.push(url);index=history.length-1;}nav();}
+form.addEventListener('submit',e=>{e.preventDefault();try{if(!token)throw Error('Reader session is not ready.');load(normalize(input.value));}catch(err){notify(err.message);}});
+$('backButton').addEventListener('click',()=>{if(index>0){index--;load(history[index],false);}});
+$('forwardButton').addEventListener('click',()=>{if(index<history.length-1){index++;load(history[index],false);}});
+$('reloadButton').addEventListener('click',()=>{if(current&&token)load(current,false);});
+frame.addEventListener('load',()=>{if(!frame.hidden)status.textContent=current||'Ready';});
+start().then(t=>{token=t;status.textContent='Signed in · Cloudflare reader ready';}).catch(err=>{status.textContent=err.message;notify(err.message);if(err.message.includes('Sign in')){const a=document.createElement('a');a.href='/accounts';a.textContent='Open account sign-in';a.style.cssText='margin-top:16px;color:#fff;text-decoration:underline;font-size:13px';empty.appendChild(a);}});
 })();

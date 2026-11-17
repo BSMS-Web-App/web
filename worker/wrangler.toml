@@ -1,0 +1,11 @@
+name = "bsms-web-reader-dev1"
+main = "src/index.js"
+compatibility_date = "2026-11-17"
+workers_dev = true
+
+[vars]
+BSMS_WEB_API_URL = "https://dev-api.bsms-web.com"
+
+# Configure secrets with Wrangler:
+# wrangler secret put BSMS_WEB_API_KEY
+# wrangler secret put READER_SIGNING_SECRET

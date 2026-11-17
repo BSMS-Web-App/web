@@ -3,9 +3,9 @@
  * Copyright © 2026 Jellyfish Jelly
  * SPDX-License-Identifier: AGPL-3.0-only
  *
- * Routes application API requests to the configured API host.
- * The cloud reader endpoint is intentionally excluded: its outbound requests
- * must originate from Vercel, never from the Mac-hosted API.
+ * Routes application API requests directly to the Mac-hosted Express API.
+ * The website remains hosted on Vercel, but application API traffic bypasses
+ * Vercel and reaches the Mac through the dedicated Cloudflare Tunnel hostname.
  */
 (() => {
     'use strict';
@@ -19,17 +19,13 @@
     window.BSMS_MEDIA_ORIGIN = MEDIA_ORIGIN;
 
     window.fetch = function(input, init) {
+        // Application requests use URL strings. Leave Request objects and
+        // unrelated external requests untouched.
         if (typeof input !== 'string' && !(input instanceof URL)) {
             return originalFetch(input, init);
         }
 
         const requestUrl = new URL(String(input), window.location.href);
-
-        // This route runs on Vercel so destination websites see cloud egress.
-        if (requestUrl.pathname === '/api/proxy' || requestUrl.pathname.startsWith('/api/proxy/')) {
-            return originalFetch(input, init);
-        }
-
         if (requestUrl.origin !== window.location.origin || !API_PATH.test(requestUrl.pathname)) {
             return originalFetch(input, init);
         }
@@ -42,6 +38,7 @@
         return originalFetch(destination.href, init);
     };
 
+    // Load the shared connection monitor on every page using the API bootstrap.
     const monitorScript = document.createElement('script');
     monitorScript.src = '/js/connection-monitor.js';
     monitorScript.defer = true;
