@@ -4,6 +4,7 @@
 const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() || "");
 const frame = document.getElementById("gameFrame");
 const title = document.getElementById("playerTitle");
+const saveStatus = document.getElementById("saveStatus");
 const loading = document.getElementById("playerLoading");
 const loadingTitle = document.getElementById("loadingTitle");
 const loadingCaption = document.getElementById("loadingCaption");
@@ -25,6 +26,7 @@ let last = "";
 let timer = null;
 let syncInterval = null;
 let frameLoadTimer = null;
+let cloudRestoreAvailable = false;
 
 function gameSlug(game) {
   try {
@@ -38,6 +40,13 @@ function gameSlug(game) {
 function assetBase(image) {
   const match = String(image || "").match(/^https:\/\/raw\.githubusercontent\.com\/55gms\/assets\/([^/]+)\/(misc\/[^/]+\/)/i);
   return match ? "https://cdn.jsdelivr.net/gh/55gms/assets@" + match[1] + "/" + match[2] : "";
+}
+
+function setSaveStatus(message, state = "idle", detail = "") {
+  if (!saveStatus) return;
+  saveStatus.textContent = message;
+  saveStatus.dataset.state = state;
+  saveStatus.title = detail || message;
 }
 
 function saveData() {
@@ -70,6 +79,7 @@ async function sync(keep = false) {
   if (!cloud || !ready || !id) return;
   if (busy) { again = true; return; }
   busy = true;
+  setSaveStatus("Saving to your account…", "saving");
   try {
     const data = saveData();
     const serialized = JSON.stringify(data);
@@ -90,8 +100,10 @@ async function sync(keep = false) {
       if (!response.ok) throw Error(result.error || "Cloud save failed");
       last = serialized;
     }
+    setSaveStatus("Saved to your account", "saved", "Your supported game save data is synced to your BSMS Web account.");
   } catch (error) {
     console.warn("[BSMS Web :: Game Player] Save sync failed", error);
+    setSaveStatus("Cloud save unavailable — retrying", "error", error.message || "Cloud save failed.");
   } finally {
     busy = false;
     if (again) { again = false; sync(); }
@@ -197,8 +209,17 @@ async function load() {
     loadingCaption.textContent = "Connecting directly to the game CDN…";
 
     if (cloud) {
-      try { restore((await getCloud()).saveData || {}); }
-      catch (error) { console.warn("[BSMS Web] Cloud restore failed", error); }
+      setSaveStatus("Loading your cloud save…", "saving");
+      try {
+        restore((await getCloud()).saveData || {});
+        cloudRestoreAvailable = true;
+        setSaveStatus("Cloud save ready", "saved", "Your account save has been loaded. Changes will sync automatically.");
+      } catch (error) {
+        console.warn("[BSMS Web] Cloud restore failed", error);
+        setSaveStatus("Cloud save unavailable — using device save", "error", error.message || "Could not load the account save.");
+      }
+    } else {
+      setSaveStatus("Saved on this device", "idle", "Sign in to BSMS Web to sync supported game saves across devices.");
     }
 
     last = JSON.stringify(saveData());
@@ -245,6 +266,7 @@ addEventListener("message", event => {
 });
 addEventListener("pagehide", () => sync(true));
 addEventListener("beforeunload", () => sync(true));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") sync(true); });
 
 back.addEventListener("click", event => {
   event.preventDefault();
