@@ -41,6 +41,8 @@ function createFreshState(name='',heroClass='Guardian',gender){
   weaponTier:0,armorTier:0,skillTier:0,
   skills:[0],skipped:[],inventory:[],
   beaten:{},questStep:0,
+  /* a stage clear the contest API refused, kept so the next load can still record it */
+  pendingStage:null,
   cityUnlocked:false,firstWildDefeated:false,
   sentinelTrainingStarted:false,firstArmorUpgrade:false,sentinelRaidSeen:false,
   regionScenes:{},mainQuests:{},sideQuests:{},storyArcs:{},storyReactions:{},chests:{},
@@ -89,6 +91,8 @@ function sanitizeState(s){
  s.weaponTier=clampInt(s.weaponTier,0,8,0);
  s.armorTier=clampInt(s.armorTier,0,8,0);
  s.skillTier=clampInt(s.skillTier,0,8,0);
+ const pend=s.pendingStage,pendStage=pend&&typeof pend==='object'?clampInt(pend.stage,0,10,0):0;
+ s.pendingStage=pendStage>=1?{stage:pendStage,at:Number(pend.at)||Date.now()}:null;
  return s;
 }
 let resetting=false,stateRepaired=false;
@@ -577,14 +581,18 @@ function contestNotice(text){try{const old=document.getElementById('lh-toast');i
  const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent=text;
  document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},6500);}catch(e){}}
 let contestPending=0;
+/* A signed-out player has no contest credit to lose, so stay quiet for them. */
 async function contestCompleteStage(stage,token){
+ if(!sessionId())return false;
  if(contestPending===stage)return false;
  contestPending=stage;
  try{
   for(let attempt=0;attempt<4;attempt++){
    const t=(stageRun&&stageRun.stage===stage)?stageRun.token:token||null;
    const r=await contestPostFull({action:'complete-stage',stage,token:t});
-   if(r.status>=200&&r.status<300)return true;
+   if(r.status>=200&&r.status<300){
+    if(state.pendingStage&&Number(state.pendingStage.stage)<=stage){state.pendingStage=null;save();}
+    return true;}
    if(!r.status)break;
    const code=r.body&&r.body.code,left=Number(r.body&&r.body.retryAfterMs)||60000;
    if(code==='stage-too-fast'){
@@ -598,13 +606,28 @@ async function contestCompleteStage(stage,token){
     contestNotice('CONTEST \u00B7 STAGE '+stage+' RESTARTED \u2014 RECORDING IN '+Math.ceil(wait/1000)+'s');
     await sleep(wait);continue;}
    break;}
-  contestNotice('CONTEST \u00B7 STAGE '+stage+' NOT RECORDED \u2014 YOUR RUN IS SAVED ON THIS DEVICE');
+  /* Keep the clear on the save: a closed tab must not cost the player the stage. */
+  if(!(state.pendingStage&&Number(state.pendingStage.stage)<=stage)){state.pendingStage={stage,at:Date.now()};save();}
+  contestNotice('CONTEST \u00B7 STAGE '+stage+' NOT RECORDED \u2014 WILL RETRY ON NEXT LOAD');
   return false;
  }finally{contestPending=0;}}
 
 /* The contest keeps its own copy of the run. On boot we take it back where it
    is ahead of this device a cleared save or a second browser.
    Only forward: a local save that is further along is never rewound. */
+/* A stage clear the API refused is replayed on the next load, once there is a
+   session to replay it with. */
+async function flushPendingStage(){
+ const p=state.pendingStage;
+ if(!p||!p.stage||!sessionId())return;
+ /* If the server already has this stage, the queue entry is stale, not owed. */
+ try{const r=await fetch('/api/last-harvest',{headers:{'X-Session-ID':sessionId()}});
+  if(r.ok){const d=await r.json(),srv=d&&d.state;
+   if(srv&&Number(srv.stage)>=Number(p.stage)){state.pendingStage=null;save();return;}}}
+ catch(e){}
+ await sleep(1200);
+ await contestCompleteStage(Number(p.stage));
+}
 async function syncContestState(){
  const sid=sessionId();
  if(!sid||!state.name)return;
@@ -3025,6 +3048,6 @@ initSfx();initRows();addEventListener('pagehide',save);document.addEventListener
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,areaHit,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,twin:battle.twin?{name:battle.twin.name,hp:battle.twin.hp,max:battle.twin.max}:null,ult:battle.ult,ultUsed:!!battle.ultUsed,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),bossTalk:()=>{const b=(AREA&&AREA.npcs||[]).find(n=>n.boss);if(!b)return null;areaBossIntro(b);return b.name;},areaNpcs:()=>(AREA&&AREA.npcs||[]).map(n=>({x:n.x,y:n.y,name:n.name,boss:!!n.boss,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,p2:{open:p2Open,eligible:p2Eligible,ready:p2Ready,start:()=>startBattle(p2Foe()),letter:p2Letter,talk:p2Approach},offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;},damage(n){if(!battle)return null;battle.e.hp=Math.max(0,battle.e.hp-(n||0));return{hp:battle.e.hp,twin:battle.twin?battle.twin.hp:null};}};
 {/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore||stateRepaired)save();
-{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);if(hasSave)syncContestState();
+{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);if(hasSave)syncContestState();if(hasSave)flushPendingStage();
  if(hasSave&&p2Ready()){rebuildVillageEntities();if(!state.p2Seen)p2Announce();}});}
 })();
