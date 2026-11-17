@@ -251,7 +251,7 @@ async function fetchPage(req, env, url, token) {
   if (bytes === null) return reply({ error: "Page exceeds reader size limit." }, 413);
 
   if (type.startsWith("image/")) {
-    if (!/^image\\/(png|jpeg|gif|webp|avif)/.test(type)) {
+    if (!["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"].includes(type.split(";")[0].trim())) {
       return reply({ error: "Image type unsupported." }, 415);
     }
     return new Response(bytes, {

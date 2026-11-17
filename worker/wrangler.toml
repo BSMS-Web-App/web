@@ -8,7 +8,7 @@ routes = [
 ]
 
 [vars]
-BSMS_WEB_API_URL = "https://dev-api.bsms-web.com"
+BSMS_WEB_API_URL = "https://api.bsms-web.com"
 
 # Configure secrets with Wrangler:
 # wrangler secret put BSMS_WEB_API_KEY
