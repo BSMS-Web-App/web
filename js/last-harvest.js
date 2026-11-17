@@ -59,7 +59,7 @@ const SAVE_MIGRATIONS={
  /* 3 -> 4: health now grows 10/level, plus 12 per vitality and 8 per armor tier */
  3(s){
   const lv=Math.max(1,Math.min(99,Math.floor(Number(s.level)||1))),vit=Math.max(0,Math.min(8,Math.floor(Number(s.vitalityTier)||0))),arm=Math.max(0,Math.min(8,Math.floor(Number(s.armorTier)||0)));
-  const floor=40+(lv-1)*10+vit*12+arm*8;
+  const floor=40+(lv-1)*2+vit*12+arm*8;
   if(!(Number(s.maxHp)>=floor))s.maxHp=floor;
   s.hp=Math.min(Number(s.maxHp)||floor,Math.max(1,Math.floor(Number(s.hp)||Number(s.maxHp)||floor)));
  }
@@ -2348,7 +2348,7 @@ async function pkWin(){
 await tween(B?1300:650,p=>{b.dead=p;if(B){if(Math.random()<.45)burst(G.fx+(Math.random()-.5)*G.fh*.8,G.fy-Math.random()*G.fh,9,['#ffffff','#ffd84a','#ff6a2e',bossTheme(b.e)[2]],230);if(p<.85)b.shake=Math.max(b.shake,8);}else if(p<.3)burst(G.fx,G.fy-G.fh*.5,3,['#ffffff','#ffd84a'],140);});
 b.dead=1;b.flashW=B?1:0;sfx('win');await pkSay(g.name+' was defeated!',1000);
 const reward=g.bossLike?(g.reward||0):(B?B.reward:g.reward);let xp=g.bossLike?(g.xp||0):(B?B.xp:(g.xp||40));if(g.wild){state.wildKills=(state.wildKills||0)+1;if(state.wildKills<=4)xp*=2;}state.coins+=reward;state.xp+=xp;let up=0;
-while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=10;state.maxMp+=2;state.hp=state.maxHp;up++;}
+while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.maxHp+=2;state.maxMp+=2;state.hp=state.maxHp;up++;}
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
