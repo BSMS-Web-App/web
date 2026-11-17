@@ -558,14 +558,50 @@ function offerSkills(){if(offering)return;const cat=skillCat();state.skills=stat
 function sessionId(){try{return localStorage.getItem('session_id')||localStorage.getItem('bsms_session')||'';}catch(e){return'';}}
 /* Contest sync: the adventure is still played locally, but stage clears and
    loadout choices are mirrored to the contest API so the server keeps its own
-   record of the run. Failures are silent: offline play must not break. */
+   record of the run. A missing session stays silent; a server refusal on a
+   stage clear is retried and, if it cannot be, shown to the player. */
 /* A stage is only completable inside a run the server issued, so the fight
    starts one and its token travels with the completion. */
 let stageRun=null;
 async function contestStartStage(stage){const d=await contestPost({action:'start-stage',stage});
  if(d&&d.run&&d.run.stage===stage)stageRun={stage,token:d.run.token,startedAt:d.run.startedAt};
  return stageRun;}
-async function contestPost(payload){const sid=sessionId();if(!sid)return null;try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify(payload)});if(!r.ok)return null;const d=await r.json();return d&&d.success?d:null;}catch(e){return null;}}
+async function contestPostFull(payload){const sid=sessionId();if(!sid)return{status:0,body:null};
+ try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify(payload)});
+  let d=null;try{d=await r.json();}catch(e){}
+  return{status:r.status,body:d};}catch(e){return{status:0,body:null};}}
+async function contestPost(payload){const r=await contestPostFull(payload);return(r.status>=200&&r.status<300&&r.body&&r.body.success)?r.body:null;}
+/* Losing a stage silently costs a player their contest place, so anything the
+   server refuses is retried where it makes sense and said out loud where it does not. */
+function contestNotice(text){try{const old=document.getElementById('lh-toast');if(old)old.remove();
+ const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent=text;
+ document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},6500);}catch(e){}}
+let contestPending=0;
+async function contestCompleteStage(stage,token){
+ if(contestPending===stage)return false;
+ contestPending=stage;
+ try{
+  for(let attempt=0;attempt<4;attempt++){
+   const t=(stageRun&&stageRun.stage===stage)?stageRun.token:token||null;
+   const r=await contestPostFull({action:'complete-stage',stage,token:t});
+   if(r.status>=200&&r.status<300)return true;
+   if(!r.status)break;
+   const code=r.body&&r.body.code,left=Number(r.body&&r.body.retryAfterMs)||60000;
+   if(code==='stage-too-fast'){
+    const wait=Math.max(1500,Math.min(75000,left+600));
+    contestNotice('CONTEST \u00B7 STAGE '+stage+' FINISH TOO QUICK \u2014 RECORDING IN '+Math.ceil(wait/1000)+'s');
+    await sleep(wait);continue;}
+   if(code==='stage-not-started'||code==='stage-expired'){
+    const run=await contestStartStage(stage);
+    if(!run)break;
+    const wait=Math.max(1500,Math.min(75000,(Number(run.startedAt)||Date.now())+60000-Date.now()+800));
+    contestNotice('CONTEST \u00B7 STAGE '+stage+' RESTARTED \u2014 RECORDING IN '+Math.ceil(wait/1000)+'s');
+    await sleep(wait);continue;}
+   break;}
+  contestNotice('CONTEST \u00B7 STAGE '+stage+' NOT RECORDED \u2014 YOUR RUN IS SAVED ON THIS DEVICE');
+  return false;
+ }finally{contestPending=0;}}
+
 /* The contest keeps its own copy of the run. On boot we take it back where it
    is ahead of this device a cleared save or a second browser.
    Only forward: a local save that is further along is never rewound. */
@@ -577,10 +613,6 @@ async function syncContestState(){
   if(!r.ok)return;
   const d=await r.json(),srv=d&&d.state;
   if(!srv||typeof srv!=='object')return;
-  /* Start the next uncleared stage's run on boot so the server's clock is already
-     running when its boss falls; start-stage is idempotent per stage. */
-  const nextStage=Number(srv.stage||0)+1;
-  if(nextStage>=1&&nextStage<=BOSSES.length)contestStartStage(nextStage);
   let changed=false;
   const serverStage=clampInt(srv.stage,0,BOSSES.length,0);
   if(serverStage>state.stage){
@@ -1060,7 +1092,11 @@ function openShop(vendor){
 }
 function openTeleporter(){if(scene!=='outside'||dialogue||battle||cinematic)return;syncStageFromBeaten();sfx('teleporter');const options=[{id:'village',label:'Hearthvale Village',detail:'Return to the village square',open:true},{id:'wilds',label:'The Wildlands',detail:'Training grounds and Ranger Camp',open:!!(state.beaten&&state.beaten.north)},{id:'city',label:'Goldleaf City',detail:'The Tower and city shops',open:!!state.cityUnlocked}];for(let c=1;c<=9;c++)options.push({id:'region'+c,label:chapters[c].place,detail:'Chapter '+(c+1)+' · '+chapters[c].title,open:(Number(state.stage)||0)>=c});const menu=ov('<h3>HEARTHVALE TELEPORTER</h3><p>Choose a destination. Your journey will resume at its arrival point.</p><div class="col">'+options.map(o=>'<button class="lh-ob '+(o.open?'':'alt')+'" data-dest="'+o.id+'" '+(o.open?'':'disabled style="opacity:.42;cursor:not-allowed"')+'>'+o.label+'<br><small>'+o.detail+(o.open?'':' · LOCKED')+'</small></button>').join('')+'</div><div class="row"><button class="lh-ob alt" data-close> CLOSE </button></div>','lh-teleporter-menu');menu.querySelector('[data-close]').addEventListener('click',()=>{sfx('menu');menu.close();});menu.querySelectorAll('[data-dest]:not(:disabled)').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.dest;menu.close();teleportTo(id);}));}
  function teleportTo(id){state.teleUsed=true;save();syncStageFromBeaten();sfx('portal');if(id==='village'){if(scene==='area')leaveArea('village');else{scene='outside';AREA=null;state.x=25*TILE+16;state.y=15*TILE+56;updateHud();save();}return;}if(id==='wilds'){enterWilds();return;}if(id==='city'){enterArea('city');return;}const m=/^region(\d+)$/.exec(id);if(m){const c=Number(m[1]);if(c>=1&&c<=9&&(Number(state.stage)||0)>=c)enterRegion(c);}}
-function startArea(A,tx,ty){AREA=A;A.leaving=false;A.justBeatBoss=false;A.bossTalk=0;resetRoamers();if(A.boss&&state.beaten[A.boss.id])A.npcs=A.npcs.filter(n=>!n.boss);scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
+function startArea(A,tx,ty){AREA=A;
+/* Entering the chapter is when the stage run starts, so the server's clock covers
+   the chapter you actually have to play rather than the moment the page loaded. */
+if(A&&A.chapter&&A.chapter===Number(state.stage||0)+1&&!(stageRun&&stageRun.stage===A.chapter))contestStartStage(A.chapter);
+A.leaving=false;A.justBeatBoss=false;A.bossTalk=0;resetRoamers();if(A.boss&&state.beaten[A.boss.id])A.npcs=A.npcs.filter(n=>!n.boss);scene='area';stepper=null;facing=3;areaPlayer={x:tx*32+16,y:ty*32+24};sfx('portal');updateHud();}
 function enterArea(id){if(id==='city'){startArea(getCity(),1,13);setDialogue([['GOLDLEAF MAYOR','Welcome to Goldleaf City, traveler! The Tower stands to the north.']]);}}
 function leaveArea(to){sfx('portal');const c=AREA&&AREA.chapter;const city=AREA&&AREA.city;const ret=AREA&&AREA.ret;AREA=null;scene='outside';stepper=null;if(city){state.x=44*TILE+16;state.y=12*TILE+24;}else if(ret){state.x=ret.x;state.y=ret.y;}else{state.x=16*TILE+16;state.y=32*TILE+24;}const sp=safeSpot(state.x,state.y);state.x=sp.x;state.y=sp.y;updateHud();save();}
 function areaHit(x,y){const A=AREA,tx=Math.floor(x/32),ty=Math.floor(y/32);if(tx<0||ty<0||tx>=A.w||ty>=A.h)return true;return !!A.solid[ty*A.w+tx];}
@@ -2353,8 +2389,9 @@ function p2End(won){
  ]);
 }
 function startBattle(g){if(dialogue)closeDialogue(true);
-/* Chapter fights start the server-side stage run the completion is checked against. */
-if(g&&g.bi!==undefined&&!g.bossLike)contestStartStage(Number(g.bi)+1);
+/* Fallback for a save that loads mid-chapter, where no entry happened: the server
+   reuses an existing run, so this never shortens a clock that entry already started. */
+if(g&&g.bi!==undefined&&!g.bossLike&&!(stageRun&&stageRun.stage===Number(g.bi)+1))contestStartStage(Number(g.bi)+1);
 ensureBattleItems();state.level=state.level||1;state.maxHp=Math.max(state.maxHp||0,state.hp,40);state.maxMp=state.maxMp||20;state.mp=state.mp??state.maxMp;state.potions=state.potions??3;state.xp=state.xp||0;state.hp=Math.max(state.hp,1);
 const B=g.bi!==undefined?BOSSES[g.bi]:(g.bossLike?g:null),hp=B?B.hp:g.hp,atk=B?B.atk:g.atk;
 battle={g,B,e:{name:g.foeName||g.name,hp,max:hp,atk,row:g.row,mi:g.mi,bi:g.bi,boss:!!B,theme:g.theme,sbi:g.sbi,sig:g.sig,status:{},turn:0,charging:false,enraged:false},ward:0,evade:false,guard:false,busy:true,sel:-1,phase:'alert',t0:performance.now(),last:performance.now(),
@@ -2467,7 +2504,7 @@ while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.m
 state.mp=Math.min(state.maxMp,state.mp+(B?state.maxMp:5));if(B){state.hp=Math.min(state.maxHp,state.hp+Math.round(state.maxHp*.5));addPotions(2);}
 if(!g.wild)state.beaten[g.id]=true;if(g.id==='north'){state.sentinelTrainingStarted=true;state.firstWildDefeated=false;}if(g.wild&&state.sentinelTrainingStarted&&!state.firstWildDefeated){state.firstWildDefeated=true;}if(B&&AREA&&AREA.chapter){AREA.justBeatBoss=true;mainQuestData(AREA.chapter).complete=true;save();}if(g.alpha){addPotions(1);}const i=npcs.findIndex(n=>n.trainer&&n.trainer.id===g.id);if(i>=0)npcs.splice(i,1);
 const extra=[];
-if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestPost({action:'complete-stage',stage:state.stage,token:(stageRun&&stageRun.stage===state.stage)?stageRun.token:null});if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
+if(B&&!g.bossLike){const prevStage=Number(state.stage)||0;state.stage=Math.max(prevStage,g.bi+1);if(state.stage>prevStage)contestCompleteStage(state.stage);if(g.bi<BOSSES.length-1){const nx=chapters[g.bi+1];extra.push(['CHAPTER '+(g.bi+1)+' COMPLETE',chapters[g.bi].title+' \u2014 cleared!'],['NEXT CHAPTER',nx.title+' \u00B7 '+nx.place+'. '+nx.quest+'.']);const _ep=CHAPTER_EPILOGUE[g.bi];if(_ep)extra.push(..._ep);}else {
  const redeemed=state.rowanChoice==='forgive'||state.rowanTrust>=2;
  const mercy=state.finalChoice==='mercy';
  state.ending=redeemed?(mercy?'together':'guardian'):(mercy?'unfinished':'steadfast');
