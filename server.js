@@ -181,7 +181,28 @@ app.use(pageFileLimiter);
 
 // Same-origin proxy for the approved 55GMS game repositories.
 // Only the two known repositories are accessible; this is not an open proxy.
-app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
+app.options(/^\/game-assets\/(.+)$/, (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    return res.status(204).end();
+});
+
+// Game files are intentionally public, read-only assets. CORS is required for
+// module scripts, WebAssembly, fonts, canvas images, and game fetch() calls.
+app.all(/^\/game-assets\/(.+)$/, async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+    res.setHeader('Access-Control-Expose-Headers', 'Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    if (!['GET', 'HEAD'].includes(req.method)) {
+        return res.status(405).setHeader('Allow', 'GET, HEAD, OPTIONS').send('Method not allowed.');
+    }
+
     try {
         const parts = String(req.params[0] || '').split('/');
         const [owner, repository, ref, ...fileParts] = parts;
@@ -198,10 +219,15 @@ app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
 
         const upstreamUrl = 'https://raw.githubusercontent.com/' +
             [owner, repository, ref, filePath].join('/');
+        const upstreamHeaders = { 'User-Agent': 'BSMS-Web-Game-Asset-Proxy' };
+        const range = req.get('Range');
+        if (range) upstreamHeaders.Range = range;
+
         const upstream = await fetch(upstreamUrl, {
+            method: req.method,
             redirect: 'follow',
-            signal: AbortSignal.timeout(12000),
-            headers: { 'User-Agent': 'BSMS-Web-Game-Asset-Proxy' }
+            signal: AbortSignal.timeout(20000),
+            headers: upstreamHeaders
         });
 
         if (!upstream.ok) {
@@ -213,7 +239,7 @@ app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
             return res.status(413).send('Game asset is too large.');
         }
 
-        let bytes = Buffer.from(await upstream.arrayBuffer());
+        let bytes = req.method === 'HEAD' ? Buffer.alloc(0) : Buffer.from(await upstream.arrayBuffer());
         if (bytes.length > 50 * 1024 * 1024) {
             return res.status(413).send('Game asset is too large.');
         }
@@ -264,8 +290,17 @@ app.get(/^\/game-assets\/(.+)$/ , async (req, res) => {
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
         res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('Content-Length', String(bytes.length));
-        return res.status(200).send(bytes);
+
+        for (const header of ['accept-ranges', 'content-range', 'etag', 'last-modified']) {
+            const value = upstream.headers.get(header);
+            if (value) res.setHeader(header, value);
+        }
+
+        const upstreamLength = upstream.headers.get('content-length');
+        if (req.method === 'HEAD' && upstreamLength) res.setHeader('Content-Length', upstreamLength);
+        else res.setHeader('Content-Length', String(bytes.length));
+
+        return res.status(upstream.status).send(bytes);
     } catch (error) {
         console.error('[BSMS Web :: Game Asset Proxy]', error);
         return res.status(502).send('Unable to retrieve game asset.');
