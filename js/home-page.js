@@ -275,9 +275,145 @@ function formatRelativeTime(ts) {
     return new Date(Number(ts)).toLocaleDateString();
 }
 
+
+function renderAnnouncementPoll(announcement) {
+    const root = document.getElementById('homeAnnPoll');
+    const poll = announcement?.poll;
+    if (!root) return;
+
+    if (!poll || !Array.isArray(poll.options) || !poll.options.length) {
+        root.hidden = true;
+        root.innerHTML = '';
+        root.onclick = null;
+        root.onchange = null;
+        return;
+    }
+
+    root.hidden = false;
+    const session = (() => {
+        try { return JSON.parse(localStorage.getItem('bsms_auth_session') || 'null'); }
+        catch { return null; }
+    })();
+    const loggedIn = Boolean(session?.loggedIn);
+    const existingSelection = Array.isArray(poll.userOptionIds) ? poll.userOptionIds : [];
+    const hasVoted = existingSelection.length > 0;
+    let selected = new Set(existingSelection);
+    let editing = !hasVoted;
+
+    const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+
+    const draw = () => {
+        const multiple = poll.votingType === 'multiple';
+        const totalVotes = Number(poll.totalVotes || 0);
+        const optionsHtml = poll.options.map(option => {
+            const optionId = String(option.id || '');
+            const isSelected = selected.has(optionId);
+            const percent = Math.max(0, Math.min(100, Number(option.percentage || 0)));
+            const control = loggedIn && editing
+                ? '<input type="' + (multiple ? 'checkbox' : 'radio') + '" name="home-ann-poll-' + escape(announcement.id) + '" data-poll-option="' + escape(optionId) + '" ' + (isSelected ? 'checked' : '') + '>'
+                : (hasVoted && existingSelection.includes(optionId) ? '<span class="announcement-poll-selected-mark" aria-label="Your selection">✓</span>' : '');
+            return '<label class="announcement-poll-option ' + (isSelected ? 'is-selected' : '') + '">' +
+                '<span class="announcement-poll-option-top">' + control +
+                '<span class="announcement-poll-option-label">' + escape(option.text) + '</span>' +
+                '<strong>' + Number(option.votes || 0) + '</strong></span>' +
+                '<span class="announcement-poll-track"><span style="width:' + percent + '%"></span></span>' +
+                '<span class="announcement-poll-option-meta">' + percent + '% of voters</span>' +
+                '</label>';
+        }).join('');
+
+        let actions = '';
+        if (!loggedIn) {
+            actions = '<div class="announcement-poll-actions"><a class="announcement-poll-login" href="/accounts">Sign in to vote</a><span>Sign in with your BSMS Web account to participate.</span></div>';
+        } else if (hasVoted && !editing) {
+            actions = '<div class="announcement-poll-actions"><span class="announcement-poll-voted">Your vote is recorded</span><button type="button" class="announcement-poll-secondary" data-poll-change>Change vote</button></div>';
+        } else {
+            actions = '<div class="announcement-poll-actions"><button type="button" class="announcement-poll-submit" data-poll-submit ' + (selected.size ? '' : 'disabled') + '>' + (hasVoted ? 'Update vote' : 'Submit vote') + '</button>' +
+                (hasVoted ? '<button type="button" class="announcement-poll-secondary" data-poll-cancel>Cancel</button>' : '') + '</div>';
+        }
+
+        root.innerHTML = '<div class="announcement-poll-heading"><div><span class="announcement-poll-eyebrow">COMMUNITY POLL</span><h4>' + escape(poll.question) + '</h4></div>' +
+            '<span class="announcement-poll-total">' + totalVotes + ' vote' + (totalVotes === 1 ? '' : 's') + '</span></div>' +
+            '<div class="announcement-poll-options">' + optionsHtml + '</div>' + actions +
+            '<p class="announcement-poll-status" data-poll-status aria-live="polite"></p>';
+    };
+
+    root.onchange = event => {
+        const input = event.target.closest('[data-poll-option]');
+        if (!input) return;
+        const optionId = input.getAttribute('data-poll-option');
+        if (poll.votingType === 'multiple') {
+            if (input.checked) selected.add(optionId);
+            else selected.delete(optionId);
+        } else {
+            selected = new Set([optionId]);
+        }
+        root.querySelectorAll('.announcement-poll-option').forEach(label => {
+            const control = label.querySelector('[data-poll-option]');
+            label.classList.toggle('is-selected', Boolean(control?.checked));
+        });
+        const submit = root.querySelector('[data-poll-submit]');
+        if (submit) submit.disabled = selected.size === 0;
+    };
+
+    root.onclick = async event => {
+        if (event.target.closest('[data-poll-change]')) {
+            editing = true;
+            selected = new Set(existingSelection);
+            draw();
+            return;
+        }
+        if (event.target.closest('[data-poll-cancel]')) {
+            editing = false;
+            selected = new Set(existingSelection);
+            draw();
+            return;
+        }
+        if (!event.target.closest('[data-poll-submit]')) return;
+
+        const submit = root.querySelector('[data-poll-submit]');
+        const status = root.querySelector('[data-poll-status]');
+        if (!selected.size) return;
+        if (submit) {
+            submit.disabled = true;
+            submit.textContent = 'Saving vote…';
+        }
+
+        try {
+            const response = await fetch('/api/announcements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': localStorage.getItem('session_id') || ''
+                },
+                body: JSON.stringify({
+                    action: 'vote',
+                    announcementId: announcement.id,
+                    optionIds: [...selected]
+                })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Unable to save your vote.');
+            announcement.poll = data.poll;
+            renderAnnouncementPoll(announcement);
+        } catch (error) {
+            if (status) status.textContent = error.message;
+            if (submit) {
+                submit.disabled = false;
+                submit.textContent = hasVoted ? 'Update vote' : 'Submit vote';
+            }
+        }
+    };
+
+    draw();
+}
+
 async function fetchRecentAnnouncement() {
     try {
-        const res = await fetch('/api/announcements');
+        const res = await fetch('/api/announcements', {
+            headers: { 'X-Session-ID': localStorage.getItem('session_id') || '' }
+        });
         if (!res.ok) throw new Error('API response was not ok');
         const data = await res.json();
         
@@ -302,6 +438,7 @@ async function fetchRecentAnnouncement() {
 
         if (titleEl) titleEl.innerText = a.title || "Official Announcement";
         if (contentEl) contentEl.innerHTML = parseAnnouncementMarkdown(a.content || "");
+        renderAnnouncementPoll(a);
         if (authorNameEl) authorNameEl.innerText = a.authorDisplayName || a.authorUsername || "Administrator";
         if (authorUserEl) authorUserEl.innerText = `@${a.authorUsername || 'staff'}`;
         if (authorBadgeEl) {
