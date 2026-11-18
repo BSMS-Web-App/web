@@ -246,7 +246,10 @@ class Clean {
       element.removeAttribute(attribute);
     }
     const tag = element.tagName.toLowerCase();
-    for (const attribute of ["href", "src", "action", "formaction", "poster", "data"]) {
+    for (const attribute of [
+      "href", "src", "action", "formaction", "poster", "data",
+      "data-src", "data-original", "data-lazy-src"
+    ]) {
       const raw = element.getAttribute(attribute);
       if (!raw) continue;
       if (
@@ -260,8 +263,10 @@ class Clean {
       }
       element.setAttribute(attribute, proxyUrl(target.href, this.token));
     }
-    const srcset = element.getAttribute("srcset");
-    if (srcset) element.setAttribute("srcset", rewriteSrcset(srcset, this.base, this.token));
+    for (const attribute of ["srcset", "data-srcset"]) {
+      const srcset = element.getAttribute(attribute);
+      if (srcset) element.setAttribute(attribute, rewriteSrcset(srcset, this.base, this.token));
+    }
     const style = element.getAttribute("style");
     if (style) element.setAttribute("style", rewriteCss(style, this.base, this.token));
     if (tag === "a") element.setAttribute("rel", "noreferrer noopener");
@@ -597,14 +602,6 @@ async function fetchPage(req, env, url, token) {
     );
   }
 
-  if (type.startsWith("image/") &&
-      !["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif", "image/svg+xml"].includes(type.split(";")[0].trim())) {
-    return reply({ error: "This image format is not supported.", contentType: type }, 415);
-  }
-
-  if (type.startsWith("image/svg+xml")) {
-    responseHeaders.set("Content-Security-Policy", "default-src 'none'; sandbox");
-  }
   if (!responseHeaders.has("Content-Type")) {
     responseHeaders.set("Content-Type", "application/octet-stream");
   }
