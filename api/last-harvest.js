@@ -137,8 +137,9 @@ function cleanState(value){
  const base=freshState(),v=value&&typeof value==='object'?value:{};
  const inventory=[...new Set((Array.isArray(v.inventory)?v.inventory:base.inventory).filter(id=>EQUIPMENT[id]))];
  const equipped={};
+ const equippedSource=v.equipped&&typeof v.equipped==='object'?v.equipped:base.equipped;
  for(const slot of ['weapon','armor','helmet','boots']){
-  const id=v.equipped?.[slot];if(EQUIPMENT[id]?.slot===slot&&inventory.includes(id))equipped[slot]=id;
+  const id=equippedSource[slot];if(EQUIPMENT[id]?.slot===slot&&inventory.includes(id))equipped[slot]=id;
  }
  return {...base,character:normalizeClass(v.character)||base.character,
   sidekick:SIDES.has(v.sidekick)?v.sidekick:base.sidekick,pet:normalizePet(v.pet)||base.pet,
@@ -187,13 +188,19 @@ export default async function handler(req,res){
   const snap=await ref.once('value');
   const state=cleanState(snap.val()||freshState());
   const openStage=releasedStage();
-  if(req.method==='GET')return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt});
+  if(req.method==='GET'){
+   if(state.stage===STAGES.length&&state.completedAt)await ensureFinisher(user,state.completedAt);
+   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,completionVerification:'time-gated-client-reported'});
+  }
   const body=reqBody,action=body.action;
   if(action==='save-loadout'){
-   const patch={...state};
-   for(const key of ['character','sidekick','pet','equipped'])if(body[key]!==undefined&&body[key]!==null)patch[key]=body[key];
-   const next=cleanState(patch);
-   await ref.set(next);return res.json({success:true,state:next});
+   const tx=await ref.transaction(current=>{
+    const patch=cleanState(current||freshState());
+    for(const key of ['character','sidekick','pet','equipped'])if(body[key]!==undefined&&body[key]!==null)patch[key]=body[key];
+    return cleanState(patch);
+   });
+   if(!tx.committed)return res.status(409).json({error:'Loadout changed in another session. Refresh and try again.'});
+   return res.json({success:true,state:cleanState(tx.snapshot.val())});
   }
   if(action==='save-player'){
    const playerData=cleanPlayerData(body.playerData);
@@ -288,7 +295,7 @@ async function towerApi(req,res){
    rejection=null;prev=prev||null;
    if(prev&&now-(prev.lastSubmit||0)<8000){rejection='cooldown';return;}
    if(floor>(prev?prev.floor:0)+40){rejection='jump';return;}
-   return(!prev||floor>prev.floor)?{uid:user.uid,displayName:String(user.account.display_name||user.account.username||'Player').slice(0,32),floor,cls,level,at:prev&&prev.at||now,lastSubmit:now}:{...prev,lastSubmit:now};
+   return(!prev||floor>prev.floor)?{uid:user.uid,displayName:String(user.account.display_name||user.account.username||'Player').slice(0,32),floor,cls,level,at:now,lastSubmit:now}:{...prev,lastSubmit:now};
   });
   if(!tx.committed)return rejection==='cooldown'?res.status(429).json({error:'Please wait a moment before posting again.'}):res.status(400).json({error:'Score rejected.'});
   return res.status(200).json({success:true,floor:tx.snapshot.val().floor,verification:'client-reported-casual'});
