@@ -299,8 +299,7 @@ function whenIdle(fn){const iv=setInterval(()=>{if(!dialogue&&!battle&&!cinemati
 var muted=false;try{muted=localStorage.getItem('lh_mute')==='1';}catch(e){}
 function setMuted(v){muted=v;try{localStorage.setItem('lh_mute',v?'1':'0');}catch(e){}if(AUDIO_BUS.master&&AC)try{AUDIO_BUS.master.gain.setTargetAtTime(v?0:1,AC.currentTime,.015);}catch(e){}if(v)stopMusic();else musicTick(true);}
 const TALK={buf:null,tried:0};
-function talkBlip(){if(muted)return;const a=audio();if(!a)return;if(!TALK.buf&&!TALK.tried){TALK.tried=1;(async()=>{for(const u of['/audio/last-harvest/talk.mp3?v=11','/img/last-harvest/talk.mp3?v=11']){try{const r=await fetch(u);if(!r.ok)continue;TALK.buf=await a.decodeAudioData(await r.arrayBuffer());return;}catch(e){}}})();}
-if(TALK.buf){const s=a.createBufferSource(),g=a.createGain();s.buffer=TALK.buf;s.playbackRate.value=.85+Math.random()*.55;g.gain.value=.55;s.connect(g);g.connect(AUDIO_BUS.sfx||a.destination);s.start();}else tone(260+rnd(180),.045,'square',.025);}
+function talkBlip(){if(muted)return;const a=audio();if(!a)return;tone(260+rnd(180),.045,'square',.025);}
 function initSfx(){Object.assign(SFX,{
  door(){tone(210,.07,'square',.045,-75);tone(140,.11,'triangle',.055,-45,.05);sfxNoise(.06,700,.025,.01);},
  menu(){tone(680,.045,'square',.035,60);},
