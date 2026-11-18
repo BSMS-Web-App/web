@@ -22,15 +22,26 @@ async function rejectFlaggedContent(res, value, label) {
 }
 
 
-// Session validator
+// Session validator: resolve indexed sessions directly, with a one-time legacy migration.
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
-    const snap = await db.ref('/accounts').once('value');
-    const accounts = snap.val() || {};
-    
-    for (const [uid, acc] of Object.entries(accounts)) {
-        if (acc.sessions && acc.sessions[sessionId]) {
-            return { uid, account: acc };
+    const indexRef = db.ref('/session_index/' + sessionId);
+    const indexSnap = await indexRef.once('value');
+    const indexed = indexSnap.val();
+    const indexedUid = typeof indexed === 'string' ? indexed : indexed?.uid;
+    if (indexedUid) {
+        const accountSnap = await db.ref('/accounts/' + indexedUid).once('value');
+        const account = accountSnap.val();
+        if (account && account.account_status !== 'deleted' && account.sessions?.[sessionId]) {
+            return { uid: indexedUid, account };
+        }
+        await indexRef.remove();
+    }
+    const accountsSnap = await db.ref('/accounts').once('value');
+    for (const [uid, account] of Object.entries(accountsSnap.val() || {})) {
+        if (account?.account_status !== 'deleted' && account?.sessions?.[sessionId]) {
+            await indexRef.set({ uid, createdAt: account.sessions[sessionId].createdAt || Date.now() });
+            return { uid, account };
         }
     }
     return null;
