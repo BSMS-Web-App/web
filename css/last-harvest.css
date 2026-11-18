@@ -254,7 +254,9 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 .lh-dialogue.lh-dialogue-top #lh-next{position:relative!important;z-index:3!important;pointer-events:auto!important}
 @media(max-width:700px){.lh-dialogue.lh-dialogue-top #lh-portrait{top:-48px!important;width:52px!important;height:52px!important}.lh-dialogue.lh-dialogue-top .lh-dialogue-speaker>div{margin-left:62px!important}}
 .lh-story-choices{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 2px 78px;position:relative;z-index:4}
-.lh-story-choices .lh-gold-button{white-space:normal;text-align:left;min-height:42px;padding:8px 12px;cursor:pointer}
+.lh-story-choices .lh-gold-button{white-space:normal;text-align:left;min-height:42px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px}
+.lh-story-choice-title{display:block;font-size:clamp(8px,1.25vw,10px);line-height:1.5}
+.lh-story-choice-detail{display:block;font-family:ui-monospace,monospace;font-size:clamp(10px,1.25vw,12px);font-weight:400;line-height:1.45;color:#fff0d0;white-space:normal;letter-spacing:0}
 @media(max-width:700px){.lh-story-choices{margin-left:0;display:grid;grid-template-columns:1fr}.lh-story-choices .lh-gold-button{width:100%}}
 /* .lh-dialogue button{display:none} above would swallow the story choices, which are
    buttons inside the dialogue box - the Rowan / Hollow King decisions were invisible. */
@@ -298,6 +300,7 @@ html,body,.lh-body,.lh-game,.lh-game canvas,.lh-overlay,.lh-dialogue,.lh-menu-bu
 .lh-j-body{flex:1;min-height:220px;overflow:auto;background:#fbefd0;border:3px solid #1a110c;box-shadow:inset 0 0 0 3px #e8d39e;padding:16px;font-size:clamp(7px,1.35vw,9px);line-height:1.8;-webkit-overflow-scrolling:touch}
 .lh-j-h{display:flex;align-items:center;gap:8px;margin:18px 0 10px;font-size:clamp(8px,1.62vw,11px);color:#a8452e;font-weight:400}.lh-j-h:first-child{margin-top:0}.lh-j-h:before{content:"";width:8px;height:8px;background:#a8452e;box-shadow:2px 2px 0 #1a110c;transform:rotate(45deg)}
 .lh-j-p{margin:8px 0}.lh-j-p b{color:#a8452e;font-weight:400}
+.lh-j-guidance{margin:0 0 12px;padding:10px 12px;background:#f5e2b5;border:2px solid #8f5a37;box-shadow:inset 0 0 0 2px #fff4d8}.lh-j-guidance .lh-j-p{margin:4px 0;line-height:1.8}
 .lh-j-hero{display:flex;gap:16px;align-items:center;padding:12px;background:#e8d39e;border:3px solid #1a110c;box-shadow:inset 0 0 0 2px #fff4d8}
 .lh-j-portrait{flex:none;width:96px;height:96px;background:linear-gradient(#a8e0fa,#6cb8e0);border:3px solid #1a110c;box-shadow:inset 0 0 0 3px #fff4d8;display:grid;place-items:center}
 .lh-j-portrait canvas{width:80px;height:80px;image-rendering:pixelated}
