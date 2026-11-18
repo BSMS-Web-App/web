@@ -613,8 +613,8 @@ function sessionId(){try{const direct=(localStorage.getItem('session_id')||'').t
 /* The event page must stay playable while the account API is unreachable or a
    player has not signed in. The published window is the same one the API
    enforces; the server still rules on every contest write it receives. */
-const PUBLIC_EVENT_START=Date.parse('2026-11-16T12:00:00.000Z');
-const PUBLIC_EVENT_END=Date.parse('2026-12-20T05:00:00.000Z');
+const PUBLIC_EVENT_START=Date.parse('2026-11-18T12:00:00.000Z');
+const PUBLIC_EVENT_END=Date.parse('2026-11-24T20:10:00.000Z');
 function localEventPhase(now=Date.now()){
  if(now<PUBLIC_EVENT_START)return{phase:'upcoming',startsAt:PUBLIC_EVENT_START,endsAt:PUBLIC_EVENT_END,serverTime:now};
  if(now>=PUBLIC_EVENT_END)return{phase:'ended',startsAt:PUBLIC_EVENT_START,endsAt:PUBLIC_EVENT_END,serverTime:now};

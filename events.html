@@ -79,7 +79,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     <div class="event-body">
       <p class="event-status" id="lh-event-status" role="status" aria-live="polite">LIVE NOW</p>
       <h2 id="lh-event-title">The Last Harvest</h2>
-      <p class="event-dates" id="lh-event-dates">November 16 – December 20, 2026 · Eastern time</p>
+      <p class="event-dates" id="lh-event-dates">November 18 – November 24, 2026 · Eastern time</p>
       <p class="event-window" id="lh-event-window"></p>
       <p class="event-copy">A 16-bit autumn adventure. Explore Hearthvale, help its residents save the Everfeast, then see how many towers you can conquer in a single Goldleaf Tower run.</p>
       <a class="event-play" id="lh-event-play" href="/last-harvest">PLAY THE EVENT</a>
@@ -93,8 +93,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 (() => {
   'use strict';
   /* Keep the window in sync with api/last-harvest.js and js/last-harvest.js. */
-  const START = Date.parse('2026-11-16T12:00:00.000Z');
-  const END = Date.parse('2026-12-20T05:00:00.000Z');
+  const START = Date.parse('2026-11-18T12:00:00.000Z');
+  const END = Date.parse('2026-11-24T20:10:00.000Z');
   const dayFmt = new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric', timeZone:'America/New_York'});
   const yearFmt = new Intl.DateTimeFormat('en-US', {year:'numeric', timeZone:'America/New_York'});
   const momentFmt = new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York', timeZoneName:'short'});
