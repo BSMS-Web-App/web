@@ -81,10 +81,11 @@ function foreignTimestamp(body){
 }
 async function ensureFinisher(user,completedAt){
  const ref=db.ref('/last_harvest/finishers/'+user.uid),existingSnap=await ref.once('value'),existing=existingSnap.val();
- if(existing&&Number.isFinite(existing.completedAt))return existing;
+ if(existing&&Number.isFinite(existing.completedAt)&&Number(existing.finishOrder)>0)return existing;
  const sequence=await db.ref('/last_harvest/finish_sequence').transaction(value=>(Number(value)||0)+1);
- const record={uid:user.uid,displayName:user.account.display_name||user.account.username||'Player',completedAt:Number(completedAt)||Date.now(),finishOrder:Number(sequence.snapshot.val())||1};
- const result=await ref.transaction(current=>current&&Number.isFinite(current.completedAt)?undefined:record);
+ const order=Number(sequence.snapshot.val())||1;
+ const record=existing&&Number.isFinite(existing.completedAt)?{...existing,finishOrder:order}:{uid:user.uid,displayName:user.account.display_name||user.account.username||'Player',completedAt:Number(completedAt)||Date.now(),finishOrder:order};
+ const result=await ref.transaction(current=>current&&Number.isFinite(current.completedAt)?(Number(current.finishOrder)>0?undefined:{...current,finishOrder:order}):record);
  return result.snapshot.val()||record;
 }
 async function resolveUser(sessionId){
