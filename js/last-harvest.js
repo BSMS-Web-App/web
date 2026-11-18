@@ -106,6 +106,7 @@ function sanitizeState(s){
  return s;
 }
 let resetting=false,stateRepaired=false;
+let eventAccess={active:false,phase:'unknown',startsAt:null,endsAt:null};let remoteSaveTimer=null,remoteSaveBusy=false;
 let state=createFreshState('','Guardian');
 state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;
 try{const old=restoreLocalSave();if(old&&old.name){const merged={...state,...old};const raw=JSON.stringify(merged);state=sanitizeState(migrateSave(merged));if(JSON.stringify(state)!==raw)stateRepaired=true;}}catch(e){}
@@ -204,7 +205,7 @@ function askFinalWish(done){
 
 const rand=(x,y)=>{let n=Math.sin(x*127.1+y*311.7+worldSeed)*43758.5453;return n-Math.floor(n)};
 function resetLocalSave(skipTitle){resetting=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(BACKUP);}catch(e){}try{if(skipTitle)sessionStorage.setItem('lh_skip_title','1');else sessionStorage.removeItem('lh_skip_title');}catch(e){}state=createFreshState('','Guardian');state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;}
-let saveWarning=false;function save(){if(resetting)return false;const stamp=Number(state.savedAt||0);try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name){if(Number(valid.savedAt||0)>stamp){staleSaveNotice();return false;}localStorage.setItem(BACKUP,previous);}}catch(e){}}if(!(Number(state.saveVersion)>SAVE_VERSION))state.saveVersion=SAVE_VERSION;state.savedAt=Date.now();localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){let best=null;for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(!data||!data.name)continue;const stamp=Number(data.savedAt)||0;if(!best||stamp>best.stamp)best={stamp,data};}catch(e){}}return best?best.data:null;}let staleNoticeAt=0;function staleSaveNotice(){const now=Date.now();if(now-staleNoticeAt<10000)return;staleNoticeAt=now;try{const old=document.getElementById('lh-toast');if(old)old.remove();const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent='NOT SAVED \u00B7 ANOTHER TAB HAS NEWER PROGRESS \u2014 RELOAD TO KEEP IT';document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},5200);}catch(e){}}
+let saveWarning=false;function save(){if(resetting)return false;const stamp=Number(state.savedAt||0);try{const previous=localStorage.getItem(SAVE);if(previous){try{const valid=JSON.parse(previous);if(valid&&valid.name){if(Number(valid.savedAt||0)>stamp){staleSaveNotice();return false;}localStorage.setItem(BACKUP,previous);}}catch(e){}}if(!(Number(state.saveVersion)>SAVE_VERSION))state.saveVersion=SAVE_VERSION;state.savedAt=Date.now();localStorage.setItem(SAVE,JSON.stringify(state));saveWarning=false;scheduleRemoteSave();return true;}catch(e){saveWarning=true;return false;}}function restoreLocalSave(){let best=null;for(const key of [SAVE,BACKUP]){try{const raw=localStorage.getItem(key),data=raw&&JSON.parse(raw);if(!data||!data.name)continue;const stamp=Number(data.savedAt)||0;if(!best||stamp>best.stamp)best={stamp,data};}catch(e){}}return best?best.data:null;}let staleNoticeAt=0;function staleSaveNotice(){const now=Date.now();if(now-staleNoticeAt<10000)return;staleNoticeAt=now;try{const old=document.getElementById('lh-toast');if(old)old.remove();const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';el.textContent='NOT SAVED \u00B7 ANOTHER TAB HAS NEWER PROGRESS \u2014 RELOAD TO KEEP IT';document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},5200);}catch(e){}}
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.floor(innerWidth*dpr);canvas.height=Math.floor(innerHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
 addEventListener('resize',resize);resize();
 function tileAt(x,y){if(x<0||y<0||x>=MAP_W||y>=MAP_H)return 1;return 0;}
@@ -610,7 +611,11 @@ function offerSkills(){if(offering)return;const cat=skillCat();state.skills=stat
   el.querySelector('#sk-keep').onclick=()=>{sfx('menu');state.skipped.push(idx);done();};
   el.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{sfx('select');state.skills.splice(+b.dataset.f,1,idx);done();});};}
 /* ---------- leaderboard (global when signed in to BSMS, always saved locally) ---------- */
-function sessionId(){try{return localStorage.getItem('session_id')||localStorage.getItem('bsms_session')||'';}catch(e){return'';}}
+function sessionId(){try{const direct=(localStorage.getItem('session_id')||'').trim();if(direct)return direct;const raw=localStorage.getItem('bsms_session')||'';try{return String(JSON.parse(raw)?.sessionId||'');}catch(e){return raw.trim();}}catch(e){return'';}}
+async function checkEventAccess(){const sid=sessionId();if(!sid)return{ok:false,reason:'signin'};try{const r=await fetch('/api/last-harvest',{cache:'no-store',headers:{'X-Session-ID':sid}});if(r.status===401)return{ok:false,reason:'signin'};if(r.status===403)return{ok:false,reason:'ineligible'};if(!r.ok)return{ok:false,reason:'unavailable'};const d=await r.json(),phase=String(d.phase||'unknown');return{ok:phase==='active',reason:phase==='upcoming'?'upcoming':phase==='ended'?'ended':phase==='active'?'':'unavailable',phase,startsAt:Number(d.startsAt)||null,endsAt:Number(d.endsAt)||null};}catch(e){return{ok:false,reason:'unavailable'};}}
+function showAccessGate(result){eventAccess={active:false,phase:result.phase||result.reason||'unknown',startsAt:result.startsAt||null,endsAt:result.endsAt||null};const game=$('lh-game'),gate=$('lh-access-gate'),title=$('lh-access-title'),copy=$('lh-access-copy'),action=$('lh-access-action'),note=$('lh-access-note');if(game)game.style.display='none';if(!gate)return;gate.hidden=false;const m={signin:['SIGN IN REQUIRED','You must sign in to an eligible BSMS Web account before starting or continuing The Last Harvest.','SIGN IN TO BSMS'],ineligible:['ACCOUNT NOT ELIGIBLE','This account cannot enter. Check for a ban or required Terms of Service / Privacy Policy acceptance.','OPEN ACCOUNT'],upcoming:['THE EVENT HAS NOT OPENED','The Last Harvest opens Wednesday, November 18, 2026 at 7:00 AM Eastern Standard Time. Gameplay and Tower runs are locked until then.','REFRESH STATUS'],ended:['THE EVENT HAS ENDED','The event closed Tuesday, November 24, 2026 at 3:10 PM Eastern Standard Time. New runs and progression are locked.','VIEW BSMS WEB'],unavailable:['EVENT STATUS UNAVAILABLE','The server could not confirm your account and the official event window. Gameplay stays locked until that check succeeds.','RETRY']};const v=m[result.reason]||m.unavailable;if(title)title.textContent=v[0];if(copy)copy.textContent=v[1];if(action)action.textContent=v[2];if(note)note.textContent=result.reason==='signin'?'Sign in and return here automatically.':result.reason==='ineligible'?'Review your account eligibility and required legal acknowledgements.':'The event uses the server clock, not your device clock.';if(action)action.onclick=()=>{if(result.reason==='signin'||result.reason==='ineligible')location.href='/accounts?callback_url='+encodeURIComponent('/last-harvest');else if(result.reason==='unavailable')location.reload();else location.href='/';};}
+function scheduleRemoteSave(){if(!eventAccess.active||!state||!state.name||!sessionId())return;if(remoteSaveTimer)clearTimeout(remoteSaveTimer);remoteSaveTimer=setTimeout(async()=>{remoteSaveTimer=null;if(remoteSaveBusy||!eventAccess.active)return;remoteSaveBusy=true;try{const playerData={...state};delete playerData.stage;delete playerData.coins;delete playerData.xp;delete playerData.completedAt;delete playerData.pendingStages;const r=await contestPostFull({action:'save-player',playerData});if(r.status===410||r.status===425)showAccessGate({reason:r.status===410?'ended':'upcoming'});}catch(e){}finally{remoteSaveBusy=false;}},1800);}
+
 /* Contest sync: the adventure is still played locally, but stage clears and
    loadout choices are mirrored to the contest API so the server keeps its own
    record of the run. A missing session stays silent; a server refusal on a
@@ -621,7 +626,7 @@ let stageRun=null;
 async function contestStartStage(stage){const d=await contestPost({action:'start-stage',stage});
  if(d&&d.run&&d.run.stage===stage)stageRun={stage,token:d.run.token,startedAt:d.run.startedAt};
  return stageRun;}
-async function contestPostFull(payload){const sid=sessionId();if(!sid)return{status:0,body:null};
+async function contestPostFull(payload){const sid=sessionId();if(!sid||!eventAccess.active)return{status:0,body:null};
  try{const r=await fetch('/api/last-harvest',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':sid},body:JSON.stringify(payload)});
   let d=null;try{d=await r.json();}catch(e){}
   return{status:r.status,body:d};}catch(e){return{status:0,body:null};}}
@@ -690,27 +695,7 @@ async function flushPendingStage(){
  /* In order: the API only accepts the next stage, so one refusal stops the line. */
  for(const p of queued()){if(!await contestCompleteStage(Number(p.stage)))break;}
 }
-async function syncContestState(){
- const sid=sessionId();
- if(!sid||!state.name)return;
- try{
-  const r=await fetch('/api/last-harvest',{headers:{'X-Session-ID':sid}});
-  if(!r.ok)return;
-  const d=await r.json(),srv=d&&d.state;
-  if(!srv||typeof srv!=='object')return;
-  let changed=false;
-  const serverStage=clampInt(srv.stage,0,BOSSES.length,0);
-  if(serverStage>state.stage){
-   state.stage=serverStage;changed=true;
-   /* the stage payouts rode along with those clears; keep them together */
-   const sxp=clampInt(srv.xp,0,10000000,0),sc=clampInt(srv.coins,0,1000000,0);
-   if(sxp>Number(state.xp||0)){state.xp=sxp;changed=true;}
-   if(sc>Number(state.coins||0)){state.coins=sc;changed=true;}
-  }
-  if(srv.completedAt&&!state.completedAt){state.completedAt=Number(srv.completedAt)||null;changed=true;}
-  if(changed){updateHud();save();}
- }catch(e){}
-}
+async function syncContestState(){const sid=sessionId();if(!sid)return false;try{const r=await fetch('/api/last-harvest',{cache:'no-store',headers:{'X-Session-ID':sid}});if(!r.ok)return false;const d=await r.json(),srv=d&&d.state;if(!srv||typeof srv!=='object')return false;let changed=false;const localStamp=Number(state.savedAt)||0,remoteStamp=Number(srv.playerDataUpdatedAt)||0;if(srv.playerData&&typeof srv.playerData==='object'&&remoteStamp>=localStamp){const keep={stage:state.stage,coins:state.coins,xp:state.xp,completedAt:state.completedAt,pendingStages:state.pendingStages};state=sanitizeState(migrateSave({...state,...srv.playerData,...keep}));changed=true;}else if(srv.playerData&&remoteStamp<localStamp&&state.name)scheduleRemoteSave();const serverStage=clampInt(srv.stage,0,BOSSES.length,0);if(serverStage>state.stage){state.stage=serverStage;changed=true;}const sxp=clampInt(srv.xp,0,10000000,0),sc=clampInt(srv.coins,0,1000000,100);if(sxp!==Number(state.xp||0)){state.xp=sxp;changed=true;}if(sc!==Number(state.coins||0)){state.coins=sc;changed=true;}if(srv.completedAt&&Number(srv.completedAt)!==Number(state.completedAt||0)){state.completedAt=Number(srv.completedAt)||null;changed=true;}if(changed){updateHud();save();}return true;}catch(e){return false;}}
 function contestPetName(){return state&&state.pet&&PETS[state.pet.id]?PETS[state.pet.id].name:undefined;}
 let ACCOUNT_NAME=null,ACCOUNT_ASKED=false;
 async function accountName(){
@@ -770,17 +755,17 @@ function showEventRules(){
  const el=ov('<h3>THE LAST HARVEST \u00B7 EVENT RULES</h3>'
   +'<p class="note">THE AUTUMN CONTEST \u00B7 ONE SAVE, ONE RUN, TEN CHAPTERS</p>'
   +'<h3>WHEN IT RUNS</h3>'
-  +'<p>From Monday 16 November 2026, 7:00 AM EST to Sunday 20 December 2026, 12:00 AM EST.</p>'
-  +'<p class="note">The server itself refuses progress and scores outside that window, so changing the clock on your device does not buy you time.</p>'
+  +'<p>From Wednesday, November 18, 2026 at 7:00 AM EST until Tuesday, November 24, 2026 at 3:10 PM EST. The closing time is exclusive: submissions at or after 3:10 PM are rejected.</p>'
+  +'<p class="note">The server clock controls the event. Before it opens or after it closes, the game and Tower are locked.</p>'
   +'<h3>WHO CAN ENTER</h3>'
-  +'<p>Anyone playing while signed in to a BSMS Web account. One account is one entry \u2014 the account holds a single contest save, so you cannot run two attempts side by side. Accounts that are banned, or that still owe us a terms acceptance, cannot post progress.</p>'
+  +'<p>You must sign in to an eligible BSMS Web account before you can start or continue the event. Expired sessions, banned accounts, and accounts that still owe a required Terms of Service or Privacy Policy acceptance are blocked by the server. One account is one entry.</p>'
   +'<h3>HOW THE WINNER IS DECIDED</h3>'
-  +'<p>First place goes to the first verified finish of chapter ten. That is the moment the server records your tenth chapter, not the timer on your phone, so the ranking cannot be gamed by a slow connection or a stopped watch.</p>'
+  +'<p>First place goes to the earliest chapter-ten completion recorded by the server. The server requires an ordered, single-use stage run and a minimum elapsed time, but the battle itself is still completed in the browser. This is server-recorded progress, not independently server-verified gameplay.</p>'
   +'<p>Chapters must be cleared in order; the server rejects any stage that skips ahead. You can retry a fight as often as you like \u2014 a loss only sends you back \u2014 but progress never rewinds, so once a chapter is cleared it stays cleared.</p>'
   +'<h3>TIE-BREAKS</h3>'
-  +'<p>Two finishers recorded in the same second are separated by their highest Goldleaf Tower floor, and then by whoever posted that floor first. That is the only tie-break used; finishing sooner always beats it.</p>'
+  +'<p>Finishers are ordered by the original server-recorded chapter-ten completion timestamp. Goldleaf Tower scores are not used to decide contest places or prizes.</p>'
   +'<h3>GOLDLEAF TOWER</h3>'
-  +'<p>The tower is a second board ranked purely by the highest floor you have reached. Your best floor is kept, never your latest, and the board carries bragging rights rather than a prize. Posts that jump more than 40 floors at once, or land within 8 seconds of each other, are refused as impossible.</p>'
+  +'<p>The Tower is a separate casual leaderboard for bragging rights only. Scores are reported by the browser and are not server-verified, so they do not affect official contest results or prizes. Basic rate and score-change limits do not prove that a run happened.</p>'
   +'<h3>FAIR PLAY</h3>'
   +'<p>One account per person. No editing save files, injecting stats or editing network calls, and no bots or macros playing turns for you. Sharing an account to post for someone else is the same as cheating on your own. Breaking any of this removes you from both boards and from the prizes, and can cost you the account.</p>'
   +'<h3>PRIZES</h3>'
@@ -795,7 +780,7 @@ function showEventRules(){
  const ok=el.querySelector('[data-ok]');if(ok)ok.onclick=()=>{sfx('confirm');el.close();};
 }
 async function showLeaderboard(){
- const el=ov('<h3>TOWER LEADERBOARD</h3><p class="note">Every floor of the Goldleaf Tower you clear counts as one tower. Highest total wins.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
+ const el=ov('<h3>GOLDLEAF TOWER · CASUAL BOARD</h3><p class="note">Highest browser-reported floor. Bragging rights only — scores are not server-verified and never decide contest prizes.</p><div id="lb-body"><p class="note">Loading\u2026</p></div><div class="row"><button class="lh-ob" id="lb-x">CLOSE</button></div>');
  el.querySelector('#lb-x').onclick=()=>{sfx('menu');el.close();};
  let rows=[],online=false,submissionsOpen=null,opensAt=null,who='';
  try{({rows,online,submissionsOpen,opensAt}=await boardRows());who=await accountName();}catch(e){const fb=el.querySelector('#lb-body');if(fb)fb.innerHTML='<p class="lh-lb-empty">The leaderboard could not be loaded.</p>';return;}
@@ -814,7 +799,7 @@ async function showLeaderboard(){
 
 /* ---------- the Goldleaf Tower ---------- */
 let tower=null;
-function towerEnter(){const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Every floor you clear counts as one <b>tower</b>. A run ends when you fall, so the only question is how many towers you can conquer in one run.</p><p>Every blow a challenger lands costs a fixed slice of your health, so no floor can one-shot you. Your HP and MP carry between fights: a sip of both after each wave, a proper rest after each floor, and a full restore on every tenth <b>guardian</b> floor. Every fifth floor is an <b>elite</b>.</p><p>Your best: <b>floor '+best+'</b> \u00B7 you climb from <b>floor '+Math.min(500,best+1)+'</b>.</p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
+function towerEnter(){if(!eventAccess.active){showAccessGate({reason:eventAccess.phase==='ended'?'ended':eventAccess.phase==='upcoming'?'upcoming':'signin'});return;}const best=Math.max(0,Number(state.towerBest)||0,...localBoard().map(r=>r.floor),0);const el=ov('<h3>GOLDLEAF TOWER</h3><p>Every floor you clear counts as one <b>tower</b>. A run ends when you fall, so the only question is how many towers you can conquer in one run.</p><p>Every blow a challenger lands costs a fixed slice of your health, so no floor can one-shot you. Your HP and MP carry between fights: a sip of both after each wave, a proper rest after each floor, and a full restore on every tenth <b>guardian</b> floor. Every fifth floor is an <b>elite</b>.</p><p>Your best: <b>floor '+best+'</b> \u00B7 you climb from <b>floor '+Math.min(500,best+1)+'</b>.</p><div class="row"><button class="lh-ob" id="tw-go">CLIMB</button><button class="lh-ob alt" id="tw-no">NOT YET</button></div>');
  el.querySelector('#tw-no').onclick=()=>{sfx('menu');el.close();};el.querySelector('#tw-go').onclick=()=>{sfx('select');el.close();state.hp=state.maxHp;state.mp=state.maxMp;updateHud();save();tower={floor:Math.min(500,best+1),best,wave:0,waves:1,cleared:0};towerFloor();};}
 function banner(t,sub,cb){const el=document.createElement('div');el.className='lh-banner';el.innerHTML='<div><h2>'+esc(t)+'</h2><p>'+esc(sub||'')+'</p></div>';document.body.appendChild(el);sfx('alert');setTimeout(()=>{el.remove();cb&&cb();},1500);}
 function towerWavesFor(f){let w=f<=8?1:f<=20?2:3;if(f%10===0)w=Math.min(3,w+1);return w;}
@@ -2605,7 +2590,7 @@ function p2End(won){
   ['REWARD','+600 XP \u00b7 +500 COINS']
  ]);
 }
-function startBattle(g){if(dialogue)closeDialogue(true);
+function startBattle(g){if(!eventAccess.active){showAccessGate({reason:eventAccess.phase==='ended'?'ended':eventAccess.phase==='upcoming'?'upcoming':'signin'});return;}if(dialogue)closeDialogue(true);
 /* Fallback for a save that loads mid-chapter, where no entry happened: the server
    reuses an existing run, so this never shortens a clock that entry already started. */
 if(g&&g.bi!==undefined&&!g.bossLike&&!(stageRun&&stageRun.stage===Number(g.bi)+1))contestStartStage(Number(g.bi)+1);
@@ -3206,7 +3191,7 @@ if(turnWait>0){turnWait-=dt;return;}
 const SS=ins?roomGeom(interiorId).U:TILE,nx=P.x+[0,0,-1,1][f]*SS,ny=P.y+[1,-1,0,0][f]*SS;
 const hit=ins?roomHit(nx,ny):ar?areaHit(nx,ny):(blocked(nx,ny)||npcs.some(n=>Math.floor(n.x/TILE)===Math.floor(nx/TILE)&&Math.floor(n.y/TILE)===Math.floor(ny/TILE)));
 if(hit){if(ins&&f===0&&P.y>roomGeom(interiorId).exitY)exitBuilding();else if(!ins&&!ar&&blocked(P.x,P.y)){const sp=safeSpot(P.x,P.y);P.x=sp.x;P.y=sp.y;updateHud();save();}return;}stepper={fx:P.x,fy:P.y,tx:nx,ty:ny,t:0};walking=true;}
-function loop(t){const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);areaTick();ensureSouthBossGate();ensureCityGate();ensureWildsGate();musicTick();roamerTick();lastCam=drawWorld();drawOverworldActors();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
+let loopRunning=true;function loop(t){if(document.hidden){loopRunning=false;return;}const dt=Math.min((t-lastTime)/1000||0,.04);lastTime=t;move(dt);areaTick();ensureSouthBossGate();ensureCityGate();ensureWildsGate();musicTick();roamerTick();lastCam=drawWorld();drawOverworldActors();drawBattleFx(innerWidth,innerHeight);if(dialogue)positionSpeechBubble(dialogue[dialogueIndex][0]);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 addEventListener('keydown',e=>{if(dialogue&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(!e.repeat)advanceDialogue();return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='e'||e.key==='E'||e.key===' '){if(!e.repeat)interact();return;}keys[e.key]=true;});
 addEventListener('keyup',e=>{keys[e.key]=false;});
@@ -3280,10 +3265,9 @@ document.querySelectorAll('[data-rpg-tab]').forEach(b=>b.addEventListener('click
 $('lh-resume').addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidden=true;});
 {const r2=$('lh-resume2');if(r2)r2.addEventListener('click',()=>{sfx('menu');$('lh-game-menu').hidden=true;});}
 $('lh-reset').addEventListener('click',()=>{sfx('menu');if(confirm('Start a new adventure? Your saved progress on this device will be replaced.')){resetLocalSave(false);location.reload();}});
-initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save();});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
+initSfx();initRows();addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){save();}else if(!loopRunning){loopRunning=true;lastTime=performance.now();requestAnimationFrame(loop);}});setInterval(()=>{if(state.name&&state.seenIntro&&!battle&&!dialogue&&!cinematic)save();},15000);
 if(state.seenIntro)offerSkillsWhenReady();
 if(/[?&]debug\b/.test(location.search))window.__lh={setDialogue,advanceDialogue,askFinalWish,playEverfeastScene,killRowanForGood,enterTrap,areaHit,get state(){return state;},questTarget,enterRegion,interact,get scene(){return scene;},get ui(){return{dialogue:!!dialogue,speaker:dialogue&&dialogue[0]&&dialogue[0][0],menu:!$('lh-game-menu').hidden};},get flags(){return{titleOpen:!!titleOpen,transitioning:!!transitioning,cinematic:cinematic?{phase:cinematic.phase,ch:cinematic.ch,t0:cinematic.t0}:null,stepper:!!stepper};},get battle(){return battle?{phase:battle.phase,ehp:battle.e&&battle.e.hp,hp:state.hp,name:battle.e&&battle.e.name,twin:battle.twin?{name:battle.twin.name,hp:battle.twin.hp,max:battle.twin.max}:null,ult:battle.ult,ultUsed:!!battle.ultUsed,bang:battle.bang}:null;},get cam(){return{camX:lastCam.camX,camY:lastCam.camY};},get room(){return{names:(roomNPCs[interiorId]||[]).map(n=>n.name),spots:roomNPCSpots[interiorId]||[],geom:roomGeom(interiorId),px:insidePlayer&&insidePlayer.x,py:insidePlayer&&insidePlayer.y};},npcs:()=>npcs.map(n=>({x:n.x,y:n.y,name:n.name,act:n.act})),bossTalk:()=>{const b=(AREA&&AREA.npcs||[]).find(n=>n.boss);if(!b)return null;areaBossIntro(b);return b.name;},areaNpcs:()=>(AREA&&AREA.npcs||[]).map(n=>({x:n.x,y:n.y,name:n.name,boss:!!n.boss,act:n.act})),blocked:(x,y)=>blocked(x,y),hit:(x,y)=>roomHit(x,y),get area(){return AREA?{id:AREA.id,wilds:!!AREA.wilds,px:areaPlayer&&areaPlayer.x,py:areaPlayer&&areaPlayer.y}:null;},enterArea,towerEnter,showLeaderboard,openShop,openStore,npcRow,p2:{open:p2Open,eligible:p2Eligible,ready:p2Ready,start:()=>startBattle(p2Foe()),letter:p2Letter,talk:p2Approach},offerSkills,startBattle,wildEncounter,setScene(s){scene=s;},get scene(){return scene;},damage(n){if(!battle)return null;battle.e.hp=Math.max(0,battle.e.hp-(n||0));return{hp:battle.e.hp,twin:battle.twin?battle.twin.hp:null};}};
 {/* legacy saves may hold more than the current carry limits */}const capsBefore=JSON.stringify(state.battleItems||{});ensureBattleItems();if(JSON.stringify(state.battleItems)!==capsBefore||stateRepaired)save();
-{const hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(()=>{if(skip)startNaming();else showTitle(hasSave);if(hasSave)syncContestState();if(hasSave)flushPendingStage();
- if(hasSave&&p2Ready()){rebuildVillageEntities();if(!state.p2Seen)p2Announce();}});}
+{let hasSave=!!(state.name&&state.seenIntro);$('lh-create').hidden=true;if(state.name)updateHud();let skip=false;try{skip=sessionStorage.getItem('lh_skip_title')==='1';sessionStorage.removeItem('lh_skip_title');}catch(e){}applyGender();bootDone=true;bootScreen().then(async()=>{const access=await checkEventAccess();if(!access.ok){showAccessGate(access);return;}eventAccess={active:true,phase:access.phase,startsAt:access.startsAt,endsAt:access.endsAt};$('lh-game').style.display='';if(sessionId())await syncContestState();hasSave=!!(state.name&&state.seenIntro);if(skip)startNaming();else showTitle(hasSave);if(hasSave)flushPendingStage();if(hasSave&&p2Ready()){rebuildVillageEntities();if(!state.p2Seen)p2Announce();}setInterval(async()=>{const latest=await checkEventAccess();if(!latest.ok)showAccessGate(latest);else eventAccess={active:true,phase:latest.phase,startsAt:latest.startsAt,endsAt:latest.endsAt};},30000);});}
 })();
