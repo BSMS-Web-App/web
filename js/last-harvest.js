@@ -189,7 +189,7 @@ function askFinalWish(done){
   {label:'Refuse the wish.',detail:'The wish is unused. Your parents and Rowan remain gone.',value:'refuse'}
  ];
  askStoryChoice('THE HOLLOW KING','The crown holds one final wish. Choose carefully: this decides who, if anyone, returns. You will make a separate choice about the Hollow King’s fate later.',opts,v=>{
-  state.wish=v;save();
+  state.wish=v;if(v==='rowan'){state.rowanDead=false;rebuildVillageEntities();}save();
   const after={
    parents:[['YOU','Bring them back. My mother and my father.'],['THE HOLLOW KING','As you ask. Remember who paid for it.'],['JOURNAL','The crown goes quiet. Somewhere beyond the door, two voices start arguing about dinner.']],
    rowan:[['YOU','Bring Rowan back.'],['THE HOLLOW KING','You would spend a wish on the one who sold you?'],['YOU','Yes.'],['JOURNAL','The crown goes quiet. In the broken hall, a body takes a breath.']],
@@ -1052,7 +1052,7 @@ function genRegion(c){const B=BIO[c],S=STORY[c],w=44,h=26,rng=mulberry(c*7919+13
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(!open[i]){if(x===0||y===0||x===w-1||y===h-1||rng()<.8){solid[i]=1;ob[i]=1+Math.floor(rng()*B.ob.length);}}else if(x>6&&x<bx-5&&Math.abs(y-pathY[x])>2&&rng()<.5)enc[i]=1;}
  const dec=[];if(B.dec)for(let k=0;k<70;k++){const x=1+Math.floor(rng()*(w-2)),y=1+Math.floor(rng()*(h-2));if(open[T(x,y)]&&!solid[T(x,y)])dec.push({x,y,d:B.dec[Math.floor(rng()*B.dec.length)]});}
  solid[T(0,pathY[1])]=0;ob[T(0,pathY[1])]=0;
- const npcs=S.npcs.filter(n=>!(c===9&&n[0]==='ROWAN'&&state.rowanDead&&state.wish!=='rowan')).map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));if(c===9){const mara=npcs.find(n=>n.name==='MARA'),thomas=npcs.find(n=>n.name==='THOMAS'),rowan=npcs.find(n=>n.name==='ROWAN');if(state.wish!=='parents'){if(mara)mara.lines=['(a warm echo) We cannot return with the wish you chose, sweetheart. But our love is still with you.','The Heart Guardian is the last test. Let the light you carry guide you.'];if(thomas)thomas.lines=['(a warm echo) These are only memories held by the Heart. Your choice has not changed.','A promise is only real when it leaves room for everyone.'];}if(rowan&&state.rowanDead&&state.wish==='rowan'){rowan.lines=[state.rowanTrust>=2?'You used the wish to bring me back. I will spend every day making that forgiveness mean something.':'You brought me back, even though I still have to earn your trust. I will not waste that chance.','Whatever waits beyond this door, I am here because you chose me.'];}}if(c===1)npcs.push({x:8,y:pathY[8],name:'ROWAN',lines:['I caught up with you! I was not going to let you walk into these woods alone.','Look at the leaves. They are drifting toward that old stone arch. I think your parents left us a trail.','I found this little ribbon caught on a branch. It has your mother’s initials. We are getting closer.'],friend:true});
+ const npcs=S.npcs.filter(n=>!(c===9&&n[0]==='ROWAN'&&state.rowanDead&&state.wish!=='rowan')).map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));if(c===9){const mara=npcs.find(n=>n.name==='MARA'),thomas=npcs.find(n=>n.name==='THOMAS'),rowan=npcs.find(n=>n.name==='ROWAN');if(state.wish!=='parents'){if(mara)mara.lines=['(a warm echo) We cannot return with the wish you chose, sweetheart. But our love is still with you.','The Heart Guardian is the last test. Let the light you carry guide you.'];if(thomas)thomas.lines=['(a warm echo) These are only memories held by the Heart. Your choice has not changed.','A promise is only real when it leaves room for everyone.'];}if(rowan&&state.wish==='rowan'){rowan.lines=[state.rowanTrust>=2?'You used the wish to bring me back. I will spend every day making that forgiveness mean something.':'You brought me back, even though I still have to earn your trust. I will not waste that chance.','Whatever waits beyond this door, I am here because you chose me.'];}}if(c===1)npcs.push({x:8,y:pathY[8],name:'ROWAN',lines:['I caught up with you! I was not going to let you walk into these woods alone.','Look at the leaves. They are drifting toward that old stone arch. I think your parents left us a trail.','I found this little ribbon caught on a branch. It has your mother’s initials. We are getting closer.'],friend:true});
  const rivalSets={
 1:[['TAMSIN THE SCOUT','I have been tracking the strange lights too. If you want to reach the seal, show me you can handle yourself.','Quick feet! You might just make it through these woods.'],['CALEB THE WARDEN','The forest is no place for an untested traveler. Let us see what you have learned.','You have earned my respect. The guardian will be a tougher test.']],
 2:[['BRUNO THE WAYFARER','The orchard road is dangerous. I challenge every traveler before I let them pass.','You fight with purpose. Keep going; the valley needs you.'],['LYRA THE GATHERER','I protect the last healthy trees. If you want to go farther, prove you can protect yourself.','A fine battle. Take the eastern path; the old pantry is below.']],
@@ -1361,14 +1361,14 @@ function playRowanConfrontation(done){
  (async()=>{try{
   sfx('warn');
   await say([['ROWAN','Stop there. I hoped you would turn back before reaching this hall.'],['YOU','You left clues for me. You wanted me to follow you. Why?']]);
-  await say([['ROWAN','The Hollow King promised to bring my mother back. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);
+  await say([['ROWAN','The Hollow King promised to bring my mother back. I traded my own name for that promise. I thought if I helped him find the Everfeast, he would keep his word.'],['YOU','You could have told me. We have been through everything together.']]);
   // he shoves you back
   stage('shove');sfx('hit');await sleep(900);
   await say([['ROWAN','STOP. DO NOT COME ANY CLOSER.','red'],['YOU','Rowan, what are you doing?']]);
   // and then he is not Rowan any more
   stage('transform');sfx('warn');await sleep(1500);stage('monster');sfx('crit');
   await say([['ROWAN','I AM DONE BEING THE ONE WHO LOSES EVERYTHING.','red'],
-   ['ROWAN','MY MOTHER TRADED HER SEASON FOR ME AND THE VILLAGE CALLED IT A BLESSING. YOUR PARENTS LEFT AND THEY CALLED IT COURAGE.','red'],
+   ['ROWAN','MY MOTHER GAVE UP THE YEARS SHE HAD LEFT TO KEEP ME ALIVE. THE VILLAGE CALLED IT A BLESSING, BUT NOBODY ASKED WHAT IT COST HER. YOUR PARENTS LEFT AND THEY CALLED IT COURAGE.','red'],
    ['ROWAN','NOBODY EVER ASKED WHAT IT COST ME. SO I WILL TAKE WHAT I AM OWED.','red'],
    ['JOURNAL','What stands in the street is wearing Rowan\u2019s voice. It lifts a blade of dark harvest light.']]);
  }catch(err){console.error('[LH] Rowan cutscene failed:',err);}
