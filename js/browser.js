@@ -6,9 +6,9 @@
   const input = $('addressInput');
   const frame = $('browserFrame');
   const empty = $('emptyState');
-  const status = $('statusText');
-  const toast = $('toast');
+  const shell = $('browserShell');
   const signinLink = $('signinLink');
+  const toast = $('toast');
   const proxy = String(window.BSMS_READER_PROXY_ORIGIN || '').replace(/\/+$/, '');
 
   let token = null;
@@ -41,6 +41,66 @@
     return url.href;
   }
 
+  function caretOffset(element) {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount || !element.contains(selection.anchorNode)) return element.textContent.length;
+    const range = selection.getRangeAt(0).cloneRange();
+    range.selectNodeContents(element);
+    range.setEnd(selection.anchorNode, selection.anchorOffset);
+    return range.toString().length;
+  }
+
+  function setCaretOffset(element, offset) {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node;
+    let remaining = offset;
+    while ((node = walker.nextNode())) {
+      if (remaining <= node.textContent.length) {
+        const range = document.createRange();
+        range.setStart(node, remaining);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return;
+      }
+      remaining -= node.textContent.length;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function addressParts(value) {
+    const text = String(value || '').replace(/[\r\n]/g, '');
+    const match = text.match(/^((?:https?:\/\/)?[^/?#]+)(\/)?(.*)$/i);
+    if (!match) return { origin: text, path: '' };
+    return { origin: match[1] + '/', path: match[3] || '' };
+  }
+
+  function renderAddress(value, keepCaret = false) {
+    const oldCaret = keepCaret ? caretOffset(input) : null;
+    const text = String(value || '').replace(/[\r\n]/g, '');
+    const parts = addressParts(text);
+    input.replaceChildren();
+    if (parts.origin) {
+      const origin = document.createElement('span');
+      origin.className = 'address-origin';
+      origin.textContent = parts.origin;
+      input.append(origin);
+    }
+    if (parts.path) {
+      const path = document.createElement('span');
+      path.className = 'address-path';
+      path.textContent = parts.path;
+      input.append(path);
+    }
+    if (keepCaret) setCaretOffset(input, Math.min(oldCaret, input.textContent.length));
+  }
+
   function updateAddressFromPage(address, mode = 'push') {
     let normalized;
     try { normalized = normalizeAddress(address); }
@@ -48,7 +108,7 @@
     if (normalized === current) return;
 
     current = normalized;
-    input.value = normalized;
+    renderAddress(normalized);
     if (mode === 'replace' && index >= 0) {
       history[index] = normalized;
     } else {
@@ -57,7 +117,6 @@
       index = history.length - 1;
     }
     updateNavigation();
-    status.textContent = normalized;
   }
 
   async function createSession() {
@@ -88,14 +147,13 @@
 
   function loadAddress(address, addToHistory = true) {
     current = address;
-    input.value = address;
+    renderAddress(address);
     const pageUrl = new URL(proxy + '/page');
     pageUrl.searchParams.set('url', address);
     pageUrl.searchParams.set('token', token);
     frame.src = pageUrl.href;
     frame.hidden = false;
     empty.hidden = true;
-    status.textContent = 'Loading website through Cloudflare…';
 
     if (addToHistory) {
       history = history.slice(0, index + 1);
@@ -105,19 +163,41 @@
     updateNavigation();
   }
 
-  window.addEventListener('message', event => {
-    if (event.source !== frame.contentWindow || !event.data ||
-        event.data.type !== 'bsms-browser-location' ||
-        typeof event.data.url !== 'string') return;
-    updateAddressFromPage(event.data.url, event.data.mode);
+  $('collapseHeaderButton').addEventListener('click', () => {
+    shell.classList.add('header-collapsed');
+    $('expandHeaderButton').hidden = false;
+  });
+
+  $('expandHeaderButton').addEventListener('click', () => {
+    shell.classList.remove('header-collapsed');
+    $('expandHeaderButton').hidden = true;
+  });
+
+  input.addEventListener('input', () => {
+    const value = input.textContent.replace(/[\r\n]/g, '');
+    renderAddress(value, true);
+  });
+
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      form.requestSubmit();
+    }
   });
 
   form.addEventListener('submit', event => {
     event.preventDefault();
     try {
       if (!token) throw new Error('Your Browser session is not ready yet.');
-      loadAddress(normalizeAddress(input.value));
+      loadAddress(normalizeAddress(input.textContent));
     } catch (error) { notify(error.message); }
+  });
+
+  window.addEventListener('message', event => {
+    if (event.source !== frame.contentWindow || !event.data ||
+        event.data.type !== 'bsms-browser-location' ||
+        typeof event.data.url !== 'string') return;
+    updateAddressFromPage(event.data.url, event.data.mode);
   });
 
   $('backButton').addEventListener('click', () => {
@@ -138,17 +218,9 @@
     if (current && token) loadAddress(current, false);
   });
 
-  frame.addEventListener('load', () => {
-    if (!frame.hidden) status.textContent = current || 'Ready';
-  });
-
   createSession()
-    .then(sessionToken => {
-      token = sessionToken;
-      status.textContent = 'Signed in · Ready to browse public HTTPS websites';
-    })
+    .then(sessionToken => { token = sessionToken; })
     .catch(error => {
-      status.textContent = error.message;
       notify(error.message);
       if (error.message.includes('Sign in')) signinLink.hidden = false;
     });
