@@ -43,8 +43,8 @@ function normalizeClass(value){return CLASS_ALIASES[String(value||'').trim().toL
 function normalizePet(value){return PET_ALIASES[String(value||'').trim().toLowerCase()]||null;}
 
 /* ---- event schedule (edit here; deliberately not environment-driven) ---- */
-export const EVENT_START = '2026-11-16T12:00:00.000Z'; // Nov 16, 2026, 7:00 AM EST
-export const EVENT_END   = '2026-12-20T05:00:00.000Z'; // Dec 20, 2026, 12:00 AM EST
+export const EVENT_START = '2026-11-18T12:00:00.000Z'; // Nov 18, 2026, 7:00 AM EST
+export const EVENT_END   = '2026-11-24T20:10:00.000Z'; // Nov 24, 2026, 3:10 PM EST (exclusive)
 /* A stage can only be completed inside a run the server handed out, and never
    faster than a player can actually play it. A client that posts stages 1..10 in
    a loop has no run to finish, and a client that starts a run and finishes it in
@@ -80,18 +80,32 @@ function foreignTimestamp(body){
  return null;
 }
 async function ensureFinisher(user,completedAt){
- const ref=db.ref('/last_harvest/finishers/'+user.uid),snap=await ref.once('value'),existing=snap.val();
- if(existing&&Number.isFinite(existing.completedAt))return existing;
+ const ref=db.ref('/last_harvest/finishers/'+user.uid);
  const record={uid:user.uid,displayName:user.account.display_name||user.account.username||'Player',completedAt:Number(completedAt)||Date.now()};
- await ref.set(record);return record;
+ const result=await ref.transaction(existing=>existing&&Number.isFinite(existing.completedAt)?undefined:record);
+ return result.snapshot.val()||record;
 }
 async function resolveUser(sessionId){
-  if(!sessionId)return null;
-  const snap=await db.ref('/accounts').once('value');
-  for(const [uid,account] of Object.entries(snap.val()||{})){
-    if(account?.account_status!=='deleted' && account?.sessions?.[sessionId]) return {uid,account};
+ if(!sessionId)return null;
+ const indexRef=db.ref('/session_index/'+sessionId);
+ const indexSnap=await indexRef.once('value');
+ const indexed=indexSnap.val();
+ const indexedUid=typeof indexed==='string'?indexed:indexed?.uid;
+ if(indexedUid){
+  const accountSnap=await db.ref('/accounts/'+indexedUid).once('value');
+  const account=accountSnap.val();
+  if(account&&account.account_status!=='deleted'&&account.sessions?.[sessionId])return{uid:indexedUid,account};
+  await indexRef.remove();
+ }
+ /* One-time migration for sessions created before the direct index existed. */
+ const accountsSnap=await db.ref('/accounts').once('value');
+ for(const [uid,account] of Object.entries(accountsSnap.val()||{})){
+  if(account?.account_status!=='deleted'&&account?.sessions?.[sessionId]){
+   await indexRef.set({uid,createdAt:account.sessions[sessionId].createdAt||Date.now()});
+   return{uid,account};
   }
-  return null;
+ }
+ return null;
 }
 /* Every stage opens together when the event does: the contest is a sprint, not
    a daily drip, so nobody is gated on a weekday cadence. */
@@ -107,23 +121,36 @@ function freshState(){
   equipped:{weapon:'wooden_sword',armor:'pumpkin_armor',helmet:'acorn_helmet',boots:'autumn_boots'},
   coins:100,xp:0,health:40,maxHealth:40,run:null,lastStageMs:null,completedAt:null,updatedAt:Date.now()};
 }
+const PLAYER_DATA_KEYS=['name','heroClass','gender','x','y','level','hp','maxHp','mp','maxMp','potions','battleItems','potionInventoryMigrated','weaponTier','armorTier','skillTier','skills','skipped','inventory','beaten','questStep','cityUnlocked','firstWildDefeated','sentinelTrainingStarted','firstArmorUpgrade','sentinelRaidSeen','regionScenes','mainQuests','sideQuests','storyArcs','storyReactions','chests','rowanChoice','rowanTrust','finalChoice','kingChoice','ending','rowanDead','wish','trapSeals','trapEscaped','rowanLore','elderKey','elderTalks','rowanWoodsScene','tutorialDone','cutscene','seenIntro','p2Seen','p2Done','savedAt','saveVersion'];
+function cleanPlayerData(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ let encoded;try{encoded=JSON.stringify(value);}catch(e){return null;}
+ if(!encoded||encoded.length>100000)return null;
+ const source=JSON.parse(encoded),out={};
+ for(const key of PLAYER_DATA_KEYS)if(Object.prototype.hasOwnProperty.call(source,key))out[key]=source[key];
+ if(out.heroClass&&!['Guardian','Scout','Mage'].includes(out.heroClass))out.heroClass='Guardian';
+ for(const key of ['level','hp','maxHp','mp','maxMp','potions','weaponTier','armorTier','skillTier'])if(out[key]!==undefined)out[key]=Math.max(0,Math.min(key==='level'?99:key==='hp'||key==='maxHp'||key==='mp'||key==='maxMp'?999:key==='potions'?9:8,Math.floor(Number(out[key])||0)));
+ if(out.name!==undefined)out.name=String(out.name).slice(0,16);
+ return out;
+}
 function cleanState(value){
  const base=freshState(),v=value&&typeof value==='object'?value:{};
+ const inventory=[...new Set((Array.isArray(v.inventory)?v.inventory:base.inventory).filter(id=>EQUIPMENT[id]))];
  const equipped={};
  for(const slot of ['weapon','armor','helmet','boots']){
-  const id=v.equipped?.[slot];if(EQUIPMENT[id]?.slot===slot)equipped[slot]=id;
+  const id=v.equipped?.[slot];if(EQUIPMENT[id]?.slot===slot&&inventory.includes(id))equipped[slot]=id;
  }
  return {...base,character:normalizeClass(v.character)||base.character,
   sidekick:SIDES.has(v.sidekick)?v.sidekick:base.sidekick,pet:normalizePet(v.pet)||base.pet,
   stage:Math.max(0,Math.min(10,Math.floor(Number(v.stage)||0))),
-  inventory:[...new Set((Array.isArray(v.inventory)?v.inventory:base.inventory).filter(id=>EQUIPMENT[id]))],
-  equipped,coins:Math.max(0,Math.min(1000000,Math.floor(Number(v.coins)||0))),
+  inventory,equipped,coins:Math.max(0,Math.min(1000000,Math.floor(Number(v.coins)||0))),
   xp:Math.max(0,Math.min(1000000,Math.floor(Number(v.xp)||0))),
   health:Math.max(1,Math.min(100,Math.floor(Number(v.health)||base.health))),maxHealth:Math.max(1,Math.min(100,Math.floor(Number(v.maxHealth)||base.maxHealth))),
   lastStageMs:Number.isFinite(v.lastStageMs)?Math.max(0,Math.floor(v.lastStageMs)):null,
   run:(v.run&&Number.isInteger(v.run.stage)&&Number.isFinite(v.run.startedAt)&&typeof v.run.token==='string')
    ?{stage:v.run.stage,startedAt:v.run.startedAt,token:v.run.token}:null,
-  completedAt:typeof v.completedAt==='number'?v.completedAt:null,updatedAt:Date.now()};
+  completedAt:typeof v.completedAt==='number'?v.completedAt:null,
+  playerData:cleanPlayerData(v.playerData),playerDataUpdatedAt:Number(v.playerDataUpdatedAt)||0,updatedAt:Date.now()};
 }
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -168,6 +195,18 @@ export default async function handler(req,res){
    const next=cleanState(patch);
    await ref.set(next);return res.json({success:true,state:next});
   }
+  if(action==='save-player'){
+   const playerData=cleanPlayerData(body.playerData);
+   if(!playerData)return res.status(400).json({error:'Invalid player save.'});
+   const savedAt=Number(playerData.savedAt)||Date.now();
+   const tx=await ref.transaction(current=>{
+    const next=cleanState(current||state);
+    if(savedAt<(Number(next.playerDataUpdatedAt)||0))return;
+    next.playerData=playerData;next.playerDataUpdatedAt=Date.now();next.updatedAt=Date.now();return next;
+   });
+   if(!tx.committed)return res.status(409).json({error:'A newer account save already exists.',code:'stale-player-save'});
+   return res.json({success:true,state:cleanState(tx.snapshot.val())});
+  }
   if(action==='start-stage'){
    /* The run clock starts when the boss fight does. Re-entering the same stage
       keeps the existing run so a reload does not restart or reset it. */
@@ -191,7 +230,7 @@ export default async function handler(req,res){
       attempt failed to write, instead of being rejected as out of order. */
    if(stage===state.stage&&stage===STAGES.length&&state.completedAt){
     const repaired=await ensureFinisher(user,state.completedAt);
-    return res.json({success:true,state,finished:true,finisher:repaired});
+    return res.json({success:true,state,finished:true,serverRecorded:true,verification:'time-gated-client-reported',finisher:repaired});
    }
    if(stage!==state.stage+1)return res.status(400).json({error:'Stages must be completed in order.'});
    const run=state.run;
@@ -205,7 +244,7 @@ export default async function handler(req,res){
    const next=cleanState({...state,stage,run:null,lastStageMs:elapsed,xp:state.xp+stage*100,coins:state.coins+stage*25,health:40,completedAt:finished?now:state.completedAt});
    await ref.set(next);
    if(finished)await ensureFinisher(user,now);
-   return res.json({success:true,state:next,finished});
+   return res.json({success:true,state:next,finished,serverRecorded:true,verification:'time-gated-client-reported'});
   }
   return res.status(400).json({error:'Unknown action.'});
  }catch(error){console.error('[Last Harvest] API error:',error);return res.status(500).json({error:'Could not save contest progress.'});}
@@ -230,12 +269,16 @@ async function towerApi(req,res){
   if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot post scores.'});
   const body=req.body||{},floor=Math.floor(Number(body.floor));
   if(!Number.isInteger(floor)||floor<1||floor>500)return res.status(400).json({error:'Invalid floor.'});
-  const ref=db.ref('/last_harvest_tower/best/'+user.uid),snap=await ref.once('value'),prev=snap.val()||null,now=Date.now();
-  if(prev&&now-(prev.lastSubmit||0)<8000)return res.status(429).json({error:'Please wait a moment before posting again.'});
-  if(floor>(prev?prev.floor:0)+40)return res.status(400).json({error:'Score rejected.'});
+  const ref=db.ref('/last_harvest_tower/best/'+user.uid),now=Date.now();
   const cls=['Guardian','Scout','Mage'].includes(body.cls)?body.cls:'Guardian',level=Math.max(1,Math.min(99,Math.floor(Number(body.level)||1)));
-  const best=(!prev||floor>prev.floor)?{uid:user.uid,displayName:String(user.account.display_name||user.account.username||'Player').slice(0,32),floor,cls,level,at:now,lastSubmit:now}:{...prev,lastSubmit:now};
-  await ref.set(best);
-  return res.status(200).json({success:true,floor:best.floor});
+  let rejection=null;
+  const tx=await ref.transaction(prev=>{
+   rejection=null;prev=prev||null;
+   if(prev&&now-(prev.lastSubmit||0)<8000){rejection='cooldown';return;}
+   if(floor>(prev?prev.floor:0)+40){rejection='jump';return;}
+   return(!prev||floor>prev.floor)?{uid:user.uid,displayName:String(user.account.display_name||user.account.username||'Player').slice(0,32),floor,cls,level,at:prev&&prev.at||now,lastSubmit:now}:{...prev,lastSubmit:now};
+  });
+  if(!tx.committed)return rejection==='cooldown'?res.status(429).json({error:'Please wait a moment before posting again.'}):res.status(400).json({error:'Score rejected.'});
+  return res.status(200).json({success:true,floor:tx.snapshot.val().floor,verification:'client-reported-casual'});
  }catch(e){return res.status(503).json({error:'Leaderboard unavailable.'});}
 }
