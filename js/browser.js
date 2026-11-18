@@ -46,7 +46,7 @@
 
   function isBsmsWebAddress(address) {
     try {
-      const host = new URL(address).hostname.toLowerCase().replace(/\\.$/, '');
+      const host = new URL(address).hostname.toLowerCase().replace(/\.$/, '');
       return host === 'bsms-web.com' || host.endsWith('.bsms-web.com');
     } catch { return false; }
   }
@@ -63,6 +63,8 @@
       history = history.slice(0, index + 1);
       history.push(address);
       index = history.length - 1;
+    } else if (index >= 0) {
+      history[index] = address;
     }
     updateNavigation();
   }
@@ -213,8 +215,13 @@
   form.addEventListener('submit', event => {
     event.preventDefault();
     try {
+      const address = normalizeAddress(input.textContent);
+      if (isBsmsWebAddress(address)) {
+        loadAddress(address);
+        return;
+      }
       if (!token) throw new Error('Your Browser session is not ready yet.');
-      loadAddress(normalizeAddress(input.textContent));
+      loadAddress(address);
     } catch (error) { notify(error.message); }
   });
 
