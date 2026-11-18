@@ -438,5 +438,3 @@ export default {
     }
   }
 };
-
-[executed on device: Mac-mini.local (55da0f6d-7960-443a-8b64-06def1776d0b)]

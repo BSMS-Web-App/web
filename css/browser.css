@@ -316,5 +316,3 @@ button, input, a { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
-
-[executed on device: Mac-mini.local (55da0f6d-7960-443a-8b64-06def1776d0b)]
