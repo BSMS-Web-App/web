@@ -510,8 +510,8 @@ async function fetchPage(req, env, url, token) {
       "img-src " + proxyOrigin + " data: blob:; " +
       "font-src " + proxyOrigin + " data: blob:; " +
       "media-src " + proxyOrigin + " blob:; " +
-      "connect-src " + proxyOrigin + "; " +
-      "frame-src " + proxyOrigin + "; " +
+      "connect-src " + proxyOrigin + " https://www.google.com https://www.recaptcha.net https://www.gstatic.com; " +
+      "frame-src " + proxyOrigin + " https://www.google.com https://www.recaptcha.net; " +
       "form-action " + proxyOrigin + "; " +
       "worker-src blob:; object-src 'none'; base-uri 'none'; " +
       "sandbox allow-scripts allow-forms allow-downloads allow-popups; " +
