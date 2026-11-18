@@ -41,6 +41,10 @@ const PET_ALIASES = {
 };
 function normalizeClass(value){return CLASS_ALIASES[String(value||'').trim().toLowerCase()]||null;}
 function normalizePet(value){return PET_ALIASES[String(value||'').trim().toLowerCase()]||null;}
+function isStaffAccount(account={}){
+ const role=String(account.role||account.accountRole||'').trim().toLowerCase();
+ return Boolean(account.isDeveloper)||['developer','admin','administrator','owner'].includes(role);
+}
 
 /* ---- event schedule (edit here; deliberately not environment-driven) ---- */
 export const EVENT_START = '2026-11-18T12:00:00.000Z'; // Nov 18, 2026, 7:00 AM EST
@@ -80,7 +84,9 @@ function foreignTimestamp(body){
  return null;
 }
 async function ensureFinisher(user,completedAt){
- const ref=db.ref('/last_harvest/finishers/'+user.uid),existingSnap=await ref.once('value'),existing=existingSnap.val();
+ const ref=db.ref('/last_harvest/finishers/'+user.uid);
+ if(isStaffAccount(user.account)){await ref.remove();return null;}
+ const existingSnap=await ref.once('value'),existing=existingSnap.val();
  if(existing&&Number.isFinite(existing.completedAt)&&Number(existing.finishOrder)>0)return existing;
  const sequence=await db.ref('/last_harvest/finish_sequence').transaction(value=>(Number(value)||0)+1);
  const order=Number(sequence.snapshot.val())||1;
@@ -126,7 +132,7 @@ function freshState(){
   equipped:{weapon:'wooden_sword',armor:'pumpkin_armor',helmet:'acorn_helmet',boots:'autumn_boots'},
   coins:100,xp:0,health:40,maxHealth:40,run:null,lastStageMs:null,completedAt:null,updatedAt:Date.now()};
 }
-const PLAYER_DATA_KEYS=['name','heroClass','gender','pet','sidekick','equipped','towerBest','coins','xp','x','y','level','hp','maxHp','mp','maxMp','potions','battleItems','potionInventoryMigrated','weaponTier','armorTier','skillTier','skills','skipped','inventory','beaten','questStep','cityUnlocked','firstWildDefeated','sentinelTrainingStarted','firstArmorUpgrade','sentinelRaidSeen','regionScenes','mainQuests','sideQuests','storyArcs','storyReactions','chests','rowanChoice','rowanTrust','finalChoice','kingChoice','ending','rowanDead','wish','trapSeals','trapEscaped','rowanLore','elderKey','elderTalks','rowanWoodsScene','tutorialDone','cutscene','seenIntro','p2Seen','p2Done','savedAt','saveVersion','pendingStages'];
+const PLAYER_DATA_KEYS=['name','heroClass','gender','pet','sidekick','equipped','towerBest','coins','xp','x','y','level','hp','maxHp','mp','maxMp','potions','battleItems','potionInventoryMigrated','weaponTier','armorTier','skillTier','vitalityTier','focusTier','skills','skipped','inventory','beaten','questStep','clues','cityUnlocked','firstWildDefeated','wildKills','sentinelTrainingStarted','firstArmorUpgrade','sentinelRaidSeen','regionScenes','mainQuests','sideQuests','storyArcs','storyReactions','chests','rowanChoice','rowanTrust','finalChoice','kingChoice','ending','rowanDead','wish','trapSeals','trapEscaped','rowanLore','elderKey','elderTalks','rowanWoodsScene','tutorialDone','cutscene','seenIntro','p2Seen','p2Done','teleUsed','tipFight','savedAt','saveVersion','pendingStages'];
 function cleanPlayerData(value){
  if(!value||typeof value!=='object'||Array.isArray(value))return null;
  let encoded;try{encoded=JSON.stringify(value);}catch(e){return null;}
@@ -187,8 +193,11 @@ export default async function handler(req,res){
  if(!user)return res.status(401).json({error:'Please sign in to continue.'});
  if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot access this event.'});
  if(req.method==='GET' && req.query.action==='leaderboard'){
-  const boardSnap=await db.ref('/last_harvest/finishers').once('value');
-  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&Number.isFinite(row.completedAt));
+  const [boardSnap,accountsSnap]=await Promise.all([
+   db.ref('/last_harvest/finishers').once('value'),db.ref('/accounts').once('value')
+  ]);
+  const accounts=accountsSnap.val()||{};
+  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&row.uid&&Number.isFinite(row.completedAt)&&!isStaffAccount(accounts[row.uid]));
   rows.sort((x,y)=>x.completedAt-y.completedAt||(Number(x.finishOrder)||Number.MAX_SAFE_INTEGER)-(Number(y.finishOrder)||Number.MAX_SAFE_INTEGER)||String(x.uid||'').localeCompare(String(y.uid||'')));
   return res.status(200).json({success:true,rankings:rows.slice(0,50).map((row,index)=>({rank:index+1,displayName:row.displayName,completedAt:row.completedAt}))});
  }
@@ -199,7 +208,7 @@ export default async function handler(req,res){
   const openStage=releasedStage();
   if(req.method==='GET'){
    if(state.stage===STAGES.length&&state.completedAt)await ensureFinisher(user,state.completedAt);
-   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,serverTime:phase.serverTime,completionVerification:'time-gated-client-reported'});
+   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,serverTime:phase.serverTime,completionVerification:'time-gated-client-reported',prizeEligible:!isStaffAccount(user.account),leaderboardEligible:!isStaffAccount(user.account)});
   }
   const body=reqBody,action=body.action;
   if(action==='save-loadout'){
@@ -269,8 +278,9 @@ export default async function handler(req,res){
    if(!stateResult)return res.status(409).json({error:'This stage could not be recorded safely. Please retry.'});
    const savedState=tx.committed?cleanState(tx.snapshot.val()):stateResult;
    if(finished){
-    const finisher=await ensureFinisher(user,completionTime||savedState.completedAt);
-    return res.json({success:true,state:savedState,finished:true,serverRecorded:true,verification:'time-gated-client-reported',finisher});
+    const prizeEligible=!isStaffAccount(user.account);
+    const finisher=prizeEligible?await ensureFinisher(user,completionTime||savedState.completedAt):await ensureFinisher(user,completionTime||savedState.completedAt);
+    return res.json({success:true,state:savedState,finished:true,serverRecorded:true,verification:'time-gated-client-reported',finisher,prizeEligible,leaderboardEligible:prizeEligible});
    }
    return res.json({success:true,state:savedState,finished:false,serverRecorded:true,verification:'time-gated-client-reported'});
   }
@@ -283,8 +293,11 @@ async function towerApi(req,res){
  try{
   const window=eventPhase();
   if(req.method==='GET'){
-   const snap=await db.ref('/last_harvest_tower/best').once('value');
-   const rows=Object.values(snap.val()||{}).filter(r=>r&&Number.isInteger(r.floor));
+   const [snap,accountsSnap]=await Promise.all([
+    db.ref('/last_harvest_tower/best').once('value'),db.ref('/accounts').once('value')
+   ]);
+   const accounts=accountsSnap.val()||{};
+   const rows=Object.values(snap.val()||{}).filter(r=>r&&r.uid&&!isStaffAccount(accounts[r.uid])&&Number.isInteger(r.floor));
    rows.sort((a,b)=>b.floor-a.floor||a.at-b.at);
    return res.status(200).json({success:true,leaderboard:rows.slice(0,50).map((r,i)=>({rank:i+1,displayName:r.displayName,floor:r.floor,cls:r.cls,level:r.level})),phase:window.phase,startsAt:window.startsAt,endsAt:window.endsAt,submissionsOpen:window.phase==='active'});
   }
@@ -295,6 +308,7 @@ async function towerApi(req,res){
   const user=await resolveUser(req.headers['x-session-id']);
   if(!user)return res.status(401).json({error:'Please sign in to post a score.'});
   if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot post scores.'});
+  if(isStaffAccount(user.account))return res.status(403).json({error:'Staff accounts cannot appear on leaderboards or qualify for prizes.'});
   const body=req.body||{},floor=Math.floor(Number(body.floor));
   if(!Number.isInteger(floor)||floor<1||floor>500)return res.status(400).json({error:'Invalid floor.'});
   const ref=db.ref('/last_harvest_tower/best/'+user.uid),now=Date.now();
