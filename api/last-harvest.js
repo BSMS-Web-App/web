@@ -45,6 +45,9 @@ function isStaffAccount(account={}){
  const role=String(account.role||account.accountRole||'').trim().toLowerCase();
  return Boolean(account.isDeveloper)||['developer','admin','administrator','owner'].includes(role);
 }
+function isPrizeIneligibleAccount(account={}){
+ return isStaffAccount(account)||Boolean(account.last_harvest&&account.last_harvest.prizeDisqualified);
+}
 
 /* ---- event schedule (edit here; deliberately not environment-driven) ---- */
 export const EVENT_START = '2026-11-18T12:00:00.000Z'; // Nov 18, 2026, 7:00 AM EST
@@ -85,7 +88,10 @@ function foreignTimestamp(body){
 }
 async function ensureFinisher(user,completedAt){
  const ref=db.ref('/last_harvest/finishers/'+user.uid);
- if(isStaffAccount(user.account)){await ref.remove();return null;}
+ const disqualifiedRef=db.ref('/accounts/'+user.uid+'/last_harvest/prizeDisqualified');
+ if(isStaffAccount(user.account))await disqualifiedRef.set(true);
+ const disqualifiedSnap=await disqualifiedRef.once('value');
+ if(isPrizeIneligibleAccount(user.account)||disqualifiedSnap.val()===true){await ref.remove();return null;}
  const existingSnap=await ref.once('value'),existing=existingSnap.val();
  if(existing&&Number.isFinite(existing.completedAt)&&Number(existing.finishOrder)>0)return existing;
  const sequence=await db.ref('/last_harvest/finish_sequence').transaction(value=>(Number(value)||0)+1);
@@ -166,7 +172,7 @@ function cleanState(value){
   run:(v.run&&Number.isInteger(v.run.stage)&&Number.isFinite(v.run.startedAt)&&typeof v.run.token==='string')
    ?{stage:v.run.stage,startedAt:v.run.startedAt,token:v.run.token}:null,
   completedAt:typeof v.completedAt==='number'?v.completedAt:null,
-  playerData:cleanPlayerData(v.playerData),playerDataUpdatedAt:Number(v.playerDataUpdatedAt)||0,updatedAt:Date.now()};
+  playerData:cleanPlayerData(v.playerData),playerDataUpdatedAt:Number(v.playerDataUpdatedAt)||0,prizeDisqualified:Boolean(v.prizeDisqualified),updatedAt:Date.now()};
 }
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -197,7 +203,7 @@ export default async function handler(req,res){
    db.ref('/last_harvest/finishers').once('value'),db.ref('/accounts').once('value')
   ]);
   const accounts=accountsSnap.val()||{};
-  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&row.uid&&Number.isFinite(row.completedAt)&&!isStaffAccount(accounts[row.uid]));
+  const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&row.uid&&Number.isFinite(row.completedAt)&&!isPrizeIneligibleAccount(accounts[row.uid]));
   rows.sort((x,y)=>x.completedAt-y.completedAt||(Number(x.finishOrder)||Number.MAX_SAFE_INTEGER)-(Number(y.finishOrder)||Number.MAX_SAFE_INTEGER)||String(x.uid||'').localeCompare(String(y.uid||'')));
   return res.status(200).json({success:true,rankings:rows.slice(0,50).map((row,index)=>({rank:index+1,displayName:row.displayName,completedAt:row.completedAt}))});
  }
@@ -207,8 +213,9 @@ export default async function handler(req,res){
   const state=cleanState(snap.val()||freshState());
   const openStage=releasedStage();
   if(req.method==='GET'){
-   if(state.stage===STAGES.length&&state.completedAt)await ensureFinisher(user,state.completedAt);
-   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,serverTime:phase.serverTime,completionVerification:'time-gated-client-reported',prizeEligible:!isStaffAccount(user.account),leaderboardEligible:!isStaffAccount(user.account)});
+   if(state.stage===STAGES.length&&state.completedAt){if(isStaffAccount(user.account)){state.prizeDisqualified=true;await ref.child('prizeDisqualified').set(true);}await ensureFinisher(user,state.completedAt);}
+   const prizeEligible=!isPrizeIneligibleAccount({...user.account,last_harvest:state});
+   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,serverTime:phase.serverTime,completionVerification:'time-gated-client-reported',prizeEligible,leaderboardEligible:prizeEligible});
   }
   const body=reqBody,action=body.action;
   if(action==='save-loadout'){
@@ -271,15 +278,15 @@ export default async function handler(req,res){
     if(elapsed<STAGE_MIN_MS){failure={status:429,error:'That stage cannot be finished that quickly.',code:'stage-too-fast',retryAfterMs:STAGE_MIN_MS-elapsed};return;}
     if(elapsed>STAGE_MAX_MS){failure={status:410,error:'That stage run expired. Start the stage again.',code:'stage-expired'};return;}
     finished=stage===STAGES.length;completionTime=finished?now:null;
-    stateResult=cleanState({...currentState,stage,run:null,lastStageMs:elapsed,xp:currentState.xp+stage*100,coins:currentState.coins+stage*25,health:40,completedAt:finished?now:currentState.completedAt});
+    stateResult=cleanState({...currentState,stage,run:null,lastStageMs:elapsed,xp:currentState.xp+stage*100,coins:currentState.coins+stage*25,health:40,completedAt:finished?now:currentState.completedAt,prizeDisqualified:currentState.prizeDisqualified||isStaffAccount(user.account)});
     return stateResult;
    });
    if(failure)return res.status(failure.status).json({...failure});
    if(!stateResult)return res.status(409).json({error:'This stage could not be recorded safely. Please retry.'});
    const savedState=tx.committed?cleanState(tx.snapshot.val()):stateResult;
    if(finished){
-    const prizeEligible=!isStaffAccount(user.account);
-    const finisher=prizeEligible?await ensureFinisher(user,completionTime||savedState.completedAt):await ensureFinisher(user,completionTime||savedState.completedAt);
+    const prizeEligible=!isPrizeIneligibleAccount({...user.account,last_harvest:savedState});
+    const finisher=await ensureFinisher(user,completionTime||savedState.completedAt);
     return res.json({success:true,state:savedState,finished:true,serverRecorded:true,verification:'time-gated-client-reported',finisher,prizeEligible,leaderboardEligible:prizeEligible});
    }
    return res.json({success:true,state:savedState,finished:false,serverRecorded:true,verification:'time-gated-client-reported'});
