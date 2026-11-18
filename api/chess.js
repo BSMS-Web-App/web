@@ -11,16 +11,33 @@ export const chessOnlineState = {
     clients: new Map(),      // clientId -> { clientId, memberId, username, elo, avatar, wins, draws, losses, streak, status, roomId, lastSeen }
     queue: [],               // Array<{ clientId, mode, mins, inc, joinedAt }>
     rooms: new Map(),        // roomId -> { roomId, mode, baseMinutes, incrementSeconds, whitePlayer, blackPlayer, status, moves, winner, reason, updatedAt }
+    recentlyEndedRooms: new Map(), // roomId -> endedAt timestamp to prevent DB resurrection
     events: new Map(),       // clientId -> Array<EventPayload>
     lastDbSync: 0
 };
 
 const CLIENT_TTL_MS = 30000;
 const ROOM_TTL_MS = 3600000;
+const ENDED_TOMBSTONE_TTL_MS = 300000;
 
 let wsSender = null;
+let presenceBroadcaster = null;
 export function registerWsSender(fn) {
     wsSender = fn;
+}
+export function registerPresenceBroadcaster(fn) {
+    presenceBroadcaster = fn;
+}
+export function markRoomEnded(roomId) {
+    const clean = cleanRoomCode(roomId);
+    if (!clean) return;
+    chessOnlineState.recentlyEndedRooms.set(clean, Date.now());
+    try { db.ref(`/chess/online_runtime/rooms/${clean}`).remove().catch(() => {}); } catch {}
+}
+export function triggerPresenceBroadcast() {
+    if (presenceBroadcaster) {
+        try { presenceBroadcaster(); } catch {}
+    }
 }
 
 export function pushClientEvent(clientId, event) {
@@ -104,20 +121,66 @@ export function pruneStaleOnlineState() {
             chessOnlineState.clients.delete(cid);
         }
     }
+    for (const [rid, endedAt] of chessOnlineState.recentlyEndedRooms.entries()) {
+        if (now - endedAt > ENDED_TOMBSTONE_TTL_MS) {
+            chessOnlineState.recentlyEndedRooms.delete(rid);
+        }
+    }
     chessOnlineState.queue = chessOnlineState.queue.filter((q) => {
         const c = chessOnlineState.clients.get(q.clientId);
         return Boolean(c && now - (c.lastSeen || 0) <= CLIENT_TTL_MS);
     });
     for (const [rid, room] of chessOnlineState.rooms.entries()) {
+        if (!room || room.status === 'finished') {
+            markRoomEnded(rid);
+            chessOnlineState.rooms.delete(rid);
+            continue;
+        }
         if (room.isBotMatch && room.status === 'playing') {
             const ownerId = room.humanClientId || room.whitePlayer?.clientId;
             const ownerAlive = chessOnlineState.clients.has(ownerId);
-            if (!ownerAlive || now - (room.updatedAt || 0) > 120000) {
+            if (!ownerAlive || now - (room.updatedAt || 0) > 90000) {
+                for (const specId of ensureSpectatorList(room)) {
+                    pushClientEvent(specId, { type: 'game:ended', roomId: room.roomId, reason: 'disconnected', winner: 'draw' });
+                }
+                markRoomEnded(rid);
+                chessOnlineState.rooms.delete(rid);
+                continue;
+            }
+        } else if (!room.isBotMatch && room.status === 'playing') {
+            const wAlive = room.whitePlayer?.clientId ? chessOnlineState.clients.has(room.whitePlayer.clientId) : false;
+            const bAlive = room.blackPlayer?.clientId ? chessOnlineState.clients.has(room.blackPlayer.clientId) : false;
+            if ((!wAlive && !bAlive) || ((!wAlive || !bAlive) && now - (room.updatedAt || 0) > 35000)) {
+                const winner = wAlive && !bAlive ? 'w' : bAlive && !wAlive ? 'b' : 'draw';
+                const endEv = { type: 'game:ended', roomId: room.roomId, reason: 'disconnected', winner };
+                if (wAlive && room.whitePlayer?.clientId) {
+                    pushClientEvent(room.whitePlayer.clientId, endEv);
+                    const wc = chessOnlineState.clients.get(room.whitePlayer.clientId);
+                    if (wc) { wc.status = 'online'; wc.roomId = null; }
+                }
+                if (bAlive && room.blackPlayer?.clientId) {
+                    pushClientEvent(room.blackPlayer.clientId, endEv);
+                    const bc = chessOnlineState.clients.get(room.blackPlayer.clientId);
+                    if (bc) { bc.status = 'online'; bc.roomId = null; }
+                }
+                for (const specId of ensureSpectatorList(room)) {
+                    pushClientEvent(specId, endEv);
+                }
+                markRoomEnded(rid);
+                chessOnlineState.rooms.delete(rid);
+                continue;
+            }
+        } else if (room.status === 'waiting') {
+            const creatorId = room.creatorClientId || room.whitePlayer?.clientId;
+            const creatorAlive = creatorId ? chessOnlineState.clients.has(creatorId) : false;
+            if (!creatorAlive && now - (room.updatedAt || 0) > CLIENT_TTL_MS) {
+                markRoomEnded(rid);
                 chessOnlineState.rooms.delete(rid);
                 continue;
             }
         }
         if (now - (room.updatedAt || 0) > ROOM_TTL_MS) {
+            markRoomEnded(rid);
             chessOnlineState.rooms.delete(rid);
         }
     }
@@ -145,7 +208,7 @@ async function loadStateFromDbIfNeeded() {
         }
         if (val.rooms && typeof val.rooms === 'object') {
             for (const [rid, r] of Object.entries(val.rooms)) {
-                if (r && now - (r.updatedAt || 0) <= ROOM_TTL_MS) {
+                if (r && r.status !== 'finished' && !chessOnlineState.recentlyEndedRooms.has(rid) && now - (r.updatedAt || 0) <= ROOM_TTL_MS) {
                     const local = chessOnlineState.rooms.get(rid);
                     const rMoves = Array.isArray(r.moves) ? r.moves : [];
                     const lMoves = Array.isArray(local?.moves) ? local.moves : [];
@@ -626,9 +689,12 @@ export function processOnlineAction(action, body) {
             }
             if (room.spectators instanceof Set) room.spectators.clear(); else room.spectators = [];
             const wClient = chessOnlineState.clients.get(room.whitePlayer?.clientId);
-            if (wClient) wClient.status = 'online';
+            if (wClient) { wClient.status = 'online'; wClient.roomId = null; }
             const bClient = chessOnlineState.clients.get(room.blackPlayer?.clientId);
-            if (bClient) bClient.status = 'online';
+            if (bClient) { bClient.status = 'online'; bClient.roomId = null; }
+            markRoomEnded(roomId);
+            chessOnlineState.rooms.delete(roomId);
+            triggerPresenceBroadcast();
         }
     } else if (action === 'draw:offer') {
         const roomId = cleanRoomCode(body.roomId || client.roomId);
@@ -679,6 +745,9 @@ export function processOnlineAction(action, body) {
                     if (wClient) { wClient.status = 'online'; wClient.roomId = null; }
                     const bClient = chessOnlineState.clients.get(room.blackPlayer?.clientId);
                     if (bClient) { bClient.status = 'online'; bClient.roomId = null; }
+                    markRoomEnded(roomId);
+                    chessOnlineState.rooms.delete(roomId);
+                    triggerPresenceBroadcast();
                 } else if (targetId) {
                     pushClientEvent(targetId, {
                         type: 'draw:declined',
@@ -731,13 +800,16 @@ export function processOnlineAction(action, body) {
             lastSandevistan: null,
             lastGolden: null,
             lastPirate: null,
+            lastNutella: null,
             spectators: [],
             updatedAt: now
         };
+        chessOnlineState.recentlyEndedRooms.delete(roomId);
         chessOnlineState.rooms.set(roomId, room);
         client.status = 'in_game';
         client.roomId = roomId;
         pushClientEvent(clientId, { type: 'bot_match:started', roomId });
+        triggerPresenceBroadcast();
     } else if (action === 'bot_match:move') {
         const roomId = cleanRoomCode(body.roomId || client.roomId);
         const room = chessOnlineState.rooms.get(roomId);
@@ -829,6 +901,24 @@ export function processOnlineAction(action, body) {
                 });
             }
         }
+    } else if (action === 'bot_match:nutella') {
+        const roomId = cleanRoomCode(body.roomId || client.roomId);
+        const room = chessOnlineState.rooms.get(roomId);
+        if (room && room.isBotMatch && room.status === 'playing') {
+            room.lastNutella = body.nutellaState || null;
+            if (body.board) room.lastBoard = body.board;
+            if (body.turn) room.turn = body.turn;
+            room.updatedAt = now;
+            for (const specId of ensureSpectatorList(room)) {
+                pushClientEvent(specId, {
+                    type: 'spectate:nutella',
+                    roomId: room.roomId,
+                    nutellaState: body.nutellaState || null,
+                    board: body.board || null,
+                    turn: body.turn || null
+                });
+            }
+        }
     } else if (action === 'bot_match:end') {
         const roomId = cleanRoomCode(body.roomId || client.roomId);
         const room = chessOnlineState.rooms.get(roomId);
@@ -845,10 +935,12 @@ export function processOnlineAction(action, body) {
                     winner: room.winner
                 });
             }
+            markRoomEnded(roomId);
             chessOnlineState.rooms.delete(roomId);
         }
         client.status = 'online';
         client.roomId = null;
+        triggerPresenceBroadcast();
     } else if (action === 'spectate:join') {
         const roomId = cleanRoomCode(body.roomId);
         const room = chessOnlineState.rooms.get(roomId);
@@ -888,8 +980,10 @@ export function processOnlineAction(action, body) {
                 sandevistanState: room.lastSandevistan || null,
                 goldenState: room.lastGolden || null,
                 pirateState: room.lastPirate || null,
+                nutellaState: room.lastNutella || null,
                 spectatorCount: specCount
             });
+            triggerPresenceBroadcast();
         }
     } else if (action === 'spectate:leave') {
         const roomId = body.roomId ? cleanRoomCode(body.roomId) : null;
@@ -898,6 +992,7 @@ export function processOnlineAction(action, body) {
                 removeSpectatorFromRoom(r, clientId);
             }
         }
+        triggerPresenceBroadcast();
     }
 
     return getPublicLobbySnapshot(clientId);

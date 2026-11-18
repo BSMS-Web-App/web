@@ -527,7 +527,7 @@ export default async function handler(req, res) {
                 const user = legalUser || await getUserBySession(sessionId);
                 if (!user) return res.status(401).json({ error: 'Unauthorized.' });
 
-                const ALLOWED_BADGES = new Set(['netanyahu', 'david_martinez']);
+                const ALLOWED_BADGES = new Set(['netanyahu', 'david_martinez', 'super_gothamchess', 'pirate_token', 'tom_pearl']);
                 const incoming = [];
                 if (typeof payload.badge === 'string') incoming.push(payload.badge.trim());
                 if (Array.isArray(payload.badges)) {
