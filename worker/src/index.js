@@ -452,6 +452,10 @@ async function fetchPage(req, env, url, token) {
     const lower = name.toLowerCase();
     if (lower === "authorization" || lower.startsWith("x-")) requestHeaders.set(name, value);
   }
+  for (const name of ["Range", "If-Range", "If-None-Match", "If-Modified-Since"]) {
+    const value = req.headers.get(name);
+    if (value) requestHeaders.set(name, value);
+  }
   requestHeaders.set("Origin", destination.origin);
   requestHeaders.set("Referer", destination.href);
   if (method === "POST") {
@@ -497,10 +501,40 @@ async function fetchPage(req, env, url, token) {
 
   const type = (upstream.headers.get("Content-Type") || "application/octet-stream").toLowerCase();
   const contentLength = Number(upstream.headers.get("Content-Length") || 0);
-  if (contentLength > MAX) return reply({ error: "The destination response exceeds Browser's 25 MB limit." }, 413);
+  const isHtml = type.includes("text/html") || type.includes("application/xhtml+xml");
+  const isCss = type.includes("text/css");
+  const isPlainText = type.startsWith("text/plain");
+  const needsTransform = isHtml || isCss || isPlainText;
 
+  // Keep binary resources streaming. In particular, video/audio players need
+  // 206 Partial Content responses and Content-Range headers for seeking.
+  if (!needsTransform) {
+    const streamingHeaders = new Headers({
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "private, no-store"
+    });
+    for (const name of [
+      "Content-Type", "Content-Length", "Content-Range", "Accept-Ranges",
+      "Content-Disposition", "ETag", "Last-Modified", "Expires"
+    ]) {
+      const value = upstream.headers.get(name);
+      if (value) streamingHeaders.set(name, value);
+    }
+    if (type.startsWith("image/svg+xml")) {
+      streamingHeaders.set("Content-Security-Policy", "default-src 'none'; sandbox");
+    }
+    const noBody = method === "HEAD" || upstream.status === 204 || upstream.status === 304;
+    return new Response(noBody ? null : upstream.body, {
+      status: upstream.status,
+      headers: streamingHeaders
+    });
+  }
+
+  if (contentLength > MAX) {
+    return reply({ error: "The destination page exceeds Browser's 25 MB processing limit." }, 413);
+  }
   const bytes = method === "HEAD" ? new Uint8Array() : await readLimited(upstream.body, MAX);
-  if (bytes === null) return reply({ error: "The destination response exceeds Browser's 25 MB limit." }, 413);
+  if (bytes === null) return reply({ error: "The destination page exceeds Browser's 25 MB processing limit." }, 413);
 
   const responseHeaders = new Headers({
     "X-Content-Type-Options": "nosniff",
@@ -512,7 +546,7 @@ async function fetchPage(req, env, url, token) {
   if (upstreamType) responseHeaders.set("Content-Type", upstreamType);
   const status = upstream.status;
 
-  if (type.includes("text/html") || type.includes("application/xhtml+xml")) {
+  if (isHtml) {
     const proxyOrigin = new URL(req.url).origin;
     const transformed = new HTMLRewriter()
       .on("base,object,embed", new Strip())
@@ -532,7 +566,7 @@ async function fetchPage(req, env, url, token) {
       "style-src " + proxyOrigin + " 'unsafe-inline'; " +
       "img-src " + proxyOrigin + " data: blob:; " +
       "font-src " + proxyOrigin + " data: blob:; " +
-      "media-src " + proxyOrigin + " blob:; " +
+      "media-src " + proxyOrigin + " data: blob:; " +
       "connect-src " + proxyOrigin + " https://www.google.com https://www.recaptcha.net https://www.gstatic.com; " +
       "frame-src " + proxyOrigin + " https://www.google.com https://www.recaptcha.net; " +
       "form-action " + proxyOrigin + "; " +
@@ -547,13 +581,13 @@ async function fetchPage(req, env, url, token) {
     return new Response(transformed.body, { status, headers });
   }
 
-  if (type.includes("text/css")) {
+  if (isCss) {
     const css = rewriteCss(new TextDecoder().decode(bytes), destination, token);
     responseHeaders.set("Content-Type", "text/css; charset=utf-8");
     return new Response(css, { status, headers: responseHeaders });
   }
 
-  if (type.startsWith("text/plain")) {
+  if (isPlainText) {
     responseHeaders.set("Content-Type", "text/html; charset=utf-8");
     responseHeaders.set("Content-Security-Policy", "default-src 'none'; sandbox");
     return new Response(
