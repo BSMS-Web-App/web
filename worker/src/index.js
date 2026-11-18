@@ -11,6 +11,7 @@ const ORIGINS = new Set([
   "https://dev1.bsms-web.com",
   "https://bsms-web-dev1.vercel.app"
 ]);
+const FRAME_ANCESTORS = [...ORIGINS].join(" ");
 const HOSTS = [
   "wikipedia.org", "britannica.com", "developer.mozilla.org",
   "support.apple.com", "apple.com", "github.com", "w3.org",
@@ -48,7 +49,7 @@ function cors(req) {
 function b64(bytes) {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 function un64(s) {
   s = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -130,7 +131,7 @@ function targetUrl(value, base) {
       url.hostname.includes("%")
     ) return null;
 
-    const host = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
     if (!HOSTS.some(domain => host === domain || host.endsWith("." + domain))) return null;
     url.hostname = host;
     url.hash = "";
@@ -282,7 +283,7 @@ async function fetchPage(req, env, url, token) {
     const headers = new Headers(transformed.headers);
     headers.set(
       "Content-Security-Policy",
-      "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+      "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox allow-same-origin; base-uri 'none'; form-action 'none'; frame-ancestors " + FRAME_ANCESTORS
     );
     headers.set("Referrer-Policy", "no-referrer");
     headers.set("X-Content-Type-Options", "nosniff");
