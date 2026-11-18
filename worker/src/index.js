@@ -271,10 +271,13 @@ class Bootstrap {
       var BASE=${base}, TOKEN=${token}, PROXY=${proxy};
       function toProxy(input){
         var raw = input instanceof Request ? input.url : String(input);
+        if (/^(#|mailto:|tel:|data:|blob:)/i.test(raw)) return raw;
+        var proxyCandidate;
+        try { proxyCandidate = new URL(raw, PROXY); } catch (_) { return raw; }
+        if (proxyCandidate.origin === PROXY && proxyCandidate.pathname === "/page" && proxyCandidate.searchParams.has("url")) return proxyCandidate.href;
         var target;
         try { target = new URL(raw, BASE); } catch (_) { return raw; }
         if (target.protocol === "data:" || target.protocol === "blob:") return raw;
-        if (target.origin === PROXY && target.pathname === "/page" && target.searchParams.has("url")) return raw;
         if (target.origin === PROXY) target = new URL(target.pathname + target.search + target.hash, BASE);
         if (target.protocol !== "https:") return raw;
         var endpoint = new URL("/page", PROXY);
@@ -389,6 +392,7 @@ async function fetchPage(req, env, url, token) {
     "Accept-Language": req.headers.get("Accept-Language") || "en-US,en;q=0.9"
   });
   const contentType = req.headers.get("Content-Type");
+  if (contentType) requestHeaders.set("Content-Type", contentType);
   for (const [name, value] of req.headers) {
     const lower = name.toLowerCase();
     if (lower === "authorization" || lower.startsWith("x-")) requestHeaders.set(name, value);
@@ -508,6 +512,9 @@ async function fetchPage(req, env, url, token) {
     return reply({ error: "This image format is not supported.", contentType: type }, 415);
   }
 
+  if (type.startsWith("image/svg+xml")) {
+    responseHeaders.set("Content-Security-Policy", "default-src 'none'; sandbox");
+  }
   if (!responseHeaders.has("Content-Type")) {
     responseHeaders.set("Content-Type", "application/octet-stream");
   }
