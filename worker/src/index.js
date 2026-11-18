@@ -1,5 +1,5 @@
 /*
- * BSMS Web Cloud Reader — Cloudflare Worker
+ * BSMS Web Cloud Browser — Cloudflare Worker
  * Destination requests run on Cloudflare, never on Vercel or the Mac.
  */
 const ORIGINS = new Set([
@@ -303,6 +303,39 @@ class Bootstrap {
         args[1] = toProxy(url);
         return nativeOpen.apply(this, args);
       };
+      function destinationFromProxy(value) {
+        try {
+          var parsed = new URL(value, PROXY);
+          var nested = parsed.searchParams.get("url");
+          return parsed.origin === PROXY && parsed.pathname === "/page" && nested ? nested : value;
+        } catch (_) { return value; }
+      }
+      function reportLocation(mode) {
+        window.parent.postMessage({
+          type: "bsms-browser-location",
+          url: destinationFromProxy(window.location.href),
+          mode: mode || "push"
+        }, "*");
+      }
+      var nativePushState = history.pushState.bind(history);
+      var nativeReplaceState = history.replaceState.bind(history);
+      history.pushState = function(state, title, url) {
+        if (url == null) return nativePushState(state, title);
+        var proxied = toProxy(url);
+        var result = nativePushState(state, title, proxied);
+        reportLocation("push");
+        return result;
+      };
+      history.replaceState = function(state, title, url) {
+        if (url == null) return nativeReplaceState(state, title);
+        var proxied = toProxy(url);
+        var result = nativeReplaceState(state, title, proxied);
+        reportLocation("replace");
+        return result;
+      };
+      window.addEventListener("popstate", function() { reportLocation("replace"); });
+      window.addEventListener("hashchange", function() { reportLocation("replace"); });
+      reportLocation("replace");
     })();`;
     element.prepend("<script>" + script + "</script>", { html: true });
   }
@@ -319,7 +352,7 @@ async function readLimited(body, limit) {
       if (done) break;
       total += value.byteLength;
       if (total > limit) {
-        await reader.cancel("Reader response exceeded size limit").catch(() => {});
+        await reader.cancel("Browser response exceeded size limit").catch(() => {});
         return null;
       }
       chunks.push(value);
@@ -374,7 +407,7 @@ async function cors(req, url, env) {
 async function fetchPage(req, env, url, token) {
   const identity = await readToken(token, env.READER_SIGNING_SECRET);
   if (!identity || !await accountValid(env, identity.uid, identity.sid)) {
-    return reply({ error: "Your reader session expired. Sign in again." }, 401);
+    return reply({ error: "Your Browser session expired. Sign in again." }, 401);
   }
   const method = req.method.toUpperCase();
   if (!["GET", "HEAD", "POST"].includes(method)) {
@@ -441,10 +474,10 @@ async function fetchPage(req, env, url, token) {
 
   const type = (upstream.headers.get("Content-Type") || "application/octet-stream").toLowerCase();
   const contentLength = Number(upstream.headers.get("Content-Length") || 0);
-  if (contentLength > MAX) return reply({ error: "The destination response exceeds Reader's 25 MB limit." }, 413);
+  if (contentLength > MAX) return reply({ error: "The destination response exceeds Browser's 25 MB limit." }, 413);
 
   const bytes = method === "HEAD" ? new Uint8Array() : await readLimited(upstream.body, MAX);
-  if (bytes === null) return reply({ error: "The destination response exceeds Reader's 25 MB limit." }, 413);
+  if (bytes === null) return reply({ error: "The destination response exceeds Browser's 25 MB limit." }, 413);
 
   const responseHeaders = new Headers({
     "X-Content-Type-Options": "nosniff",
@@ -472,7 +505,7 @@ async function fetchPage(req, env, url, token) {
     headers.set(
       "Content-Security-Policy",
       "default-src " + proxyOrigin + " data: blob:; " +
-      "script-src " + proxyOrigin + " 'unsafe-inline' 'unsafe-eval' blob:; " +
+      "script-src " + proxyOrigin + " 'unsafe-inline' 'unsafe-eval' blob: https://www.gstatic.com https://www.google.com https://www.recaptcha.net; " +
       "style-src " + proxyOrigin + " 'unsafe-inline'; " +
       "img-src " + proxyOrigin + " data: blob:; " +
       "font-src " + proxyOrigin + " data: blob:; " +
@@ -532,7 +565,7 @@ export default {
     try {
       if (url.pathname === "/health" && request.method === "GET") {
         return reply({
-          service: "BSMS Web Cloud Reader",
+          service: "BSMS Web Cloud Browser",
           status: "ok",
           egress: "cloudflare"
         }, 200, corsHeaders);
@@ -578,7 +611,7 @@ export default {
     } catch (error) {
       console.error("[BSMS Reader]", error?.name || "Error", error?.message || error);
       return reply({
-        error: "Reader service temporarily unavailable.",
+        error: "Browser service temporarily unavailable.",
         reason: error?.name || "Internal error"
       }, 503, corsHeaders);
     }
