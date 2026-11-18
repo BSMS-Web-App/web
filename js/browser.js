@@ -9,7 +9,7 @@
   const status = $('statusText');
   const toast = $('toast');
   const signinLink = $('signinLink');
-  const proxy = String(window.BSMS_READER_PROXY_ORIGIN || '').replace(/\\/+$/, '');
+  const proxy = String(window.BSMS_READER_PROXY_ORIGIN || '').replace(/\/+$/, '');
 
   let token = null;
   let current = '';
