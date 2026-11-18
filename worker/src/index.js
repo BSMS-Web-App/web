@@ -275,17 +275,25 @@ class Bootstrap {
         try { target = new URL(raw, BASE); } catch (_) { return raw; }
         if (target.protocol === "data:" || target.protocol === "blob:") return raw;
         if (target.origin === PROXY && target.pathname === "/page" && target.searchParams.has("url")) return raw;
+        if (target.origin === PROXY) target = new URL(target.pathname + target.search + target.hash, BASE);
         if (target.protocol !== "https:") return raw;
         var endpoint = new URL("/page", PROXY);
         endpoint.searchParams.set("url", target.href);
         endpoint.searchParams.set("token", TOKEN);
         return endpoint.href;
       }
+      var NativeRequest = window.Request;
       var nativeFetch = window.fetch.bind(window);
       window.fetch = function(input, init) {
-        if (input instanceof Request) return nativeFetch(new Request(toProxy(input), input), init);
+        if (input instanceof NativeRequest) return nativeFetch(new NativeRequest(toProxy(input), input), init);
         return nativeFetch(toProxy(input), init);
       };
+      function ReaderRequest(input, init) {
+        return new NativeRequest(toProxy(input), init);
+      }
+      ReaderRequest.prototype = NativeRequest.prototype;
+      Object.setPrototypeOf(ReaderRequest, NativeRequest);
+      window.Request = ReaderRequest;
       var nativeOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(method, url) {
         var args = Array.prototype.slice.call(arguments);
@@ -392,7 +400,7 @@ async function fetchPage(req, env, url, token) {
       return reply({ error: "This form or request content type is not supported." }, 415);
     }
     body = await req.arrayBuffer();
-    if (body.byteLength > MAX_FORM) return reply({ error: "Form submission exceeds the 1 MB limit." }, 413);
+    if (body.byteLength > MAX_FORM) return reply({ error: "Form submission exceeds the 10 MB limit." }, 413);
     requestHeaders.set("Content-Type", contentType);
   }
 
@@ -536,7 +544,12 @@ export default {
       if (url.pathname === "/page" && ["GET", "HEAD", "POST"].includes(request.method)) {
         const destinationUrl = url.searchParams.get("url");
         if (!destinationUrl) return reply({ error: "A destination URL is required." }, 400, corsHeaders);
-        const destination = new URL(destinationUrl);
+        let destination;
+        try {
+          destination = new URL(destinationUrl);
+        } catch {
+          return reply({ error: "The destination URL is invalid." }, 400, corsHeaders);
+        }
         for (const [name, value] of url.searchParams) {
           if (name !== "url" && name !== "token") destination.searchParams.append(name, value);
         }
