@@ -1,14 +1,89 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<script src="/js/api-origin.js"></script><script src="/js/browser-config.js"></script>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111116"><meta name="color-scheme" content="dark"><meta name="referrer" content="no-referrer">
-<title>Reader — BSMS Web</title><link rel="icon" href="/img/icon.png"><link rel="stylesheet" href="/css/browser.css"><script defer src="/js/browser.js"></script>
-</head><body><main class="browser-shell">
-<header class="browser-header"><a class="brand" href="/" aria-label="BSMS Web home"><img src="/img/icon.png" alt=""><span>BSMS Web</span></a><span class="header-divider"></span><span class="product-label">Web Reader</span><span class="header-spacer"></span><a class="account-link" href="/accounts">Account</a></header>
-<section class="browser-toolbar" aria-label="Reader controls"><div class="nav-controls"><button id="backButton" class="icon-button" type="button" aria-label="Back" disabled>‹</button><button id="forwardButton" class="icon-button" type="button" aria-label="Forward" disabled>›</button><button id="reloadButton" class="icon-button" type="button" aria-label="Reload">↻</button></div>
-<form id="addressForm" class="address-form"><span class="lock-mark" aria-hidden="true">⌑</span><input id="addressInput" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="Enter a supported website address" aria-label="Website address"><button id="goButton" type="submit">Go</button></form></section>
-<div class="status-row"><span id="statusText">Checking your BSMS Web account…</span><span class="privacy-label">Cloudflare cloud reader · Your Mac is not the browsing exit</span></div>
-<section class="content-frame"><div id="emptyState" class="empty-state"><div class="empty-mark">B</div><h1>Browse with BSMS Web</h1><p>Open a simplified, read-only version of a supported public website through Cloudflare.</p><div class="supported-sites"><span>Supported sites</span><p>Wikipedia · Apple Support · GitHub · MDN · NASA · NOAA · Khan Academy</p></div><p class="reader-note">This is a secure reader, not a full Safari replacement. Scripts, sign-in forms, downloads, and embedded apps are not supported.</p></div>
-<iframe id="readerFrame" title="Proxied website" sandbox="allow-same-origin" referrerpolicy="no-referrer" hidden></iframe></section>
-<footer class="browser-footer"><span>BSMS Web Reader</span><span>Destination websites receive Cloudflare's network address, not your device's address.</span></footer><div id="toast" class="toast" role="status" aria-live="polite"></div>
-</main></body></html>
+<html lang="en">
+<head>
+  <script src="/js/api-origin.js"></script>
+  <script src="/js/browser-config.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#BB001E">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Browse public websites through BSMS Web Reader.">
+  <title>Web Reader — BSMS Web</title>
+  <link rel="icon" href="/img/icon.png">
+  <link rel="apple-touch-icon" href="/img/app-icon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/browser.css">
+  <script defer src="/js/browser.js"></script>
+</head>
+<body>
+  <main class="browser-shell">
+    <header class="browser-header">
+      <a class="brand" href="/" aria-label="BSMS Web home">
+        <img src="/img/icon.png" alt="">
+        <span>BSMS Web</span>
+      </a>
+      <span class="header-divider" aria-hidden="true"></span>
+      <span class="product-label">Web Reader</span>
+      <span class="header-spacer"></span>
+      <a class="account-link" href="/accounts">Account</a>
+    </header>
+
+    <section class="browser-toolbar" aria-label="Reader controls">
+      <div class="nav-controls">
+        <button id="backButton" class="icon-button" type="button" aria-label="Back" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button id="forwardButton" class="icon-button" type="button" aria-label="Forward" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button id="reloadButton" class="icon-button" type="button" aria-label="Reload">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg>
+        </button>
+      </div>
+
+      <form id="addressForm" class="address-form">
+        <svg class="address-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="addressInput" type="text" inputmode="url" autocomplete="url" spellcheck="false"
+          placeholder="Enter any website address" aria-label="Website address">
+        <button id="goButton" type="submit">Go</button>
+      </form>
+    </section>
+
+    <div class="status-row">
+      <span id="statusText" role="status" aria-live="polite">Checking your BSMS Web account…</span>
+      <span class="privacy-label">Cloudflare Reader · Public HTTPS websites</span>
+    </div>
+
+    <section class="content-frame">
+      <div id="emptyState" class="empty-state">
+        <div class="empty-mark" aria-hidden="true"><img src="/img/icon.png" alt=""></div>
+        <p class="eyebrow">BSMS WEB READER</p>
+        <h1>Explore the web.</h1>
+        <p class="empty-description">Enter any public HTTPS website to open it through BSMS Web.</p>
+        <div class="reader-capabilities">
+          <div class="capability">
+            <span class="capability-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+            <span><strong>Open web</strong><small>No website allowlist</small></span>
+          </div>
+          <div class="capability">
+            <span class="capability-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+            <span><strong>Private by design</strong><small>Requests use Cloudflare egress</small></span>
+          </div>
+        </div>
+        <p class="reader-note">Reader mode is read-only. Websites that require JavaScript, sign-in forms, downloads, or embedded apps may not work as expected. Private and local network addresses remain blocked.</p>
+        <a class="signin-link" href="/accounts" id="signinLink" hidden>Open account sign-in</a>
+      </div>
+      <iframe id="readerFrame" title="Website content" sandbox="allow-same-origin" referrerpolicy="no-referrer" hidden></iframe>
+    </section>
+
+    <footer class="browser-footer">
+      <span>BSMS Web Reader</span>
+      <span>Web requests are routed through Cloudflare, not your Mac.</span>
+    </footer>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>
+
+[executed on device: Mac-mini.local (55da0f6d-7960-443a-8b64-06def1776d0b)]

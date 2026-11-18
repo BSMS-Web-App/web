@@ -12,12 +12,8 @@ const ORIGINS = new Set([
   "https://bsms-web-dev1.vercel.app"
 ]);
 const FRAME_ANCESTORS = [...ORIGINS].join(" ");
-const HOSTS = [
-  "wikipedia.org", "britannica.com", "developer.mozilla.org",
-  "support.apple.com", "apple.com", "github.com", "w3.org",
-  "nasa.gov", "noaa.gov", "weather.gov", "khanacademy.org",
-  "pbs.org", "loc.gov", "si.edu"
-];
+// Destination hosts are intentionally unrestricted. URL validation below
+// permits public HTTPS destinations while rejecting local/private targets.
 const TTL = 600;
 const MAX = 2 * 1024 * 1024;
 const enc = new TextEncoder();
@@ -120,19 +116,95 @@ async function accountValid(env, uid, sid) {
   );
 }
 
-function targetUrl(value, base) {
+function parseIPv4(host) {
+  const parts = host.split(".");
+  if (parts.length !== 4 || parts.some(part => !/^\d{1,3}$/.test(part))) return null;
+  if (parts.some(part => Number(part) > 255)) return null;
+  return parts.reduce((value, part) => (value << 8n) | BigInt(Number(part)), 0n);
+}
+
+function inRange(value, network, prefix, bits) {
+  const shift = BigInt(bits - prefix);
+  const mask = ((1n << BigInt(bits)) - 1n) ^ ((1n << shift) - 1n);
+  return (value & mask) === (network & mask);
+}
+
+function isPublicIPv4(host) {
+  const value = parseIPv4(host);
+  if (value === null) return false;
+  const blocked = [
+    [0x00000000n, 8], [0x0a000000n, 8], [0x64400000n, 10],
+    [0x7f000000n, 8], [0xa9fe0000n, 16], [0xac100000n, 12],
+    [0xc0000000n, 24], [0xc0000200n, 24], [0xc01fc400n, 24], [0xc034c100n, 24], [0xc0586300n, 24], [0xc0af3000n, 24],
+    [0xc0a80000n, 16], [0xc6120000n, 15], [0xc6336400n, 24],
+    [0xcb007100n, 24], [0xe0000000n, 4], [0xf0000000n, 4]
+  ];
+  return !blocked.some(([network, prefix]) => inRange(value, network, prefix, 32));
+}
+
+function parseIPv6(host) {
+  let value = host.replace(/^\[|\]$/g, "").toLowerCase();
+  if (value.includes(".")) {
+    const splitAt = value.lastIndexOf(":");
+    const ipv4 = parseIPv4(value.slice(splitAt + 1));
+    if (splitAt < 0 || ipv4 === null) return null;
+    const high = Number((ipv4 >> 16n) & 0xffffn).toString(16);
+    const low = Number(ipv4 & 0xffffn).toString(16);
+    value = value.slice(0, splitAt + 1) + high + ":" + low;
+  }
+
+  const halves = value.split("::");
+  if (halves.length > 2) return null;
+  const left = halves[0] ? halves[0].split(":") : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  if (halves.length === 1 && left.length !== 8) return null;
+  if (halves.length === 2 && left.length + right.length >= 8) return null;
+  const parts = halves.length === 2
+    ? [...left, ...Array(8 - left.length - right.length).fill("0"), ...right]
+    : left;
+  if (parts.length !== 8 || parts.some(part => !/^[0-9a-f]{1,4}$/.test(part))) return null;
+  return parts.reduce((result, part) => (result << 16n) | BigInt(parseInt(part, 16)), 0n);
+}
+
+function isPublicIPv6(host) {
+  const value = parseIPv6(host);
+  if (value === null) return false;
+  // Only globally-routable 2000::/3 addresses are accepted. This excludes
+  // unspecified, loopback, mapped, unique-local, link-local and multicast.
+  if (!inRange(value, 0x20000000000000000000000000000000n, 3, 128)) return false;
+  // Also reject documentation and special protocol-assignment ranges.
+  if (
+    inRange(value, 0x20010db8000000000000000000000000n, 32, 128) ||
+    inRange(value, 0x20010000000000000000000000000000n, 23, 128) ||
+    inRange(value, 0x20020000000000000000000000000000n, 16, 128)
+  ) return false;
+  return true;
+}
+
+export function targetUrl(value, base) {
   try {
     const url = base ? new URL(value, base) : new URL(value);
     if (
       url.protocol !== "https:" ||
       url.username || url.password ||
       (url.port && url.port !== "443") ||
-      url.hostname.endsWith(".local") ||
       url.hostname.includes("%")
     ) return null;
 
     const host = url.hostname.toLowerCase().replace(/\.$/, "");
-    if (!HOSTS.some(domain => host === domain || host.endsWith("." + domain))) return null;
+    if (
+      !host || (!host.includes(".") && !host.startsWith("[")) ||
+      ["localhost", "localhost.localdomain", "local", "internal", "test", "invalid", "example"].includes(host) ||
+      [".localhost", ".local", ".internal", ".home.arpa", ".test", ".invalid", ".example", ".lan", ".intranet"]
+        .some(suffix => host.endsWith(suffix))
+    ) return null;
+
+    if (host.startsWith("[") && host.endsWith("]")) {
+      if (!isPublicIPv6(host)) return null;
+    } else if (/^[0-9.]+$/.test(host)) {
+      if (!isPublicIPv4(host)) return null;
+    }
+
     url.hostname = host;
     url.hash = "";
     return url;
@@ -221,7 +293,7 @@ async function fetchPage(req, env, url, token) {
 
   const destination = targetUrl(url);
   if (!destination) {
-    return reply({ error: "Only supported HTTPS websites are available." }, 400);
+    return reply({ error: "Enter a public HTTPS website. Private and local network addresses are blocked." }, 400);
   }
 
   // This fetch runs inside Cloudflare. The destination receives Cloudflare
@@ -238,7 +310,7 @@ async function fetchPage(req, env, url, token) {
   if ([301, 302, 303, 307, 308].includes(upstream.status)) {
     const location = upstream.headers.get("Location");
     const next = location && targetUrl(location, destination);
-    if (!next) return reply({ error: "Redirect outside supported sites blocked." }, 403);
+    if (!next) return reply({ error: "Redirect to a private or unsupported destination blocked." }, 403);
     const redirectUrl = new URL(req.url);
     redirectUrl.searchParams.set("url", next.href);
     return Response.redirect(redirectUrl.toString(), 302);
@@ -366,3 +438,5 @@ export default {
     }
   }
 };
+
+[executed on device: Mac-mini.local (55da0f6d-7960-443a-8b64-06def1776d0b)]
