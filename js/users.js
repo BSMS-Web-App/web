@@ -22,7 +22,10 @@ const UI = {
     showDevModal: (name) => { document.getElementById('dmUserDisplay').innerText = name; UI.openModal('devModal'); },
     showOwnerModal: (name) => { document.getElementById('omUserDisplay').innerText = name; UI.openModal('ownerModal'); },
     showNetanyahuModal: (name) => { document.getElementById('nbmUserDisplay').innerText = name; UI.openModal('netanyahuBadgeModal'); },
-    showDavidModal: (name) => { document.getElementById('dbmUserDisplay').innerText = name; UI.openModal('davidBadgeModal'); }
+    showDavidModal: (name) => { document.getElementById('dbmUserDisplay').innerText = name; UI.openModal('davidBadgeModal'); },
+    showGothamModal: (name) => { document.getElementById('gbmUserDisplay').innerText = name; UI.openModal('gothamBadgeModal'); },
+    showPirateModal: (name) => { document.getElementById('pbmUserDisplay').innerText = name; UI.openModal('pirateBadgeModal'); },
+    showTomModal: (name) => { document.getElementById('tbmUserDisplay').innerText = name; UI.openModal('tomBadgeModal'); }
 };
 
 const DirectoryApp = {
@@ -80,6 +83,9 @@ const DirectoryApp = {
         else if (type === 'dev') UI.showDevModal(name);
         else if (type === 'netanyahu') UI.showNetanyahuModal(name);
         else if (type === 'david') UI.showDavidModal(name);
+        else if (type === 'gotham') UI.showGothamModal(name);
+        else if (type === 'pirate') UI.showPirateModal(name);
+        else if (type === 'tom') UI.showTomModal(name);
     },
 
     buildAvatarHTML: function(u, eager = false) {
@@ -240,6 +246,15 @@ const DirectoryApp = {
         }
         if (badges.david_martinez) {
             b += `<span class="boss-badge-david" title="Defeated David Martinez (3,000 ELO)" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'david',this.dataset.uid)"><img src="/img/bots/david_martinez.jpg" alt="" style="width:13px;height:13px;object-fit:cover;border-radius:3px;"> Sandevistan</span>`;
+        }
+        if (badges.super_gothamchess) {
+            b += `<span class="boss-badge-gotham" title="Defeated Super Gothamchess (2,850 ELO)" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'gotham',this.dataset.uid)"><img src="/img/bots/super_gothamchess.jpg" alt="" style="width:13px;height:13px;object-fit:cover;border-radius:3px;"> Gotham Conqueror</span>`;
+        }
+        if (badges.pirate_token) {
+            b += `<span class="boss-badge-pirate" title="Defeated The Pirate Token (3,600 ELO)" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'pirate',this.dataset.uid)"><img src="/img/bots/pirate_token.png" alt="" style="width:13px;height:13px;object-fit:contain;"> Fate Breaker</span>`;
+        }
+        if (badges.tom_pearl) {
+            b += `<span class="boss-badge-tom" title="Defeated Tom Pearl (2,000 ELO)" data-uid="${uidAttr}" onclick="DirectoryApp.openBadgeModal(event,'tom',this.dataset.uid)"><img src="/img/bots/tom_pearl.jpg" alt="" style="width:13px;height:13px;object-fit:cover;border-radius:3px;"> Nutella Nemesis</span>`;
         }
         return b;
     },

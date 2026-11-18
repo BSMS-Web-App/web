@@ -426,6 +426,36 @@ function renderChessBadges() {
             unlockedBg: 'linear-gradient(135deg, rgba(0,240,255,0.18), rgba(74,222,128,0.14))',
             unlockedBorder: 'rgba(0,240,255,0.65)',
             accent: '#67e8f9'
+        },
+        {
+            id: 'super_gothamchess',
+            title: 'Gotham Conqueror',
+            subtitle: 'Defeated Super Gothamchess (2,850 ELO)',
+            img: '/img/bots/super_gothamchess.jpg',
+            imgContain: false,
+            unlockedBg: 'linear-gradient(135deg, rgba(245,158,11,0.24), rgba(180,83,9,0.16))',
+            unlockedBorder: 'rgba(250,204,21,0.7)',
+            accent: '#fde047'
+        },
+        {
+            id: 'pirate_token',
+            title: 'Fate Breaker',
+            subtitle: 'Defeated The Pirate Token (3,600 ELO)',
+            img: '/img/bots/pirate_token.png',
+            imgContain: true,
+            unlockedBg: 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(245,158,11,0.14))',
+            unlockedBorder: 'rgba(192,132,252,0.7)',
+            accent: '#e9d5ff'
+        },
+        {
+            id: 'tom_pearl',
+            title: 'Nutella Nemesis',
+            subtitle: 'Defeated Tom Pearl (2,000 ELO)',
+            img: '/img/bots/tom_pearl.jpg',
+            imgContain: false,
+            unlockedBg: 'linear-gradient(135deg, rgba(146,64,14,0.28), rgba(217,119,6,0.16))',
+            unlockedBorder: 'rgba(217,119,6,0.7)',
+            accent: '#fdba74'
         }
     ];
 
