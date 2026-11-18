@@ -4,7 +4,7 @@
   const KEY = 'lh_event_announcement_dismissed_v1';
   const EVENT_URL = '/last-harvest';
   if (window.top !== window.self) return;
-  if (location.pathname.replace(/\\/+$/, '') === EVENT_URL) return;
+  if (location.pathname.replace(/\/+$/, '') === EVENT_URL) return;
   try { if (localStorage.getItem(KEY) === '1') return; } catch (_) {}
 
   const css = `
