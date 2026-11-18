@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#17251c">
 <title>The Last Harvest — Adventure</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=41"></head>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=42"></head>
 <body class="lh-body">
 <style>#lh-loading{position:fixed;inset:0;z-index:120;display:grid;place-items:center;background:#17251c;color:#fff4d8;font:8px "Press Start 2P",ui-monospace,monospace;letter-spacing:.16em;text-align:center}</style>
 <div id="lh-loading" class="lh-loading" role="status" aria-live="polite" aria-label="Loading The Last Harvest">
@@ -26,7 +26,7 @@
   </section>
 </div>
 <main id="lh-game" class="lh-game">
-  <canvas id="lh-world" aria-label="The Last Harvest pixel-art game world"></canvas>
+  <canvas id="lh-world" aria-label="The Last Harvest pixel-art game world" aria-describedby="lh-accessibility-status"></canvas>
   <div class="lh-hud">
     <div class="lh-hud-hero"><div class="lh-hud-avatar"><canvas id="lh-hud-avatar" width="16" height="16" aria-hidden="true"></canvas></div><div class="lh-hud-id"><b id="lh-name-hud">ADVENTURER</b><span class="lh-hud-sub"><i id="lh-class-hud">CLASS</i> · LV <em id="lh-level-hud">1</em></span><span class="lh-lvl-chip">LV <em id="lh-level-chip">1</em></span></div></div>
     <div class="lh-hud-bars"><div class="lh-bar hp"><label>HP</label><div class="lh-bar-track"><div id="lh-hp-fill" class="lh-bar-fill"></div></div><b id="lh-health">40</b></div><div class="lh-bar mp"><label>MP</label><div class="lh-bar-track"><div id="lh-mp-fill" class="lh-bar-fill"></div></div><b id="lh-mp-hud">20</b></div></div>
@@ -76,5 +76,5 @@
   </div>
   <div id="lh-accessibility-status" class="lh-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 </main>
-<script src="/js/last-harvest.js?v=139" defer></script>
+<script src="/js/last-harvest.js?v=140" defer></script>
 </body></html>
