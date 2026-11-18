@@ -71,10 +71,10 @@
             <span><strong>Private by design</strong><small>Requests use Cloudflare egress</small></span>
           </div>
         </div>
-        <p class="reader-note">Reader mode is read-only. Websites that require JavaScript, sign-in forms, downloads, or embedded apps may not work as expected. Private and local network addresses remain blocked.</p>
+        <p class="reader-note">JavaScript, forms, styles, and supported downloads run inside an isolated sandbox. Some websites may still restrict Cloudflare requests or rely on browser features Reader cannot proxy. Private and local network addresses remain blocked.</p>
         <a class="signin-link" href="/accounts" id="signinLink" hidden>Open account sign-in</a>
       </div>
-      <iframe id="readerFrame" title="Website content" sandbox="allow-same-origin" referrerpolicy="no-referrer" hidden></iframe>
+      <iframe id="readerFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" referrerpolicy="no-referrer" hidden></iframe>
     </section>
 
     <footer class="browser-footer">
