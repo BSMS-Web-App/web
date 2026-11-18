@@ -429,6 +429,7 @@ export default async function handler(req, res) {
                 
                 if (payload.sessionId) {
                     await db.ref(`/accounts/${user.uid}/sessions/${payload.sessionId}`).remove();
+                    await db.ref(`/session_index/${payload.sessionId}`).remove();
                 }
                 return res.status(200).json({ success: true });
             }
@@ -446,6 +447,7 @@ export default async function handler(req, res) {
                 
                 await db.ref(`/accounts/${user.uid}/account_status`).set('deleted');
                 await db.ref(`/accounts/${user.uid}/sessions`).remove();
+                const sessionIndexUpdates = {}; Object.keys(user.account.sessions || {}).forEach(id => { sessionIndexUpdates[`/session_index/${id}`] = null; }); if (Object.keys(sessionIndexUpdates).length) await db.ref().update(sessionIndexUpdates);
                 return res.status(200).json({ success: true });
             }
 
