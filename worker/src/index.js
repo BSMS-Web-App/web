@@ -178,7 +178,7 @@ export function targetUrl(value, base) {
 }
 
 function isBsmsWebHost(hostname) {
-  const host = String(hostname || "").toLowerCase().replace(/\\.$/, "");
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
   return host === "bsms-web.com" || host.endsWith(".bsms-web.com");
 }
 function blockedDestinationPage(destination) {
