@@ -6,6 +6,8 @@
   const input = $('addressInput');
   const frame = $('browserFrame');
   const empty = $('emptyState');
+  const blocked = $('blockedState');
+  const blockedAddress = $('blockedAddress');
   const shell = $('browserShell');
   const signinLink = $('signinLink');
   const toast = $('toast');
@@ -16,6 +18,7 @@
   let history = [];
   let index = -1;
   let toastTimer;
+  let cssFullscreen = false;
 
   function notify(message) {
     toast.textContent = message;
@@ -39,6 +42,29 @@
     if (url.protocol !== 'https:') throw new Error('For security, the Browser only opens HTTPS websites.');
     if (!url.hostname) throw new Error('Enter a valid website address.');
     return url.href;
+  }
+
+  function isBsmsWebAddress(address) {
+    try {
+      const host = new URL(address).hostname.toLowerCase().replace(/\\.$/, '');
+      return host === 'bsms-web.com' || host.endsWith('.bsms-web.com');
+    } catch { return false; }
+  }
+
+  function showBlockedPage(address, addToHistory = true) {
+    current = address;
+    renderAddress(address);
+    frame.removeAttribute('src');
+    frame.hidden = true;
+    empty.hidden = true;
+    blockedAddress.textContent = address;
+    blocked.hidden = false;
+    if (addToHistory) {
+      history = history.slice(0, index + 1);
+      history.push(address);
+      index = history.length - 1;
+    }
+    updateNavigation();
   }
 
   function caretOffset(element) {
@@ -105,6 +131,10 @@
     let normalized;
     try { normalized = normalizeAddress(address); }
     catch { return; }
+    if (isBsmsWebAddress(normalized)) {
+      if (normalized !== current) showBlockedPage(normalized, mode !== 'replace');
+      return;
+    }
     if (normalized === current) return;
 
     current = normalized;
@@ -146,8 +176,13 @@
   }
 
   function loadAddress(address, addToHistory = true) {
+    if (isBsmsWebAddress(address)) {
+      showBlockedPage(address, addToHistory);
+      return;
+    }
     current = address;
     renderAddress(address);
+    blocked.hidden = true;
     const pageUrl = new URL(proxy + '/page');
     pageUrl.searchParams.set('url', address);
     pageUrl.searchParams.set('token', token);
@@ -162,16 +197,6 @@
     }
     updateNavigation();
   }
-
-  $('collapseHeaderButton').addEventListener('click', () => {
-    shell.classList.add('header-collapsed');
-    $('expandHeaderButton').hidden = false;
-  });
-
-  $('expandHeaderButton').addEventListener('click', () => {
-    shell.classList.remove('header-collapsed');
-    $('expandHeaderButton').hidden = true;
-  });
 
   input.addEventListener('input', () => {
     const value = input.textContent.replace(/[\r\n]/g, '');
@@ -194,9 +219,12 @@
   });
 
   window.addEventListener('message', event => {
-    if (event.source !== frame.contentWindow || !event.data ||
-        event.data.type !== 'bsms-browser-location' ||
-        typeof event.data.url !== 'string') return;
+    if (event.source !== frame.contentWindow || !event.data) return;
+    if (event.data.type === 'bsms-browser-blocked' && typeof event.data.url === 'string') {
+      try { showBlockedPage(normalizeAddress(event.data.url), true); } catch {}
+      return;
+    }
+    if (event.data.type !== 'bsms-browser-location' || typeof event.data.url !== 'string') return;
     updateAddressFromPage(event.data.url, event.data.mode);
   });
 
@@ -216,6 +244,73 @@
 
   $('reloadButton').addEventListener('click', () => {
     if (current && token) loadAddress(current, false);
+  });
+
+  function leaveCssFullscreen() {
+    if (!cssFullscreen) return;
+    cssFullscreen = false;
+    shell.classList.remove('reader-fullscreen');
+    $('exitFullscreenButton').hidden = true;
+    $('fullscreenButton').setAttribute('aria-label', 'Full screen website');
+    $('fullscreenButton').title = 'Full screen';
+  }
+
+  async function enterFullscreen() {
+    if (!current || frame.hidden || blocked.hidden === false) {
+      notify('Open a website before using full screen.');
+      return;
+    }
+    try {
+      if (frame.requestFullscreen) {
+        await frame.requestFullscreen();
+        return;
+      }
+    } catch {}
+    cssFullscreen = true;
+    shell.classList.add('reader-fullscreen');
+    $('exitFullscreenButton').hidden = false;
+    $('fullscreenButton').setAttribute('aria-label', 'Exit full screen');
+    $('fullscreenButton').title = 'Exit full screen';
+  }
+
+  $('fullscreenButton').addEventListener('click', () => {
+    if (cssFullscreen) {
+      leaveCssFullscreen();
+      return;
+    }
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      return;
+    }
+    enterFullscreen();
+  });
+  $('exitFullscreenButton').addEventListener('click', leaveCssFullscreen);
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      leaveCssFullscreen();
+      $('fullscreenButton').setAttribute('aria-label', 'Full screen website');
+      $('fullscreenButton').title = 'Full screen';
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && cssFullscreen) leaveCssFullscreen();
+  });
+
+  const betaNotice = $('betaNotice');
+  const betaGotItButton = $('betaGotItButton');
+  betaGotItButton.addEventListener('click', () => {
+    if (betaGotItButton.disabled) return;
+    betaNotice.hidden = true;
+  });
+  window.setTimeout(() => { betaGotItButton.disabled = false; }, 5000);
+
+  const infoModal = $('infoModal');
+  function closeInfoModal() { infoModal.hidden = true; }
+  $('infoButton').addEventListener('click', () => { infoModal.hidden = false; });
+  $('closeInfoButton').addEventListener('click', closeInfoModal);
+  $('closeInfoDoneButton').addEventListener('click', closeInfoModal);
+  infoModal.addEventListener('click', event => {
+    if (event.target === infoModal) closeInfoModal();
   });
 
   createSession()
