@@ -123,7 +123,7 @@ function freshState(){
   equipped:{weapon:'wooden_sword',armor:'pumpkin_armor',helmet:'acorn_helmet',boots:'autumn_boots'},
   coins:100,xp:0,health:40,maxHealth:40,run:null,lastStageMs:null,completedAt:null,updatedAt:Date.now()};
 }
-const PLAYER_DATA_KEYS=['name','heroClass','gender','x','y','level','hp','maxHp','mp','maxMp','potions','battleItems','potionInventoryMigrated','weaponTier','armorTier','skillTier','skills','skipped','inventory','beaten','questStep','cityUnlocked','firstWildDefeated','sentinelTrainingStarted','firstArmorUpgrade','sentinelRaidSeen','regionScenes','mainQuests','sideQuests','storyArcs','storyReactions','chests','rowanChoice','rowanTrust','finalChoice','kingChoice','ending','rowanDead','wish','trapSeals','trapEscaped','rowanLore','elderKey','elderTalks','rowanWoodsScene','tutorialDone','cutscene','seenIntro','p2Seen','p2Done','savedAt','saveVersion'];
+const PLAYER_DATA_KEYS=['name','heroClass','gender','x','y','level','hp','maxHp','mp','maxMp','potions','battleItems','potionInventoryMigrated','weaponTier','armorTier','skillTier','skills','skipped','inventory','beaten','questStep','cityUnlocked','firstWildDefeated','sentinelTrainingStarted','firstArmorUpgrade','sentinelRaidSeen','regionScenes','mainQuests','sideQuests','storyArcs','storyReactions','chests','rowanChoice','rowanTrust','finalChoice','kingChoice','ending','rowanDead','wish','trapSeals','trapEscaped','rowanLore','elderKey','elderTalks','rowanWoodsScene','tutorialDone','cutscene','seenIntro','p2Seen','p2Done','savedAt','saveVersion','pendingStages'];
 function cleanPlayerData(value){
  if(!value||typeof value!=='object'||Array.isArray(value))return null;
  let encoded;try{encoded=JSON.stringify(value);}catch(e){return null;}
@@ -133,6 +133,7 @@ function cleanPlayerData(value){
  if(out.heroClass&&!['Guardian','Scout','Mage'].includes(out.heroClass))out.heroClass='Guardian';
  for(const key of ['level','hp','maxHp','mp','maxMp','potions','weaponTier','armorTier','skillTier'])if(out[key]!==undefined)out[key]=Math.max(0,Math.min(key==='level'?99:key==='hp'||key==='maxHp'||key==='mp'||key==='maxMp'?999:key==='potions'?9:8,Math.floor(Number(out[key])||0)));
  if(out.name!==undefined)out.name=String(out.name).slice(0,16);
+ if(Array.isArray(out.pendingStages))out.pendingStages=[...new Set(out.pendingStages.map(item=>Math.floor(Number(item&&item.stage))).filter(stage=>stage>=1&&stage<=10))].sort((x,y)=>x-y).slice(0,10).map(stage=>({stage,at:Date.now()}));
  return out;
 }
 function cleanState(value){
