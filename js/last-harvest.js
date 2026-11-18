@@ -46,7 +46,7 @@ function createFreshState(name='',heroClass='Guardian',gender){
   cityUnlocked:false,firstWildDefeated:false,
   sentinelTrainingStarted:false,firstArmorUpgrade:false,sentinelRaidSeen:false,
   regionScenes:{},mainQuests:{},sideQuests:{},storyArcs:{},storyReactions:{},chests:{},
-  rowanChoice:null,rowanTrust:0,finalChoice:null,ending:null,
+  rowanChoice:null,rowanTrust:0,finalChoice:null,kingChoice:null,ending:null,
   /* v13: Rowan dies in the Broken Banquet Hall; the final wish decides who comes back */
   rowanDead:false,wish:null,
   trapSeals:[0,0,0],trapEscaped:false,rowanLore:0,
@@ -89,6 +89,9 @@ function sanitizeState(s){
  s.xp=clampInt(s.xp,0,10000000,0);
  s.level=clampInt(s.level,1,99,1);
  s.stage=clampInt(s.stage,0,10,0);
+ if(!['mercy','seal'].includes(s.kingChoice))s.kingChoice=['mercy','seal'].includes(s.finalChoice)?s.finalChoice:null;
+ if(!['parents','rowan','hunger','refuse'].includes(s.wish))s.wish=null;
+ if(!['forgive','cautious'].includes(s.rowanChoice))s.rowanChoice=null;
  s.potions=clampInt(s.potions,0,9,0);
  s.weaponTier=clampInt(s.weaponTier,0,8,0);
  s.armorTier=clampInt(s.armorTier,0,8,0);
@@ -1016,8 +1019,8 @@ const STORY={
  npcs:[['SMUGGLER VEX',30,['Everything has a price here, even the truth. Free tip: the Merchant never works alone.','A boy in a green cloak asked about your parents last night. He looked scared.']],['SHADOW BROKER',31,['Your friend Rowan sold his name for a promise: his lost mother\u2019s necklace, found.','The Merchant keeps promises exactly as written, and not one letter more.']],['MERCHANT MARISOL',42,['Don\u2019t look at me like that. I only sell potions. Honest ones. Mostly.','If you break the Merchant\u2019s mask, the shadows may let go.']]],
  post:['The Merchant\u2019s mask cracks and a hollow wind rushes out. A note falls: \u201cRowan has chosen. Come to the Banquet Hall.\u201d','Your heart sinks. Rowan, your oldest friend, waits at the end of the road.']},
 5:{intro:['THE BROKEN BANQUET HALL. A feast frozen in time: plates still full, candles still burning, nobody left to eat.'],
- npcs:[['HALL STEWARD ORLAN',45,['The young man in dark armor sits at the head table. He says he is saving a seat for you.','He keeps whispering: \u201cIf I win, I get to see them again.\u201d']],['NELL THE TRAVELER',18,['I saw Rowan weeping at the table. The Hollow King promised him his parents back.','Do not hate him. Hunger makes liars of kings and promises of ghosts.','I saw Rowan leave a little wooden bird on the table. He carved it for you years ago. He has not forgotten who he was.']],['ANCIENT KEEPER',47,['The Hollow King was never a monster by birth. He was the first guest we turned away.','Break the chain around Rowan\u2019s heart with kindness, not just strength.']]],
- post:['The black armor falls away and Rowan collapses, free. \u201cI\u2019m sorry,\u201d he whispers. \u201cI only wanted my family back.\u201d','Rowan vows to guard the village while you finish the journey. A golden thread leads north to the Frostfall Mountains.']},
+ npcs:[['HALL STEWARD ORLAN',45,['The young man in dark armor sits at the head table. He says he is saving a seat for you.','He keeps whispering: \u201cIf I win, I get to see them again.\u201d']],['NELL THE TRAVELER',18,['I saw Rowan weeping at the table. The Hollow King promised him his parents back.','Do not hate him. Hunger makes liars of kings and promises of ghosts.','I saw Rowan leave a little wooden bird on the table. He carved it for you years ago. He has not forgotten who he was.']],['ANCIENT KEEPER',47,['The Hollow King was never a monster by birth. He was the first guest the Keepers forgot to invite to the Everfeast. They celebrated their promise while leaving him outside it.','His hunger grew from being forgotten. He wants a seat at the table, not a throne over the valley.','Break the chain around Rowan\u2019s heart with kindness, not just strength.']]],
+ post:['The black armor falls away. Rowan is free from the Hollow King\u2019s control, but the bargain has taken too much from him. \u201cI\u2019m sorry,\u201d he whispers. \u201cI only wanted my family back.\u201d','A golden thread leads north to the Frostfall Mountains. You carry Rowan\u2019s memory with you.']},
 6:{intro:['FROSTFALL MOUNTAINS. Snow falls in perfect silence. Somewhere above, a king hoards the last feast of winter.'],
  npcs:[['FROST RANGER ILSA',32,['The Turkey King was a gentle harvest spirit, until the Hollow King taught him to hoard.','He sits atop the watchtower guarding a table that never empties and never feeds anyone.']],['MONK TORV',33,['Hunger and greed wear the same crown. Remind him what a feast is for: sharing.','Take the lantern path. The avalanche slope is a trap.']],['ICE SPRITE',46,['Hee hee! Want to see my snow fort? The King is grumpy because nobody visits him anymore.']]],
  post:['The Turkey King laughs for the first time in a century and tears the golden feast apart: \u201cTake it. Share it.\u201d','The watchtower gate opens, revealing the road to the Hollow Fortress.']},
@@ -1029,7 +1032,7 @@ const STORY={
  post:['The Hollow King\u2019s crown shatters. He looks at the empty table, then at you. \u201cMay I\u2026 sit?\u201d','The golden door of the Heart opens.']},
 9:{intro:['HEART OF HEARTHVALE. The Everfeast\u2019s beating heart: a garden of gold under a sky of stars.'],
  npcs:[['MARA',8,['My darling! You came all this way\u2026 The Heart Guardian only tests those who love Hearthvale.']],['THOMAS',9,['We were never lost. The Heart held us safe until someone brave enough could share the feast again.']],['ROWAN',3,['I made it too! Whatever it asks, we face it together.']]],
- post:['The Heart Guardian blooms into a thousand lanterns. The Everfeast burns bright again.','Hearthvale is saved, and the whole village sits at one long golden table. There is a seat for everyone, even the Hollow King.','The lanterns rise above Hearthvale. For the first time in a long while, nobody is left outside the circle of light.']}};
+ post:['The Heart Guardian blooms into a thousand lanterns. The Everfeast burns bright again.','Hearthvale is saved, and the whole village sits at one long golden table.','The lanterns rise above Hearthvale. For the first time in a long while, nobody is left outside the circle of light.']}};
 function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const AREAS={};let AREA=null,areaPlayer={x:0,y:0};
 function getRegion(c){return AREAS['r'+c]||(AREAS['r'+c]=genRegion(c));}
@@ -1045,7 +1048,7 @@ function genRegion(c){const B=BIO[c],S=STORY[c],w=44,h=26,rng=mulberry(c*7919+13
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=T(x,y);if(!open[i]){if(x===0||y===0||x===w-1||y===h-1||rng()<.8){solid[i]=1;ob[i]=1+Math.floor(rng()*B.ob.length);}}else if(x>6&&x<bx-5&&Math.abs(y-pathY[x])>2&&rng()<.5)enc[i]=1;}
  const dec=[];if(B.dec)for(let k=0;k<70;k++){const x=1+Math.floor(rng()*(w-2)),y=1+Math.floor(rng()*(h-2));if(open[T(x,y)]&&!solid[T(x,y)])dec.push({x,y,d:B.dec[Math.floor(rng()*B.dec.length)]});}
  solid[T(0,pathY[1])]=0;ob[T(0,pathY[1])]=0;
- const npcs=S.npcs.map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));if(c===1)npcs.push({x:8,y:pathY[8],name:'ROWAN',lines:['I caught up with you! I was not going to let you walk into these woods alone.','Look at the leaves. They are drifting toward that old stone arch. I think your parents left us a trail.','I found this little ribbon caught on a branch. It has your mother’s initials. We are getting closer.'],friend:true});
+ const npcs=S.npcs.filter(n=>!(c===9&&n[0]==='ROWAN'&&state.rowanDead&&state.wish!=='rowan')).map((n,k)=>({x:npcPos[k][0],y:npcPos[k][1],name:n[0],lines:n[2]}));if(c===9){const mara=npcs.find(n=>n.name==='MARA'),thomas=npcs.find(n=>n.name==='THOMAS'),rowan=npcs.find(n=>n.name==='ROWAN');if(state.wish!=='parents'){if(mara)mara.lines=['(a warm echo) We cannot return with the wish you chose, sweetheart. But our love is still with you.','The Heart Guardian is the last test. Let the light you carry guide you.'];if(thomas)thomas.lines=['(a warm echo) These are only memories held by the Heart. Your choice has not changed.','A promise is only real when it leaves room for everyone.'];}if(rowan&&state.rowanDead&&state.wish==='rowan'){rowan.lines=[state.rowanTrust>=2?'You used the wish to bring me back. I will spend every day making that forgiveness mean something.':'You brought me back, even though I still have to earn your trust. I will not waste that chance.','Whatever waits beyond this door, I am here because you chose me.'];}}if(c===1)npcs.push({x:8,y:pathY[8],name:'ROWAN',lines:['I caught up with you! I was not going to let you walk into these woods alone.','Look at the leaves. They are drifting toward that old stone arch. I think your parents left us a trail.','I found this little ribbon caught on a branch. It has your mother’s initials. We are getting closer.'],friend:true});
  const rivalSets={
 1:[['TAMSIN THE SCOUT','I have been tracking the strange lights too. If you want to reach the seal, show me you can handle yourself.','Quick feet! You might just make it through these woods.'],['CALEB THE WARDEN','The forest is no place for an untested traveler. Let us see what you have learned.','You have earned my respect. The guardian will be a tougher test.']],
 2:[['BRUNO THE WAYFARER','The orchard road is dangerous. I challenge every traveler before I let them pass.','You fight with purpose. Keep going; the valley needs you.'],['LYRA THE GATHERER','I protect the last healthy trees. If you want to go farther, prove you can protect yourself.','A fine battle. Take the eastern path; the old pantry is below.']],
@@ -1193,11 +1196,12 @@ function areaHit(x,y){const A=AREA,tx=Math.floor(x/32),ty=Math.floor(y/32);if(tx
 function areaWild(c){const g=Math.max(0,Math.min(9,c+(Math.random()<.35?0:-1))),i=g*10+rnd(9),m=monInfo(i);return{id:'wild',wild:true,name:m.name,mi:i,hp:Math.round(m.hp*1.1),atk:m.atk,reward:m.reward,xp:20+g*16,win:[]};}
 function areaStep(){const A=AREA,tx=Math.floor(areaPlayer.x/32),ty=Math.floor(areaPlayer.y/32);
  if(A.wilds){const z=A.zone[ty*A.w+tx];if(z!==A.curZone){const first=A.curZone===undefined;A.curZone=z;A.name=WZ[z].n;updateHud();if(!first)banner(WZ[z].n,'Monsters Lv '+WZ[z].lv);}}
- const routeExit=A.exits.find(e=>e.x===tx&&e.y===ty);if(routeExit){if(routeExit.to==='trap'){trapEscape();return;}if(routeExit.to==='village'){leaveArea('village');return;}if(routeExit.to==='route'){const target=routeExit.route,needed='boss'+(target-1);if(target>A.chapter&&!state.beaten[needed]){setDialogue([['JOURNAL','The path ahead is sealed. Defeat this route’s Guardian before traveling onward.']]);return;}const next=getRegion(target),entry=target>A.chapter?1:next.w-2;startArea(next,entry,next.pathY[entry]);next.routeName='ROUTE '+target+' · '+chapters[target].place;setDialogue([['JOURNAL','The restored seal has opened the way. You travel along the connecting trail into '+chapters[target].place+'. New paths, people, and discoveries await.']]);return;}}
- if(A.boss&&!state.beaten[A.boss.id]&&mainQuestReady(A.chapter)){const n=A.npcs.find(q=>q.boss);if(n&&!A.bossTalk&&Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24))<5*32){areaBossIntro(n);return;}}
+ const routeExit=A.exits.find(e=>e.x===tx&&e.y===ty);if(routeExit){if(routeExit.to==='trap'){trapEscape();return;}if(routeExit.to==='village'){leaveArea('village');return;}if(routeExit.to==='route'){const target=routeExit.route,needed='boss'+(target-1);if(target>A.chapter&&!state.beaten[needed]){setDialogue([['JOURNAL','The path ahead is sealed. Defeat this route’s Guardian before traveling onward.']]);return;}const next=getRegion(target),entry=target>A.chapter?1:next.w-2;startArea(next,entry,next.pathY[entry]);next.routeName='ROUTE '+target+' · '+chapters[target].place;setDialogue([['JOURNAL','The restored seal has opened the way. You travel along the connecting trail into '+chapters[target].place+'.'],...chapterGuidanceLines(target)]);return;}}
+ if(A.boss&&!state.beaten[A.boss.id]){const n=A.npcs.find(q=>q.boss);if(n&&!A.bossTalk&&Math.hypot(areaPlayer.x-(n.x*32+16),areaPlayer.y-(n.y*32+24))<5*32){areaBossIntro(n);return;}}
  if(A.enc&&A.enc[ty*A.w+tx]&&Math.random()<.12&&!battle&&!dialogue)startBattle(areaWild(A.wilds?A.zone[ty*A.w+tx]:A.chapter));else if(A.pathY&&tx>7&&tx<A.w-14&&Math.abs(ty-A.pathY[tx])<=1&&Math.random()<.03&&!battle&&!dialogue)startBattle(areaWild(A.chapter));}
-function mainQuestData(c){state.mainQuests=state.mainQuests||{};return state.mainQuests[c]||(state.mainQuests[c]={talked:[],kills:0,complete:false});}
+function mainQuestData(c){state.mainQuests=state.mainQuests||{};const q=state.mainQuests[c]||(state.mainQuests[c]={talked:[],kills:0,complete:false});if(!Array.isArray(q.talked))q.talked=[];q.kills=Math.max(0,Math.min(3,Math.floor(Number(q.kills)||0)));return q;}
 function mainQuestReady(c){if(!c)return true;const q=mainQuestData(c);return !!q.complete||((q.talked||[]).length>=2&&(q.kills||0)>=3);}
+function chapterGuidanceLines(c){const chapter=chapters[c],boss=BOSSES[c];if(!chapter||!boss)return[];const q=mainQuestData(c),talked=Math.min(2,q.talked.length),kills=Math.min(3,q.kills);return[['CHAPTER '+(c+1)+' · '+chapter.title,'You have reached '+chapter.place+'. '+chapter.quest+'.'],['JOURNAL',q.complete||state.beaten['boss'+c]?'The guardian has been defeated. Follow the opened route to the next region.':'To unlock '+boss.name+', speak with two different residents ('+talked+'/2) and defeat three wild creatures ('+kills+'/3). Then follow the trail to the guardian at the far end of this region.']];}
 function recordMainQuestTalk(n){if(!AREA||!AREA.chapter||!n||n.boss||n.alpha||n.chest||n.act)return;const q=mainQuestData(AREA.chapter);if(!q.talked.includes(n.name)){q.talked.push(n.name);save();updateQuest();}}
 function storyArcTalk(n){
  const arcs=[
@@ -2274,7 +2278,8 @@ function playRegionIntro(c){
    if(!state.rowanDead)await walk('ROWAN',{x:.59,y:.74},620);
    await say([[guide,'I have been waiting for someone who could follow the Keepers’ trail. The path ahead will not be easy.'],['YOU','We did not come this far to turn back. Tell us what happened here.']]);
   }
-  state.regionScenes[c]=true;save();cinematic=null;document.body.classList.remove('lh-cinematic');
+  await say(chapterGuidanceLines(c));
+   state.regionScenes[c]=true;save();cinematic=null;document.body.classList.remove('lh-cinematic');
  })();
 }
 function drawDreamScene(W,H){const a=cinematic.actors,s=Math.max(3,Math.round(H/160)),u=16*s,k=Math.max(3,Math.round(H/170));
