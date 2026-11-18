@@ -11,9 +11,13 @@
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
     #lh-event-announcement{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:20px;background:rgba(8,15,12,.86);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:"Press Start 2P",ui-monospace,monospace;color:#fff4d8}
     #lh-event-announcement[hidden]{display:none!important}
-    #lh-event-announcement .lh-ann-card{position:relative;isolation:isolate;overflow:hidden;width:min(590px,100%);padding:clamp(22px,5vw,38px);background:#314b5d;border:5px solid #26334a;box-shadow:inset 0 0 0 4px #f3e6bf,7px 7px 0 #172a3a;text-align:center}
-    #lh-event-announcement .lh-ann-art{height:clamp(120px,24vw,190px);margin:-8px -8px 26px;border:3px solid #26334a;box-shadow:inset 0 0 0 2px #f3e6bf;background:#17251c url("/img/last-harvest/village.png") center 54%/cover no-repeat;image-rendering:pixelated;position:relative}
-    #lh-event-announcement .lh-ann-art:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(16,29,23,.45),transparent 70%)}
+    #lh-event-announcement .lh-ann-card{display:block;position:relative;isolation:isolate;overflow:hidden;width:min(590px,100%);padding:clamp(22px,5vw,38px);background:#314b5d;border:5px solid #26334a;box-shadow:inset 0 0 0 4px #f3e6bf,7px 7px 0 #172a3a;text-align:center}
+    #lh-event-announcement .lh-ann-art{height:clamp(120px,24vw,190px);margin:-8px -8px 26px;border:3px solid #26334a;box-shadow:inset 0 0 0 2px #f3e6bf;image-rendering:pixelated;position:relative;overflow:hidden;display:grid;place-items:center;background:radial-gradient(circle at 50% 16%,#3f6249 0,#1d3226 58%,#13211a 100%)}
+    #lh-event-announcement .lh-ann-art:after{content:"";position:absolute;inset:9px;border:2px dashed rgba(243,230,191,.22);pointer-events:none}
+    #lh-event-announcement .lh-ann-logo{position:relative;display:flex;flex-direction:column;align-items:center;gap:9px;font-family:"Press Start 2P",ui-monospace,monospace;line-height:1.25;text-align:center}
+    #lh-event-announcement .lh-ann-logo small{color:#ffe18a;font-size:8px;letter-spacing:.18em;text-shadow:2px 2px #26334a}
+    #lh-event-announcement .lh-ann-logo b{color:#fff4d8;font-size:clamp(16px,3.1vw,24px);letter-spacing:.02em;text-shadow:4px 4px #7c2318,-2px -2px #26334a,2px -2px #26334a,-2px 2px #26334a}
+    #lh-event-announcement .lh-ann-logo i{display:block;width:78px;max-width:60%;height:5px;background:repeating-linear-gradient(90deg,#e9bd59 0 9px,transparent 9px 18px)}
     #lh-event-announcement .lh-ann-eyebrow{margin:0 0 17px;color:#8fd9ae;font-size:8px;line-height:1.8;letter-spacing:.12em}
     #lh-event-announcement h2{margin:0 0 18px;color:#fff4d8;font-size:clamp(13px,3.3vw,20px);line-height:1.8;text-shadow:3px 3px #26334a}
     #lh-event-announcement h2 span{color:#ffe18a}
@@ -39,7 +43,7 @@
     overlay.setAttribute('aria-labelledby','lh-ann-title');
     overlay.innerHTML = `
       <section class="lh-ann-card">
-        <div class="lh-ann-art" role="img" aria-label="The Last Harvest pixel-art village"></div>
+        <div class="lh-ann-art" role="img" aria-label="The Last Harvest"><span class="lh-ann-logo"><small>THE LAST</small><b>HARVEST</b><i></i></span></div>
         <p class="lh-ann-eyebrow">BSMS WEB · LIMITED-TIME EVENT</p>
         <h2 id="lh-ann-title">THE LAST <span>HARVEST</span> IS NOW ON</h2>
         <p class="lh-ann-copy">A new adventure has arrived. Visit Hearthvale, help its residents, and experience The Last Harvest event.</p>

@@ -785,7 +785,12 @@ html { scroll-padding-top: 100px; }
 /* The Last Harvest homepage event card */
 .lh-home-promo{padding:34px 5vw 42px;min-height:0}
 .lh-home-promo-card{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(220px,.9fr) minmax(0,1.1fr);align-items:stretch;width:min(1120px,100%);min-height:270px;background:#314b5d;border:5px solid #26334a;box-shadow:inset 0 0 0 4px #f3e6bf,7px 7px 0 #172a3a;color:#fff4d8}
-.lh-home-promo-art{min-height:260px;background:#17251c url("/img/last-harvest/village.png") center 54%/cover no-repeat;border-right:4px solid #26334a;box-shadow:inset 0 0 0 3px #f3e6bf;image-rendering:pixelated}
+.lh-home-promo-art{position:relative;overflow:hidden;display:grid;place-items:center;min-height:260px;padding:22px;text-align:center;background:radial-gradient(circle at 50% 16%,#3f6249 0,#1d3226 58%,#13211a 100%);border-right:4px solid #26334a;box-shadow:inset 0 0 0 3px #f3e6bf;image-rendering:pixelated}
+.lh-home-promo-art:before{content:"";position:absolute;inset:11px;border:2px dashed rgba(243,230,191,.22);pointer-events:none}
+.lh-home-promo-logo{position:relative;display:flex;flex-direction:column;align-items:center;gap:13px;font-family:"Press Start 2P",ui-monospace,monospace;line-height:1.25}
+.lh-home-promo-logo small{color:#ffe18a;font-size:9px;letter-spacing:.18em;text-shadow:2px 2px #26334a}
+.lh-home-promo-logo b{color:#fff4d8;font-size:clamp(20px,3.2vw,30px);letter-spacing:.02em;text-shadow:4px 4px #7c2318,-2px -2px #26334a,2px -2px #26334a,-2px 2px #26334a}
+.lh-home-promo-logo:after{content:"";width:92px;max-width:72%;height:6px;background:repeating-linear-gradient(90deg,#e9bd59 0 10px,transparent 10px 20px)}
 .lh-home-promo-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(22px,4vw,42px);font-family:"Press Start 2P",ui-monospace,monospace}
 .lh-home-promo-eyebrow{margin:0 0 16px;color:#8fd9ae;font-size:8px;line-height:1.8;letter-spacing:.1em}
 .lh-home-promo-copy h2{margin:0 0 15px;color:#fff4d8;font-size:clamp(15px,2.7vw,23px);line-height:1.7;text-shadow:3px 3px #26334a}
