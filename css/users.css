@@ -183,7 +183,10 @@ a { color: var(--accent); text-decoration: none; }
 .verified-icon:hover { transform: scale(1.1); }
 
 .boss-badge-netanyahu,
-.boss-badge-david {
+.boss-badge-david,
+.boss-badge-gotham,
+.boss-badge-pirate,
+.boss-badge-tom {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 2px 7px; border-radius: 6px; font-weight: bold;
     font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;
@@ -199,8 +202,26 @@ a { color: var(--accent); text-decoration: none; }
     color: #67e8f9; border: 1px solid rgba(0,240,255,0.65);
     box-shadow: 0 0 8px rgba(0,240,255,0.25);
 }
+.boss-badge-gotham {
+    background: linear-gradient(135deg, rgba(245,158,11,0.28), rgba(180,83,9,0.22));
+    color: #fde047; border: 1px solid rgba(250,204,21,0.7);
+    box-shadow: 0 0 8px rgba(245,158,11,0.28);
+}
+.boss-badge-pirate {
+    background: linear-gradient(135deg, rgba(168,85,247,0.26), rgba(245,158,11,0.18));
+    color: #e9d5ff; border: 1px solid rgba(192,132,252,0.7);
+    box-shadow: 0 0 8px rgba(168,85,247,0.28);
+}
+.boss-badge-tom {
+    background: linear-gradient(135deg, rgba(146,64,14,0.34), rgba(217,119,6,0.2));
+    color: #fdba74; border: 1px solid rgba(217,119,6,0.7);
+    box-shadow: 0 0 8px rgba(146,64,14,0.3);
+}
 .boss-badge-netanyahu:hover,
-.boss-badge-david:hover { transform: scale(1.06); }
+.boss-badge-david:hover,
+.boss-badge-gotham:hover,
+.boss-badge-pirate:hover,
+.boss-badge-tom:hover { transform: scale(1.06); }
 
 /* Full Screen Profile View */
 #profileView {

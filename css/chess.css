@@ -419,37 +419,73 @@ body {
   100% { opacity: 0.55; transform: translateY(2px) scaleY(0.96) scaleX(0.98); filter: blur(1px); }
 }
 .sandevistan-aura-stream {
+  position: absolute;
+  inset: -12%;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 60%, rgba(0, 240, 255, 0.48) 0%, rgba(74, 222, 128, 0.28) 46%, transparent 74%);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.38);
   animation: sandevistanAuraStream 1.6s ease-in-out infinite;
 }
 .sandevistan-aura-stream-active {
+  position: absolute;
+  inset: -16%;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 55%, rgba(0, 240, 255, 0.72) 0%, rgba(74, 222, 128, 0.45) 48%, transparent 76%);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.65), 0 0 26px rgba(74, 222, 128, 0.45);
   animation: sandevistanAuraStream 0.65s ease-in-out infinite;
 }
 
 @keyframes sandevistanScreenPulse {
-  0%, 100% { opacity: 0.9; }
+  0%, 100% { opacity: 0.88; }
   50% { opacity: 1; }
 }
 .sandevistan-screen-tint {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 40;
   background:
-    radial-gradient(circle at 50% 45%, rgba(0, 240, 255, 0.08) 0%, rgba(4, 34, 42, 0.38) 55%, rgba(2, 22, 26, 0.62) 100%),
-    linear-gradient(135deg, rgba(0, 240, 255, 0.09), rgba(16, 185, 129, 0.11));
-  box-shadow: inset 0 0 90px rgba(0, 240, 255, 0.24), inset 0 0 140px rgba(16, 185, 129, 0.2);
+    radial-gradient(circle at 50% 45%, rgba(0, 240, 255, 0.07) 0%, rgba(4, 38, 48, 0.36) 58%, rgba(2, 24, 28, 0.58) 100%),
+    linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(16, 185, 129, 0.1));
+  box-shadow: inset 0 0 90px rgba(0, 240, 255, 0.26), inset 0 0 150px rgba(16, 185, 129, 0.22);
   animation: sandevistanScreenPulse 1.3s ease-in-out infinite;
 }
 
 @keyframes sandevistanBoardPulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.85), 0 0 24px rgba(0, 240, 255, 0.45), 0 0 40px rgba(74, 222, 128, 0.3); }
-  50% { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.95), 0 0 30px rgba(74, 222, 128, 0.55), 0 0 48px rgba(0, 240, 255, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 2.5px rgba(0, 240, 255, 0.92), 0 0 26px rgba(0, 240, 255, 0.52), 0 0 44px rgba(74, 222, 128, 0.35); }
+  50% { box-shadow: 0 0 0 3.5px rgba(74, 222, 128, 0.98), 0 0 34px rgba(74, 222, 128, 0.62), 0 0 54px rgba(0, 240, 255, 0.52); }
 }
 .sandevistan-board-glow {
   animation: sandevistanBoardPulse 0.9s ease-in-out infinite;
+}
+.board-3d-frame.sandevistan-board-glow {
+  box-shadow:
+    0 12px 0 #083344,
+    0 22px 0 #062535,
+    0 0 0 3px rgba(0, 240, 255, 0.95),
+    0 0 32px rgba(0, 240, 255, 0.6),
+    0 36px 56px rgba(0, 0, 0, 0.85) !important;
+}
+
+.bsms-chess-shell .sandevistan-banner {
+  background: linear-gradient(90deg, rgba(8, 51, 68, 0.95) 0%, rgba(7, 38, 44, 0.97) 50%, rgba(6, 78, 59, 0.95) 100%) !important;
+  border: 1.5px solid #00f0ff !important;
+  color: #67e8f9 !important;
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.28) !important;
 }
 
 @keyframes sandevistanClockFrozen {
   0%, 100% { border-color: rgba(0, 240, 255, 0.9); box-shadow: 0 0 12px rgba(0, 240, 255, 0.45); }
   50% { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 16px rgba(74, 222, 128, 0.5); }
 }
-.sandevistan-clock-paused {
+.bsms-chess-shell .sandevistan-clock-paused {
   background: linear-gradient(135deg, #062535 0%, #062e22 100%) !important;
   color: #67e8f9 !important;
   border: 1.5px solid #00f0ff !important;
@@ -543,10 +579,216 @@ body {
   .golden-piece-aura,
   .david-glitch-frame,
   .david-ecg-path,
-  .pirate-pawn-cursed {
+  .pirate-pawn-cursed,
+  .nutella-piece-aura {
     animation: none !important;
     transition: none !important;
     transform: none !important;
   }
 }
+
+/* Additional Board Themes (Black & Red + Curated Palettes) */
+.bg-\[\#0b0b0f\] { background-color: #0b0b0f !important; }
+.bg-\[\#991b1b\] { background-color: #991b1b !important; }
+.text-\[\#fca5a5\] { color: #fca5a5 !important; }
+.text-\[\#fecaca\] { color: #fecaca !important; }
+.bg-\[\#111118\] { background-color: #111118 !important; }
+.bg-\[\#b45309\] { background-color: #b45309 !important; }
+.text-\[\#fde68a\] { color: #fde68a !important; }
+.bg-\[\#06402b\] { background-color: #06402b !important; }
+.bg-\[\#a7f3d0\] { background-color: #a7f3d0 !important; }
+.text-\[\#06402b\] { color: #06402b !important; }
+.bg-\[\#130926\] { background-color: #130926 !important; }
+.bg-\[\#0891b2\] { background-color: #0891b2 !important; }
+.bg-\[\#2b0912\] { background-color: #2b0912 !important; }
+.bg-\[\#be123c\] { background-color: #be123c !important; }
+.text-\[\#ffe4e6\] { color: #ffe4e6 !important; }
+.bg-\[\#3b2314\] { background-color: #3b2314 !important; }
+.bg-\[\#d6b289\] { background-color: #d6b289 !important; }
+.text-\[\#3b2314\] { color: #3b2314 !important; }
+
+/* Nutella Covered Piece Glow */
+@keyframes nutellaPieceGlow {
+  0%, 100% { box-shadow: inset 0 0 12px rgba(120, 53, 15, 0.72), 0 0 10px rgba(146, 64, 14, 0.6); }
+  50% { box-shadow: inset 0 0 18px rgba(180, 83, 9, 0.9), 0 0 16px rgba(120, 53, 15, 0.85); }
+}
+.nutella-piece-aura {
+  animation: nutellaPieceGlow 1.6s ease-in-out infinite;
+}
+
+/* 3D Chess Pieces, 3D (Bright), Cyber Glass & True 3D Board Perspective */
+.piece-style-3d-bright svg {
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.38)) drop-shadow(0 7px 6px rgba(0, 0, 0, 0.46));
+  transform: translateY(-2px);
+}
+.piece-style-3d svg {
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.72)) drop-shadow(0 6px 5px rgba(0, 0, 0, 0.68));
+  transform: translateY(-3px) scale(1.03);
+  transform-origin: center bottom;
+}
+.piece-style-3d-pedestal {
+  position: relative;
+}
+.piece-style-3d-pedestal::after {
+  content: "";
+  position: absolute;
+  bottom: 4%;
+  left: 12%;
+  right: 12%;
+  height: 16%;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.68) 0%, rgba(0, 0, 0, 0.25) 48%, rgba(0, 0, 0, 0) 78%);
+  pointer-events: none;
+  z-index: 0;
+}
+.piece-style-cyber-glass svg {
+  filter: drop-shadow(0 0 7px rgba(34, 211, 238, 0.5)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+}
+.board-3d-stage {
+  perspective: 1050px;
+  perspective-origin: 50% 40%;
+}
+.board-3d-frame {
+  transform: rotateX(25deg);
+  transform-origin: center 54%;
+  transform-style: preserve-3d;
+  border: 6px solid #2b231d;
+  border-bottom-width: 10px;
+  border-radius: 10px;
+  overflow: visible !important;
+  box-shadow:
+    0 12px 0 #1f1914,
+    0 21px 0 #14100d,
+    0 25px 0 #0a0806,
+    0 42px 58px rgba(0, 0, 0, 0.85) !important;
+  margin-top: 6px;
+  margin-bottom: 28px;
+}
+.board-3d-frame .piece-style-3d svg {
+  transform: rotateX(-16deg) translateY(-6px) scale(1.07);
+}
+.board-3d-frame .piece-style-3d-bright svg {
+  transform: rotateX(-10deg) translateY(-3px) scale(1.03);
+}
+
+/* Whole-Site Chess Page Themes */
+html, body {
+  overflow-anchor: none;
+}
+
+.bsms-chess-shell {
+  --site-bg: #050507;
+  --site-aside: #0a0a0d;
+  --site-card: #0d0d12;
+  --site-subcard: #13131a;
+  --site-elevated: #17171c;
+  --site-border: rgba(255, 255, 255, 0.08);
+  --site-accent: #BB001E;
+  --site-accent-strong: #d10022;
+  --site-accent-soft: rgba(187, 0, 30, 0.18);
+  --site-text: #ffffff;
+  --site-glow: radial-gradient(circle at 75% 15%, rgba(187, 0, 30, 0.14), transparent 52%);
+  background-color: var(--site-bg) !important;
+  background-image: var(--site-glow) !important;
+  color: var(--site-text) !important;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+.bsms-chess-shell[data-site-theme="black_red"] {
+  --site-bg: #070305;
+  --site-aside: #110408;
+  --site-card: #16060b;
+  --site-subcard: #1f080f;
+  --site-elevated: #280a13;
+  --site-border: rgba(239, 68, 68, 0.24);
+  --site-accent: #dc2626;
+  --site-accent-strong: #ef4444;
+  --site-accent-soft: rgba(220, 38, 38, 0.24);
+  --site-glow: radial-gradient(circle at 80% 10%, rgba(220, 38, 38, 0.28), transparent 55%), radial-gradient(circle at 12% 90%, rgba(153, 27, 27, 0.22), transparent 50%);
+}
+
+.bsms-chess-shell[data-site-theme="emerald_club"] {
+  --site-bg: #04100b;
+  --site-aside: #071912;
+  --site-card: #0a2017;
+  --site-subcard: #0e2a1e;
+  --site-elevated: #143627;
+  --site-border: rgba(52, 211, 153, 0.22);
+  --site-accent: #10b981;
+  --site-accent-strong: #059669;
+  --site-accent-soft: rgba(16, 185, 129, 0.22);
+  --site-glow: radial-gradient(circle at 80% 12%, rgba(16, 185, 129, 0.22), transparent 55%), radial-gradient(circle at 18% 85%, rgba(5, 150, 105, 0.16), transparent 50%);
+}
+
+.bsms-chess-shell[data-site-theme="royal_gold"] {
+  --site-bg: #0b0905;
+  --site-aside: #141008;
+  --site-card: #19140a;
+  --site-subcard: #221b0e;
+  --site-elevated: #2b2212;
+  --site-border: rgba(250, 204, 21, 0.24);
+  --site-accent: #d97706;
+  --site-accent-strong: #f59e0b;
+  --site-accent-soft: rgba(245, 158, 11, 0.22);
+  --site-glow: radial-gradient(circle at 80% 10%, rgba(245, 158, 11, 0.22), transparent 55%), radial-gradient(circle at 15% 88%, rgba(180, 83, 9, 0.16), transparent 50%);
+}
+
+.bsms-chess-shell[data-site-theme="cyber_teal"] {
+  --site-bg: #030912;
+  --site-aside: #061120;
+  --site-card: #091729;
+  --site-subcard: #0d2038;
+  --site-elevated: #122a47;
+  --site-border: rgba(34, 211, 238, 0.24);
+  --site-accent: #06b6d4;
+  --site-accent-strong: #22d3ee;
+  --site-accent-soft: rgba(6, 182, 212, 0.22);
+  --site-glow: radial-gradient(circle at 82% 14%, rgba(6, 182, 212, 0.24), transparent 52%), radial-gradient(circle at 12% 85%, rgba(59, 130, 246, 0.18), transparent 48%);
+}
+
+.bsms-chess-shell[data-site-theme="midnight_violet"] {
+  --site-bg: #090512;
+  --site-aside: #100920;
+  --site-card: #150d29;
+  --site-subcard: #1c1236;
+  --site-elevated: #241745;
+  --site-border: rgba(168, 85, 247, 0.25);
+  --site-accent: #9333ea;
+  --site-accent-strong: #a855f7;
+  --site-accent-soft: rgba(147, 51, 234, 0.24);
+  --site-glow: radial-gradient(circle at 80% 15%, rgba(168, 85, 247, 0.24), transparent 55%), radial-gradient(circle at 15% 88%, rgba(236, 72, 153, 0.16), transparent 50%);
+}
+
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) aside {
+  background-color: var(--site-aside) !important;
+  border-color: var(--site-border) !important;
+}
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#0d0d12\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#0a0a0d\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#0e0e12\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#111115\] {
+  background-color: var(--site-card) !important;
+}
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#121216\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#13131a\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#141418\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#14141b\] {
+  background-color: var(--site-subcard) !important;
+}
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#17171c\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#18181f\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#1a1a22\],
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#1c1c24\] {
+  background-color: var(--site-elevated) !important;
+}
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .bg-\[\#BB001E\] {
+  background-color: var(--site-accent) !important;
+}
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .text-\[\#BB001E\] {
+  color: var(--site-accent-strong) !important;
+}
+.bsms-chess-shell[data-site-theme]:not([data-site-theme="obsidian"]) .border-\[\#BB001E\] {
+  border-color: var(--site-accent) !important;
+}
+
 
