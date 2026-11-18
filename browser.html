@@ -26,16 +26,14 @@
       </a>
       <span class="header-divider" aria-hidden="true"></span>
       <span class="product-label">Web Browser</span>
+      <span class="beta-badge">BETA</span>
       <span class="header-spacer"></span>
-      <button id="collapseHeaderButton" class="header-toggle" type="button" aria-label="Hide browser header" title="Hide header">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      <button id="infoButton" class="icon-button info-button" type="button" aria-label="About BSMS Web Browser" title="About this browser">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>
       </button>
     </header>
 
     <section class="browser-toolbar" aria-label="Browser controls">
-      <button id="expandHeaderButton" class="header-toggle expand-toggle" type="button" aria-label="Show browser header" title="Show header" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
-      </button>
       <div class="nav-controls">
         <button id="backButton" class="icon-button" type="button" aria-label="Back" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -54,6 +52,9 @@
           contenteditable="true" inputmode="url" spellcheck="false" data-placeholder="Enter any website address"></div>
         <button id="goButton" type="submit">Go</button>
       </form>
+      <button id="fullscreenButton" class="icon-button fullscreen-button" type="button" aria-label="Full screen website" title="Full screen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
+      </button>
     </section>
 
     <section class="content-frame">
@@ -63,9 +64,46 @@
         <p class="empty-description">Enter a website address to get started.</p>
         <a class="signin-link" href="/accounts" id="signinLink" hidden>Open account sign-in</a>
       </div>
-      <iframe id="browserFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" referrerpolicy="no-referrer" hidden></iframe>
+      <div id="blockedState" class="empty-state blocked-state" hidden>
+        <div class="blocked-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>
+        </div>
+        <h1>This page isn't available here.</h1>
+        <p class="empty-description">BSMS Web pages and subdomains can't be opened inside BSMS Web Browser.</p>
+        <p id="blockedAddress" class="blocked-address"></p>
+      </div>
+      <iframe id="browserFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" allow="fullscreen" allowfullscreen referrerpolicy="no-referrer" hidden></iframe>
+      <button id="exitFullscreenButton" class="exit-fullscreen-button" type="button" hidden>Exit full screen</button>
     </section>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <div id="betaNotice" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="betaTitle" aria-describedby="betaDescription">
+      <div class="modal-card beta-modal">
+        <span class="modal-eyebrow">BSMS WEB BROWSER</span>
+        <h2 id="betaTitle">This browser is in beta.</h2>
+        <p id="betaDescription">BSMS Web Browser is still being developed. Some websites and pages may not load, display correctly, or function properly. You may run into broken features while we continue improving compatibility.</p>
+        <button id="betaGotItButton" class="modal-primary" type="button" disabled>Got it</button>
+      </div>
+    </div>
+
+    <div id="infoModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="infoTitle" hidden>
+      <div class="modal-card info-modal">
+        <button id="closeInfoButton" class="modal-close" type="button" aria-label="Close information">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <span class="modal-eyebrow">ABOUT THE BROWSER</span>
+        <h2 id="infoTitle">How it works</h2>
+        <p>BSMS Web Browser is a lightweight web reader built into BSMS Web. It is not a full Safari or Chrome browser engine.</p>
+        <ol class="info-steps">
+          <li><strong>Browser interface:</strong> The browser controls and interface are served by BSMS Web.</li>
+          <li><strong>Page requests:</strong> When you open a website, its page is requested through the BSMS Web Reader service on Cloudflare.</li>
+          <li><strong>Account check:</strong> The reader checks your BSMS account session with the BSMS Web API before serving a page. The API verifies the session; it does not fetch the website for the reader.</li>
+          <li><strong>Page adaptation:</strong> Supported page links and resources are adjusted to load through the reader service. Some browser features and website behaviors are not fully supported.</li>
+        </ol>
+        <p class="info-beta-note"><strong>Still in beta:</strong> Some pages will not load or function properly. Compatibility is being improved over time.</p>
+        <button id="closeInfoDoneButton" class="modal-primary" type="button">Close</button>
+      </div>
+    </div>
   </main>
 </body>
 </html>
