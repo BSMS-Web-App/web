@@ -177,6 +177,23 @@ export function targetUrl(value, base) {
   }
 }
 
+function isBsmsWebHost(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/\\.$/, "");
+  return host === "bsms-web.com" || host.endsWith(".bsms-web.com");
+}
+function blockedDestinationPage(destination) {
+  const safeUrl = JSON.stringify(destination).replace(/</g, "\\u003c");
+  const html = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page unavailable</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#08080b;color:#fff;font:16px -apple-system,BlinkMacSystemFont,sans-serif;text-align:center"><main style="max-width:560px;padding:32px"><div style="font-size:42px;color:#ff7183">⊘</div><h1>This page isn't available here.</h1><p style="color:#aaa;line-height:1.6">BSMS Web pages and subdomains can't be opened inside BSMS Web Browser.</p></main><script>parent.postMessage({type:"bsms-browser-blocked",url:${safeUrl}},"*");</script></body></html>`;
+  return new Response(html, {
+    status: 451,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
+}
+
 function proxyUrl(value, token) {
   return "/page?url=" + encodeURIComponent(value) + "&token=" + encodeURIComponent(token);
 }
@@ -413,6 +430,11 @@ async function fetchPage(req, env, url, token) {
   if (!["GET", "HEAD", "POST"].includes(method)) {
     return reply({ error: "This request method is not supported by Reader." }, 405);
   }
+  let requested;
+  try { requested = new URL(url); } catch {}
+  if (requested && isBsmsWebHost(requested.hostname)) {
+    return blockedDestinationPage(requested.href);
+  }
   const destination = targetUrl(url);
   if (!destination) {
     return reply({ error: "Enter a public HTTPS website. Private and local network addresses are blocked." }, 400);
@@ -463,6 +485,7 @@ async function fetchPage(req, env, url, token) {
     const location = upstream.headers.get("Location");
     const next = location && targetUrl(location, destination);
     if (!next) return reply({ error: "Redirect to a private or unsupported destination blocked." }, 403);
+    if (isBsmsWebHost(next.hostname)) return blockedDestinationPage(next.href);
     const redirectUrl = new URL(req.url);
     redirectUrl.searchParams.set("url", next.href);
     return Response.redirect(redirectUrl.toString(), upstream.status);
