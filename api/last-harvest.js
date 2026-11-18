@@ -93,6 +93,7 @@ async function resolveUser(sessionId){
  const indexRef=db.ref('/session_index/'+sessionId);
  const indexSnap=await indexRef.once('value');
  const indexed=indexSnap.val();
+ if(indexed?.checked===true&&!indexed?.uid)return null;
  const indexedUid=typeof indexed==='string'?indexed:indexed?.uid;
  if(indexedUid){
   const accountSnap=await db.ref('/accounts/'+indexedUid).once('value');
@@ -108,6 +109,7 @@ async function resolveUser(sessionId){
    return{uid,account};
   }
  }
+ await indexRef.set({checked:true,checkedAt:Date.now()});
  return null;
 }
 /* Every stage opens together when the event does: the contest is a sprint, not
