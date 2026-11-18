@@ -126,7 +126,12 @@
       path.textContent = parts.path;
       input.append(path);
     }
-    if (keepCaret) setCaretOffset(input, Math.min(oldCaret, input.textContent.length));
+    if (keepCaret) {
+      setCaretOffset(input, Math.min(oldCaret, input.textContent.length));
+    } else {
+      input.scrollLeft = 0;
+    }
+    input.scrollTop = 0;
   }
 
   function updateAddressFromPage(address, mode = 'push') {
