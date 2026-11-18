@@ -188,6 +188,7 @@ export default async function handler(req, res) {
                 };
 
                 await db.ref(`/accounts/${uid}`).set(newAccount);
+                await db.ref(`/session_index/${newSessionId}`).set({ uid, createdAt: currentTimestamp });
                 await db.ref(`/chat/users/${uid}`).set({
                     status: 'online',
                     lastSeen: currentTimestamp,
@@ -245,6 +246,7 @@ export default async function handler(req, res) {
                     lastActive: admin.database.ServerValue.TIMESTAMP,
                     deviceId: clientDeviceId || "" // Storing ONLY in session scope
                 });
+                await db.ref(`/session_index/${newSessionId}`).set({ uid: targetUid, createdAt: admin.database.ServerValue.TIMESTAMP });
 
                 const { password: _, ...safeProfile } = targetAcc;
                 safeProfile.avatar = mediaUrl(safeProfile.avatar);
@@ -257,6 +259,7 @@ export default async function handler(req, res) {
                 
                 // Naturally deletes the device ID linkage because it is scoped entirely inside this session node
                 await db.ref(`/accounts/${user.uid}/sessions/${sessionId}`).remove();
+                await db.ref(`/session_index/${sessionId}`).remove();
                 return res.status(200).json({ success: true });
             }
 
