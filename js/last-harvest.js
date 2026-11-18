@@ -2744,6 +2744,7 @@ const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.pu
   ['JOURNAL','Some years you can hear the two of them laughing in the square. Some years you cannot.']]
  };
  extra.push(...endings[state.ending]);
+ if(state.rowanDead)extra.push(['JOURNAL',state.rowanChoice==='forgive'?'You leave Rowan’s wooden bird beside his name. You forgave him, even though the wish could not bring him back.':'You leave Rowan’s wooden bird beside his name. You cared about him, but trust would have taken time to rebuild.']);
  extra.push(['JOURNAL',state.kingChoice==='seal'?'You chose to seal the Hollow King away. He remains beyond the sanctuary and does not take a place at the Everfeast.':'You chose to welcome the Hollow King. He is given a seat and must learn to share the feast he once tried to take.']);
 
  extra.push(['MAIN STORY COMPLETE','The ten-chapter adventure is finished. Phase Two is a separate epilogue that unlocks on November 19 at 7:00 AM Eastern.']);save();
