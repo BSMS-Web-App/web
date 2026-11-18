@@ -18,8 +18,8 @@
   <script defer src="/js/browser.js"></script>
 </head>
 <body>
-  <main class="browser-shell">
-    <header class="browser-header">
+  <main class="browser-shell" id="browserShell">
+    <header class="browser-header" id="browserHeader">
       <a class="brand" href="/" aria-label="BSMS Web home">
         <img src="/img/icon.png" alt="">
         <span>BSMS Web</span>
@@ -27,10 +27,15 @@
       <span class="header-divider" aria-hidden="true"></span>
       <span class="product-label">Web Browser</span>
       <span class="header-spacer"></span>
-      <a class="account-link" href="/accounts">Account</a>
+      <button id="collapseHeaderButton" class="header-toggle" type="button" aria-label="Hide browser header" title="Hide header">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </header>
 
     <section class="browser-toolbar" aria-label="Browser controls">
+      <button id="expandHeaderButton" class="header-toggle expand-toggle" type="button" aria-label="Show browser header" title="Show header" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
+      </button>
       <div class="nav-controls">
         <button id="backButton" class="icon-button" type="button" aria-label="Back" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -45,43 +50,21 @@
 
       <form id="addressForm" class="address-form">
         <svg class="address-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input id="addressInput" type="text" inputmode="url" autocomplete="url" spellcheck="false"
-          placeholder="Enter any website address" aria-label="Website address">
+        <div id="addressInput" class="address-input" role="textbox" aria-label="Website address" aria-multiline="false"
+          contenteditable="true" inputmode="url" spellcheck="false" data-placeholder="Enter any website address"></div>
         <button id="goButton" type="submit">Go</button>
       </form>
     </section>
 
-    <div class="status-row">
-      <span id="statusText" role="status" aria-live="polite">Checking your BSMS Web account…</span>
-      <span class="privacy-label">Cloudflare Browser · Public HTTPS websites</span>
-    </div>
-
     <section class="content-frame">
       <div id="emptyState" class="empty-state">
         <div class="empty-mark" aria-hidden="true"><img src="/img/icon.png" alt=""></div>
-        <p class="eyebrow">BSMS WEB BROWSER</p>
         <h1>Explore the web.</h1>
-        <p class="empty-description">Enter any public HTTPS website to open it through BSMS Web.</p>
-        <div class="reader-capabilities">
-          <div class="capability">
-            <span class="capability-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
-            <span><strong>Open web</strong><small>No website allowlist</small></span>
-          </div>
-          <div class="capability">
-            <span class="capability-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span>
-            <span><strong>Private by design</strong><small>Requests use Cloudflare egress</small></span>
-          </div>
-        </div>
-        <p class="reader-note">JavaScript, forms, styles, and supported downloads run inside an isolated sandbox. Some websites may still restrict Cloudflare requests or rely on browser features Browser cannot proxy. Private and local network addresses remain blocked.</p>
+        <p class="empty-description">Enter a website address to get started.</p>
         <a class="signin-link" href="/accounts" id="signinLink" hidden>Open account sign-in</a>
       </div>
       <iframe id="browserFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" referrerpolicy="no-referrer" hidden></iframe>
     </section>
-
-    <footer class="browser-footer">
-      <span>BSMS Web Browser</span>
-      <span>Web requests are routed through Cloudflare, not your Mac.</span>
-    </footer>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </main>
 </body>
