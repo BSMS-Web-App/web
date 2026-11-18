@@ -78,7 +78,7 @@
     const text = String(value || '').replace(/[\r\n]/g, '');
     const match = text.match(/^((?:https?:\/\/)?[^/?#]+)(\/)?(.*)$/i);
     if (!match) return { origin: text, path: '' };
-    return { origin: match[1] + '/', path: match[3] || '' };
+    return { origin: match[1] + (match[2] || ''), path: match[3] || '' };
   }
 
   function renderAddress(value, keepCaret = false) {
