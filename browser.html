@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#BB001E">
   <meta name="color-scheme" content="dark">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Browse public websites through BSMS Web Reader.">
-  <title>Web Reader — BSMS Web</title>
+  <meta name="description" content="Browse public websites through BSMS Web Browser.">
+  <title>Web Browser — BSMS Web</title>
   <link rel="icon" href="/img/icon.png">
   <link rel="apple-touch-icon" href="/img/app-icon.png">
   <link rel="stylesheet" href="/css/styles.css">
@@ -24,12 +24,12 @@
         <span>BSMS Web</span>
       </a>
       <span class="header-divider" aria-hidden="true"></span>
-      <span class="product-label">Web Reader</span>
+      <span class="product-label">Web Browser</span>
       <span class="header-spacer"></span>
       <a class="account-link" href="/accounts">Account</a>
     </header>
 
-    <section class="browser-toolbar" aria-label="Reader controls">
+    <section class="browser-toolbar" aria-label="Browser controls">
       <div class="nav-controls">
         <button id="backButton" class="icon-button" type="button" aria-label="Back" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -37,8 +37,8 @@
         <button id="forwardButton" class="icon-button" type="button" aria-label="Forward" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
-        <button id="reloadButton" class="icon-button" type="button" aria-label="Reload">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg>
+        <button id="reloadButton" class="icon-button" type="button" aria-label="Reload" title="Reload">
+          <i class="fa-solid fa-rotate" aria-hidden="true"></i>
         </button>
       </div>
 
@@ -52,16 +52,16 @@
 
     <div class="status-row">
       <span id="statusText" role="status" aria-live="polite">Checking your BSMS Web account…</span>
-      <span class="privacy-label">Cloudflare Reader · Public HTTPS websites</span>
+      <span class="privacy-label">Cloudflare Browser · Public HTTPS websites</span>
     </div>
 
     <section class="content-frame">
       <div id="emptyState" class="empty-state">
         <div class="empty-mark" aria-hidden="true"><img src="/img/icon.png" alt=""></div>
-        <p class="eyebrow">BSMS WEB READER</p>
+        <p class="eyebrow">BSMS WEB BROWSER</p>
         <h1>Explore the web.</h1>
         <p class="empty-description">Enter any public HTTPS website to open it through BSMS Web.</p>
-        <div class="reader-capabilities">
+        <div class="browser-capabilities">
           <div class="capability">
             <span class="capability-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
             <span><strong>Open web</strong><small>No website allowlist</small></span>
@@ -71,14 +71,14 @@
             <span><strong>Private by design</strong><small>Requests use Cloudflare egress</small></span>
           </div>
         </div>
-        <p class="reader-note">JavaScript, forms, styles, and supported downloads run inside an isolated sandbox. Some websites may still restrict Cloudflare requests or rely on browser features Reader cannot proxy. Private and local network addresses remain blocked.</p>
+        <p class="browser-note">JavaScript, forms, styles, and supported downloads run inside an isolated sandbox. Some websites may still restrict Cloudflare requests or rely on browser features Reader cannot proxy. Private and local network addresses remain blocked.</p>
         <a class="signin-link" href="/accounts" id="signinLink" hidden>Open account sign-in</a>
       </div>
-      <iframe id="readerFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" referrerpolicy="no-referrer" hidden></iframe>
+      <iframe id="browserFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" referrerpolicy="no-referrer" hidden></iframe>
     </section>
 
     <footer class="browser-footer">
-      <span>BSMS Web Reader</span>
+      <span>BSMS Web Browser</span>
       <span>Web requests are routed through Cloudflare, not your Mac.</span>
     </footer>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
