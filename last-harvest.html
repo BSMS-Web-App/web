@@ -16,6 +16,15 @@
     <p class="lh-loading-note" id="lh-loading-note">GATHERING THE HARVEST&hellip;</p>
   </div>
 </div>
+<div id="lh-access-gate" class="lh-access-gate" hidden role="alertdialog" aria-modal="true" aria-labelledby="lh-access-title" aria-describedby="lh-access-copy">
+  <section class="lh-access-card">
+    <p class="lh-access-eyebrow">BSMS WEB · THE LAST HARVEST</p>
+    <h1 id="lh-access-title">CHECKING EVENT ACCESS</h1>
+    <p id="lh-access-copy">Checking your account and the official event window…</p>
+    <button id="lh-access-action" type="button" class="lh-access-button">PLEASE WAIT</button>
+    <p id="lh-access-note" class="lh-access-note">The event uses the server clock.</p>
+  </section>
+</div>
 <main id="lh-game" class="lh-game">
   <canvas id="lh-world" aria-label="The Last Harvest pixel-art game world"></canvas>
   <div class="lh-hud">
@@ -65,6 +74,7 @@
       <p class="lh-j-foot-note">Progress is saved on this device.</p>
     </section>
   </div>
+  <div id="lh-accessibility-status" class="lh-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 </main>
 <script src="/js/last-harvest.js?v=139" defer></script>
 </body></html>
