@@ -208,43 +208,55 @@ export default async function handler(req,res){
    return res.json({success:true,state:cleanState(tx.snapshot.val())});
   }
   if(action==='start-stage'){
-   /* The run clock starts when the boss fight does. Re-entering the same stage
-      keeps the existing run so a reload does not restart or reset it. */
    const stage=Math.floor(Number(body.stage));
    if(!Number.isInteger(stage)||stage<1||stage>STAGES.length)return res.status(400).json({error:'Stages must be started in order.'});
    if(stage>openStage)return res.status(423).json({error:'This stage has not unlocked yet.'});
-   if(stage!==state.stage+1)return res.status(400).json({error:'Stages must be started in order.'});
-   const now=Date.now();
-   if(state.run&&state.run.stage===stage&&now-state.run.startedAt<STAGE_MAX_MS)
-    return res.json({success:true,run:{stage,startedAt:state.run.startedAt,token:state.run.token,earliestFinish:state.run.startedAt+STAGE_MIN_MS}});
-   const run={stage,startedAt:now,token:crypto.randomUUID()};
-   const next=cleanState({...state,run});
-   await ref.set(next);
-   return res.json({success:true,run:{stage,startedAt:run.startedAt,token:run.token,earliestFinish:run.startedAt+STAGE_MIN_MS}});
+   let failure=null,runResult=null;
+   const tx=await ref.transaction(current=>{
+    failure=null;runResult=null;
+    const currentState=cleanState(current||freshState());
+    if(stage!==currentState.stage+1){failure={status:400,error:'Stages must be started in order.'};return;}
+    const now=Date.now();
+    if(currentState.run&&currentState.run.stage===stage&&now-currentState.run.startedAt<STAGE_MAX_MS){
+     runResult=currentState.run;return;
+    }
+    const run={stage,startedAt:now,token:crypto.randomUUID()};
+    runResult=run;return cleanState({...currentState,run});
+   });
+   if(failure)return res.status(failure.status).json({error:failure.error});
+   if(!runResult)return res.status(409).json({error:'Could not start this stage safely. Please retry.'});
+   return res.json({success:true,run:{stage,startedAt:runResult.startedAt,token:runResult.token,earliestFinish:runResult.startedAt+STAGE_MIN_MS}});
   }
   if(action==='complete-stage'){
    const stage=Math.floor(Number(body.stage));
    if(!Number.isInteger(stage)||stage<1||stage>STAGES.length)return res.status(400).json({error:'Stages must be completed in order.'});
    if(stage>openStage)return res.status(423).json({error:'This stage has not unlocked yet.'});
-   /* A retried final submission repairs a finisher row that the earlier
-      attempt failed to write, instead of being rejected as out of order. */
-   if(stage===state.stage&&stage===STAGES.length&&state.completedAt){
-    const repaired=await ensureFinisher(user,state.completedAt);
-    return res.json({success:true,state,finished:true,serverRecorded:true,verification:'time-gated-client-reported',finisher:repaired});
+   let failure=null,stateResult=null,finished=false,completionTime=null;
+   const tx=await ref.transaction(current=>{
+    failure=null;stateResult=null;finished=false;completionTime=null;
+    const currentState=cleanState(current||freshState());
+    if(stage===currentState.stage&&currentState.lastStageMs!==null){
+     stateResult=currentState;finished=stage===STAGES.length;completionTime=currentState.completedAt;return;
+    }
+    if(stage!==currentState.stage+1){failure={status:400,error:'Stages must be completed in order.'};return;}
+    const run=currentState.run;
+    if(!run||run.stage!==stage){failure={status:409,error:'This stage has not been started. Start it from the chapter before completing it.',code:'stage-not-started'};return;}
+    if(String(body.token||'')!==run.token){failure={status:409,error:'That stage run is not the one in progress.',code:'stage-token'};return;}
+    const now=Date.now(),elapsed=now-run.startedAt;
+    if(elapsed<STAGE_MIN_MS){failure={status:429,error:'That stage cannot be finished that quickly.',code:'stage-too-fast',retryAfterMs:STAGE_MIN_MS-elapsed};return;}
+    if(elapsed>STAGE_MAX_MS){failure={status:410,error:'That stage run expired. Start the stage again.',code:'stage-expired'};return;}
+    finished=stage===STAGES.length;completionTime=finished?now:null;
+    stateResult=cleanState({...currentState,stage,run:null,lastStageMs:elapsed,xp:currentState.xp+stage*100,coins:currentState.coins+stage*25,health:40,completedAt:finished?now:currentState.completedAt});
+    return stateResult;
+   });
+   if(failure)return res.status(failure.status).json({...failure});
+   if(!stateResult)return res.status(409).json({error:'This stage could not be recorded safely. Please retry.'});
+   const savedState=tx.committed?cleanState(tx.snapshot.val()):stateResult;
+   if(finished){
+    const finisher=await ensureFinisher(user,completionTime||savedState.completedAt);
+    return res.json({success:true,state:savedState,finished:true,serverRecorded:true,verification:'time-gated-client-reported',finisher});
    }
-   if(stage!==state.stage+1)return res.status(400).json({error:'Stages must be completed in order.'});
-   const run=state.run;
-   if(!run||run.stage!==stage)return res.status(409).json({error:'This stage has not been started. Start it from the chapter before completing it.',code:'stage-not-started'});
-   if(String(body.token||'')!==run.token)return res.status(409).json({error:'That stage run is not the one in progress.',code:'stage-token'});
-   const now=Date.now(),elapsed=now-run.startedAt;
-   if(elapsed<STAGE_MIN_MS)return res.status(429).json({error:'That stage cannot be finished that quickly.',code:'stage-too-fast',retryAfterMs:STAGE_MIN_MS-elapsed});
-   if(elapsed>STAGE_MAX_MS)return res.status(410).json({error:'That stage run expired. Start the stage again.',code:'stage-expired'});
-   const finished=stage===STAGES.length;
-   /* The run is spent, so the same token can never finish a second stage. */
-   const next=cleanState({...state,stage,run:null,lastStageMs:elapsed,xp:state.xp+stage*100,coins:state.coins+stage*25,health:40,completedAt:finished?now:state.completedAt});
-   await ref.set(next);
-   if(finished)await ensureFinisher(user,now);
-   return res.json({success:true,state:next,finished,serverRecorded:true,verification:'time-gated-client-reported'});
+   return res.json({success:true,state:savedState,finished:false,serverRecorded:true,verification:'time-gated-client-reported'});
   }
   return res.status(400).json({error:'Unknown action.'});
  }catch(error){console.error('[Last Harvest] API error:',error);return res.status(500).json({error:'Could not save contest progress.'});}
