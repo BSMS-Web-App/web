@@ -124,13 +124,11 @@ button, input, a { font: inherit; }
   font-size: 15px;
   line-height: 25px;
   white-space: pre;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,.32) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   overscroll-behavior-x: contain;
 }
-.address-input::-webkit-scrollbar { height: 5px; }
-.address-input::-webkit-scrollbar-track { background: transparent; }
-.address-input::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(255,255,255,.32); }
+.address-input::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .address-input:empty::before { content: attr(data-placeholder); color: rgba(255,255,255,.4); pointer-events: none; }
 .address-origin { color: #fff; }
 .address-path { color: rgba(255,255,255,.48); }
