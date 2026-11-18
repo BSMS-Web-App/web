@@ -12,7 +12,7 @@ const ORIGINS = new Set([
 const FRAME_ANCESTORS = [...ORIGINS].join(" ");
 const TTL = 600;
 const MAX = 25 * 1024 * 1024;
-const MAX_FORM = 1024 * 1024;
+const MAX_FORM = 10 * 1024 * 1024;
 const enc = new TextEncoder();
 
 function reply(data, status = 200, headers = {}) {
@@ -336,10 +336,16 @@ async function cors(req, url, env) {
   if (origin === "null" && url.pathname === "/page") {
     const identity = await readToken(url.searchParams.get("token"), env.READER_SIGNING_SECRET);
     if (!identity) return null;
+    const requested = (req.headers.get("Access-Control-Request-Headers") || "")
+      .split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+    const allowed = requested.filter(name =>
+      ["content-type", "authorization", "x-requested-with"].includes(name) || name.startsWith("x-")
+    );
+    if (allowed.length !== requested.length) return null;
     return {
       "Access-Control-Allow-Origin": "null",
       "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+      "Access-Control-Allow-Headers": allowed.join(", ") || "Content-Type, Authorization, X-Requested-With",
       "Access-Control-Max-Age": "600",
       "Vary": "Origin"
     };
@@ -375,6 +381,12 @@ async function fetchPage(req, env, url, token) {
     "Accept-Language": req.headers.get("Accept-Language") || "en-US,en;q=0.9"
   });
   const contentType = req.headers.get("Content-Type");
+  for (const [name, value] of req.headers) {
+    const lower = name.toLowerCase();
+    if (lower === "authorization" || lower.startsWith("x-")) requestHeaders.set(name, value);
+  }
+  requestHeaders.set("Origin", destination.origin);
+  requestHeaders.set("Referer", destination.href);
   if (method === "POST") {
     if (!contentType || !/^(application\/x-www-form-urlencoded|multipart\/form-data|text\/plain|application\/json)(;|$)/i.test(contentType)) {
       return reply({ error: "This form or request content type is not supported." }, 415);
@@ -382,10 +394,6 @@ async function fetchPage(req, env, url, token) {
     body = await req.arrayBuffer();
     if (body.byteLength > MAX_FORM) return reply({ error: "Form submission exceeds the 1 MB limit." }, 413);
     requestHeaders.set("Content-Type", contentType);
-    const authorization = req.headers.get("Authorization");
-    if (authorization) requestHeaders.set("Authorization", authorization);
-    requestHeaders.set("Origin", destination.origin);
-    requestHeaders.set("Referer", destination.href);
   }
 
   let upstream;
@@ -439,7 +447,6 @@ async function fetchPage(req, env, url, token) {
   if (type.includes("text/html") || type.includes("application/xhtml+xml")) {
     const proxyOrigin = new URL(req.url).origin;
     const transformed = new HTMLRewriter()
-      .on("script,style,link,meta,svg,math,form,input,button,textarea,select,option,template,noscript,iframe,frame,source,video,audio,picture", new Clean(destination, token))
       .on("base,object,embed", new Strip())
       .on("meta", new MetaClean())
       .on("style", new StyleText(destination, token))
@@ -527,10 +534,16 @@ export default {
         }, 200, corsHeaders);
       }
       if (url.pathname === "/page" && ["GET", "HEAD", "POST"].includes(request.method)) {
+        const destinationUrl = url.searchParams.get("url");
+        if (!destinationUrl) return reply({ error: "A destination URL is required." }, 400, corsHeaders);
+        const destination = new URL(destinationUrl);
+        for (const [name, value] of url.searchParams) {
+          if (name !== "url" && name !== "token") destination.searchParams.append(name, value);
+        }
         const response = await fetchPage(
           request,
           env,
-          url.searchParams.get("url"),
+          destination.href,
           url.searchParams.get("token")
         );
         const headers = new Headers(response.headers);
