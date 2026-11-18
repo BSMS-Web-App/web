@@ -2732,8 +2732,7 @@ const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.pu
   ['JOURNAL','Rowan does not come back. His name goes on the fountain beside the other Keepers, and the village learns to say it without flinching.'],
   ['JOURNAL','The Everfeast returns, and there is an empty chair at your table that nobody ever moves.']],
  rowan:[['THE LAST HARVEST','You ask for Rowan. The crown drinks the wish and he falls out of the dark breathing \u2014 thinner, older, and very quiet.'],
-  ['ROWAN','You should have asked for them instead.'],
-  ['YOU','I know.'],
+  ['ROWAN',state.rowanTrust>=2?'You forgave me. I will not forget that.':'I know I still have to earn your trust.'],
   ['JOURNAL','Your parents do not come back. Every autumn you leave a lantern at the sealed door of the sanctuary, and every autumn it goes out before dawn.'],
   ['JOURNAL','Rowan spends the rest of his life rebuilding what he broke. He never jokes about the feast again.']],
  hunger:[['THE LAST HARVEST','You ask for an end to hunger. The crown crumbles, the hunger that twisted the valley begins to fade, and Hearthvale feels its own weight for the first time in a generation.'],
@@ -2746,7 +2745,7 @@ const _ep=(state.rowanDead?DEAD_EPILOGUE:CHAPTER_EPILOGUE)[g.bi];if(_ep)extra.pu
  };
  extra.push(...endings[state.ending]);
  extra.push(['JOURNAL',state.kingChoice==='seal'?'You chose to seal the Hollow King away. He remains beyond the sanctuary and does not take a place at the Everfeast.':'You chose to welcome the Hollow King. He is given a seat and must learn to share the feast he once tried to take.']);
- if(state.ending==='rowan')extra.push(['ROWAN',state.rowanTrust>=2?'You forgave me, even after everything. I will spend the rest of my life proving that trust was not misplaced.':'You brought me back, but I know I still have to earn your trust. I will earn it, one day at a time.']);
+
  extra.push(['MAIN STORY COMPLETE','The ten-chapter adventure is finished. Phase Two is a separate epilogue that unlocks on November 19 at 7:00 AM Eastern.']);save();
 }spawnLair();}
 pkEnd();if(up){sfx('levelup');offerSkillsWhenReady();}
