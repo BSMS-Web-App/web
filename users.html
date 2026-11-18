@@ -219,6 +219,45 @@ SPDX-License-Identifier: AGPL-3.0-only
     </div>
 </div>
 
+<div id="gothamBadgeModal" class="overlay" onclick="if(event.target===this) UI.closeModal('gothamBadgeModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="boss-badge-gotham" style="font-size: 1.05rem; padding: 6px 14px; margin-bottom: 16px;">
+            <img src="/img/bots/super_gothamchess.jpg" alt="Super Gothamchess" style="width:22px;height:22px;object-fit:cover;border-radius:4px;"> Gotham Conqueror
+        </span>
+        <h2 style="font-size: 1.85rem; margin-bottom: 8px;">Defeated Super Gothamchess</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            <strong id="gbmUserDisplay" style="color:var(--fg);">---</strong> cracked open Golden Armor Rooks and defeated the 2,850 ELO Super Gothamchess Boss on BSMS Chess Arena!
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('gothamBadgeModal')">Close</button>
+    </div>
+</div>
+
+<div id="pirateBadgeModal" class="overlay" onclick="if(event.target===this) UI.closeModal('pirateBadgeModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="boss-badge-pirate" style="font-size: 1.05rem; padding: 6px 14px; margin-bottom: 16px;">
+            <img src="/img/bots/pirate_token.png" alt="The Pirate Token" style="width:22px;height:22px;object-fit:contain;"> Fate Breaker
+        </span>
+        <h2 style="font-size: 1.85rem; margin-bottom: 8px;">Defeated The Pirate Token</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            <strong id="pbmUserDisplay" style="color:var(--fg);">---</strong> defied Infinite Probability and defeated the 3,600 ELO Stockfish-IQ Boss on BSMS Chess Arena!
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('pirateBadgeModal')">Close</button>
+    </div>
+</div>
+
+<div id="tomBadgeModal" class="overlay" onclick="if(event.target===this) UI.closeModal('tomBadgeModal')">
+    <div class="modal-card" style="align-items: center; text-align: center;">
+        <span class="boss-badge-tom" style="font-size: 1.05rem; padding: 6px 14px; margin-bottom: 16px;">
+            <img src="/img/bots/tom_pearl.jpg" alt="Tom Pearl" style="width:22px;height:22px;object-fit:cover;border-radius:4px;"> Nutella Nemesis
+        </span>
+        <h2 style="font-size: 1.85rem; margin-bottom: 8px;">Defeated Tom Pearl</h2>
+        <p style="color: var(--fg2); margin-bottom: 20px;">
+            <strong id="tbmUserDisplay" style="color:var(--fg);">---</strong> survived Nutella-coated betrayals and defeated the 2,000 ELO Tom Pearl Boss on BSMS Chess Arena!
+        </p>
+        <button class="btn sec" onclick="UI.closeModal('tomBadgeModal')">Close</button>
+    </div>
+</div>
+
 <div id="toastContainer" onclick="UI.hideToast()">
     <svg class="ic" style="width:20px;height:20px;"><use href="#ico-user"></use></svg>
     <span id="toastText">Notification</span>

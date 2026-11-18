@@ -25,7 +25,7 @@ import supportConversationsHandler from './api/support-conversations.js';
 import legalHandler from './api/legal.js';
 import mediaHandler from './api/media.js';
 import voiceHandler from './api/voice.js';
-import chessHandler, { chessOnlineState, cleanRoomCode, pushClientEvent, registerWsSender, resolveMatchColors } from './api/chess.js';
+import chessHandler, { chessOnlineState, cleanRoomCode, drainClientEvents, markRoomEnded, pruneStaleOnlineState, pushClientEvent, registerPresenceBroadcaster, registerWsSender, resolveMatchColors } from './api/chess.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,7 +94,18 @@ app.use('/api/support-conversations', (req, res) => supportConversationsHandler(
 app.use('/api/legal', (req, res) => legalHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
 app.use('/api/voice', (req, res) => voiceHandler(req, res));
-app.use('/api/chess', (req, res) => chessHandler(req, res));
+app.post('/api/chess/beacon', (req, res) => {
+    try {
+        let body = req.body;
+        if (typeof body === 'string') {
+            try { body = JSON.parse(body); } catch { body = {}; }
+        }
+        return chessHandler({ method: 'POST', body: body || {}, query: req.query }, res);
+    } catch {
+        return res.status(200).json({ ok: true });
+    }
+});
+app.use('/api/chess', (req, res, next) => (req.path === '/stream' && req.method === 'GET') ? next() : chessHandler(req, res));
 
 // BSMS Chess Arena Member Directory & Account Sync REST Endpoints
 function loadStoredMembers() {
@@ -106,6 +117,7 @@ function saveStoredMembers(_members) {
 }
 
 const clients = new Map();
+const sseClients = new Map(); // clientId -> Set<res>
 const membersRegistry = loadStoredMembers();
 const rooms = chessOnlineState.rooms;
 
@@ -194,7 +206,8 @@ function ensureSpectatorSet(room) {
     return room.spectators;
 }
 
-function broadcastPresence() {
+function buildPresenceSnapshot() {
+    pruneStaleOnlineState();
     const users = getAllActiveUsers();
     const members = getSortedMembersList();
     const activeRooms = Array.from(rooms.values())
@@ -220,19 +233,76 @@ function broadcastPresence() {
             };
         });
 
-    const payload = JSON.stringify({
+    return {
         type: 'presence:update',
         users,
         members,
         liveMatches: activeRooms
-    });
+    };
+}
 
-    for (const { ws } of clients.values()) {
+function broadcastPresence() {
+    const snapObj = buildPresenceSnapshot();
+    const payload = JSON.stringify(snapObj);
+    const sseFrame = `data: ${payload}\n\n`;
+
+    for (const [cid, { ws }] of clients.entries()) {
         if (ws.readyState === WebSocket.OPEN) {
-            ws.send(payload);
+            try { ws.send(payload); } catch {}
+        }
+    }
+    for (const [cid, resSet] of sseClients.entries()) {
+        const wsEntry = clients.get(cid);
+        if (wsEntry && wsEntry.ws && wsEntry.ws.readyState === WebSocket.OPEN) continue;
+        for (const sseRes of resSet) {
+            try { sseRes.write(sseFrame); } catch {}
         }
     }
 }
+
+registerPresenceBroadcaster(broadcastPresence);
+
+app.get('/api/chess/stream', (req, res) => {
+    const clientId = String(req.query?.clientId || '').trim();
+    if (!clientId) return res.status(400).end();
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+    if (!sseClients.has(clientId)) sseClients.set(clientId, new Set());
+    sseClients.get(clientId).add(res);
+
+    const clientRec = chessOnlineState.clients.get(clientId);
+    if (clientRec) clientRec.lastSeen = Date.now();
+
+    try {
+        const queued = drainClientEvents(clientId);
+        for (const ev of queued) {
+            res.write(`data: ${JSON.stringify(ev)}\n\n`);
+        }
+        res.write(`data: ${JSON.stringify(buildPresenceSnapshot())}\n\n`);
+    } catch {}
+
+    const keepalive = setInterval(() => {
+        try {
+            const cRec = chessOnlineState.clients.get(clientId);
+            if (cRec) cRec.lastSeen = Date.now();
+            res.write(': ping\n\n');
+        } catch {}
+    }, 15000);
+
+    req.on('close', () => {
+        clearInterval(keepalive);
+        const set = sseClients.get(clientId);
+        if (set) {
+            set.delete(res);
+            if (set.size === 0) sseClients.delete(clientId);
+        }
+    });
+});
 
 app.get('/api/members', (req, res) => {
     const localList = getSortedMembersList();
@@ -270,14 +340,27 @@ app.post('/api/members/sync', (req, res) => {
 });
 
 registerWsSender((clientId, data) => {
+    let delivered = false;
     const entry = clients.get(clientId);
     if (entry && entry.ws && entry.ws.readyState === WebSocket.OPEN) {
         try {
             entry.ws.send(JSON.stringify(data));
-            return true;
+            delivered = true;
         } catch {}
     }
-    return false;
+    if (!delivered) {
+        const sseSet = sseClients.get(clientId);
+        if (sseSet && sseSet.size > 0) {
+            const frame = `data: ${JSON.stringify(data)}\n\n`;
+            for (const sseRes of sseSet) {
+                try {
+                    sseRes.write(frame);
+                    delivered = true;
+                } catch {}
+            }
+        }
+    }
+    return delivered;
 });
 
 function sendToClient(clientId, data) {
@@ -680,6 +763,8 @@ wss.on('connection', (ws) => {
                         upsertMemberFromUser(bEntry.user);
                     }
                 }
+                markRoomEnded(roomId);
+                rooms.delete(roomId);
                 broadcastPresence();
             } else if (msg.type === 'draw:offer') {
                 const roomId = cleanRoomCode(msg.roomId);
@@ -737,6 +822,8 @@ wss.on('connection', (ws) => {
                             upsertMemberFromUser(bEntry.user);
                         }
                     }
+                    markRoomEnded(roomId);
+                    rooms.delete(roomId);
                     broadcastPresence();
                 } else if (targetId) {
                     sendToClient(targetId, {
@@ -790,9 +877,11 @@ wss.on('connection', (ws) => {
                     lastSandevistan: null,
                     lastGolden: null,
                     lastPirate: null,
+                    lastNutella: null,
                     updatedAt: Date.now(),
                     spectators: new Set()
                 };
+                chessOnlineState.recentlyEndedRooms.delete(roomId);
                 rooms.set(roomId, room);
                 entry.user.status = 'in_game';
                 entry.user.roomId = roomId;
@@ -890,6 +979,24 @@ wss.on('connection', (ws) => {
                         turn: msg.turn || null
                     });
                 });
+            } else if (msg.type === 'bot_match:nutella') {
+                const entry = clients.get(currentClientId);
+                const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
+                const room = rooms.get(roomId);
+                if (!room || !room.isBotMatch || room.status !== 'playing') return;
+                room.lastNutella = msg.nutellaState || null;
+                if (msg.board) room.lastBoard = msg.board;
+                if (msg.turn) room.turn = msg.turn;
+                room.updatedAt = Date.now();
+                ensureSpectatorSet(room).forEach((specId) => {
+                    sendToClient(specId, {
+                        type: 'spectate:nutella',
+                        roomId: room.roomId,
+                        nutellaState: msg.nutellaState || null,
+                        board: msg.board || null,
+                        turn: msg.turn || null
+                    });
+                });
             } else if (msg.type === 'bot_match:end') {
                 const entry = clients.get(currentClientId);
                 const roomId = cleanRoomCode(msg.roomId || entry?.user?.roomId);
@@ -907,6 +1014,7 @@ wss.on('connection', (ws) => {
                             winner: room.winner
                         });
                     });
+                    markRoomEnded(roomId);
                     rooms.delete(roomId);
                 }
                 if (entry) {
@@ -959,6 +1067,7 @@ wss.on('connection', (ws) => {
                     sandevistanState: room.lastSandevistan || null,
                     goldenState: room.lastGolden || null,
                     pirateState: room.lastPirate || null,
+                    nutellaState: room.lastNutella || null,
                     spectatorCount: specCount
                 });
                 const notifyIds = room.isBotMatch
@@ -1013,6 +1122,35 @@ wss.on('connection', (ws) => {
                             winner: 'draw'
                         });
                     });
+                    markRoomEnded(rid);
+                    rooms.delete(rid);
+                } else if (!r.isBotMatch && (r.whitePlayer?.clientId === currentClientId || r.blackPlayer?.clientId === currentClientId)) {
+                    const isW = r.whitePlayer?.clientId === currentClientId;
+                    const opponentId = isW ? r.blackPlayer?.clientId : r.whitePlayer?.clientId;
+                    const winner = r.status === 'playing' ? (isW ? 'b' : 'w') : 'draw';
+                    if (opponentId) {
+                        sendToClient(opponentId, {
+                            type: 'game:ended',
+                            roomId: r.roomId,
+                            reason: 'disconnected',
+                            winner
+                        });
+                        const opEntry = clients.get(opponentId);
+                        if (opEntry) {
+                            opEntry.user.status = 'online';
+                            opEntry.user.roomId = null;
+                            upsertMemberFromUser(opEntry.user);
+                        }
+                    }
+                    ensureSpectatorSet(r).forEach((specId) => {
+                        sendToClient(specId, {
+                            type: 'game:ended',
+                            roomId: r.roomId,
+                            reason: 'disconnected',
+                            winner
+                        });
+                    });
+                    markRoomEnded(rid);
                     rooms.delete(rid);
                 }
             }
