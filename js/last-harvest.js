@@ -106,7 +106,7 @@ function sanitizeState(s){
  return s;
 }
 let stateRepaired=false;
-let eventAccess={active:false,phase:'unknown',startsAt:null,endsAt:null};let remoteSaveTimer=null,remoteSaveBusy=false;
+let eventAccess={active:false,phase:'unknown',startsAt:null,endsAt:null};let remoteSaveTimer=null,remoteSaveBusy=false,remoteSaveDirty=false;
 let state=createFreshState('','Guardian');
 state.x=MAP_W*TILE/2;state.y=MAP_H*TILE/2;
 let keys={},touch={},joystick={x:0,y:0},scene='outside',interiorId=0,insideTalked=false,questStep=0,dialogue=null,dialogueIndex=0,nearby=null,lastTime=0,moveCooldown=0,playerFrame=0,worldSeed=13,cinematic=null;
