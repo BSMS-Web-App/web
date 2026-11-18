@@ -182,10 +182,14 @@ const DEAD_EPILOGUE={
 };
 /* the Hollow King's crown holds the last wish in the valley: four ways to end the harvest */
 function askFinalWish(done){
- const opts=[{label:'ASK FOR MY PARENTS',value:'parents'},{label:'ASK FOR ROWAN',value:'rowan'},
-  {label:'END THE HUNGER FOR GOOD',value:'hunger'},{label:'REFUSE THE WISH',value:'refuse'}];
- askStoryChoice('THE HOLLOW KING','The crown splits open in your hands. One wish is left inside it. What do you ask for?',opts,v=>{
-  state.wish=v;state.finalChoice=v;save();
+ const opts=[
+  {label:'Bring back Mara and Thomas.',detail:'Your parents return. Rowan remains gone.',value:'parents'},
+  {label:'Bring back Rowan.',detail:'Rowan returns. Your parents remain beyond the door.',value:'rowan'},
+  {label:'End hunger everywhere.',detail:'No one returns, but nobody in the valley will go hungry again.',value:'hunger'},
+  {label:'Refuse the wish.',detail:'The wish is unused. Your parents and Rowan remain gone.',value:'refuse'}
+ ];
+ askStoryChoice('THE HOLLOW KING','The crown holds one final wish. Choose carefully: this decides who, if anyone, returns. You will make a separate choice about the Hollow King’s fate later.',opts,v=>{
+  state.wish=v;save();
   const after={
    parents:[['YOU','Bring them back. My mother and my father.'],['THE HOLLOW KING','As you ask. Remember who paid for it.'],['JOURNAL','The crown goes quiet. Somewhere beyond the door, two voices start arguing about dinner.']],
    rowan:[['YOU','Bring Rowan back.'],['THE HOLLOW KING','You would spend a wish on the one who sold you?'],['YOU','Yes.'],['JOURNAL','The crown goes quiet. In the broken hall, a body takes a breath.']],
@@ -1370,8 +1374,29 @@ function playRowanConfrontation(done){
  }catch(err){console.error('[LH] Rowan cutscene failed:',err);}
   cinematic=null;document.body.classList.remove('lh-cinematic');done();})();
 }
-function areaBossIntro(n){const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;if(!mainQuestReady(A.chapter)){const q=mainQuestData(A.chapter);setDialogue([['JOURNAL','The guardian will not face you yet. Speak with at least two people in this region ('+(q.talked||[]).length+'/2) and defeat three wild creatures ('+(q.kills||0)+'/3).']]);return;}A.bossTalk=1;if(A.chapter===5&&g.name==='ROWAN'){playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan looks at you, waiting to hear what happens to your friendship.',[{label:'I forgive you. We will fix this together.',value:'forgive'},{label:'I care about you, but trust must be earned.',value:'cautious'}],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;}if(A.chapter===9){playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();askStoryChoice('YOU','The Hollow King’s power is fading. What should happen to the Everfeast’s final light?', [{label:'Offer him a chance to belong.',value:'mercy'},{label:'Seal the darkness and protect Hearthvale.',value:'seal'}],value=>{state.finalChoice=value;save();startBattle(g);});});});return;}playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();A.bossTalk=0;startBattle(g);});});}
-function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!cinematic&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=(STORY[A.chapter]||{post:[]}).post;setTimeout(()=>{const go=()=>{leaveArea('village');};
+function areaBossIntro(n){
+ const A=AREA,g=n.trainer;if(state.beaten[g.id]||A.bossTalk)return;
+ if(!mainQuestReady(A.chapter)){
+  const q=mainQuestData(A.chapter),talked=Math.min(2,q.talked.length),kills=Math.min(3,q.kills);
+  setDialogue([['JOURNAL','This guardian is not ready to face you yet. Complete both tasks: speak with two different residents ('+talked+'/2) and defeat three wild creatures ('+kills+'/3). Find residents around this region and wild creatures along the trail.']]);return;
+ }
+ A.bossTalk=1;
+ if(A.chapter===5&&g.name==='ROWAN'){
+  playRowanConfrontation(()=>{A.bossTalk=0;askStoryChoice('YOU','Rowan is still your friend, but he has hurt you. This choice shapes your relationship; it does not decide whether he survives the battle. The final wish later can bring him back.',[
+   {label:'I forgive you.',detail:'You choose to rebuild your friendship together.',value:'forgive'},
+   {label:'Trust must be earned.',detail:'You care about him, but he must earn your trust again.',value:'cautious'}
+  ],value=>{state.rowanChoice=value;state.rowanTrust=value==='forgive'?2:1;save();startBattle(g);});});return;
+ }
+ if(A.chapter===9){
+  playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();askStoryChoice('YOU','Your final wish has already decided who returns. This separate choice decides the Hollow King’s fate.',[
+   {label:'Welcome him to the feast.',detail:'He is forgiven and given a place at the table.',value:'mercy'},
+   {label:'Seal him beyond Hearthvale.',detail:'He remains contained and does not join the feast.',value:'seal'}
+  ],value=>{state.kingChoice=value;save();startBattle(g);});});});return;
+ }
+ playBossScene(g,end=>{setDialogue(g.lines.map(t=>[g.name,t]),()=>{end();A.bossTalk=0;startBattle(g);});});
+}
+function chapterPostLines(c){const lines=[...((STORY[c]||{post:[]}).post||[])];if(c===9){lines.push(state.kingChoice==='seal'?'The Hollow King remains sealed beyond the sanctuary. His place at the table is empty, but Hearthvale keeps its doors open to everyone else.':'The Hollow King takes the seat you offered. For the first time, he is a guest instead of an outsider.');}return lines;}
+function areaTick(){if(scene!=='area'||!AREA)return;const A=AREA;if(A.wilds&&A.npcs.some(n=>n.alpha&&state.beaten[n.trainer.id]))A.npcs=A.npcs.filter(n=>!(n.alpha&&state.beaten[n.trainer.id]));if(A.boss&&A.justBeatBoss&&state.beaten[A.boss.id]&&!battle&&!dialogue&&!cinematic&&!A.leaving){A.leaving=true;A.justBeatBoss=false;A.npcs=A.npcs.filter(n=>!n.boss);for(let i=npcs.length-1;i>=0;i--)if(npcs[i].region===A.chapter)npcs.splice(i,1);const q=mainQuestData(A.chapter);q.complete=true;save();const post=chapterPostLines(A.chapter);setTimeout(()=>{const go=()=>{leaveArea('village');};
  const show=()=>{if(dialogue||cinematic||battle){setTimeout(show,300);return;}if(post.length)setDialogue(post.map(t=>['JOURNAL',t]),go);else go();};
  show();},600);}}
 function chapterEpilogue(c,n){
@@ -2532,14 +2557,14 @@ function p2Foe(){const m=P2_SERVANTS[0],f=P2_SERVANTS[1],st=p2Stats();
  return{id:'hollow',bossLike:true,name:'THE HOLLOW SERVANTS',foeName:m.name,hp:st.hpM,atk:st.atkM,reward:500,xp:600,theme:m.theme,sbi:m.sbi,sig:m.sig,
   twin:{name:f.name,hp:st.hpF,atk:st.atkF,theme:f.theme,sbi:f.sbi,sig:f.sig},lines:[],win:[],onEnd:p2End};}
 function p2Letter(){
- const el=ov('<h3>A LETTER FROM HOME</h3><p class="note">The road north opened at dawn. We are back. Come to the square tonight \u2014 there is so much we have to tell you.</p><p class="note">\u2014 Mum &amp; Dad</p><div class="row"><button class="lh-ob" id="p2-ok">TO THE SQUARE</button></div>');
+ const el=ov('<h3>PHASE TWO · A LETTER FROM HOME</h3><p class="note">The ten-chapter story is complete, but a new mystery has appeared. A letter in your parents’ handwriting asks you to come to the square tonight. Something about it feels wrong.</p><p class="note">A separate epilogue · Unlocked after the main adventure</p><div class="row"><button class="lh-ob" id="p2-ok">TO THE SQUARE</button></div>');
  const ok=el.querySelector('#p2-ok');if(ok)ok.onclick=()=>{sfx('menu');el.close();};
 }
 function p2Toast(){
  try{
   const old=document.getElementById('lh-toast');if(old)old.remove();
   const el=document.createElement('div');el.id='lh-toast';el.className='lh-toast';
-  el.textContent='A LETTER FROM HOME \u00B7 MUM AND DAD ARE WAITING IN THE SQUARE';
+  el.textContent='PHASE TWO EPILOGUE \u00B7 A STRANGE LETTER WAITS IN THE SQUARE';
   document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},7000);
  }catch(e){}
 }
@@ -2576,7 +2601,7 @@ function p2End(won){
   ['HOLLOW MOTHER','So that is what a heart feels like. It is very loud.'],
   ['HOLLOW FATHER','The King will send others. He always does.'],
   ['JOURNAL','They come apart like wet paper, and the sigil burns itself out on the flagstones.'],
-  ['JOURNAL','Your real parents are still missing \u2014 but the Hollow King knows your name now.'],
+  ['JOURNAL',state.wish==='parents'?'Mara and Thomas are safe at home. These were Hollow Servants wearing familiar faces; your wish has not been undone.':'Your parents remain beyond the wish you chose. These were Hollow Servants wearing their faces; they were never your parents.'],
   ['REWARD','+600 XP \u00b7 +500 COINS']
  ]);
 }
@@ -2958,7 +2983,7 @@ function askStoryChoice(speaker,prompt,options,onPick){
  const box=$('lh-dialogue'),next=$('lh-next'),row=document.createElement('div');
  row.className='lh-story-choices';row.setAttribute('role','group');row.setAttribute('aria-label','Story choice');
  next.hidden=true;
- options.forEach((option,index)=>{const button=document.createElement('button');button.type='button';button.className='lh-gold-button';button.textContent=option.label;button.addEventListener('click',()=>{sfx('confirm');row.remove();next.hidden=false;onPick(option.value);closeDialogue();});row.appendChild(button);});
+ options.forEach(option=>{const button=document.createElement('button');button.type='button';button.className='lh-gold-button';button.setAttribute('aria-label',option.label+(option.detail?' — '+option.detail:''));const title=document.createElement('strong');title.className='lh-story-choice-title';title.textContent=option.label;button.appendChild(title);if(option.detail){const detail=document.createElement('small');detail.className='lh-story-choice-detail';detail.textContent=option.detail;button.appendChild(detail);}button.addEventListener('click',()=>{sfx('confirm');row.remove();next.hidden=false;onPick(option.value);closeDialogue();});row.appendChild(button);});
  box.appendChild(row);
 }
 const PENDING_LINES=[];
