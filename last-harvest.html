@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#17251c">
+<title>The Last Harvest — Adventure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/last-harvest.css?v=42"></head>
+<body class="lh-body">
+<style>#lh-loading{position:fixed;inset:0;z-index:120;display:grid;place-items:center;background:#17251c;color:#fff4d8;font:8px "Press Start 2P",ui-monospace,monospace;letter-spacing:.16em;text-align:center}</style>
+<div id="lh-loading" class="lh-loading" role="status" aria-live="polite" aria-label="Loading The Last Harvest">
+  <div class="lh-loading-in">
+    <p class="lh-loading-eyebrow">A 16-BIT AUTUMN ADVENTURE</p>
+    <h1 class="lh-loading-title">THE LAST <span>HARVEST</span></h1>
+    <div class="lh-loading-bar" role="presentation"><i id="lh-loading-fill"></i></div>
+    <p class="lh-loading-note" id="lh-loading-note">GATHERING THE HARVEST&hellip;</p>
+  </div>
+</div>
+<div id="lh-access-gate" class="lh-access-gate" hidden role="alertdialog" aria-modal="true" aria-labelledby="lh-access-title" aria-describedby="lh-access-copy">
+  <section class="lh-access-card">
+    <p class="lh-access-eyebrow">BSMS WEB · THE LAST HARVEST</p>
+    <h1 id="lh-access-title">CHECKING EVENT ACCESS</h1>
+    <p id="lh-access-copy">Checking your account and the official event window…</p>
+    <button id="lh-access-action" type="button" class="lh-access-button">PLEASE WAIT</button>
+    <p id="lh-access-note" class="lh-access-note">The event uses the server clock.</p>
+  </section>
+</div>
+<main id="lh-game" class="lh-game">
+  <canvas id="lh-world" aria-label="The Last Harvest pixel-art game world" aria-describedby="lh-accessibility-status"></canvas>
+  <div class="lh-hud">
+    <div class="lh-hud-hero"><div class="lh-hud-avatar"><canvas id="lh-hud-avatar" width="16" height="16" aria-hidden="true"></canvas></div><div class="lh-hud-id"><b id="lh-name-hud">ADVENTURER</b><span class="lh-hud-sub"><i id="lh-class-hud">CLASS</i> · LV <em id="lh-level-hud">1</em></span><span class="lh-lvl-chip">LV <em id="lh-level-chip">1</em></span></div></div>
+    <div class="lh-hud-bars"><div class="lh-bar hp"><label>HP</label><div class="lh-bar-track"><div id="lh-hp-fill" class="lh-bar-fill"></div></div><b id="lh-health">40</b></div><div class="lh-bar mp"><label>MP</label><div class="lh-bar-track"><div id="lh-mp-fill" class="lh-bar-fill"></div></div><b id="lh-mp-hud">20</b></div></div>
+    <div class="lh-hud-coins"><i class="lh-coin"></i><b id="lh-coins">100</b></div>
+    <button id="lh-menu" class="lh-menu-button" aria-label="Open field journal">MENU</button>
+  </div>
+  <div id="lh-location" class="lh-location">HEARTHVALE VILLAGE</div>
+  <aside id="lh-quest" class="lh-quest"><b>✦ CURRENT QUEST</b><span id="lh-quest-text">Speak with Elder Maple</span></aside>
+  <div class="lh-controls-hint">WASD / ARROWS TO MOVE · TAP TO INTERACT</div>
+  <div id="lh-dialogue" class="lh-dialogue" hidden>
+    <div class="lh-dialogue-speaker"><canvas id="lh-portrait" width="64" height="64" aria-hidden="true"></canvas><div><div class="lh-speaker" id="lh-speaker">ELDER MAPLE</div><p id="lh-dialogue-text" aria-live="polite" aria-atomic="true"></p></div></div>
+    <button id="lh-next" class="lh-gold-button">CONTINUE ▶</button>
+  </div>
+  <div id="lh-create" class="lh-overlay">
+    <section class="lh-modal">
+      <div class="lh-eyebrow">A 16-BIT AUTUMN ADVENTURE</div><h1>THE LAST <span>HARVEST</span></h1>
+      <p>The Everfeast is fading. Hearthvale needs a hero.</p>
+      <label class="lh-field">WHAT IS YOUR NAME?<input id="lh-name-input" maxlength="16" autocomplete="off" placeholder="Enter your name"></label>
+      <button id="lh-begin" class="lh-gold-button lh-start">BEGIN YOUR STORY</button>
+      <p class="lh-footnote">Your adventure saves automatically to your BSMS Web account.</p>
+    </section>
+  </div>
+  <div id="lh-school-class" class="lh-overlay" hidden>
+    <section class="lh-modal">
+      <div class="lh-eyebrow">HEARTHVALE SCHOOL</div><h2>CHOOSE YOUR PATH</h2>
+      <p>Rowan waits beside you as the instructor explains the three paths. Which one will you follow?</p>
+      <div class="lh-class-grid">
+        <button class="lh-class selected" data-class="Guardian"><span>🛡️</span><b>GUARDIAN</b><small>Strong defense · steady attacks</small></button>
+        <button class="lh-class" data-class="Scout"><span>🏹</span><b>SCOUT</b><small>Quick movement · powerful strikes</small></button>
+        <button class="lh-class" data-class="Mage"><span>✨</span><b>MAGE</b><small>Harvest magic · balanced power</small></button>
+      </div>
+      <button id="lh-school-confirm" class="lh-gold-button lh-start">CONFIRM CLASS</button>
+    </section>
+  </div>
+  <div id="lh-touch" class="lh-touch" aria-label="Touch movement controls">
+    <div id="lh-joystick" class="lh-joystick" role="application" aria-label="Virtual movement joystick"><div id="lh-stick" class="lh-stick"></div></div>
+
+  </div>
+  <div id="lh-game-menu" class="lh-overlay" hidden>
+    <section class="lh-journal" aria-label="Field journal">
+      <header class="lh-j-head"><div class="lh-j-title"><h2>FIELD JOURNAL</h2></div><button id="lh-resume" class="lh-j-close" aria-label="Close menu"></button></header>
+      <nav class="lh-j-tabs" aria-label="Adventure menu"><button class="active" data-rpg-tab="status">STATUS</button><button data-rpg-tab="bag">BAG</button><button data-rpg-tab="journal">QUESTS</button><button data-rpg-tab="tower">TOWER</button></nav>
+      <div id="lh-rpg-content" class="lh-j-body" aria-live="polite"></div>
+      <footer class="lh-j-foot"><button id="lh-resume2" class="lh-j-btn gold">RESUME</button></footer>
+      <p class="lh-j-foot-note">Progress automatically saves to your BSMS account and follows you across devices.</p>
+    </section>
+  </div>
+  <div id="lh-accessibility-status" class="lh-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+</main>
+<script src="/js/last-harvest.js?v=143" defer></script>
+</body></html>

@@ -22,17 +22,30 @@ async function rejectFlaggedContent(res, value, label) {
 }
 
 
-// Session validator
+// Session validator: resolve indexed sessions directly, with a one-time legacy migration.
 async function getUserBySession(sessionId) {
     if (!sessionId || !db) return null;
-    const snap = await db.ref('/accounts').once('value');
-    const accounts = snap.val() || {};
-    
-    for (const [uid, acc] of Object.entries(accounts)) {
-        if (acc.sessions && acc.sessions[sessionId]) {
-            return { uid, account: acc };
+    const indexRef = db.ref('/session_index/' + sessionId);
+    const indexSnap = await indexRef.once('value');
+    const indexed = indexSnap.val();
+    if (indexed?.checked === true && !indexed?.uid) return null;
+    const indexedUid = typeof indexed === 'string' ? indexed : indexed?.uid;
+    if (indexedUid) {
+        const accountSnap = await db.ref('/accounts/' + indexedUid).once('value');
+        const account = accountSnap.val();
+        if (account && account.account_status !== 'deleted' && account.sessions?.[sessionId]) {
+            return { uid: indexedUid, account };
+        }
+        await indexRef.remove();
+    }
+    const accountsSnap = await db.ref('/accounts').once('value');
+    for (const [uid, account] of Object.entries(accountsSnap.val() || {})) {
+        if (account?.account_status !== 'deleted' && account?.sessions?.[sessionId]) {
+            await indexRef.set({ uid, createdAt: account.sessions[sessionId].createdAt || Date.now() });
+            return { uid, account };
         }
     }
+    await indexRef.set({ checked: true, checkedAt: Date.now() });
     return null;
 }
 
@@ -188,6 +201,7 @@ export default async function handler(req, res) {
                 };
 
                 await db.ref(`/accounts/${uid}`).set(newAccount);
+                await db.ref(`/session_index/${newSessionId}`).set({ uid, createdAt: currentTimestamp });
                 await db.ref(`/chat/users/${uid}`).set({
                     status: 'online',
                     lastSeen: currentTimestamp,
@@ -245,6 +259,7 @@ export default async function handler(req, res) {
                     lastActive: admin.database.ServerValue.TIMESTAMP,
                     deviceId: clientDeviceId || "" // Storing ONLY in session scope
                 });
+                await db.ref(`/session_index/${newSessionId}`).set({ uid: targetUid, createdAt: admin.database.ServerValue.TIMESTAMP });
 
                 const { password: _, ...safeProfile } = targetAcc;
                 safeProfile.avatar = mediaUrl(safeProfile.avatar);
@@ -257,6 +272,7 @@ export default async function handler(req, res) {
                 
                 // Naturally deletes the device ID linkage because it is scoped entirely inside this session node
                 await db.ref(`/accounts/${user.uid}/sessions/${sessionId}`).remove();
+                await db.ref(`/session_index/${sessionId}`).remove();
                 return res.status(200).json({ success: true });
             }
 
@@ -426,6 +442,7 @@ export default async function handler(req, res) {
                 
                 if (payload.sessionId) {
                     await db.ref(`/accounts/${user.uid}/sessions/${payload.sessionId}`).remove();
+                    await db.ref(`/session_index/${payload.sessionId}`).remove();
                 }
                 return res.status(200).json({ success: true });
             }
@@ -443,6 +460,7 @@ export default async function handler(req, res) {
                 
                 await db.ref(`/accounts/${user.uid}/account_status`).set('deleted');
                 await db.ref(`/accounts/${user.uid}/sessions`).remove();
+                const sessionIndexUpdates = {}; Object.keys(user.account.sessions || {}).forEach(id => { sessionIndexUpdates[`/session_index/${id}`] = null; }); if (Object.keys(sessionIndexUpdates).length) await db.ref().update(sessionIndexUpdates);
                 return res.status(200).json({ success: true });
             }
 
