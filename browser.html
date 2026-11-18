@@ -12,6 +12,7 @@
   <title>Web Browser — BSMS Web</title>
   <link rel="icon" href="/img/icon.png">
   <link rel="apple-touch-icon" href="/img/app-icon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/browser.css">
   <script defer src="/js/browser.js"></script>
@@ -61,7 +62,7 @@
         <p class="eyebrow">BSMS WEB BROWSER</p>
         <h1>Explore the web.</h1>
         <p class="empty-description">Enter any public HTTPS website to open it through BSMS Web.</p>
-        <div class="browser-capabilities">
+        <div class="reader-capabilities">
           <div class="capability">
             <span class="capability-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
             <span><strong>Open web</strong><small>No website allowlist</small></span>
@@ -71,7 +72,7 @@
             <span><strong>Private by design</strong><small>Requests use Cloudflare egress</small></span>
           </div>
         </div>
-        <p class="browser-note">JavaScript, forms, styles, and supported downloads run inside an isolated sandbox. Some websites may still restrict Cloudflare requests or rely on browser features Reader cannot proxy. Private and local network addresses remain blocked.</p>
+        <p class="reader-note">JavaScript, forms, styles, and supported downloads run inside an isolated sandbox. Some websites may still restrict Cloudflare requests or rely on browser features Reader cannot proxy. Private and local network addresses remain blocked.</p>
         <a class="signin-link" href="/accounts" id="signinLink" hidden>Open account sign-in</a>
       </div>
       <iframe id="browserFrame" title="Website content" sandbox="allow-scripts allow-forms allow-downloads allow-popups" referrerpolicy="no-referrer" hidden></iframe>
