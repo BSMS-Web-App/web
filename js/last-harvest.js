@@ -77,7 +77,7 @@ function migrateSave(s){
  s.saveVersion=SAVE_VERSION;
  return s;
 }
-/* saves are the only copy of player progress, so nothing reaches the game unclamped */
+/* Local storage is the fast cache; a debounced, validated account snapshot is the cross-device save. */
 function clampInt(value,min,max,fallback){const n=Math.round(Number(value));return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
 function sanitizeState(s){
  if(!s||typeof s!=='object')return s;
@@ -618,10 +618,9 @@ function showAccessGate(result){eventAccess={active:false,phase:result.phase||re
 function scheduleRemoteSave(){if(!eventIsActive()||!state||!state.name||!sessionId())return;if(remoteSaveTimer)clearTimeout(remoteSaveTimer);remoteSaveTimer=setTimeout(async()=>{remoteSaveTimer=null;if(remoteSaveBusy||!eventIsActive())return;remoteSaveBusy=true;try{const playerData={...state};delete playerData.stage;delete playerData.coins;delete playerData.xp;delete playerData.completedAt;const r=await contestPostFull({action:'save-player',playerData});if(r.status===410||r.status===425)showAccessGate({reason:r.status===410?'ended':'upcoming'});}catch(e){}finally{remoteSaveBusy=false;}},1800);}
 function flushRemoteSave(){if(remoteSaveTimer)clearTimeout(remoteSaveTimer);remoteSaveTimer=null;if(!eventIsActive()||!state||!state.name||!sessionId())return;const playerData={...state};delete playerData.stage;delete playerData.coins;delete playerData.xp;delete playerData.completedAt;try{fetch('/api/last-harvest',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json','X-Session-ID':sessionId()},body:JSON.stringify({action:'save-player',playerData})}).catch(()=>{});}catch(e){}}
 
-/* Contest sync: the adventure is still played locally, but stage clears and
-   loadout choices are mirrored to the contest API so the server keeps its own
-   record of the run. A missing session stays silent; a server refusal on a
-   stage clear is retried and, if it cannot be, shown to the player. */
+/* The account save mirrors the full contest-relevant adventure snapshot. The API keeps
+   stage, XP, coins and completion timestamps authoritative; the browser snapshot
+   supplies the character, inventory, equipment tiers, quests and story flags. */
 /* A stage is only completable inside a run the server issued, so the fight
    starts one and its token travels with the completion. */
 let stageRun=null;
@@ -645,7 +644,7 @@ function contestNotice(text){try{const old=document.getElementById('lh-toast');i
  catch(e){}
  setTimeout(()=>{if(el.parentNode)el.remove();},6500);}catch(e){}}
 let contestPending=0;
-/* A signed-out player has no contest credit to lose, so stay quiet for them. */
+/* Authentication is gated before the title screen; this guard also protects stale sessions. */
 async function contestCompleteStage(stage,token){
  if(!sessionId())return false;
  if(contestPending===stage)return false;
@@ -679,9 +678,8 @@ async function contestCompleteStage(stage,token){
   return false;
  }finally{contestPending=0;}}
 
-/* The contest keeps its own copy of the run. On boot we take it back where it
-   is ahead of this device a cleared save or a second browser.
-   Only forward: a local save that is further along is never rewound. */
+/* On boot, hydrate the account-held player snapshot before showing the title screen.
+   Server-recorded stage rewards and completion timestamps remain authoritative. */
 /* A stage clear the API refused is replayed on the next load, once there is a
    session to replay it with. */
 async function flushPendingStage(){
