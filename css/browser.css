@@ -165,7 +165,7 @@ button, input, a { font: inherit; }
   border-radius: 15px;
   background: #fff;
 }
-#readerFrame {
+#browserFrame {
   display: block;
   width: 100%;
   height: 100%;
@@ -173,7 +173,7 @@ button, input, a { font: inherit; }
   border: 0;
   background: #fff;
 }
-#readerFrame[hidden], .empty-state[hidden] { display: none; }
+#browserFrame[hidden], .empty-state[hidden] { display: none; }
 .empty-state {
   min-height: 640px;
   display: flex;
@@ -303,7 +303,7 @@ button, input, a { font: inherit; }
   .address-form input { font-size: 18px; }
   .status-row { align-items: flex-start; flex-direction: column; gap: 0; padding: 0 13px 9px; font-size: 13px; }
   .content-frame { min-height: calc(100dvh - 220px); margin: 0 7px 9px; }
-  .empty-state, #readerFrame { min-height: calc(100dvh - 220px); }
+  .empty-state, #browserFrame { min-height: calc(100dvh - 220px); }
   .empty-state { padding: 28px 18px; }
   .empty-state h1 { font-size: 38px; }
   .empty-description { font-size: 18px; }
@@ -316,3 +316,6 @@ button, input, a { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Browser toolbar icon-library glyphs */
+.icon-button i { font-size: 17px; line-height: 1; }
