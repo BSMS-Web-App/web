@@ -80,9 +80,11 @@ function foreignTimestamp(body){
  return null;
 }
 async function ensureFinisher(user,completedAt){
- const ref=db.ref('/last_harvest/finishers/'+user.uid);
- const record={uid:user.uid,displayName:user.account.display_name||user.account.username||'Player',completedAt:Number(completedAt)||Date.now()};
- const result=await ref.transaction(existing=>existing&&Number.isFinite(existing.completedAt)?undefined:record);
+ const ref=db.ref('/last_harvest/finishers/'+user.uid),existingSnap=await ref.once('value'),existing=existingSnap.val();
+ if(existing&&Number.isFinite(existing.completedAt))return existing;
+ const sequence=await db.ref('/last_harvest/finish_sequence').transaction(value=>(Number(value)||0)+1);
+ const record={uid:user.uid,displayName:user.account.display_name||user.account.username||'Player',completedAt:Number(completedAt)||Date.now(),finishOrder:Number(sequence.snapshot.val())||1};
+ const result=await ref.transaction(current=>current&&Number.isFinite(current.completedAt)?undefined:record);
  return result.snapshot.val()||record;
 }
 async function resolveUser(sessionId){
@@ -180,7 +182,7 @@ export default async function handler(req,res){
  if(req.method==='GET' && req.query.action==='leaderboard'){
   const boardSnap=await db.ref('/last_harvest/finishers').once('value');
   const rows=Object.values(boardSnap.val()||{}).filter(row=>row&&Number.isFinite(row.completedAt));
-  rows.sort((x,y)=>x.completedAt-y.completedAt);
+  rows.sort((x,y)=>x.completedAt-y.completedAt||(Number(x.finishOrder)||Number.MAX_SAFE_INTEGER)-(Number(y.finishOrder)||Number.MAX_SAFE_INTEGER)||String(x.uid||'').localeCompare(String(y.uid||'')));
   return res.status(200).json({success:true,rankings:rows.slice(0,50).map((row,index)=>({rank:index+1,displayName:row.displayName,completedAt:row.completedAt}))});
  }
  const ref=db.ref('/accounts/'+user.uid+'/last_harvest');
@@ -190,7 +192,7 @@ export default async function handler(req,res){
   const openStage=releasedStage();
   if(req.method==='GET'){
    if(state.stage===STAGES.length&&state.completedAt)await ensureFinisher(user,state.completedAt);
-   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,completionVerification:'time-gated-client-reported'});
+   return res.status(200).json({success:true,state,openStage,stageNames:STAGES,releaseAt:nextReleaseAt(openStage)?new Date(nextReleaseAt(openStage)).toISOString():null,displayName:user.account.display_name||user.account.username||'Player',phase:phase.phase,startsAt:phase.startsAt,endsAt:phase.endsAt,serverTime:phase.serverTime,completionVerification:'time-gated-client-reported'});
   }
   const body=reqBody,action=body.action;
   if(action==='save-loadout'){
