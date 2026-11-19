@@ -16,6 +16,14 @@
     {
       "source": "/g/:gameSlug",
       "destination": "/game-player?slug=:gameSlug"
+    },
+    {
+      "source": "/a-christmas-tale",
+      "destination": "/frostfall"
+    },
+    {
+      "source": "/event/a-christmas-tale",
+      "destination": "/frostfall"
     }
   ],
   "git": {
