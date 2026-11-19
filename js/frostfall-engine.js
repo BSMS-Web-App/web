@@ -307,8 +307,7 @@
       disc: discGeo(18)
     };
 
-    Object.keys(sources).forEach((name) => {
-      const source = sources[name];
+    function upload(source) {
       const vbo = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
       gl.bufferData(gl.ARRAY_BUFFER, source.position, gl.STATIC_DRAW);
@@ -318,12 +317,62 @@
       const ibo = gl.createBuffer();
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, source.index, gl.STATIC_DRAW);
-      geometries[name] = { vbo, nbo, ibo, count: source.index.length };
+      return { vbo, nbo, ibo, count: source.index.length, type: source.index instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT };
+    }
+
+    Object.keys(sources).forEach((name) => {
+      geometries[name] = upload(sources[name]);
     });
 
     let scene = { objects: [], fogColor: [0.72, 0.83, 0.94], fogNear: 26, fogFar: 74 };
     const camera = { eye: [0, 3, 9], target: [0, 1, 0], fov: 56 * Math.PI / 180, orthoSize: 0 };
     let currentGeo = null;
+    const stats = { calls: 0, objects: 0 };
+
+    /* Bake one primitive into a single static buffer per batch: hundreds of
+       studs become one draw call instead of one per stud. */
+    function batchGeometry(name, matrices) {
+      const source = sources[name] || sources.cube;
+      const copies = matrices.length;
+      const stride = source.position.length;
+      const position = new Float32Array(stride * copies);
+      const normal = new Float32Array(source.normal.length * copies);
+      const index = new Uint16Array(source.index.length * copies);
+      const vertices = (stride / 3) * copies;
+      if (vertices > 65535) return null;
+      for (let m = 0; m < copies; m++) {
+        const matrix = matrices[m];
+        const pBase = m * stride;
+        const nBase = m * stride;
+        for (let v = 0; v < stride; v += 3) {
+          const x = source.position[v], y = source.position[v + 1], z = source.position[v + 2];
+          position[pBase + v] = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+          position[pBase + v + 1] = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+          position[pBase + v + 2] = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14];
+          const nx = source.normal[v], ny = source.normal[v + 1], nz = source.normal[v + 2];
+          let tx = matrix[0] * nx + matrix[4] * ny + matrix[8] * nz;
+          let ty = matrix[1] * nx + matrix[5] * ny + matrix[9] * nz;
+          let tz = matrix[2] * nx + matrix[6] * ny + matrix[10] * nz;
+          const len = Math.hypot(tx, ty, tz) || 1;
+          normal[nBase + v] = tx / len;
+          normal[nBase + v + 1] = ty / len;
+          normal[nBase + v + 2] = tz / len;
+        }
+        const offset = (stride / 3) * m;
+        for (let k = 0; k < source.index.length; k++) {
+          index[m * source.index.length + k] = source.index[k] + offset;
+        }
+      }
+      return upload({ position, normal, index });
+    }
+
+    function releaseGeometry(geo) {
+      if (!geo || geo.released) return;
+      geo.released = true;
+      gl.deleteBuffer(geo.vbo);
+      gl.deleteBuffer(geo.nbo);
+      gl.deleteBuffer(geo.ibo);
+    }
 
     function resize() {
       const ratio = Math.min(global.devicePixelRatio || 1, 2);
@@ -342,9 +391,10 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    function bindGeometry(name) {
-      if (currentGeo === name) return geometries[name];
-      const geo = geometries[name] || geometries.cube;
+    function bindGeometry(key) {
+      const geo = typeof key === 'string' ? (geometries[key] || geometries.cube) : key;
+      if (!geo) return geometries.cube;
+      if (currentGeo === geo) return geo;
       gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo);
       gl.enableVertexAttribArray(loc.aPos);
       gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 0, 0);
@@ -352,7 +402,7 @@
       gl.enableVertexAttribArray(loc.aNormal);
       gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
-      currentGeo = name;
+      currentGeo = geo;
       return geo;
     }
 
@@ -364,11 +414,14 @@
         gl.uniformMatrix4fv(loc.uModel, false, object.model);
         gl.uniform3fv(loc.uColor, object.color);
         gl.uniform1f(loc.uAlpha, object.alpha === undefined ? 1 : object.alpha);
-        gl.drawElements(gl.TRIANGLES, geo.count, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, geo.count, geo.type || gl.UNSIGNED_SHORT, 0);
+        stats.calls += 1;
       }
     }
 
     function render() {
+      stats.calls = 0;
+      stats.objects = scene.objects.length;
       const size = resize();
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -413,6 +466,9 @@
       render,
       gl,
       setScene(next) { scene = next; },
+      batchGeometry,
+      releaseGeometry,
+      stats() { return { calls: stats.calls, objects: stats.objects }; },
       setCamera(eye, target, fov, orthoSize) {
         camera.eye = eye;
         camera.target = target;

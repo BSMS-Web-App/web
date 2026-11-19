@@ -549,14 +549,35 @@
     world.colliders.push({ x: x, z: z, hw: 0.42 * s, hd: 0.42 * s });
   }
 
+  /* Studs are collected per colour and baked into one buffer (see flushStuds),
+     so a studded plaza costs a draw call instead of hundreds. */
+  var STUD_BATCH_MAX = 400;
   function studs(x, z, width, depth, topY, color, spacing) {
+    if (!world) return;
     spacing = spacing || 1.7;
     var radius = 0.2;
+    var groups = world.studGroups || (world.studGroups = {});
+    var group = groups[color] || (groups[color] = { color: color, matrices: [] });
     for (var sx = -width / 2 + spacing / 2; sx <= width / 2 - 0.05; sx += spacing) {
       for (var sz = -depth / 2 + spacing / 2; sz <= depth / 2 - 0.05; sz += spacing) {
-        box(x + sx, topY + 0.07, z + sz, radius * 2, 0.14, radius * 2, color, { geo: 'cylinder' });
+        group.matrices.push(mat.compose([x + sx, topY + 0.07, z + sz], [0, 0, 0], [radius * 2, 0.14, radius * 2]));
       }
     }
+  }
+
+  function flushStuds() {
+    var groups = world && world.studGroups;
+    if (!groups || !renderer) return;
+    Object.keys(groups).forEach(function (key) {
+      var group = groups[key];
+      for (var start = 0; start < group.matrices.length; start += STUD_BATCH_MAX) {
+        var geo = renderer.batchGeometry('cylinder', group.matrices.slice(start, start + STUD_BATCH_MAX));
+        if (!geo) continue;
+        world.geometries.push(geo);
+        world.objects.push({ geo: geo, model: mat.identity(), color: rgb(group.color), alpha: 1, hidden: false });
+      }
+    });
+    world.studGroups = null;
   }
 
   function snowPile(x, z, s) {
@@ -1020,7 +1041,9 @@
   function continueGame() {
     if (!save || !save.started || save.ending) return;
     if (phaseAt() === 'ended') { showEnded(); return; }
+    var showIntro = save.chapter === 0 && !save.seenIntro;
     buildWorld(save.chapter);
+    if (showIntro) startIntroCutscene(true);
   }
 
   function showChapterScreen(index) {
@@ -1109,8 +1132,9 @@
     cutscene.shard = shard;
   }
 
-  function startIntroCutscene() {
+  function startIntroCutscene(resume) {
     if (!world) return;
+    cutscene.resume = Boolean(resume);
     hideScreens();
     ui.hud.hidden = true;
     ui.objective.hidden = true;
@@ -1167,10 +1191,15 @@
   }
 
   function endCutscene() {
+    var resume = cutscene.resume;
     cutscene.active = false;
+    cutscene.resume = false;
     ui.cutscene.hidden = true;
     cutscene.star = null;
     cutscene.shard = null;
+    /* Continuing a chapter-one save returns straight to the world; a new
+       story still gets the chapter card. */
+    if (resume && save) { buildWorld(save.chapter); return; }
     showChapterScreen(0);
   }
 
@@ -1350,8 +1379,12 @@
     index = clamp(index, 0, CHAPTERS.length - 1);
     save.chapter = index;
     var chapter = CHAPTERS[index];
-    world = { objects: [], colliders: [], interactables: [], actors: [], chapter: index, theme: chapter.theme, spawn: chapter.spawn.slice() };
+    if (world && world.geometries && renderer) {
+      world.geometries.forEach(function (geo) { renderer.releaseGeometry(geo); });
+    }
+    world = { objects: [], colliders: [], interactables: [], actors: [], geometries: [], chapter: index, theme: chapter.theme, spawn: chapter.spawn.slice() };
     chapter.build();
+    flushStuds();
     player = buildHero(heroPalette());
     player.x = chapter.spawn[0];
     player.z = chapter.spawn[1];
@@ -2607,6 +2640,7 @@
         if (battle && battle.window) battle.window.closeAt = Date.now() + (ms || 5000);
       },
       cards: function () { return { equipped: save.cards.slice(), mods: cardMods(), spent: cardCost(), bp: save.bp }; },
+      drawCalls: function () { return renderer && renderer.stats ? renderer.stats() : null; },
       openChapter: function (index) { if (!save) { save = freshSave(); save.started = true; } save.chapter = index; showChapterScreen(index); }
     };
   }
