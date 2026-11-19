@@ -1,10 +1,10 @@
-/* The Frostfall site-wide event announcement. */
+/* The A Christmas Tale site-wide event announcement. */
 (() => {
   'use strict';
   const START = Date.parse('2026-11-19T05:00:00.000Z');
   const END = Date.parse('2027-01-05T04:59:00.000Z');
   const KEY = 'frostfall_event_announcement_dismissed_v1';
-  const EVENT_URL = '/frostfall';
+  const EVENT_URL = '/a-christmas-tale';
   if (Date.now() < START || Date.now() >= END) return;
   if (window.top !== window.self) return;
   if (location.pathname.replace(/\/+$/, '') === EVENT_URL) return;
@@ -47,9 +47,9 @@
     overlay.setAttribute('aria-labelledby','ff-ann-title');
     overlay.innerHTML = `
       <section class="ff-ann-card">
-        <div class="ff-ann-art" role="img" aria-label="Frostfall: The Star That Went Out"><span class="ff-ann-logo"><small>FROST</small><b>FALL</b><i></i><em>THE STAR THAT WENT OUT</em></span></div>
+        <div class="ff-ann-art" role="img" aria-label="A Christmas Tale: The Star That Went Out"><span class="ff-ann-logo"><small>A CHRISTMAS</small><b>TALE</b><i></i><em>THE STAR THAT WENT OUT</em></span></div>
         <p class="ff-ann-eyebrow">BSMS WEB · LIMITED-TIME 3D EVENT</p>
-        <h2 id="ff-ann-title">FROSTFALL IS NOW ON</h2>
+        <h2 id="ff-ann-title">A CHRISTMAS TALE IS NOW ON</h2>
         <p class="ff-ann-copy">Five chapters, a low-poly Roadtown, and a star that went out. Play the new 3D adventure and bring the light back before January 4.</p>
         <div class="ff-ann-actions">
           <button type="button" class="ff-ann-play" data-action="play">PLAY THE EVENT</button>

@@ -64,6 +64,17 @@
         0, 0, 2 * far * near * nf, 0
       ]);
     },
+    ortho(left, right, bottom, top, near, far) {
+      const nf = 1 / (near - far);
+      return new Float32Array([
+        2 / (right - left), 0, 0, 0,
+        0, 2 / (top - bottom), 0, 0,
+        0, 0, 2 * nf, 0,
+        -(right + left) / (right - left),
+        -(top + bottom) / (top - bottom),
+        (far + near) * nf, 1
+      ]);
+    },
     lookAt(eye, target, up) {
       let zx = eye[0] - target[0], zy = eye[1] - target[1], zz = eye[2] - target[2];
       let len = Math.hypot(zx, zy, zz) || 1;
@@ -311,7 +322,7 @@
     });
 
     let scene = { objects: [], fogColor: [0.72, 0.83, 0.94], fogNear: 26, fogFar: 74 };
-    const camera = { eye: [0, 3, 9], target: [0, 1, 0], fov: 56 * Math.PI / 180 };
+    const camera = { eye: [0, 3, 9], target: [0, 1, 0], fov: 56 * Math.PI / 180, orthoSize: 0 };
     let currentGeo = null;
 
     function resize() {
@@ -362,7 +373,14 @@
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(program);
-      gl.uniformMatrix4fv(loc.uProj, false, M.perspective(camera.fov, size.width / size.height, 0.1, 160));
+      const aspect = size.width / size.height;
+      if (camera.orthoSize) {
+        const halfH = camera.orthoSize / 2;
+        const halfW = halfH * aspect;
+        gl.uniformMatrix4fv(loc.uProj, false, M.ortho(-halfW, halfW, -halfH, halfH, 0.1, 220));
+      } else {
+        gl.uniformMatrix4fv(loc.uProj, false, M.perspective(camera.fov, aspect, 0.1, 160));
+      }
       gl.uniformMatrix4fv(loc.uView, false, M.lookAt(camera.eye, camera.target, [0, 1, 0]));
       gl.uniform3fv(loc.uCam, camera.eye);
       gl.uniform3fv(loc.uFogColor, scene.fogColor || [0.72, 0.83, 0.94]);
@@ -395,10 +413,11 @@
       render,
       gl,
       setScene(next) { scene = next; },
-      setCamera(eye, target, fov) {
+      setCamera(eye, target, fov, orthoSize) {
         camera.eye = eye;
         camera.target = target;
         if (fov) camera.fov = fov;
+        camera.orthoSize = orthoSize || 0;
       }
     };
   }

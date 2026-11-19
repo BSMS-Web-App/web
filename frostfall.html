@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Frostfall: a five-chapter 3D winter adventure event from BSMS Web.">
+<meta name="description" content="A Christmas Tale: a five-chapter 3D holiday adventure event from BSMS Web.">
 <meta name="theme-color" content="#190f33">
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex,nofollow">
-<title>Frostfall — The Star That Went Out</title>
+<title>A Christmas Tale — The Star That Went Out</title>
 <link rel="icon" href="/img/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=1">
+<link rel="stylesheet" href="/css/frostfall.css?v=2">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
   <div id="ff-stage" class="ff-stage">
-    <canvas id="ff-canvas" aria-label="Frostfall low-poly 3D world"></canvas>
+    <canvas id="ff-canvas" aria-label="A Christmas Tale low-poly 3D world"></canvas>
     <canvas id="ff-snow" aria-hidden="true"></canvas>
     <div class="ff-vignette" aria-hidden="true"></div>
   </div>
@@ -61,8 +61,8 @@
 
   <div id="ff-loading" class="ff-screen ff-loading">
     <div class="ff-loading-in">
-      <p class="ff-eyebrow">A BSMS WEB WINTER EVENT</p>
-      <h1 class="ff-logo"><small>FROST</small><span>FALL</span></h1>
+      <p class="ff-eyebrow">A BSMS WEB HOLIDAY EVENT</p>
+      <h1 class="ff-logo"><small>A CHRISTMAS</small><span>TALE</span></h1>
       <p class="ff-loading-sub">The star that went out</p>
       <div class="ff-load-track"><i id="ff-load-fill"></i></div>
       <p class="ff-loading-note" id="ff-loading-note">LIGHTING THE LANTERN...</p>
@@ -71,8 +71,8 @@
 
   <div id="ff-title" class="ff-screen ff-title" hidden>
     <div class="ff-title-in">
-      <p class="ff-eyebrow" id="ff-title-eyebrow">A BSMS WEB WINTER EVENT · 5 CHAPTERS</p>
-      <h1 class="ff-title-logo"><small>FROST</small><span>FALL</span></h1>
+      <p class="ff-eyebrow" id="ff-title-eyebrow">A BSMS WEB HOLIDAY EVENT · 5 CHAPTERS</p>
+      <h1 class="ff-title-logo"><small>A CHRISTMAS</small><span>TALE</span></h1>
       <p class="ff-title-sub">THE STAR THAT WENT OUT</p>
       <p class="ff-title-copy">The Aurora Star has cracked. Five shards are scattered across the valley, and the Long Night is coming down the mountain. You have a lantern, a scarf, and a best friend made of snow.</p>
       <div class="ff-title-actions">
@@ -81,8 +81,22 @@
         <a class="ff-button ghost" href="/events">EVENTS</a>
       </div>
       <p class="ff-title-note" id="ff-title-note">November 19, 2026 – January 4, 2027 · Eastern time</p>
-      <p class="ff-title-hint">WASD / ARROWS MOVE · DRAG TO LOOK · E TALK &amp; FIGHT</p>
+      <p class="ff-title-hint">WASD / ARROWS MOVE · E TALK &amp; FIGHT</p>
     </div>
+  </div>
+
+  <div id="ff-cutscene" class="ff-cutscene" hidden>
+    <div class="ff-cut-bar top"></div>
+    <p class="ff-cut-brand">A CHRISTMAS TALE</p>
+    <div class="ff-cut-panel">
+      <p id="ff-cut-speaker" class="ff-cut-speaker">NARRATOR</p>
+      <p id="ff-cut-text" class="ff-cut-text"></p>
+      <div class="ff-cut-actions">
+        <button id="ff-cut-next" class="ff-button gold" type="button">CONTINUE</button>
+        <button id="ff-cut-skip" class="ff-cut-skip" type="button">SKIP CUTSCENE</button>
+      </div>
+    </div>
+    <div class="ff-cut-bar bottom"></div>
   </div>
 
   <div id="ff-name-screen" class="ff-screen" hidden>
@@ -189,7 +203,7 @@
 
   <div id="ff-ending" class="ff-screen" hidden>
     <div class="ff-ending-in">
-      <p class="ff-eyebrow">FROSTFALL · THE END</p>
+      <p class="ff-eyebrow">A CHRISTMAS TALE · THE END</p>
       <h2>THE STAR IS BACK</h2>
       <div class="ff-ending-star" aria-hidden="true">✦</div>
       <div id="ff-ending-lines" class="ff-ending-lines"></div>
@@ -204,22 +218,22 @@
   <div id="ff-ended" class="ff-screen" hidden>
     <div class="ff-panel">
       <p class="ff-eyebrow">BSMS WEB · WINTER EVENT</p>
-      <h2 class="ff-panel-title">FROSTFALL HAS ENDED</h2>
-      <p class="ff-panel-copy">The Long Night has been pushed back, and the star is still burning. Frostfall ran from November 19, 2026 to January 4, 2027.</p>
+      <h2 class="ff-panel-title">A CHRISTMAS TALE HAS ENDED</h2>
+      <p class="ff-panel-copy">The Long Night has been pushed back, and the star is still burning. A Christmas Tale ran from November 19, 2026 to January 4, 2027.</p>
       <a class="ff-button gold" href="/events">SEE WHAT'S NEXT</a>
     </div>
   </div>
 
   <div id="ff-fallback" class="ff-screen" hidden>
     <div class="ff-panel">
-      <p class="ff-eyebrow">FROSTFALL</p>
+      <p class="ff-eyebrow">A CHRISTMAS TALE</p>
       <h2 class="ff-panel-title">3D ISN'T AVAILABLE HERE</h2>
       <p class="ff-panel-copy">This browser could not start WebGL. Try a current version of Chrome, Edge, Firefox or Safari with hardware acceleration enabled.</p>
       <a class="ff-button" href="/events">BACK TO EVENTS</a>
     </div>
   </div>
 </div>
-<script src="/js/frostfall-engine.js?v=1"></script>
-<script src="/js/frostfall.js?v=9"></script>
+<script src="/js/frostfall-engine.js?v=2"></script>
+<script src="/js/frostfall.js?v=15"></script>
 </body>
 </html>

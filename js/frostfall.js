@@ -63,7 +63,9 @@
     menuHp: $('ff-menu-hp'), menuSp: $('ff-menu-sp'), menuBp: $('ff-menu-bp'), menuShards: $('ff-menu-shards'),
     menuObjective: $('ff-menu-objective'), menuResume: $('ff-menu-resume'), menuRestart: $('ff-menu-restart'), menuReset: $('ff-menu-reset'),
     ending: $('ff-ending'), endingLines: $('ff-ending-lines'), endingStats: $('ff-ending-stats'), endingAgain: $('ff-ending-again'),
-    ended: $('ff-ended'), fallback: $('ff-fallback')
+    ended: $('ff-ended'), fallback: $('ff-fallback'),
+    cutscene: $('ff-cutscene'), cutSpeaker: $('ff-cut-speaker'), cutText: $('ff-cut-text'),
+    cutNext: $('ff-cut-next'), cutSkip: $('ff-cut-skip')
   };
 
   var FF = window.FFEngine;
@@ -79,7 +81,7 @@
       v: 1, name: 'NICO', started: false, ending: false,
       chapter: 0, level: 1, xp: 0,
       maxHp: 30, hp: 30, maxSp: 10, sp: 10, bp: 4,
-      cocoa: 2, shards: 0, cards: [], defeated: {}, talked: {}
+      cocoa: 2, shards: 0, cards: [], seenIntro: false, defeated: {}, talked: {}
     };
   }
 
@@ -100,6 +102,7 @@
     out.bp = clamp(Math.floor(Number(value.bp) || base.bp), 1, 999);
     out.cocoa = clamp(Math.floor(Number(value.cocoa) || 0), 0, 9);
     out.shards = clamp(Math.floor(Number(value.shards) || 0), 0, 5);
+    out.seenIntro = Boolean(value.seenIntro);
     out.cards = Array.isArray(value.cards) ? value.cards.filter(function (id) { return typeof id === 'string'; }).slice(0, 8) : [];
     ['defeated', 'talked'].forEach(function (key) {
       if (value[key] && typeof value[key] === 'object') {
@@ -134,7 +137,7 @@
   var world = null;
   var player = null;
   var pip = null;
-  var camera = { yaw: 0, pitch: 0.34, dist: 9.4, eye: [0, 5, 10], target: [0, 1, 0] };
+  var camera = { yaw: 0.24, pitch: 0.2, dist: 26, ortho: 20, eye: [0, 6, 25], target: [0, 1, 0] };
   var keys = Object.create(null);
   var touchMove = { x: 0, y: 0 };
   var battle = null;
@@ -159,6 +162,9 @@
   var shakeTimer = null;
   var snowFlakes = [];
   var dialogue = { lines: [], index: 0, speaker: '', onDone: null };
+  var PARTY = { max: 4, active: [{ id: 'player', name: 'PLAYER' }], leader: 'player', ready: 0 };
+  var CUTSCENE_MARKS = [[-0.9, 2.8], [1.9, 2.8], [-2.9, 4.4], [3.4, 4.4]];
+  var cutscene = { active: false, index: 0, t: 0, lines: [], star: null, shard: null };
 
   var SKILLS = [
     { id: 'icicle', name: 'ICICLE', cost: 3, level: 1, mult: 1.8, desc: 'A spear of ice. Heavy damage.' },
@@ -543,6 +549,16 @@
     world.colliders.push({ x: x, z: z, hw: 0.42 * s, hd: 0.42 * s });
   }
 
+  function studs(x, z, width, depth, topY, color, spacing) {
+    spacing = spacing || 1.7;
+    var radius = 0.2;
+    for (var sx = -width / 2 + spacing / 2; sx <= width / 2 - 0.05; sx += spacing) {
+      for (var sz = -depth / 2 + spacing / 2; sz <= depth / 2 - 0.05; sz += spacing) {
+        box(x + sx, topY + 0.07, z + sz, radius * 2, 0.14, radius * 2, color, { geo: 'cylinder' });
+      }
+    }
+  }
+
   function snowPile(x, z, s) {
     box(x, 0.16 * (s || 1), z, 1.8 * (s || 1), 0.32 * (s || 1), 1.4 * (s || 1), 0xf6fcff);
   }
@@ -573,7 +589,8 @@
   function buildRoadtown() {
     box(0, -0.3, 0, 64, 0.6, 64, 0xeaf4ff);
     box(0, 0.02, 0, 7, 0.06, 54, 0x94a7bd);
-    for (var m = -24; m <= 24; m += 4) box(0, 0.07, m, 0.32, 0.04, 1.4, 0xdce9f7);
+    studs(0, 0, 7, 54, 0.05, 0xc7d4e3, 1.75);
+    for (var m = -24; m <= 24; m += 4) box(0, 0.15, m, 0.32, 0.03, 1.4, 0xdce9f7);
     house(-10.5, 3, 7, 6, 4, 0x9a7561, 0x6b4a3a);
     house(10.5, 2, 6, 5, 3.8, 0x7f8fa8, 0x51617a);
     house(-11, -9, 6, 6, 4.4, 0x8a6a8f, 0x5d4166);
@@ -591,6 +608,7 @@
     box(0, -0.3, 0, 64, 0.6, 64, 0xdfeeff);
     for (var z = -24; z <= 24; z += 3) {
       box(Math.sin(z * 0.18) * 2, 0.03, z, 4.6, 0.06, 2.8, 0xf3faff);
+      studs(Math.sin(z * 0.18) * 2, z, 4.6, 2.8, 0.06, 0xffffff, 1.5);
     }
     var spots = [[-8, 8], [-12, 4], [-9, -2], [-13, -9], [-8, -15], [-12, -21], [8, 7], [12, 3], [9, -3], [13, -9], [8, -15], [12, -21], [-4, 17], [5, 16], [-16, 12], [16, 12], [-16, -16], [16, -18], [-18, 1], [18, 0]];
     spots.forEach(function (spot, index) {
@@ -606,6 +624,7 @@
   function buildLake() {
     box(0, -0.3, 0, 64, 0.6, 64, 0xbfe8f5);
     box(0, 0.02, 0, 5, 0.06, 52, 0xeaf7fc);
+    studs(0, 0, 5, 52, 0.05, 0xffffff, 1.7);
     box(-5.5, 0.05, 2, 0.18, 0.02, 8, 0xffffff);
     box(6.5, 0.05, -5, 0.18, 0.02, 6, 0xffffff, { ry: 0.35 });
     box(-2, 0.05, -13, 0.18, 0.02, 7, 0xffffff, { ry: -0.5 });
@@ -621,11 +640,8 @@
   function buildClocktower() {
     box(0, -0.3, 0, 64, 0.6, 64, 0x5a5468);
     box(0, 0.02, 0, 22, 0.06, 30, 0x6b6478);
-    for (var x = -10; x <= 10; x += 2) {
-      for (var z = -14; z <= 14; z += 2) {
-        if ((x + z) % 4 === 0) box(x, 0.07, z, 1.9, 0.02, 1.9, 0x767087);
-      }
-    }
+    studs(0, 0, 22, 30, 0.05, 0x817a96, 2.0);
+
     box(0, 6, -14, 8, 12, 8, 0x565074);
     box(0, 13.5, -14, 6, 4, 6, 0x6a6288);
     box(0, 16.5, -14, 4, 3, 4, 0x565074);
@@ -647,6 +663,7 @@
   function buildSummit() {
     box(0, -0.3, 0, 64, 0.6, 64, 0x2a2440);
     box(0, 0.02, 0, 6, 0.06, 50, 0x3a3254);
+    studs(0, 0, 6, 50, 0.05, 0x4d4468, 1.8);
     var spires = [[-8, 6], [-13, 0], [9, 4], [14, -2], [-10, -9], [11, -11], [-6, -18], [7, -20], [-16, 14], [16, 14]];
     spires.forEach(function (spot, index) {
       var h = 3 + (index % 3) * 2;
@@ -817,7 +834,7 @@
         'Five pieces become one. The Aurora Star catches like a struck match.',
         'Below, Roadtown lights up window by window. Pip cheers so hard he falls over.',
         'The Long Night retreats down the mountain, grumbling.',
-        'THE END — thank you for playing Frostfall.'
+        'THE END — thank you for playing A Christmas Tale.'
       ],
       npc: {
         name: 'AURORA', x: 0, z: 6.5, palette: 'aurora',
@@ -916,7 +933,7 @@
   }
 
   /* ---------------------------------------------------------------- flow */
-  var SCREENS = ['ff-title', 'ff-name-screen', 'ff-chapter-screen', 'ff-menu', 'ff-ending', 'ff-ended', 'ff-levelup', 'ff-loading', 'ff-fallback'];
+  var SCREENS = ['ff-title', 'ff-name-screen', 'ff-chapter-screen', 'ff-menu', 'ff-ending', 'ff-ended', 'ff-levelup', 'ff-loading', 'ff-fallback', 'ff-cutscene'];
 
   function hideScreens() {
     SCREENS.forEach(function (id) {
@@ -978,8 +995,8 @@
   }
 
   function requestNewGame() {
-    if (phaseAt() !== 'active') { toast('FROSTFALL IS NOT OPEN RIGHT NOW.'); return; }
-    if (save && save.started && !save.ending && !window.confirm('Start a new story? Your current Frostfall save will be erased.')) return;
+    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    if (save && save.started && !save.ending && !window.confirm('Start a new story? Your current A Christmas Tale save will be erased.')) return;
     hideScreens();
     ui.nameScreen.hidden = false;
     ui.nameInput.value = save ? save.name : '';
@@ -988,7 +1005,7 @@
   }
 
   function beginNewStory() {
-    if (phaseAt() !== 'active') { toast('FROSTFALL IS NOT OPEN RIGHT NOW.'); return; }
+    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     var name = String(ui.nameInput.value || '').toUpperCase().replace(/[^A-Z0-9 _-]/g, '').trim().slice(0, 12) || 'NICO';
     save = freshSave();
     save.name = name;
@@ -996,7 +1013,8 @@
     save.chapter = 0;
     persist();
     ui.nameScreen.hidden = true;
-    showChapterScreen(0);
+    buildWorld(0);
+    startIntroCutscene();
   }
 
   function continueGame() {
@@ -1066,6 +1084,128 @@
     view = 'title';
     app.dataset.theme = 'night';
     buildTitleScene();
+  }
+
+  /* ------------------------------------------------------------- cutscene */
+  function buildCutsceneProps() {
+    var star = makeActor('cutscene-star');
+    addPart(star, 0xffe08a, [0, 0, 0], [0, 0, 0], [1.1, 1.1, 0.8], { rz: Math.PI / 4 });
+    addPart(star, 0xfff6cf, [0, 0, 0], [0, 0, 0], [0.34, 2.4, 0.34], { rz: Math.PI / 4 });
+    addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [2.3, 0.3, 0.3]);
+    addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [0.3, 2.3, 0.3]);
+    addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [1.7, 0.22, 0.22], { rz: 0.78 });
+    addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [1.7, 0.22, 0.22], { rz: -0.78 });
+    star.x = 0; star.y = 5.7; star.z = -11;
+    pushActor(world.objects, star);
+    updateActor(star);
+    cutscene.star = star;
+
+    var shard = makeActor('cutscene-shard');
+    addPart(shard, 0x9fe6ff, [0, 0, 0], [0, 0, 0], [0.36, 0.95, 0.36], { geo: 'cone6', rz: Math.PI });
+    addPart(shard, 0xffffff, [0, 0, 0], [0, 0, 0], [0.55, 0.55, 0.55], { alpha: 0.2 });
+    shard.x = 2.2; shard.y = 8.5; shard.z = -5;
+    pushActor(world.objects, shard);
+    updateActor(shard);
+    cutscene.shard = shard;
+  }
+
+  function startIntroCutscene() {
+    if (!world) return;
+    hideScreens();
+    ui.hud.hidden = true;
+    ui.objective.hidden = true;
+    ui.touch.hidden = true;
+    ui.prompt.hidden = true;
+    ui.toast.hidden = true;
+    ui.cutscene.hidden = false;
+    document.body.classList.remove('ff-talking');
+    mode = 'cutscene';
+    view = 'cutscene';
+    cutscene.active = true;
+    cutscene.index = 0;
+    cutscene.t = 0;
+    cutscene.lines = [
+      { who: 'NARRATOR', text: 'Every winter, Roadtown hangs one golden star above the square.' },
+      { who: 'NARRATOR', text: 'This year, the star cracked before midnight.' },
+      { who: 'MAYOR BRAM', text: 'The sky just broke. Get inside, kid. The cold is coming down the mountain.' },
+      { who: 'PIP', text: 'Look! A piece landed in the fountain!' },
+      { who: 'NARRATOR', text: 'Five shards. One star. One very long night.' }
+    ];
+    if (player) {
+      player.x = CUTSCENE_MARKS[0][0];
+      player.z = CUTSCENE_MARKS[0][1];
+      player.yaw = 0.35;
+      updateActor(player);
+    }
+    if (pip) {
+      pip.x = CUTSCENE_MARKS[1][0];
+      pip.z = CUTSCENE_MARKS[1][1];
+      pip.yaw = -0.35;
+      updateActor(pip);
+    }
+    buildCutsceneProps();
+    showCutsceneLine();
+    save.seenIntro = true;
+    persist();
+    sound('shard');
+  }
+
+  function showCutsceneLine() {
+    var line = cutscene.lines[cutscene.index];
+    if (!line) return;
+    ui.cutSpeaker.textContent = line.who;
+    ui.cutText.textContent = line.text;
+    ui.cutNext.textContent = cutscene.index === cutscene.lines.length - 1 ? 'BEGIN CHAPTER ONE' : 'CONTINUE';
+    sound('click');
+  }
+
+  function advanceCutscene() {
+    if (!cutscene.active) return;
+    cutscene.index += 1;
+    if (cutscene.index >= cutscene.lines.length) { endCutscene(); return; }
+    showCutsceneLine();
+  }
+
+  function endCutscene() {
+    cutscene.active = false;
+    ui.cutscene.hidden = true;
+    cutscene.star = null;
+    cutscene.shard = null;
+    showChapterScreen(0);
+  }
+
+  function updateCutscene(dt, time) {
+    if (!cutscene.active) return;
+    cutscene.t += dt;
+    if (cutscene.star) {
+      cutscene.star.y = 5.6 + Math.sin(time * 1.4) * 0.12;
+      cutscene.star.yaw += dt * 0.35;
+      updateActor(cutscene.star);
+    }
+    if (cutscene.shard) {
+      var fall = Math.min(1, cutscene.t / 7);
+      cutscene.shard.y = 8.5 - 5.6 * fall;
+      cutscene.shard.x = 2.2 + Math.sin(cutscene.t * 1.7) * 0.3;
+      cutscene.shard.yaw += dt * 1.6;
+      updateActor(cutscene.shard);
+    }
+    var dolly = Math.min(1, cutscene.t / 26);
+    renderer.setCamera([0, 2.8 + dolly * 0.3, 12 - dolly * 1.5], [0, 1.0, 1.5], 50 * Math.PI / 180);
+  }
+
+  function scaleEnemyForParty(def) {
+    var count = Math.max(1, Math.min(PARTY.max, PARTY.active.length || 1));
+    if (count === 1) return def;
+    var multiplier = count === 2 ? 1.3 : count === 3 ? 1.5 : 2;
+    var scaled = Object.assign({}, def);
+    scaled.hp = Math.round(def.hp * multiplier);
+    scaled.enemyEvery = 1;
+    scaled.partySize = count;
+    return scaled;
+  }
+
+  function partyReady() {
+    return PARTY.active.length <= 1 || PARTY.ready >= PARTY.active.length;
   }
 
   /* ---------------------------------------------------------------- world */
@@ -1227,9 +1367,10 @@
     pipTimer = 0;
     addNpc(chapter, index);
     spawnEnemies(chapter);
-    camera.yaw = 0;
-    camera.pitch = 0.34;
-    camera.dist = 9.4;
+    camera.yaw = 0.24;
+    camera.pitch = 0.2;
+    camera.dist = 26;
+    camera.ortho = 20;
     snapCamera();
     renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
     app.dataset.theme = chapter.theme;
@@ -1362,7 +1503,7 @@
       camera.target[1] + Math.sin(camera.pitch) * camera.dist,
       camera.target[2] + Math.cos(camera.yaw) * flat
     ];
-    renderer.setCamera(camera.eye, camera.target, 56 * Math.PI / 180);
+    renderer.setCamera(camera.eye, camera.target, 52 * Math.PI / 180, camera.ortho);
   }
 
   function updateCamera(dt) {
@@ -1377,7 +1518,7 @@
       camera.target[i] = lerp(camera.target[i], target[i], Math.min(1, dt * 9));
       camera.eye[i] = lerp(camera.eye[i], eye[i], Math.min(1, dt * 7));
     }
-    renderer.setCamera(camera.eye, camera.target, 56 * Math.PI / 180);
+    renderer.setCamera(camera.eye, camera.target, 52 * Math.PI / 180, camera.ortho);
   }
 
   function nearestInteractable() {
@@ -1486,7 +1627,6 @@
     { id: 'swift-boots', name: 'SWIFT BOOTS', cost: 2, desc: '+3 agility: act before the enemy.', mods: { agility: 3 } },
     { id: 'snowball', name: 'SNOWBALL CHARM', cost: 3, desc: 'Skills cost 1 less SP.', mods: { skillDiscount: 1 } }
   ];
-  var PARTY_SIZE = 1;
 
   function equippedCards() {
     return (save && Array.isArray(save.cards)) ? save.cards : [];
@@ -1707,13 +1847,6 @@
     return entries.sort(function (a, b) {
       return b.priority - a.priority || b.agility - a.agility;
     });
-  }
-
-  function scaleEnemyForParty(def) {
-    if (PARTY_SIZE <= 1) return def;
-    var scaled = Object.assign({}, def);
-    scaled.hp = Math.round(def.hp * (1 + 0.65 * (PARTY_SIZE - 1)));
-    return scaled;
   }
 
   function startBattle(def, opts) {
@@ -2243,7 +2376,7 @@
   }
 
   function resetSave() {
-    if (!window.confirm('Erase your Frostfall save and start from Chapter One?')) return;
+    if (!window.confirm('Erase your A Christmas Tale save and start from Chapter One?')) return;
     try { localStorage.removeItem(SAVE_KEY); } catch (error) { /* ignore */ }
     save = null;
     location.reload();
@@ -2267,6 +2400,7 @@
     if (event.target && /INPUT|TEXTAREA/.test(event.target.tagName)) return;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(event.code) >= 0) event.preventDefault();
     if (event.code === 'KeyE' || event.code === 'Space' || event.code === 'Enter') {
+      if (mode === 'cutscene') { event.preventDefault(); advanceCutscene(); return; }
       if (mode === 'battle') { event.preventDefault(); timingPress(); return; }
       if (mode === 'world' || mode === 'dialogue') { event.preventDefault(); interact(); }
       return;
@@ -2298,8 +2432,6 @@
     dragX = event.clientX;
     dragY = event.clientY;
     dragDistance += Math.abs(dx) + Math.abs(dy);
-    camera.yaw -= dx * 0.006;
-    camera.pitch = clamp(camera.pitch + dy * 0.004, 0.08, 0.95);
   }
 
   function onPointerUp() {
@@ -2311,7 +2443,7 @@
   function onWheel(event) {
     if (mode !== 'world') return;
     event.preventDefault();
-    camera.dist = clamp(camera.dist + event.deltaY * 0.01, 5.5, 13);
+    camera.ortho = clamp(camera.ortho + event.deltaY * 0.012, 11, 24);
   }
 
   function updateJoystick(event) {
@@ -2351,6 +2483,12 @@
     ui.newGame.addEventListener('click', requestNewGame);
     ui.continueButton.addEventListener('click', continueGame);
     ui.nameStart.addEventListener('click', beginNewStory);
+    ui.cutNext.addEventListener('click', advanceCutscene);
+    ui.cutSkip.addEventListener('click', endCutscene);
+    ui.cutscene.addEventListener('click', function (event) {
+      if (event.target.closest('button')) return;
+      advanceCutscene();
+    });
     ui.nameInput.addEventListener('keydown', function (event) {
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -2408,6 +2546,7 @@
     var dt = lastFrame ? Math.min(0.05, (time - lastFrame) / 1000) : 0.016;
     lastFrame = time;
     if (view === 'world' && world && player) updateWorld(dt, time / 1000);
+    else if (view === 'cutscene') updateCutscene(dt, time / 1000);
     else if (view === 'battle' && battle) updateBattle(dt, time / 1000);
     else if (view === 'title') updateTitle(time / 1000);
     drawSnow(dt, time / 1000);
