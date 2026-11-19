@@ -41,6 +41,7 @@
     hud: $('ff-hud'), face: $('ff-hud-face'), hudName: $('ff-hud-name'), hudLevel: $('ff-hud-level'),
     hudChapter: $('ff-hud-chapter'), hudHp: $('ff-hud-hp'), hudHpText: $('ff-hud-hp-text'),
     hudSp: $('ff-hud-sp'), hudSpText: $('ff-hud-sp-text'), hudBp: $('ff-hud-bp'), hudShards: $('ff-hud-shards'),
+    hudBpBar: $('ff-hud-bp-fill'), hudBpText: $('ff-hud-bp-text'),
     sound: $('ff-sound'), menuButton: $('ff-menu-button'),
     objective: $('ff-objective'), objectiveText: $('ff-objective-text'),
     toast: $('ff-toast'), prompt: $('ff-prompt'), promptText: $('ff-prompt-text'),
@@ -58,6 +59,7 @@
     timing: $('ff-timing'), timingLabel: $('ff-timing-label'), timingMarker: $('ff-timing-marker'),
     timingButton: $('ff-timing-button'), timingNote: $('ff-timing-note'), telegraph: $('ff-telegraph'),
     cards: $('ff-cards'), cardBudget: $('ff-card-budget'),
+    slash: $('ff-slash'), fx: $('ff-fx'), rating: $('ff-rating'), gimmick: $('ff-gimmick'), flash: $('ff-flash'),
     levelup: $('ff-levelup'), levelSub: $('ff-level-sub'), lvHp: $('ff-lv-hp'), lvSp: $('ff-lv-sp'), lvBp: $('ff-lv-bp'),
     menu: $('ff-menu'), menuClose: $('ff-menu-close'), menuName: $('ff-menu-name'), menuLevel: $('ff-menu-level'),
     menuHp: $('ff-menu-hp'), menuSp: $('ff-menu-sp'), menuBp: $('ff-menu-bp'), menuShards: $('ff-menu-shards'),
@@ -137,7 +139,7 @@
   var world = null;
   var player = null;
   var pip = null;
-  var camera = { yaw: 0.24, pitch: 0.2, dist: 26, ortho: 20, eye: [0, 6, 25], target: [0, 1, 0] };
+  var camera = { yaw: 0.26, pitch: 0.46, dist: 16, ortho: 15, punch: 0, eye: [0, 8, 18], target: [0, 1.2, 0] };
   var keys = Object.create(null);
   var touchMove = { x: 0, y: 0 };
   var battle = null;
@@ -145,6 +147,8 @@
   var battlePlayer = null;
   var battleEnemy = null;
   var levelQueue = 0;
+  var freezeUntil = 0;
+  var punchTimer = null;
   var titleObjects = [];
   var titleGeometries = [];
   var titleHero = null;
@@ -167,6 +171,7 @@
   var CUTSCENE_MARKS = [[-0.9, 2.8], [1.9, 2.8], [-2.9, 4.4], [3.4, 4.4]];
   var cutscene = { active: false, index: 0, t: 0, lines: [], star: null, shard: null };
 
+  var SWING_TIME = 0.3;
   var SKILLS = [
     { id: 'icicle', name: 'ICICLE', cost: 3, level: 1, mult: 1.8, desc: 'A spear of ice. Heavy damage.' },
     { id: 'warmth', name: 'WARMTH', cost: 4, level: 2, heal: true, desc: 'Melt the cold. Restore HP.' },
@@ -190,7 +195,15 @@
   }
 
   function updateActor(actor) {
-    var root = mat.mul(mat.translation(actor.x, actor.y, actor.z), mat.mul(mat.rotY(actor.yaw), mat.scaling(actor.scale, actor.scale, actor.scale)));
+    var squashY = actor.scale * (actor.squashY === undefined ? 1 : actor.squashY);
+    var squashXZ = actor.scale * (actor.squashX === undefined ? 1 : actor.squashX);
+    var root = mat.mul(
+      mat.translation(actor.x, actor.y, actor.z),
+      mat.mul(
+        mat.rotY(actor.yaw),
+        mat.mul(mat.rotX(actor.tiltX || 0), mat.mul(mat.rotZ(actor.lean || 0), mat.scaling(squashXZ, squashY, squashXZ)))
+      )
+    );
     for (var i = 0; i < actor.parts.length; i++) {
       var part = actor.parts[i];
       var rotation = mat.mul(mat.mul(mat.rotY(part.ry), mat.rotX(part.rx)), mat.rotZ(part.rz));
@@ -215,43 +228,84 @@
     return actor;
   }
 
+  /* Classic R6 proportions: one big square head, a blocky torso and four
+     limbs swinging from shoulder and hip pivots. Squash, tilt and lean live
+     on the root (see updateActor) so a walk reads as a bouncy toy. */
   function buildHero(palette) {
     var pal = palette || heroPalette();
     var actor = makeActor('player');
-    actor.legL = addPart(actor, pal.pants, [-0.17, 0.78, 0], [0, -0.3, 0], [0.22, 0.56, 0.24]);
-    actor.legR = addPart(actor, pal.pants, [0.17, 0.78, 0], [0, -0.3, 0], [0.22, 0.56, 0.24]);
-    actor.shoeL = addPart(actor, pal.shoe, [-0.17, 0.78, 0], [0, -0.57, 0.06], [0.27, 0.17, 0.37]);
-    actor.shoeR = addPart(actor, pal.shoe, [0.17, 0.78, 0], [0, -0.57, 0.06], [0.27, 0.17, 0.37]);
-    addPart(actor, pal.coat, [0, 1.13, 0], [0, 0, 0], [0.6, 0.62, 0.42]);
-    addPart(actor, pal.coat, [0, 1.13, 0.22], [0, 0, 0], [0.12, 0.6, 0.04]);
-    addPart(actor, pal.scarf, [0, 1.38, 0], [0, 0, 0], [0.54, 0.14, 0.46]);
-    actor.armL = addPart(actor, pal.coat, [-0.4, 1.35, 0], [0, -0.28, 0], [0.18, 0.54, 0.18]);
-    actor.armR = addPart(actor, pal.coat, [0.4, 1.35, 0], [0, -0.28, 0], [0.18, 0.54, 0.18]);
-    addPart(actor, pal.skin, [-0.4, 1.35, 0], [0, -0.52, 0], [0.21, 0.2, 0.21]);
-    addPart(actor, pal.skin, [0.4, 1.35, 0], [0, -0.52, 0], [0.21, 0.2, 0.21]);
-    addPart(actor, pal.skin, [0, 1.5, 0], [0, 0.2, 0], [0.56, 0.52, 0.5]);
-    addPart(actor, pal.cap, [0, 1.7, 0], [0, 0.08, 0], [0.6, 0.24, 0.54]);
-    addPart(actor, pal.cap, [0, 1.68, 0.3], [0, 0, 0], [0.5, 0.09, 0.2]);
-    addPart(actor, 0xffffff, [0, 1.74, 0], [0, 0.17, 0], [0.1, 0.1, 0.1]);
-    addPart(actor, 0xffffff, [0, 1.52, 0.25], [-0.11, 0, 0], [0.11, 0.13, 0.06]);
-    addPart(actor, 0xffffff, [0, 1.52, 0.25], [0.11, 0, 0], [0.11, 0.13, 0.06]);
-    addPart(actor, 0x1a1224, [0, 1.52, 0.28], [-0.1, 0, 0], [0.055, 0.075, 0.04]);
-    addPart(actor, 0x1a1224, [0, 1.52, 0.28], [0.1, 0, 0], [0.055, 0.075, 0.04]);
-    addPart(actor, pal.skin, [0, 1.44, 0.28], [0, -0.02, 0], [0.15, 0.12, 0.1]);
-    addPart(actor, pal.hair, [0, 1.4, 0.28], [0, -0.08, 0], [0.3, 0.07, 0.06]);
+    var hat = pal.hat || 'beanie';
+    var trim = pal.trim === undefined ? pal.scarf : pal.trim;
+    var belt = pal.belt === undefined ? 0x2b2036 : pal.belt;
+
+    actor.legL = addPart(actor, pal.pants, [-0.24, 0.88, 0], [0, -0.44, 0], [0.40, 0.88, 0.44]);
+    actor.legR = addPart(actor, pal.pants, [0.24, 0.88, 0], [0, -0.44, 0], [0.40, 0.88, 0.44]);
+    actor.shoeL = addPart(actor, pal.shoe, [-0.24, 0.88, 0], [0, -0.84, 0.08], [0.44, 0.20, 0.56]);
+    actor.shoeR = addPart(actor, pal.shoe, [0.24, 0.88, 0], [0, -0.84, 0.08], [0.44, 0.20, 0.56]);
+
+    addPart(actor, pal.coat, [0, 1.34, 0], [0, 0, 0], [0.96, 1.02, 0.56]);
+    addPart(actor, trim, [0, 1.34, 0.29], [0, 0, 0], [0.26, 0.94, 0.06]);
+    addPart(actor, belt, [0, 0.88, 0], [0, 0, 0], [1.02, 0.16, 0.60]);
+    addPart(actor, pal.scarf, [0, 1.80, 0], [0, 0, 0], [0.86, 0.22, 0.70]);
+    addPart(actor, pal.scarf, [0, 1.66, 0.30], [-0.34, 0, 0], [0.22, 0.50, 0.12], { rz: 0.18 });
+    addPart(actor, pal.scarf, [0, 1.66, 0.30], [0.34, 0, 0], [0.22, 0.40, 0.12], { rz: -0.24 });
+
+    actor.armL = addPart(actor, pal.coat, [-0.62, 1.74, 0], [0, -0.34, 0], [0.32, 0.86, 0.36]);
+    actor.armR = addPart(actor, pal.coat, [0.62, 1.74, 0], [0, -0.34, 0], [0.32, 0.86, 0.36]);
+    addPart(actor, pal.skin, [-0.62, 1.74, 0], [0, -0.66, 0.02], [0.32, 0.24, 0.38]);
+    addPart(actor, pal.skin, [0.62, 1.74, 0], [0, -0.66, 0.02], [0.32, 0.24, 0.38]);
+
+    /* head, then the classic two eyes and smile */
+    addPart(actor, pal.skin, [0, 1.94, 0], [0, 0.40, 0], [0.88, 0.88, 0.84]);
+    addPart(actor, 0xffffff, [0, 1.94, 0], [-0.20, 0.46, 0.43], [0.20, 0.22, 0.05]);
+    addPart(actor, 0xffffff, [0, 1.94, 0], [0.20, 0.46, 0.43], [0.20, 0.22, 0.05]);
+    addPart(actor, 0x1a1224, [0, 1.94, 0], [-0.18, 0.44, 0.46], [0.11, 0.14, 0.04]);
+    addPart(actor, 0x1a1224, [0, 1.94, 0], [0.18, 0.44, 0.46], [0.11, 0.14, 0.04]);
+    addPart(actor, 0x1a1224, [0, 1.94, 0], [-0.14, 0.26, 0.44], [0.14, 0.06, 0.03], { rz: -0.38 });
+    addPart(actor, 0x1a1224, [0, 1.94, 0], [0.14, 0.26, 0.44], [0.14, 0.06, 0.03], { rz: 0.38 });
+    addPart(actor, pal.hair, [0, 1.94, 0], [0, 0.62, 0.16], [0.58, 0.26, 0.50]);
+
+    if (hat === 'pom') {
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.74, 0], [0.94, 0.28, 0.90]);
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.60, 0], [0.98, 0.14, 0.94]);
+      addPart(actor, 0xfff3d5, [0, 1.94, 0], [0, 0.96, 0], [0.26, 0.26, 0.26]);
+    } else if (hat === 'tophat') {
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.86, 0], [0.64, 0.52, 0.62]);
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.66, 0], [1.02, 0.12, 0.98]);
+      addPart(actor, pal.scarf, [0, 1.94, 0], [0, 0.70, 0], [0.68, 0.10, 0.66]);
+    } else if (hat === 'cap') {
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.76, 0], [0.92, 0.26, 0.90]);
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.66, 0.46], [0.84, 0.10, 0.30]);
+    } else if (hat === 'bun') {
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.80, -0.10], [0.94, 0.22, 0.86]);
+      addPart(actor, pal.hair, [0, 1.94, 0], [0, 0.66, -0.50], [0.42, 0.42, 0.34]);
+    } else if (hat === 'crown') {
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.82, 0], [0.90, 0.16, 0.86]);
+      addPart(actor, pal.cap, [0, 1.94, 0], [-0.28, 1.00, 0], [0.14, 0.40, 0.14], { geo: 'cone4' });
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 1.06, 0], [0.16, 0.52, 0.16], { geo: 'cone4' });
+      addPart(actor, pal.cap, [0, 1.94, 0], [0.28, 1.00, 0], [0.14, 0.40, 0.14], { geo: 'cone4' });
+    } else {
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.76, 0], [0.92, 0.28, 0.88]);
+      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.62, 0], [0.96, 0.14, 0.92]);
+    }
+    if (pal.goggles) {
+      addPart(actor, pal.goggles, [0, 1.94, 0], [0, 0.62, 0.40], [0.90, 0.16, 0.14]);
+      addPart(actor, pal.goggles, [0, 1.94, 0], [-0.22, 0.62, 0.46], [0.26, 0.26, 0.10]);
+      addPart(actor, pal.goggles, [0, 1.94, 0], [0.22, 0.62, 0.46], [0.26, 0.26, 0.10]);
+    }
     return actor;
   }
 
   function heroPalette() {
-    return { coat: 0x32518f, pants: 0x22335c, scarf: 0xd2463e, cap: 0xd2463e, skin: 0xf0c29a, hair: 0x6b432c, shoe: 0x3a2418 };
+    return { coat: 0x3a63b8, pants: 0x243a6e, scarf: 0xe03f36, cap: 0xe03f36, skin: 0xf6c9a0, hair: 0x6b432c, shoe: 0x3a2418, hat: 'pom', belt: 0x2b2036 };
   }
 
   var PALETTES = {
-    bram: { coat: 0x4a6b8a, pants: 0x2c3550, scarf: 0x9a4436, cap: 0x2b2633, skin: 0xe7b78e, hair: 0x8a8070, shoe: 0x3a2418 },
-    juniper: { coat: 0x3d7a56, pants: 0x2c4638, scarf: 0xd7a03c, cap: 0x2f5d46, skin: 0xd9a276, hair: 0x6b3f2a, shoe: 0x3a2418 },
-    finn: { coat: 0x6a5a3e, pants: 0x3d3428, scarf: 0x4d6e8a, cap: 0x3c3024, skin: 0xd8a87e, hair: 0xcfcfcf, shoe: 0x3a2418 },
-    odette: { coat: 0x5b3f78, pants: 0x352345, scarf: 0xc7a1e0, cap: 0x472f5c, skin: 0xe8c19c, hair: 0x2f2038, shoe: 0x3a2418 },
-    aurora: { coat: 0xbdefff, pants: 0x7fc7e0, scarf: 0xffffff, cap: 0x9fe6ff, skin: 0xf7e7ff, hair: 0xffffff, shoe: 0x8fdcf5 }
+    bram: { coat: 0x4a6b8a, pants: 0x2c3550, scarf: 0x9a4436, cap: 0x2b2633, skin: 0xe7b78e, hair: 0x8a8070, shoe: 0x3a2418, hat: 'tophat', goggles: 0x9a4436 },
+    juniper: { coat: 0x3d7a56, pants: 0x2c4638, scarf: 0xd7a03c, cap: 0x2f5d46, skin: 0xd9a276, hair: 0x6b3f2a, shoe: 0x3a2418, hat: 'beanie' },
+    finn: { coat: 0x6a5a3e, pants: 0x3d3428, scarf: 0x4d6e8a, cap: 0x3c3024, skin: 0xd8a87e, hair: 0xcfcfcf, shoe: 0x3a2418, hat: 'cap' },
+    odette: { coat: 0x5b3f78, pants: 0x352345, scarf: 0xc7a1e0, cap: 0x472f5c, skin: 0xe8c19c, hair: 0x2f2038, shoe: 0x3a2418, hat: 'bun' },
+    aurora: { coat: 0xbdefff, pants: 0x7fc7e0, scarf: 0xffffff, cap: 0x9fe6ff, skin: 0xf7e7ff, hair: 0xffffff, shoe: 0x8fdcf5, hat: 'crown' }
   };
 
   function buildPip() {
@@ -272,90 +326,126 @@
     return actor;
   }
 
+  /* Blocky, toy-like enemies: chunky pieces, a big readable head, glowing
+     eyes with a soft halo, and a silhouette you can name at a glance. */
+  function glowEyes(actor, color, y, z, spread, size) {
+    var s = size || 0.16;
+    addPart(actor, color, [0, 0, 0], [-spread, y, z], [s, s * 1.2, 0.06]);
+    addPart(actor, color, [0, 0, 0], [spread, y, z], [s, s * 1.2, 0.06]);
+    addPart(actor, color, [0, 0, 0], [-spread, y, z + 0.02], [s * 2.4, s * 2.4, 0.02], { alpha: 0.22 });
+    addPart(actor, color, [0, 0, 0], [spread, y, z + 0.02], [s * 2.4, s * 2.4, 0.02], { alpha: 0.22 });
+  }
+
   function buildEnemy(model) {
     var actor = makeActor('enemy');
     if (model === 'mite') {
-      actor.baseY = 0.55;
-      addPart(actor, 0x9fdcff, [0, 0.6, 0], [0, 0, 0], [1.1, 0.7, 0.95]);
-      addPart(actor, 0x7fc4ec, [0, 0.6, 0.38], [0, 0, 0], [0.62, 0.5, 0.4]);
-      addPart(actor, 0xd9f6ff, [0, 0.9, 0.38], [-0.16, 0, 0], [0.11, 0.12, 0.06]);
-      addPart(actor, 0xd9f6ff, [0, 0.9, 0.38], [0.16, 0, 0], [0.11, 0.12, 0.06]);
-      addPart(actor, 0xeafaff, [0, 0.85, 0], [-0.4, 0.4, 0], [0.24, 0.9, 0.24], { geo: 'cone6', rz: 0.3 });
-      addPart(actor, 0xeafaff, [0, 0.85, 0], [0.4, 0.4, 0], [0.24, 0.9, 0.24], { geo: 'cone6', rz: -0.3 });
-      addPart(actor, 0xeafaff, [0, 0.85, 0], [0, 0.4, -0.2], [0.22, 0.8, 0.22], { geo: 'cone6' });
-      for (var i = 0; i < 3; i++) {
-        addPart(actor, 0x6aa8cc, [0, 0.4, 0], [-0.55 - i * 0.05, -0.1, -0.3 + i * 0.3], [0.1, 0.5, 0.1], { rz: 0.7 });
-        addPart(actor, 0x6aa8cc, [0, 0.4, 0], [0.55 + i * 0.05, -0.1, -0.3 + i * 0.3], [0.1, 0.5, 0.1], { rz: -0.7 });
+      actor.baseY = 0;
+      addPart(actor, 0x9fdcff, [0, 0, 0], [0, 1.05, 0], [1.5, 0.9, 1.25]);
+      addPart(actor, 0x7fc4ec, [0, 0, 0], [0, 1.0, 0.62], [1.0, 0.72, 0.5]);
+      addPart(actor, 0xd9f6ff, [0, 0, 0], [-0.42, 1.62, 0], [0.3, 0.9, 0.3], { geo: 'cone6', rz: 0.28 });
+      addPart(actor, 0xd9f6ff, [0, 0, 0], [0, 1.72, -0.1], [0.34, 1.05, 0.34], { geo: 'cone6' });
+      addPart(actor, 0xd9f6ff, [0, 0, 0], [0.42, 1.62, 0], [0.3, 0.9, 0.3], { geo: 'cone6', rz: -0.28 });
+      for (var m = 0; m < 3; m++) {
+        var mz = -0.45 + m * 0.45;
+        addPart(actor, 0x6aa8cc, [0, 0, 0], [-0.95, 0.92, mz], [0.5, 0.24, 0.24], { rz: 0.5 });
+        addPart(actor, 0x6aa8cc, [0, 0, 0], [-1.28, 0.5, mz], [0.22, 0.9, 0.22], { rz: -0.35 });
+        addPart(actor, 0x6aa8cc, [0, 0, 0], [0.95, 0.92, mz], [0.5, 0.24, 0.24], { rz: -0.5 });
+        addPart(actor, 0x6aa8cc, [0, 0, 0], [1.28, 0.5, mz], [0.22, 0.9, 0.22], { rz: 0.35 });
       }
+      glowEyes(actor, 0xeafaff, 1.14, 0.9, 0.26, 0.17);
     } else if (model === 'wisp') {
-      actor.baseY = 0.7;
-      addPart(actor, 0x7ce7ff, [0, 0.7, 0], [0, 0.1, 0], [0.7, 1.4, 0.7], { geo: 'cone8', alpha: 0.92 });
-      addPart(actor, 0xffffff, [0, 0.8, 0.3], [-0.14, 0, 0], [0.12, 0.12, 0.06]);
-      addPart(actor, 0xffffff, [0, 0.8, 0.3], [0.14, 0, 0], [0.12, 0.12, 0.06]);
-      addPart(actor, 0x9ff2ff, [0, 0.7, 0], [0, 1.0, 0], [0.6, 0.6, 0.6], { alpha: 0.22 });
-      addPart(actor, 0x4aa8cc, [0, 0.4, 0], [0, 0, 0], [1.0, 0.12, 1.0], { geo: 'disc', alpha: 0.3 });
+      actor.baseY = 0.55;
+      addPart(actor, 0x8fe8ff, [0, 0, 0], [0, 1.5, 0], [0.86, 1.05, 0.7], { alpha: 0.96 });
+      addPart(actor, 0xbdf4ff, [0, 0, 0], [0, 1.9, 0], [0.94, 0.34, 0.78], { alpha: 0.95 });
+      addPart(actor, 0x8fe8ff, [0, 0, 0], [0, 0.7, 0], [0.92, 1.1, 0.86], { geo: 'cone6', rx: Math.PI, alpha: 0.9 });
+      addPart(actor, 0x6fd0f0, [0, 0, 0], [-0.52, 1.5, 0], [0.26, 0.62, 0.26], { rz: 0.5, alpha: 0.9 });
+      addPart(actor, 0x6fd0f0, [0, 0, 0], [0.52, 1.5, 0], [0.26, 0.62, 0.26], { rz: -0.5, alpha: 0.9 });
+      addPart(actor, 0x4aa8cc, [0, 0, 0], [0, 0.05, 0], [1.4, 0.1, 1.4], { geo: 'disc', alpha: 0.25 });
+      glowEyes(actor, 0xffffff, 1.68, 0.38, 0.22, 0.15);
     } else if (model === 'crab') {
-      actor.baseY = 0.45;
-      addPart(actor, 0xbfe9ff, [0, 0.45, 0], [0, 0, 0], [1.2, 0.55, 0.9]);
-      addPart(actor, 0x8fc9e6, [0, 0.45, 0], [-0.8, 0.1, 0.2], [0.4, 0.45, 0.4]);
-      addPart(actor, 0x8fc9e6, [0, 0.45, 0], [0.8, 0.1, 0.2], [0.4, 0.45, 0.4]);
-      addPart(actor, 0x5a9ab8, [0, 0.45, 0], [-0.95, 0.2, 0.4], [0.18, 0.18, 0.5], { rz: 0.4 });
-      addPart(actor, 0x5a9ab8, [0, 0.45, 0], [0.95, 0.2, 0.4], [0.18, 0.18, 0.5], { rz: -0.4 });
-      addPart(actor, 0x1a3a4a, [0, 0.55, 0.3], [-0.2, 0, 0], [0.1, 0.2, 0.1]);
-      addPart(actor, 0x1a3a4a, [0, 0.55, 0.3], [0.2, 0, 0], [0.1, 0.2, 0.1]);
-      for (var j = 0; j < 4; j++) {
-        addPart(actor, 0x8fc9e6, [0, 0.3, 0], [-0.5 + j * 0.33, -0.25, 0], [0.1, 0.4, 0.1], { rz: j % 2 ? 0.5 : -0.5 });
+      actor.baseY = 0;
+      addPart(actor, 0xbfe9ff, [0, 0, 0], [0, 0.78, 0], [1.7, 0.62, 1.15]);
+      addPart(actor, 0xe8f9ff, [0, 0, 0], [0, 1.1, -0.05], [1.3, 0.3, 0.9]);
+      addPart(actor, 0x8fc9e6, [0, 0, 0], [-1.15, 0.8, 0.15], [0.56, 0.55, 0.55]);
+      addPart(actor, 0x8fc9e6, [0, 0, 0], [1.15, 0.8, 0.15], [0.56, 0.55, 0.55]);
+      addPart(actor, 0x5a9ab8, [0, 0, 0], [-1.2, 0.95, 0.5], [0.22, 0.22, 0.62], { rz: 0.3 });
+      addPart(actor, 0x5a9ab8, [0, 0, 0], [1.2, 0.95, 0.5], [0.22, 0.22, 0.62], { rz: -0.3 });
+      addPart(actor, 0x9fe6ff, [0, 0, 0], [-0.5, 1.35, -0.1], [0.2, 0.6, 0.2], { geo: 'cone6' });
+      addPart(actor, 0x9fe6ff, [0, 0, 0], [0.5, 1.35, -0.1], [0.2, 0.6, 0.2], { geo: 'cone6' });
+      addPart(actor, 0x9fe6ff, [0, 0, 0], [0, 1.42, -0.2], [0.24, 0.72, 0.24], { geo: 'cone6' });
+      for (var c = 0; c < 4; c++) {
+        addPart(actor, 0x8fc9e6, [0, 0, 0], [-0.62 + c * 0.42, 0.35, 0.45], [0.14, 0.7, 0.14], { rz: c % 2 ? 0.55 : -0.55 });
       }
+      glowEyes(actor, 0x1a3a4a, 1.05, 0.62, 0.3, 0.16);
     } else if (model === 'wraith') {
-      actor.baseY = 0.6;
-      addPart(actor, 0x3b2b2a, [0, 0.6, 0], [0, 1.2, 0], [1.1, 3.2, 1.1], { geo: 'cylinder' });
-      addPart(actor, 0x1a1220, [0, 0.6, 0], [0, 2.2, 0], [0.9, 0.9, 0.9]);
-      addPart(actor, 0x9ff2ff, [0, 3.0, 0.42], [-0.2, 0, 0], [0.12, 0.16, 0.08]);
-      addPart(actor, 0x9ff2ff, [0, 3.0, 0.42], [0.2, 0, 0], [0.12, 0.16, 0.08]);
-      addPart(actor, 0x4a3a30, [0, 1.8, 0], [-0.75, 0.2, 0], [0.2, 1.6, 0.2], { rz: 0.9 });
-      addPart(actor, 0x4a3a30, [0, 1.8, 0], [0.75, 0.2, 0], [0.2, 1.6, 0.2], { rz: -0.9 });
-      addPart(actor, 0x4a3a30, [0, 2.0, 0], [0, 1.8, 0], [0.18, 1.2, 0.18], { rz: 1.4 });
-      addPart(actor, 0x4a3a30, [0, 2.0, 0], [0, 1.7, 0], [0.18, 1.1, 0.18], { rz: -1.4 });
+      actor.baseY = 0;
+      addPart(actor, 0x3b2b2a, [0, 0, 0], [0, 1.5, 0], [1.3, 2.6, 1.3], { geo: 'cylinder' });
+      addPart(actor, 0x2a1e1c, [0, 0, 0], [0, 2.95, 0], [1.15, 1.1, 1.05]);
+      addPart(actor, 0x2a1e1c, [0, 0, 0], [0, 1.3, 0], [2.6, 0.5, 2.2], { geo: 'cone6', rx: Math.PI });
+      addPart(actor, 0x4a3a30, [0, 0, 0], [-0.7, 3.1, 0], [0.24, 1.5, 0.24], { rz: 0.85 });
+      addPart(actor, 0x4a3a30, [0, 0, 0], [0.7, 3.1, 0], [0.24, 1.5, 0.24], { rz: -0.85 });
+      addPart(actor, 0x4a3a30, [0, 0, 0], [-1.15, 3.55, 0], [0.18, 0.8, 0.18], { rz: 1.35 });
+      addPart(actor, 0x4a3a30, [0, 0, 0], [1.15, 3.55, 0], [0.18, 0.8, 0.18], { rz: -1.35 });
+      addPart(actor, 0x4a3a30, [0, 0, 0], [-1.1, 2.0, 0.2], [0.2, 1.6, 0.2], { rz: 0.9 });
+      addPart(actor, 0x4a3a30, [0, 0, 0], [1.1, 2.0, 0.2], [0.2, 1.6, 0.2], { rz: -0.9 });
+      addPart(actor, 0x1a1220, [0, 0, 0], [0, 2.95, 0.52], [0.7, 0.42, 0.14]);
+      glowEyes(actor, 0x9ff2ff, 3.0, 0.55, 0.24, 0.16);
     } else if (model === 'serpent') {
-      actor.baseY = 0.8;
-      addPart(actor, 0x7fd4ee, [0, 0.9, 0], [0, 0.4, 0.9], [0.8, 0.8, 1.0]);
-      addPart(actor, 0xffffff, [0, 0.9, 0], [-0.18, 0.55, 1.2], [0.14, 0.14, 0.1]);
-      addPart(actor, 0xffffff, [0, 0.9, 0], [0.18, 0.55, 1.2], [0.14, 0.14, 0.1]);
-      addPart(actor, 0x9fe6ff, [0, 0.9, 0], [0, 0.85, 0.6], [0.2, 0.5, 0.2], { geo: 'cone6' });
-      for (var k = 0; k < 5; k++) {
-        addPart(actor, k % 2 ? 0x8fdcef : 0x6ec3dd, [0, 0.5, 0], [0, 0.15, -0.6 - k * 0.7], [0.7 - k * 0.05, 0.7 - k * 0.05, 0.65]);
-      }
-      addPart(actor, 0x9fe6ff, [0, 0.9, 0], [0, 0.7, -0.2], [0.16, 0.5, 0.16], { geo: 'cone6' });
+      actor.baseY = 0;
+      var coils = [[0, 0.55, 1.2], [-0.5, 0.5, 0.4], [0.5, 0.55, -0.4], [-0.45, 0.6, -1.2], [0.35, 0.7, -2.0]];
+      coils.forEach(function (spot, index) {
+        addPart(actor, index % 2 ? 0x8fdcef : 0x6ec3dd, [0, 0, 0], spot, [1.05 - index * 0.07, 1.0, 1.0]);
+        addPart(actor, 0x4fa8c4, [0, 0, 0], [spot[0], spot[1] + 0.55, spot[2]], [0.5, 0.16, 0.5]);
+      });
+      addPart(actor, 0x9fe6ff, [0, 0, 0], [0, 1.35, 1.9], [1.15, 0.95, 1.3]);
+      addPart(actor, 0x7fd4ee, [0, 0, 0], [0, 1.2, 2.55], [0.8, 0.5, 0.5]);
+      addPart(actor, 0x2c6a86, [0, 0, 0], [0, 0.98, 2.6], [0.7, 0.18, 0.45]);
+      addPart(actor, 0xd9f6ff, [0, 0, 0], [-0.34, 1.8, 1.8], [0.22, 0.5, 0.22], { geo: 'cone6', rz: 0.4 });
+      addPart(actor, 0xd9f6ff, [0, 0, 0], [0.34, 1.8, 1.8], [0.22, 0.5, 0.22], { geo: 'cone6', rz: -0.4 });
+      glowEyes(actor, 0xffffff, 1.42, 2.42, 0.3, 0.15);
     } else if (model === 'bell') {
-      actor.baseY = 0.9;
-      addPart(actor, 0x8a6fc2, [0, 0.9, 0], [0, 1.6, 0], [1.5, 2.2, 1.5], { geo: 'cone6', rx: Math.PI });
-      addPart(actor, 0x2a1a4c, [0, 0.9, 0], [0, 1.1, 0], [0.7, 0.5, 0.7]);
-      addPart(actor, 0xffe066, [0, 1.3, 0.6], [-0.2, 0, 0], [0.12, 0.14, 0.08]);
-      addPart(actor, 0xffe066, [0, 1.3, 0.6], [0.2, 0, 0], [0.12, 0.14, 0.08]);
-      addPart(actor, 0x5a4580, [0, 1.0, 0], [-0.9, 0.4, 0], [0.16, 0.9, 0.16], { rz: 0.5 });
-      addPart(actor, 0x5a4580, [0, 1.0, 0], [0.9, 0.4, 0], [0.16, 0.9, 0.16], { rz: -0.5 });
+      actor.baseY = 0;
+      addPart(actor, 0x8a6fc2, [0, 0, 0], [0, 2.0, 0], [2.1, 2.4, 2.1], { geo: 'cone6', rx: Math.PI });
+      addPart(actor, 0xcdb6f5, [0, 0, 0], [0, 0.85, 0], [2.2, 0.3, 2.2]);
+      addPart(actor, 0x2a1a4c, [0, 0, 0], [0, 1.2, 0], [1.2, 0.55, 1.2]);
+      addPart(actor, 0x8a6fc2, [0, 0, 0], [0, 3.35, 0], [0.7, 0.55, 0.7]);
+      addPart(actor, 0xffe066, [0, 0, 0], [0, 1.55, 0], [0.42, 0.7, 0.42], { geo: 'cylinder' });
+      addPart(actor, 0xffe066, [0, 0, 0], [0, 2.2, 0.02], [0.55, 0.55, 0.4]);
+      addPart(actor, 0x5a4580, [0, 0, 0], [-1.25, 2.0, 0], [0.28, 1.5, 0.28], { rz: 0.4 });
+      addPart(actor, 0x5a4580, [0, 0, 0], [1.25, 2.0, 0], [0.28, 1.5, 0.28], { rz: -0.4 });
+      glowEyes(actor, 0xffe066, 2.35, 0.62, 0.3, 0.18);
     } else if (model === 'night') {
-      actor.baseY = 0.9;
-      addPart(actor, 0x140c26, [0, 0.9, 0], [0, 1.8, 0], [1.7, 3.6, 1.2]);
-      addPart(actor, 0x241740, [0, 2.6, 0], [0, 1.1, 0], [1.2, 1.1, 1.0]);
-      addPart(actor, 0x0e0818, [0, 3.2, 0], [-0.6, 0.4, 0], [0.3, 1.2, 0.3], { geo: 'cone6', rz: 0.45 });
-      addPart(actor, 0x0e0818, [0, 3.2, 0], [0.6, 0.4, 0], [0.3, 1.2, 0.3], { geo: 'cone6', rz: -0.45 });
-      addPart(actor, 0xff5c74, [0, 3.1, 0.55], [-0.24, 0, 0], [0.16, 0.12, 0.08]);
-      addPart(actor, 0xff5c74, [0, 3.1, 0.55], [0.24, 0, 0], [0.16, 0.12, 0.08]);
-      addPart(actor, 0x7ce7ff, [0, 1.6, 0.65], [0, 0.6, 0], [0.6, 0.6, 0.2]);
-      addPart(actor, 0x7ce7ff, [0, 1.6, 0.65], [0, 0.6, 0], [0.9, 0.9, 0.4], { alpha: 0.18 });
-      addPart(actor, 0x1b1130, [0, 1.0, 0], [-1.0, 0.5, 0], [0.35, 1.4, 0.35], { rz: 0.7 });
-      addPart(actor, 0x1b1130, [0, 1.0, 0], [1.0, 0.5, 0], [0.35, 1.4, 0.35], { rz: -0.7 });
+      actor.baseY = 0;
+      addPart(actor, 0x140c26, [0, 0, 0], [-0.26, 0.62, 0], [0.5, 1.3, 0.55]);
+      addPart(actor, 0x140c26, [0, 0, 0], [0.26, 0.62, 0], [0.5, 1.3, 0.55]);
+      addPart(actor, 0x1b1130, [0, 0, 0], [0, 1.85, 0], [1.25, 1.35, 0.7]);
+      addPart(actor, 0x241740, [0, 0, 0], [-0.82, 1.85, 0], [0.42, 1.2, 0.42]);
+      addPart(actor, 0x241740, [0, 0, 0], [0.82, 1.85, 0], [0.42, 1.2, 0.42]);
+      addPart(actor, 0x0e0818, [0, 0, 0], [0, 2.9, 0], [1.0, 1.0, 0.95]);
+      addPart(actor, 0x7ce7ff, [0, 0, 0], [0, 1.85, 0.36], [0.34, 0.34, 0.06], { alpha: 0.85 });
+      addPart(actor, 0x241740, [0, 0, 0], [-0.6, 3.5, 0], [0.26, 0.9, 0.26], { geo: 'cone6', rz: 0.45 });
+      addPart(actor, 0x241740, [0, 0, 0], [0.6, 3.5, 0], [0.26, 0.9, 0.26], { geo: 'cone6', rz: -0.45 });
+      addPart(actor, 0x1b1130, [0, 0, 0], [0, 1.2, -0.5], [2.0, 1.8, 0.4], { alpha: 0.55 });
+      glowEyes(actor, 0xff5c74, 2.92, 0.5, 0.24, 0.16);
     } else {
-      actor.baseY = 0.6;
-      addPart(actor, 0x2a1d44, [0, 0.6, 0], [0, 0.5, 0], [0.9, 1.3, 0.85], { geo: 'cone6' });
-      addPart(actor, 0x120a22, [0, 0.6, 0], [0, 0.45, 0.3], [0.6, 0.5, 0.2]);
-      addPart(actor, 0x9ff2ff, [0, 0.6, 0], [-0.14, 0.5, 0.4], [0.1, 0.08, 0.06]);
-      addPart(actor, 0x9ff2ff, [0, 0.6, 0], [0.14, 0.5, 0.4], [0.1, 0.08, 0.06]);
-      addPart(actor, 0x3a2a5c, [0, 0.5, 0], [-0.55, 0.3, 0], [0.16, 0.6, 0.16], { rz: 0.5 });
-      addPart(actor, 0x3a2a5c, [0, 0.5, 0], [0.55, 0.3, 0], [0.16, 0.6, 0.16], { rz: -0.5 });
-      addPart(actor, 0x6a4ca0, [0, 0.2, 0], [0, 0, 0], [1.1, 0.1, 1.1], { geo: 'disc', alpha: 0.35 });
+      actor.baseY = 0.4;
+      addPart(actor, 0x35245c, [0, 0, 0], [0, 1.3, 0], [0.95, 1.15, 0.75]);
+      addPart(actor, 0x2a1d44, [0, 0, 0], [0, 0.55, 0], [1.1, 1.2, 0.95], { geo: 'cone6', rx: Math.PI });
+      addPart(actor, 0x120a22, [0, 0, 0], [0, 2.0, 0], [0.95, 0.95, 0.9]);
+      addPart(actor, 0x120a22, [0, 0, 0], [0, 2.15, -0.25], [1.0, 0.7, 0.5]);
+      addPart(actor, 0x3a2a5c, [0, 0, 0], [-0.62, 1.35, 0], [0.26, 0.95, 0.26], { rz: 0.5 });
+      addPart(actor, 0x3a2a5c, [0, 0, 0], [0.62, 1.35, 0], [0.26, 0.95, 0.26], { rz: -0.5 });
+      addPart(actor, 0x6a4ca0, [0, 0, 0], [0, 0.05, 0], [1.4, 0.1, 1.4], { geo: 'disc', alpha: 0.3 });
+      glowEyes(actor, 0x9ff2ff, 2.05, 0.46, 0.22, 0.14);
     }
+    /* Rotate each angled part around its own centre, so limbs and antlers stay
+       attached instead of swinging around the model's feet. */
+    actor.parts.forEach(function (part) {
+      if ((part.rx || part.ry || part.rz) && !part.pivot[0] && !part.pivot[1] && !part.pivot[2]) {
+        part.pivot = part.offset.slice();
+        part.offset = [0, 0, 0];
+      }
+    });
     return actor;
   }
 
@@ -412,9 +502,21 @@
       if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === 'suspended') audio.resume();
       var presets = {
-        click: [{ f: 520, t: 0.05 }],
-        battle: [{ f: 196, t: 0.1 }, { f: 262, at: 0.1, t: 0.12 }],
-        hit: [{ f: 190, t: 0.11, type: 'sawtooth' }],
+        click: [{ f: 620, t: 0.05 }, { f: 930, at: 0.03, t: 0.05 }],
+        menu: [{ f: 440, t: 0.04 }, { f: 660, at: 0.04, t: 0.06 }],
+        battle: [{ f: 196, t: 0.1 }, { f: 262, at: 0.1, t: 0.12 }, { f: 392, at: 0.2, t: 0.16 }],
+        swing: [{ f: 880, t: 0.09, type: 'sawtooth' }, { f: 360, at: 0.03, t: 0.1, type: 'triangle' }],
+        hit: [{ f: 190, t: 0.11, type: 'sawtooth' }, { f: 90, at: 0.02, t: 0.12, type: 'square' }],
+        perfect: [{ f: 880, t: 0.06 }, { f: 1320, at: 0.05, t: 0.08 }, { f: 1760, at: 0.11, t: 0.14 }],
+        guard: [{ f: 300, t: 0.08, type: 'triangle' }, { f: 600, at: 0.04, t: 0.1 }],
+        superguard: [{ f: 660, t: 0.07 }, { f: 990, at: 0.06, t: 0.09 }, { f: 1480, at: 0.13, t: 0.18 }],
+        chimeWhite: [{ f: 760, t: 0.08 }, { f: 1010, at: 0.06, t: 0.1 }],
+        chimeOrange: [{ f: 520, t: 0.09, type: 'triangle' }, { f: 700, at: 0.07, t: 0.12 }],
+        chimeRed: [{ f: 320, t: 0.1, type: 'sawtooth' }, { f: 240, at: 0.08, t: 0.16 }],
+        burrow: [{ f: 180, t: 0.2, type: 'triangle' }],
+        charge: [{ f: 200, t: 0.12, type: 'sawtooth' }, { f: 400, at: 0.12, t: 0.2, type: 'square' }],
+        break: [{ f: 1200, t: 0.06, type: 'square' }, { f: 700, at: 0.06, t: 0.12 }],
+        inspect: [{ f: 700, t: 0.05 }, { f: 540, at: 0.05, t: 0.06 }],
         hurt: [{ f: 110, t: 0.18, type: 'square' }],
         heal: [{ f: 520, t: 0.1 }, { f: 780, at: 0.08, t: 0.14 }],
         win: [{ f: 523, t: 0.1 }, { f: 659, at: 0.1, t: 0.1 }, { f: 784, at: 0.2, t: 0.2 }],
@@ -456,6 +558,40 @@
     shakeTimer = setTimeout(function () { stage.classList.remove('ff-shake'); }, 260);
   }
 
+  /* Block Tales-style juice: 60-80ms hit-stop, a camera kick, a fat damage
+     popup and a rating badge that squashes in. */
+  function hitStop(ms) {
+    freezeUntil = Math.max(freezeUntil, performance.now() + ms);
+  }
+
+  function flashStage(kind) {
+    if (!ui.flash) return;
+    ui.flash.className = 'ff-flash ' + (kind || 'white');
+    ui.flash.hidden = false;
+    clearTimeout(ui.flashTimer);
+    ui.flashTimer = setTimeout(function () { ui.flash.hidden = true; }, 230);
+  }
+
+  function pop(text, cls) {
+    if (!ui.fx) return;
+    var node = document.createElement('div');
+    node.className = 'ff-pop ' + (cls || '');
+    node.textContent = text;
+    node.style.left = (42 + Math.random() * 18) + '%';
+    node.style.top = (26 + Math.random() * 12) + '%';
+    ui.fx.appendChild(node);
+    setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 820);
+  }
+
+  function rate(text, cls) {
+    if (!ui.rating) return;
+    ui.rating.textContent = text;
+    ui.rating.className = 'ff-rating ' + (cls || '');
+    ui.rating.hidden = false;
+    clearTimeout(ui.ratingTimer);
+    ui.ratingTimer = setTimeout(function () { ui.rating.hidden = true; }, 900);
+  }
+
   /* ------------------------------------------------------------- scenery */
   function makeStatic(geo, x, y, z, sx, sy, sz, color, opts) {
     opts = opts || {};
@@ -464,6 +600,8 @@
       model: mat.compose([x, y, z], [opts.rx || 0, opts.ry || 0, opts.rz || 0], [sx, sy, sz]),
       color: rgb(color),
       alpha: opts.alpha === undefined ? 1 : opts.alpha,
+      pattern: opts.pattern === undefined ? !opts.alpha : opts.pattern,
+      tile: opts.tile || 1,
       hidden: false
     };
   }
@@ -532,14 +670,28 @@
     pixelTextInto(world.geometries, world.objects, text, centerX, bottomY, z, px, color);
   }
 
+  /* A gantry sign straddling the road: the board sits centred over the path
+     with a post at each end, so it stays fully inside the frame at spawn. */
   function sign(text, x, z) {
-    var px = 0.32;
+    var px = 0.22;
     var width = String(text).length * 4 * px;
-    box(x, 1.75, z, width + 1.3, 3.0, 0.5, 0x6b4a32);
-    box(x - width / 2 - 0.4, 0.75, z, 0.35, 1.5, 0.35, 0x4c3323);
-    box(x + width / 2 + 0.4, 0.75, z, 0.35, 1.5, 0.35, 0x4c3323);
-    pixelText(text, x, 1.18, z + 0.3, px, 0xfff3d5);
-    world.colliders.push({ x: x, z: z, hw: width / 2 + 0.9, hd: 0.6 });
+    var boardY = 2.7;
+    box(x - width / 2 - 0.62, 1.35, z, 0.34, 2.7, 0.34, 0x6b4a32);
+    box(x + width / 2 + 0.62, 1.35, z, 0.34, 2.7, 0.34, 0x6b4a32);
+    box(x, boardY, z, width + 1.8, 1.55, 0.44, 0x6b4a32);
+    box(x, boardY + 0.88, z, width + 2.1, 0.22, 0.52, 0x8a6242);
+    pixelText(text, x, boardY - 0.5, z + 0.30, px, 0xfff3d5);
+    world.colliders.push({ x: x - width / 2 - 0.62, z: z, hw: 0.42, hd: 0.42 });
+    world.colliders.push({ x: x + width / 2 + 0.62, z: z, hw: 0.42, hd: 0.42 });
+  }
+
+  /* E on scenery is a joke delivery service. */
+  function inspect(x, z, speaker, lines, radius) {
+    if (!world) return;
+    world.interactables.push({
+      x: x, z: z, r: radius || 2.6, label: 'INSPECT',
+      action: function () { talk(speaker, lines, null); }
+    });
   }
 
   function house(x, z, w, d, h, wall, roof) {
@@ -628,15 +780,24 @@
 
   function buildRoadtown() {
     box(0, -0.3, 0, 64, 0.6, 64, 0xeaf4ff);
-    box(0, 0.02, 0, 7, 0.06, 54, 0x94a7bd);
-    studs(0, 0, 7, 54, 0.05, 0xc7d4e3, 1.75);
+    box(0, 0.02, 0, 7, 0.06, 54, 0x6d8cb8);
+    studs(0, 0, 7, 54, 0.05, 0xe8f4ff, 1.75);
     for (var m = -24; m <= 24; m += 4) box(0, 0.15, m, 0.32, 0.03, 1.4, 0xdce9f7);
     house(-10.5, 3, 7, 6, 4, 0x9a7561, 0x6b4a3a);
     house(10.5, 2, 6, 5, 3.8, 0x7f8fa8, 0x51617a);
     house(-11, -9, 6, 6, 4.4, 0x8a6a8f, 0x5d4166);
     house(11, -10, 7, 6, 4, 0x6f8a78, 0x47604f);
-    sign('ROADTOWN', -6.8, 6.8);
+    sign('ROADTOWN', 0, 7.6);
+    inspect(0, 7.6, 'ROADTOWN', [
+      'ROADTOWN · POP. 214 · SHARDS 1 · SNOW 6 FT.',
+      'Someone crossed out WELCOME and wrote PLEASE CLOSE THE SKY.',
+      'Under that, in pencil: "we mean it."'
+    ], 3);
     fountain(0, -4);
+    inspect(0, -4, 'FOUNTAIN', [
+      'The fountain is frozen mid-splash. It looks personally offended.',
+      'A little plaque reads NO SKATING. It is covered in skate marks.'
+    ], 2.6);
     lamp(-3.6, 2.5); lamp(3.6, -1.5); lamp(-3.6, -10); lamp(3.6, 8);
     tree(-16, 8, 1.1); tree(16, 6, 1.0); tree(-17, -16, 1.2); tree(17, -18, 1.1);
     tree(-6.5, -19, 0.9); tree(7, -20, 1.0);
@@ -645,10 +806,10 @@
   }
 
   function buildPines() {
-    box(0, -0.3, 0, 64, 0.6, 64, 0xdfeeff);
+    box(0, -0.3, 0, 64, 0.6, 64, 0xc6e0f7);
     for (var z = -24; z <= 24; z += 3) {
       box(Math.sin(z * 0.18) * 2, 0.03, z, 4.6, 0.06, 2.8, 0xf3faff);
-      studs(Math.sin(z * 0.18) * 2, z, 4.6, 2.8, 0.06, 0xffffff, 1.5);
+      studs(Math.sin(z * 0.18) * 2, z, 4.6, 2.8, 0.06, 0x9fc8ea, 1.5);
     }
     var spots = [[-8, 8], [-12, 4], [-9, -2], [-13, -9], [-8, -15], [-12, -21], [8, 7], [12, 3], [9, -3], [13, -9], [8, -15], [12, -21], [-4, 17], [5, 16], [-16, 12], [16, 12], [-16, -16], [16, -18], [-18, 1], [18, 0]];
     spots.forEach(function (spot, index) {
@@ -656,6 +817,10 @@
     });
     house(-15.5, 2, 5, 5, 3.4, 0x6a5a4a, 0x3f3028);
     campfire(-4.5, -1.5);
+    inspect(-4.5, -1.5, 'CAMPFIRE', [
+      'The fire is warm. The fire is also the only thing here not whispering.',
+      'Someone left a marshmallow on a stick. It is now a small rock.'
+    ], 2.4);
     lamp(3.2, 5);
     lamp(-3.2, -10);
     snowPile(-6, 9, 0.9); snowPile(5, -6, 1.1); snowPile(10, 11, 0.8);
@@ -670,6 +835,10 @@
     box(-2, 0.05, -13, 0.18, 0.02, 7, 0xffffff, { ry: -0.5 });
     box(9, 0.05, 8, 0.18, 0.02, 5, 0xffffff, { ry: 0.8 });
     dock(4, 2);
+    inspect(4, 2, 'DOCK', [
+      'A boathouse sign: BOATS FOR RENT · ASK FINN · FINN IS UNDER THE ICE.',
+      'The lake taps back when you knock. Politely. Twice.'
+    ], 2.6);
     house(-9, 4, 5.5, 5, 3.2, 0x6a5a4a, 0x3f3028);
     box(-9, 0.4, 7.2, 1.4, 0.8, 1.0, 0x4a3322);
     lamp(-3, 7); lamp(3, -3);
@@ -696,6 +865,11 @@
     house(-13, -9, 5, 5, 3.6, 0x6f8a78, 0x47604f);
     house(13, -10, 6, 6, 4.2, 0x9a7561, 0x6b4a3a);
     lamp(-4, 4); lamp(4, -2); lamp(-4, -9); lamp(4, 9);
+    inspect(0, -9, 'CLOCKTOWER', [
+      'The clock face shows THIRTEEN. The little hand is pointing at YOU.',
+      'A brass plate: BELLKEEPER ODETTE · DO NOT COUNT THE BELLS.',
+      'Someone has scratched "it counts back" underneath.'
+    ], 2.8);
     tree(-18, 11, 1); tree(18, 12, 1); tree(-18, -17, 0.9); tree(18, -18, 1);
     snowPile(-7, 8, 0.8); snowPile(8, -8, 0.9);
   }
@@ -720,6 +894,10 @@
     box(0, 3.4, -12, 0.9, 1.0, 0.9, 0x7ce7ff, { alpha: 0.35 });
     world.colliders.push({ x: 0, z: -12, hw: 1.8, hd: 1.8 });
     lamp(-3, 7); lamp(3, 7);
+    inspect(0, -9.4, 'ALTAR', [
+      'Five grooves wait in the stone. One of them is already warm.',
+      'Carved underneath: THE STAR IS NOT LOST. IT IS WAITING TO BE LIT.'
+    ], 2.8);
     snowPile(-5, 3, 0.8); snowPile(6, -2, 0.9);
   }
 
@@ -1293,16 +1471,19 @@
       actor.phase = Math.random() * 6;
       addActor(actor);
       var item = {
-        x: shade.x, z: shade.z, r: 2.3, label: 'FIGHT', auto: true, cooldown: 0,
+        x: shade.x, z: shade.z, r: 2.6, label: 'STRIKE', auto: true, cooldown: 0, enemy: true, opening: 0,
         action: function () {
           item.cooldown = Date.now() + 5000;
           var toPlayer = Math.atan2(player.x - actor.x, player.z - actor.z);
           var facing = Math.abs(((toPlayer - actor.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          var advantage = facing > 2.0 ? 'player' : facing < 0.9 ? 'enemy' : 'neutral';
+          var advantage = item.opening ? 'player' : facing > 2.0 ? 'player' : facing < 0.9 ? 'enemy' : 'neutral';
+          var opening = item.opening || 0;
+          item.opening = 0;
           startBattle(
             { name: shade.name, hp: shade.hp, atk: shade.atk, xp: shade.xp, model: chapter.shadeModel, agility: 5 },
             {
               advantage: advantage,
+              opening: opening,
               onWin: function () {
                 save.defeated[shade.key] = true;
                 actor.hidden = true;
@@ -1421,10 +1602,11 @@
     pipTimer = 0;
     addNpc(chapter, index);
     spawnEnemies(chapter);
-    camera.yaw = 0.24;
-    camera.pitch = 0.2;
-    camera.dist = 26;
-    camera.ortho = 20;
+    camera.yaw = 0.26;
+    camera.pitch = 0.46;
+    camera.dist = 16;
+    camera.ortho = baseOrtho();
+    camera.punch = 0;
     snapCamera();
     renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
     app.dataset.theme = chapter.theme;
@@ -1457,13 +1639,20 @@
     ui.hudSpText.textContent = save.sp + '/' + save.maxSp;
     ui.hudBp.textContent = save.bp;
     ui.hudShards.textContent = save.shards;
+    if (ui.hudBpBar) {
+      var spentBp = cardCost();
+      var totalBp = Math.max(1, spentBp + save.bp);
+      ui.hudBpBar.style.width = clamp(spentBp / totalBp * 100, 0, 100) + '%';
+      if (ui.hudBpText) ui.hudBpText.textContent = spentBp + '/' + totalBp;
+    }
     placeObjective();
   }
 
   function placeObjective() {
-    if (!ui.objective || ui.hud.hidden) return;
-    var bottom = ui.hud.getBoundingClientRect().bottom;
-    ui.objective.style.top = (bottom + 10) + 'px';
+    /* The objective card lives in the bottom-left corner (CSS positions it),
+       so it never sits on top of the ROADTOWN sign or the characters. */
+    if (!ui.objective) return;
+    ui.objective.style.top = '';
   }
 
   function updateObjective() {
@@ -1548,31 +1737,58 @@
     player.moving = true;
   }
 
+  /* Portrait screens need a wider ortho box, otherwise the ROADTOWN gantry
+     leaves the frame at spawn. Desktop stays tight and low. */
+  function baseOrtho() {
+    var aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    if (aspect < 0.9) return 18;
+    if (aspect < 1.35) return 16;
+    return 14;
+  }
+
+  function cameraPunch(amount) {
+    camera.punch = Math.max(camera.punch, amount);
+    stage.classList.remove('ff-punch');
+    void stage.offsetWidth;
+    stage.classList.add('ff-punch');
+    clearTimeout(punchTimer);
+    punchTimer = setTimeout(function () { stage.classList.remove('ff-punch'); }, 190);
+  }
+
+  function punchOffset() {
+    if (camera.punch <= 0.001) return [0, 0, 0];
+    var t = performance.now();
+    return [Math.sin(t * 0.075) * camera.punch, Math.cos(t * 0.11) * camera.punch * 0.7, 0];
+  }
+
   function snapCamera() {
     if (!player) return;
-    camera.target = [player.x, player.y + 1.15, player.z];
+    camera.target = [player.x, player.y + 1.05, player.z];
     var flat = Math.cos(camera.pitch) * camera.dist;
+    var kick = punchOffset();
     camera.eye = [
-      camera.target[0] + Math.sin(camera.yaw) * flat,
-      camera.target[1] + Math.sin(camera.pitch) * camera.dist,
+      camera.target[0] + Math.sin(camera.yaw) * flat + kick[0],
+      camera.target[1] + Math.sin(camera.pitch) * camera.dist + kick[1],
       camera.target[2] + Math.cos(camera.yaw) * flat
     ];
-    renderer.setCamera(camera.eye, camera.target, 52 * Math.PI / 180, camera.ortho);
+    renderer.setCamera(camera.eye, camera.target, 55 * Math.PI / 180, camera.ortho);
   }
 
   function updateCamera(dt) {
-    var target = [player.x, player.y + 1.15, player.z];
+    var target = [player.x, player.y + 1.05, player.z];
     var flat = Math.cos(camera.pitch) * camera.dist;
+    var kick = punchOffset();
     var eye = [
-      target[0] + Math.sin(camera.yaw) * flat,
-      target[1] + Math.sin(camera.pitch) * camera.dist,
+      target[0] + Math.sin(camera.yaw) * flat + kick[0],
+      target[1] + Math.sin(camera.pitch) * camera.dist + kick[1],
       target[2] + Math.cos(camera.yaw) * flat
     ];
     for (var i = 0; i < 3; i++) {
       camera.target[i] = lerp(camera.target[i], target[i], Math.min(1, dt * 9));
       camera.eye[i] = lerp(camera.eye[i], eye[i], Math.min(1, dt * 7));
     }
-    renderer.setCamera(camera.eye, camera.target, 52 * Math.PI / 180, camera.ortho);
+    camera.punch = Math.max(0, camera.punch - dt * 26);
+    renderer.setCamera(camera.eye, camera.target, 55 * Math.PI / 180, camera.ortho);
   }
 
   function nearestInteractable() {
@@ -1597,25 +1813,66 @@
     if (nearestItem) ui.promptText.textContent = nearestItem.label;
   }
 
+    /* E is also an action button: near a shade it is a real pre-emptive swing
+     worth 1-2 opening damage, everywhere else it pokes the scenery. */
+  function overworldStrike(item) {
+    if (player.swing > 0) return;
+    player.swing = SWING_TIME;
+    player.yaw = Math.atan2(item.x - player.x, item.z - player.z);
+    updateActor(player);
+    item.opening = 1 + (Math.random() < 0.5 ? 1 : 0);
+    sound('swing');
+    slashFx();
+    cameraPunch(0.18);
+    item.action();
+  }
+
+  function slashFx() {
+    if (!ui.slash) return;
+    ui.slash.hidden = false;
+    ui.slash.classList.remove('on');
+    void ui.slash.offsetWidth;
+    ui.slash.classList.add('on');
+    clearTimeout(ui.slashTimer);
+    ui.slashTimer = setTimeout(function () { ui.slash.hidden = true; }, 320);
+  }
+
   function interact() {
     if (mode === 'dialogue') { advanceDialogue(); return; }
     if (mode !== 'world') return;
-    if (nearestItem) {
-      sound('click');
-      nearestItem.action();
-    }
+    if (!nearestItem) return;
+    if (nearestItem.enemy) { overworldStrike(nearestItem); return; }
+    sound('click');
+    nearestItem.action();
   }
 
   function updateWorld(dt, time) {
     if (mode === 'world') handleMovement(dt);
     else player.moving = false;
 
-    var swing = player.moving ? Math.sin(player.walk) * 0.62 : 0;
-    player.legL.rx = swing;
-    player.legR.rx = -swing;
-    player.armL.rx = -swing * 0.8;
-    player.armR.rx = swing * 0.8;
-    player.y = player.moving ? Math.abs(Math.sin(player.walk)) * 0.05 : 0;
+    /* Snappy 4-pose walk: limbs snap between poses instead of sliding, and
+       the torso squashes on each footfall like a plastic toy. */
+    var walkSin = Math.sin(player.walk);
+    var step = player.moving ? (walkSin > 0.55 ? 1 : walkSin < -0.55 ? -1 : walkSin * 0.3) : 0;
+    var bounce = player.moving ? Math.abs(Math.cos(player.walk)) : 0;
+    player.legL.rx = step * 0.82;
+    player.legR.rx = -step * 0.82;
+    player.armL.rx = -step * 0.72;
+    player.armR.rx = step * 0.72;
+    player.squashY = 1 + bounce * 0.075;
+    player.squashX = 1 - bounce * 0.05;
+    player.lean = -step * 0.055;
+    player.tiltX = player.moving ? 0.05 : 0;
+    player.y = bounce * 0.09;
+    if (player.swing > 0) {
+      player.swing = Math.max(0, player.swing - dt);
+      var swingK = 1 - player.swing / SWING_TIME;
+      player.armR.rx = -2.2 + swingK * 3.3;
+      player.armL.rx = 0.5 - swingK * 0.8;
+      player.tiltX = 0.15 - swingK * 0.2;
+      player.squashY = 1.04;
+      player.squashX = 0.96;
+    }
 
     pipTimer += dt;
     if (pipTimer >= 0.12) {
@@ -1679,7 +1936,9 @@
     { id: 'guard-charm', name: 'GUARD CHARM', cost: 2, desc: 'Wider guard and superguard windows.', mods: { guardMs: 160 } },
     { id: 'second-wind', name: 'SECOND WIND', cost: 4, desc: 'Get up once per battle at 5 HP.', mods: { revive: true } },
     { id: 'swift-boots', name: 'SWIFT BOOTS', cost: 2, desc: '+3 agility: act before the enemy.', mods: { agility: 3 } },
-    { id: 'snowball', name: 'SNOWBALL CHARM', cost: 3, desc: 'Skills cost 1 less SP.', mods: { skillDiscount: 1 } }
+    { id: 'snowball', name: 'SNOWBALL CHARM', cost: 3, desc: 'Skills cost 1 less SP.', mods: { skillDiscount: 1 } },
+    { id: 'ante-up', name: 'ANTE UP', cost: 3, desc: 'Narrow gold zone, but PERFECT hits deal 2× damage.', mods: { narrow: 1, ante: true } },
+    { id: 'glass-cannon', name: 'GLASS CANNON', cost: 3, desc: '+3 attack, but every hit you take deals +2.', mods: { attack: 3, incoming: 2 } }
   ];
 
   function equippedCards() {
@@ -1687,7 +1946,7 @@
   }
 
   function cardMods() {
-    var mods = { maxHp: 0, attack: 0, guardMs: 0, revive: false, agility: 0, skillDiscount: 0 };
+    var mods = { maxHp: 0, attack: 0, guardMs: 0, revive: false, agility: 0, skillDiscount: 0, narrow: 0, incoming: 0, ante: false };
     equippedCards().forEach(function (id) {
       CARDS.forEach(function (card) {
         if (card.id !== id) return;
@@ -1762,7 +2021,7 @@
     }
     for (var ix = -4; ix <= 4; ix++) {
       for (var iz = -2; iz <= 3; iz++) {
-        bpush(ix * 1.55, -0.2, iz * 1.55, 1.55, 0.35, 1.55, (ix + iz) % 2 === 0 ? 0x6b5896 : 0x251742);
+        bpush(ix * 1.55, -0.2, iz * 1.55, 1.55, 0.35, 1.55, (ix + iz) % 2 === 0 ? 0x7f6bb4 : 0x2f2050);
       }
     }
     bpush(0, -0.5, 0.6, 17, 0.4, 12, 0x140c26);
@@ -1773,21 +2032,22 @@
     bpush(0, 5.4, -6.4, 12, 0.4, 2, 0x7bc9ff, { alpha: 0.12 });
     bpush(0, -0.19, 0.6, 15, 0.02, 10, 0x0d0718, { alpha: 0.25 });
     battlePlayer = buildHero(heroPalette());
-    battlePlayer.x = -1.7;
-    battlePlayer.z = 1.4;
-    battlePlayer.yaw = Math.PI / 2;
+    battlePlayer.x = -2.1;
+    battlePlayer.z = 1.7;
+    battlePlayer.yaw = 0.72;
+    battlePlayer.scale = 0.86;
     battleEnemy = buildEnemy(def.model);
-    battleEnemy.x = 1.8;
-    battleEnemy.z = 0.9;
-    battleEnemy.yaw = -Math.PI / 2;
-    battleEnemy.scale = def.boss ? 1.5 : 1.1;
+    battleEnemy.x = 2.2;
+    battleEnemy.z = 1.0;
+    battleEnemy.yaw = -0.72;
+    battleEnemy.scale = def.boss ? 1.28 : 1.05;
     battleEnemy.y = battleEnemy.baseY * battleEnemy.scale;
     pushActor(battleObjects, battlePlayer);
     pushActor(battleObjects, battleEnemy);
     updateActor(battlePlayer);
     updateActor(battleEnemy);
-    renderer.setScene({ objects: battleObjects, fogColor: [0.1, 0.06, 0.2], fogNear: 12, fogFar: 34 });
-    renderer.setCamera([0, 3.3, 10.2], [0, 1.35, 0.6], 60 * Math.PI / 180);
+    renderer.setScene({ objects: battleObjects, fogColor: [0.26, 0.19, 0.46], fogNear: 16, fogFar: 44 });
+    renderer.setCamera([0, 3.3, 12.2], [0, 1.55, 0.8], 52 * Math.PI / 180);
   }
 
   function updateBattle(dt, time) {
@@ -1798,11 +2058,20 @@
     anim.p = Math.max(0, anim.p - dt * 3.2);
     anim.e = Math.max(0, anim.e - dt * 3.2);
     battlePlayer.y = Math.abs(Math.sin(time * 2.4)) * 0.04;
+    battlePlayer.yaw = 0.72 + Math.sin(time * 0.8) * 0.03;
     battleEnemy.y = battleEnemy.baseY * battleEnemy.scale + Math.sin(time * 1.9) * 0.1;
     battlePlayer.legL.rx = Math.sin(time * 2) * 0.05;
     battlePlayer.legR.rx = -Math.sin(time * 2) * 0.05;
-    battlePlayer.armL.rx = 0;
-    battlePlayer.armR.rx = 0;
+    battlePlayer.armL.rx = -anim.p * 0.6;
+    battlePlayer.armR.rx = -anim.p * 2.5;
+    battlePlayer.tiltX = anim.p * 0.18;
+    battlePlayer.squashY = 1 + anim.p * 0.06;
+    battlePlayer.squashX = 1 - anim.p * 0.04;
+    if (battle.lunge > 0) battle.lunge = Math.max(0, battle.lunge - dt * 4);
+    battleEnemy.tiltX = battle.windup ? -0.26 : battle.lunge > 0 ? 0.34 : 0;
+    battleEnemy.squashY = battle.windup ? 0.9 : 1;
+    battleEnemy.squashX = battle.windup ? 1.1 : 1;
+    battleEnemy.lean = battle.lunge > 0 ? 0.28 : 0;
     updateActor(battlePlayer);
     updateActor(battleEnemy);
 
@@ -1874,8 +2143,25 @@
     }
   }
 
+  function updateGimmickUi() {
+    if (!ui.gimmick) return;
+    var g = battle && battle.gimmick;
+    var text = '';
+    if (g) {
+      if (g.burrowed) text = 'BURROWED · YOUR NEXT HIT IS HALVED';
+      else if (g.coils > 0) text = 'ARMORED COILS · ' + g.coils + ' LEFT · PERFECT BREAKS ONE';
+      else if (g.threshold) text = 'ECHO ' + g.charge + '/3 · ' + Math.max(0, g.threshold - (g.chargeDamage || 0)) + ' DAMAGE TO BREAK IT';
+      else if (g.obscured) text = 'THE DARK HIDES THE BEAT · USE WARMTH';
+      else if (g.burrowEvery) text = 'BURROWS EVERY ' + g.burrowEvery + 'RD TURN';
+      else text = g.name || '';
+    }
+    ui.gimmick.hidden = !text;
+    ui.gimmick.textContent = text;
+  }
+
   function updateBattleUI() {
     if (!battle) return;
+    updateGimmickUi();
     ui.enemyHp.style.width = clamp(battle.hp / battle.max * 100, 0, 100) + '%';
     ui.enemyHpText.textContent = battle.hp + ' / ' + battle.max;
     ui.battleLevel.textContent = save.level;
@@ -1903,6 +2189,17 @@
     });
   }
 
+  /* Every boss fights differently. These little state objects are the whole
+     mechanic: they are read in the player and enemy turns below. */
+  function bossGimmick(def) {
+    if (def.model === 'mite') return { burrowEvery: 3, turns: 0, burrowed: 0, name: 'IT BURROWS EVERY THIRD TURN' };
+    if (def.model === 'wraith') return { obscured: true, name: 'THE DARK HIDES THE BEAT' };
+    if (def.model === 'serpent') return { coils: 3, name: 'ARMORED COILS · PERFECT BREAKS ONE' };
+    if (def.model === 'bell') return { charge: 0, threshold: Math.max(16, Math.round(def.hp * 0.24)), chargeDamage: 0, name: 'ECHO CHARGE' };
+    if (def.model === 'night') return { pulse: 0, name: 'THE LONG NIGHT DRAINS THE FIRE' };
+    return null;
+  }
+
   function startBattle(def, opts) {
     opts = opts || {};
     def = scaleEnemyForParty(def);
@@ -1910,8 +2207,10 @@
       def: def, hp: def.hp, max: def.hp, displayHp: Math.max(1, save.hp),
       busy: false, ended: false, turn: 1, opts: opts, anim: { p: 0, e: 0 },
       state: 'intro', telegraph: 'standard', extraTurns: opts.advantage === 'player' ? 1 : 0,
-      revived: false, mortal: false, mods: cardMods(), window: null, windowTimer: null, raged: false
+      revived: false, mortal: false, mods: cardMods(), window: null, windowTimer: null, raged: false,
+      gimmick: bossGimmick(def), windup: 0, lunge: 0, echo: false, stunned: false
     };
+    if (opts.opening) battle.hp = Math.max(1, battle.hp - opts.opening);
     save.hp = Math.max(1, save.hp);
     levelQueue = 0;
     mode = 'battle';
@@ -1938,6 +2237,15 @@
     ui.battleHint.textContent = '...';
     setTimeout(function () {
       if (!battle || battle.ended) return;
+      if (opts.opening) {
+        log('FIRST STRIKE! ' + opts.opening + ' DAMAGE BEFORE IT TURNS.');
+        flashStage('white');
+        pop(String(opts.opening), 'first');
+        rate('FIRST STRIKE!', 'first');
+        updateBattleUI();
+        setTimeout(function () { if (battle && !battle.ended) beginPlayerMenu(); }, 620);
+        return;
+      }
       if (battle.queue[0].side === 'enemy') {
         log((opts.advantage === 'enemy' ? 'AMBUSH! ' : '') + def.name + ' MOVES FIRST!');
         enemyTurn();
@@ -1963,7 +2271,9 @@
 
   function showTiming(kind, label) {
     ui.timing.hidden = false;
-    ui.timing.className = 'ff-timing' + (kind === 'guard' ? ' guard' : '');
+    var blind = !!(battle && battle.gimmick && battle.gimmick.obscured && kind === 'strike');
+    var narrow = !!(battle && battle.mods && battle.mods.narrow && kind === 'strike');
+    ui.timing.className = 'ff-timing' + (kind === 'guard' ? ' guard' : '') + (blind ? ' blind' : '') + (narrow ? ' narrow' : '');
     ui.timingLabel.textContent = label;
     ui.timingButton.textContent = kind === 'guard' ? 'GUARD' : 'STRIKE';
     ui.timingNote.textContent = kind === 'guard'
@@ -2025,25 +2335,66 @@
     var now = Date.now();
     battle.window = {
       type: 'strike', move: move, startAt: now, openAt: now + 220,
-      perfectAt: now + 820, closeAt: now + 1080, quality: null, resolved: false
+      perfectAt: now + (battle.mods.narrow ? 930 : 820), closeAt: now + 1080, quality: null, resolved: false
     };
     showTiming('strike', move.kind === 'skill' ? move.name + '!' : 'STRIKE!');
+    if (battle.gimmick && battle.gimmick.obscured) ui.timingLabel.textContent = 'THE DARK IS LISTENING...';
   }
 
   function resolvePlayerMove(move, quality) {
     if (!battle || battle.ended) return;
-    var w = battle.window;
     hideTiming();
-    var multiplier = quality === 'perfect' ? 1.5 : quality === 'good' ? 1 : 0.65;
+    var perfectMult = battle.mods.ante ? 2 : 1.5;
+    var multiplier = quality === 'perfect' ? perfectMult : quality === 'good' ? 1 : 0.65;
     var base = (3 + save.level + battle.mods.attack) * (move.mult || 1) * multiplier;
     var damage = Math.max(1, Math.round(base));
+    var g = battle.gimmick;
+    if (g && g.burrowed) {
+      damage = Math.max(1, Math.round(damage * 0.5));
+      g.burrowed = 0;
+      battleEnemy.hidden = false;
+      log('IT WAS BURROWED. HALF DAMAGE: ' + damage + '.');
+    }
+    if (g && g.coils > 0) {
+      if (quality === 'perfect') {
+        g.coils -= 1;
+        sound('break');
+        shake();
+        log('COIL SHATTERS! ' + g.coils + ' LEFT.');
+      } else {
+        damage = Math.min(damage, 2);
+        log('ARMORED COILS ABSORB IT. PERFECT HITS BREAK THEM.');
+      }
+    }
+    if (g && g.threshold) {
+      g.chargeDamage = (g.chargeDamage || 0) + damage;
+      while (g.chargeDamage >= g.threshold && g.charge > 0) {
+        g.chargeDamage -= g.threshold;
+        g.charge -= 1;
+        sound('break');
+        log('THE ECHO BREAKS! CHARGE ' + g.charge + '/3.');
+      }
+    }
     battle.hp = Math.max(0, battle.hp - damage);
     battle.anim.p = 1;
     sound('hit');
     shake();
-    if (quality === 'perfect') log('PERFECT! ' + (move.kind === 'skill' ? move.name : 'YOUR HIT') + ' LANDS FOR ' + damage + '!');
-    else if (quality === 'good') log('GOOD! ' + damage + ' DAMAGE.');
-    else log('OFF BEAT... ONLY ' + damage + ' DAMAGE.');
+    if (quality === 'perfect') {
+      log('PERFECT! ' + (move.kind === 'skill' ? move.name : 'YOUR HIT') + ' LANDS FOR ' + damage + '!');
+      sound('perfect');
+      rate('PERFECT!', 'perfect');
+      pop(String(damage), 'perfect');
+      hitStop(70);
+      cameraPunch(0.42);
+    } else if (quality === 'good') {
+      log('GOOD! ' + damage + ' DAMAGE.');
+      rate('NICE!', 'nice');
+      pop(String(damage), 'nice');
+      cameraPunch(0.18);
+    } else {
+      log('OFF BEAT... ONLY ' + damage + ' DAMAGE.');
+      pop(String(damage), 'weak');
+    }
     updateBattleUI();
     if (quality === 'perfect' && move.kind === 'attack') {
       setTimeout(function () {
@@ -2072,6 +2423,7 @@
       beginPlayerMenu();
       return;
     }
+    if (battle.holdTurn) { beginPlayerMenu(); return; }
     enemyTurn();
   }
 
@@ -2157,6 +2509,11 @@
       battle.anim.p = 0.5;
       sound('heal');
       log('WARMTH RESTORES ' + healed + ' HP.');
+      if (battle.gimmick && battle.gimmick.obscured) {
+        battle.gimmick.obscured = false;
+        log('WARMTH BURNS THE DARK AWAY. THE BEAT IS CLEAR AGAIN.');
+        rate('WARMED UP!', 'nice');
+      }
       updateBattleUI();
       setTimeout(function () { if (battle && !battle.ended) playerTurnDone(); }, 650);
       return;
@@ -2170,6 +2527,8 @@
     if (type === 'heavy') ui.telegraph.textContent = 'ORANGE · HEAVY · NO SUPERGUARD';
     else if (type === 'unblockable') ui.telegraph.textContent = 'RED · UNBLOCKABLE';
     else ui.telegraph.textContent = 'WHITE · GUARD OR SUPERGUARD';
+    sound(type === 'heavy' ? 'chimeOrange' : type === 'unblockable' ? 'chimeRed' : 'chimeWhite');
+    flashStage(type === 'heavy' ? 'orange' : type === 'unblockable' ? 'red' : 'white');
   }
 
   function hideTelegraph() {
@@ -2185,20 +2544,72 @@
 
   function enemyTurn() {
     if (!battle || battle.ended) return;
-    battle.state = 'enemyWindup';
+    var g = battle.gimmick;
+    battle.turn += 1;
     battle.busy = true;
     setBattleButtons(false);
     ui.skills.hidden = true;
+    if (battle.stunned) {
+      battle.stunned = false;
+      battle.windup = 0;
+      log(battle.def.name + ' IS STUNNED AND LOSES THE TURN!');
+      rate('STUNNED!', 'superguard');
+      sound('break');
+      setTimeout(function () { if (battle && !battle.ended) beginPlayerMenu(); }, 720);
+      return;
+    }
+    battle.state = 'enemyWindup';
+    battle.windup = 1;
     if (battle.def.model === 'night' && battle.hp < battle.max * 0.5 && !battle.raged) {
       battle.raged = true;
       battle.def.atk += 2;
       log('THE LONG NIGHT PULLS THE DARK CLOSER.');
+      rate('ENRAGED!', 'boss');
+    }
+    if (battle.def.model === 'night') {
+      g.pulse += 1;
+      if (g.pulse % 4 === 0) {
+        var drained = Math.min(save.sp, 4);
+        save.sp -= drained;
+        log('THE DARK DRINKS YOUR FIRE. -' + drained + ' SP.');
+        pop('-' + drained + ' SP', 'sp');
+        updateBattleUI();
+      }
+    }
+    if (g && g.burrowEvery) {
+      g.turns += 1;
+      if (g.turns % g.burrowEvery === 0) {
+        g.burrowed = 1;
+        battle.windup = 0;
+        battleEnemy.hidden = true;
+        log('FROST MITE BURROWS INTO THE SNOW. YOUR NEXT HIT IS HALVED.');
+        rate('BURROW!', 'boss');
+        sound('burrow');
+        updateGimmickUi();
+        setTimeout(function () { if (battle && !battle.ended) beginPlayerMenu(); }, 760);
+        return;
+      }
     }
     var type = rollTelegraph();
+    var extra = '';
+    if (g && g.threshold) {
+      if (g.charge >= 3) {
+        g.charge = 0;
+        type = 'unblockable';
+        battle.echo = true;
+        extra = 'THE HOLLOW BELL RELEASES THE ECHO! IT CANNOT BE GUARDED!';
+        rate('ECHO!', 'boss');
+      } else {
+        g.charge += 1;
+        extra = 'THE BELL SWELLS (' + g.charge + '/3) — HIT IT HARD TO BREAK THE ECHO.';
+        sound('charge');
+      }
+      updateGimmickUi();
+    }
+    if (g && g.coils > 0 && battle.turn % 4 === 0) type = 'heavy';
     battle.telegraph = type;
     showTelegraph(type);
-    log(type === 'unblockable' ? 'UNBLOCKABLE ATTACK INCOMING. BRACE!' : type === 'heavy' ? 'HEAVY ATTACK. GUARD, NO SUPERGUARD!' : 'ATTACK INCOMING. TIME YOUR GUARD!');
-    sound('click');
+    log((type === 'unblockable' ? 'UNBLOCKABLE ATTACK INCOMING. BRACE!' : type === 'heavy' ? 'HEAVY ATTACK. GUARD, NO SUPERGUARD!' : 'ATTACK INCOMING. TIME YOUR GUARD!') + (extra ? ' ' + extra : ''));
     setTimeout(function () {
       if (!battle || battle.ended) return;
       beginGuardWindow(type);
@@ -2209,6 +2620,7 @@
     if (!battle || battle.ended) return;
     hideTelegraph();
     battle.state = 'guardWindow';
+    battle.windup = 0;
     if (type === 'unblockable') {
       log('NO GUARD. NO SUPERGUARD. BRACE!');
       battle.window = { type: 'unblockable', startAt: Date.now(), closeAt: Date.now() + 360 };
@@ -2252,12 +2664,32 @@
     var raw = battle.def.atk * rand(0.9, 1.1);
     if (type === 'heavy') raw += 1;
     if (type === 'unblockable') raw *= 1.35;
+    if (battle.echo) { raw *= 1.9; battle.echo = false; }
+    raw += battle.mods.incoming || 0;
     var damage = Math.max(1, Math.round(raw));
     if (quality === 'superguard') damage = 0;
     else if (quality === 'guard') damage = Math.ceil(damage * 0.5);
     battle.anim.e = 1;
+    battle.lunge = 1;
     shake();
-    sound(quality === 'superguard' ? 'guard' : 'hurt');
+    if (quality === 'superguard') {
+      sound('superguard');
+      rate('SUPERGUARD!', 'superguard');
+      pop('0', 'block');
+      flashStage('white');
+      hitStop(80);
+      cameraPunch(0.5);
+    } else if (quality === 'guard') {
+      sound('guard');
+      rate('GUARD!', 'guard');
+      pop(String(damage), 'guard');
+      cameraPunch(0.22);
+    } else {
+      sound('hurt');
+      pop(String(damage), 'hurt');
+      flashStage('red');
+      cameraPunch(0.3);
+    }
     if (quality === 'superguard') log('SUPERGUARD! NO DAMAGE.');
     else if (quality === 'guard') log('GUARD! HALF DAMAGE: ' + damage + '.');
     else log(battle.def.name + ' HITS YOU FOR ' + damage + '!');
@@ -2266,6 +2698,7 @@
       var counter = 2 + Math.floor(save.level / 2);
       battle.hp = Math.max(0, battle.hp - counter);
       log('SUPERGUARD! ZERO DAMAGE AND A ' + counter + ' COUNTER!');
+      pop('COUNTER ' + counter, 'counter');
       setTimeout(function () { if (battle) flashEnemy(); updateBattleUI(); }, 180);
     }
     updateBattleUI();
@@ -2296,6 +2729,7 @@
 
   function winBattle() {
     if (!battle || battle.ended) return;
+    if (battleEnemy) battleEnemy.hidden = false;
     battle.ended = true;
     battle.busy = true;
     setBattleButtons(false);
@@ -2529,6 +2963,7 @@
     window.addEventListener('resize', function () {
       resizeSnow();
       placeObjective();
+      if (view === 'world' && player) { camera.ortho = baseOrtho(); snapCamera(); }
     });
     canvas.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
@@ -2599,11 +3034,14 @@
   function frame(time) {
     var dt = lastFrame ? Math.min(0.05, (time - lastFrame) / 1000) : 0.016;
     lastFrame = time;
-    if (view === 'world' && world && player) updateWorld(dt, time / 1000);
-    else if (view === 'cutscene') updateCutscene(dt, time / 1000);
-    else if (view === 'battle' && battle) updateBattle(dt, time / 1000);
-    else if (view === 'title') updateTitle(time / 1000);
-    drawSnow(dt, time / 1000);
+    var frozen = performance.now() < freezeUntil;
+    if (!frozen) {
+      if (view === 'world' && world && player) updateWorld(dt, time / 1000);
+      else if (view === 'cutscene') updateCutscene(dt, time / 1000);
+      else if (view === 'battle' && battle) updateBattle(dt, time / 1000);
+      else if (view === 'title') updateTitle(time / 1000);
+      drawSnow(dt, time / 1000);
+    }
     if (renderer) renderer.render();
     requestAnimationFrame(frame);
   }
@@ -2642,7 +3080,9 @@
       save: function () { persist(); },
       chapter: function (index) { if (!save) { save = freshSave(); save.started = true; } buildWorld(index); },
       teleport: function (x, z) { if (player) { player.x = x; player.z = z; snapCamera(); } },
-      fight: function (model) { startBattle({ name: 'TEST SHADE', hp: 22, atk: 4, xp: 10, model: model || 'shade' }, {}); },
+      fight: function (model, hp, boss) {
+        startBattle({ name: boss ? 'TEST BOSS' : 'TEST SHADE', hp: hp || 22, atk: 4, xp: 10, model: model || 'shade', boss: !!boss, agility: 4 }, {});
+      },
       win: function () { if (battle && !battle.ended) { battle.hp = 0; winBattle(); } },
       grant: function (amount) { var gained = grantXp(amount || 50); updateHud(); return gained; },
       stats: function () { return { level: save.level, xp: save.xp, maxHp: save.maxHp, sp: save.maxSp, bp: save.bp, shards: save.shards }; },
@@ -2653,7 +3093,11 @@
           state: battle.state, hp: battle.hp, displayHp: battle.displayHp, hpSave: save.hp,
           mortal: battle.mortal, revived: battle.revived, extraTurns: battle.extraTurns,
           window: battle.window ? { type: battle.window.type, guard: battle.window.guard, superguard: battle.window.superguard } : null,
-          telegraph: battle.telegraph
+          telegraph: battle.telegraph,
+          gimmick: battle.gimmick ? {
+            coils: battle.gimmick.coils, charge: battle.gimmick.charge, turns: battle.gimmick.turns,
+            burrowed: battle.gimmick.burrowed, obscured: battle.gimmick.obscured
+          } : null
         };
       },
       press: function () { timingPress(); },
@@ -2662,7 +3106,45 @@
       },
       cards: function () { return { equipped: save.cards.slice(), mods: cardMods(), spent: cardCost(), bp: save.bp }; },
       drawCalls: function () { return renderer && renderer.stats ? renderer.stats() : null; },
-      openChapter: function (index) { if (!save) { save = freshSave(); save.started = true; } save.chapter = index; showChapterScreen(index); }
+      openChapter: function (index) { if (!save) { save = freshSave(); save.started = true; } save.chapter = index; showChapterScreen(index); },
+      strike: function () {
+        var item = nearestInteractable();
+        if (item && item.enemy) { overworldStrike(item); return true; }
+        return false;
+      },
+      perfect: function () {
+        if (!battle || !battle.window) return false;
+        var w = battle.window;
+        if (w.type === 'strike') { w.perfectAt = Date.now() - 10; timingPress(); return true; }
+        if (w.type === 'guard') { w.guard = true; if (w.allowSuper) w.superguard = true; timingPress(); return true; }
+        return false;
+      },
+      attack: function () { if (battle && battle.state === 'menu') beginPlayerMove({ kind: 'attack', name: 'ATTACK', mult: 1 }); },
+      enemyTurn: function () { if (battle && !battle.ended) enemyTurn(); },
+      setHp: function (hp) { if (save) { save.hp = clamp(hp, 1, save.maxHp); updateHud(); } },
+      camera: function () {
+        return { eye: camera.eye.slice(), target: camera.target.slice(), ortho: camera.ortho, yaw: camera.yaw, pitch: camera.pitch, dist: camera.dist };
+      },
+      freeze: function (ms) { freezeUntil = performance.now() + (ms || 2500); },
+      resume: function () { freezeUntil = 0; },
+      frozen: function () { return performance.now() < freezeUntil; },
+      holdTurn: function (on) { if (battle) battle.holdTurn = !!on; },
+      demo: function (kind) {
+        if (!battle || battle.ended) return false;
+        battle.holdTurn = true;
+        if (kind === 'superguard') resolveEnemyHit('standard', 'superguard');
+        else if (kind === 'guard') resolveEnemyHit('standard', 'guard');
+        else resolvePlayerMove({ kind: 'attack', name: 'ATTACK', mult: 1 }, 'perfect');
+        clearTimeout(ui.ratingTimer);
+        freezeUntil = performance.now() + 300000;
+        return true;
+      },
+      showcase: function (text, cls, amount) {
+        rate(text || 'PERFECT!', cls || 'perfect');
+        pop(String(amount === undefined ? 12 : amount), cls || 'perfect');
+        freezeUntil = performance.now() + 300000;
+        clearTimeout(ui.ratingTimer);
+      }
     };
   }
 

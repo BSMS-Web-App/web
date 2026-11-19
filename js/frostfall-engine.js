@@ -234,6 +234,8 @@
     '}'
   ].join('\n');
 
+  /* World-space stud/brick pattern. Statics opt in with `pattern: 1`, so the
+     studs stay glued to the floor while characters slide over them. */
   const FS = [
     'precision mediump float;',
     'varying vec3 vNormal;',
@@ -244,14 +246,39 @@
     'uniform vec3 uFogColor;',
     'uniform float uFogNear;',
     'uniform float uFogFar;',
+    'uniform float uPattern;',
+    'uniform float uTile;',
     'void main() {',
     '  vec3 n = normalize(vNormal);',
+    '  vec3 an = abs(n);',
     '  vec3 light = normalize(vec3(0.42, 0.86, 0.32));',
     '  float diffuse = max(dot(n, light), 0.0);',
     '  float bounce = max(dot(n, vec3(-0.4, 0.2, -0.6)), 0.0);',
-    '  vec3 col = vColor * (0.56 + diffuse * 0.58 + bounce * 0.10);',
+    '  float stepped = smoothstep(0.34, 0.40, diffuse);',
+    '  vec3 col = vColor * (0.78 + stepped * 0.42 + bounce * 0.10);',
+    '  float lum = dot(col, vec3(0.299, 0.587, 0.114));',
+    '  col = mix(vec3(lum), col, 1.22);',
+    '  if (uPattern > 0.5) {',
+    '    vec2 uv;',
+    '    if (an.y > 0.6) { uv = vWorld.xz; }',
+    '    else if (an.x > an.z) { uv = vWorld.zy; }',
+    '    else { uv = vWorld.xy; }',
+    '    vec2 cell = fract(uv / uTile) - 0.5;',
+    '    float d = length(cell);',
+    '    vec2 grid = abs(fract(uv / uTile) - 0.5);',
+    '    float seam = smoothstep(0.44, 0.49, max(grid.x, grid.y));',
+    '    col *= 1.0 - seam * 0.13;',
+    '    if (an.y > 0.6) {',
+    '      float stud = smoothstep(0.30, 0.25, d);',
+    '      float ring = smoothstep(0.36, 0.30, d) - stud;',
+    '      col *= 1.0 - ring * 0.22;',
+    '      col += vColor * stud * 0.24;',
+    '    } else {',
+    '      col *= 0.92 + 0.08 * smoothstep(0.5, 0.0, min(grid.x, grid.y));',
+    '    }',
+    '  }',
     '  float fog = clamp((distance(vWorld, uCam) - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
-    '  col = mix(col, uFogColor, fog * 0.86);',
+    '  col = mix(col, uFogColor, fog * 0.62);',
     '  gl_FragColor = vec4(col, vAlpha);',
     '}'
   ].join('\n');
@@ -294,7 +321,9 @@
       uCam: gl.getUniformLocation(program, 'uCam'),
       uFogColor: gl.getUniformLocation(program, 'uFogColor'),
       uFogNear: gl.getUniformLocation(program, 'uFogNear'),
-      uFogFar: gl.getUniformLocation(program, 'uFogFar')
+      uFogFar: gl.getUniformLocation(program, 'uFogFar'),
+      uPattern: gl.getUniformLocation(program, 'uPattern'),
+      uTile: gl.getUniformLocation(program, 'uTile')
     };
 
     const geometries = {};
@@ -414,6 +443,8 @@
         gl.uniformMatrix4fv(loc.uModel, false, object.model);
         gl.uniform3fv(loc.uColor, object.color);
         gl.uniform1f(loc.uAlpha, object.alpha === undefined ? 1 : object.alpha);
+        gl.uniform1f(loc.uPattern, object.pattern ? 1 : 0);
+        gl.uniform1f(loc.uTile, object.tile || 1);
         gl.drawElements(gl.TRIANGLES, geo.count, geo.type || gl.UNSIGNED_SHORT, 0);
         stats.calls += 1;
       }

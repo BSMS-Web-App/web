@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=2">
+<link rel="stylesheet" href="/css/frostfall.css?v=6">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -20,6 +20,8 @@
     <canvas id="ff-canvas" aria-label="A Christmas Tale low-poly 3D world"></canvas>
     <canvas id="ff-snow" aria-hidden="true"></canvas>
     <div class="ff-vignette" aria-hidden="true"></div>
+    <div id="ff-slash" class="ff-slash" aria-hidden="true" hidden></div>
+    <div id="ff-flash" class="ff-flash" aria-hidden="true" hidden></div>
   </div>
 
   <header id="ff-hud" class="ff-hud" hidden>
@@ -31,8 +33,9 @@
       </div>
     </div>
     <div class="ff-hud-bars">
-      <div class="ff-hud-bar hp"><span>HP</span><div><i id="ff-hud-hp"></i></div><b id="ff-hud-hp-text">26/26</b></div>
+      <div class="ff-hud-bar hp"><span>HP</span><div><i id="ff-hud-hp"></i></div><b id="ff-hud-hp-text">30/30</b></div>
       <div class="ff-hud-bar sp"><span>SP</span><div><i id="ff-hud-sp"></i></div><b id="ff-hud-sp-text">10/10</b></div>
+      <div class="ff-hud-bar bp"><span>BP</span><div><i id="ff-hud-bp-fill"></i></div><b id="ff-hud-bp-text">0/4</b></div>
     </div>
     <div class="ff-hud-chips">
       <span class="ff-chip bp">BP <b id="ff-hud-bp">4</b></span>
@@ -127,8 +130,11 @@
         <span id="ff-enemy-name">FROST MITE</span>
         <div class="ff-battle-bar"><i id="ff-enemy-hp"></i></div>
         <small id="ff-enemy-hp-text">24 / 24</small>
+        <em id="ff-gimmick" class="ff-gimmick" hidden>ECHO CHARGE</em>
       </div>
     </div>
+    <div id="ff-rating" class="ff-rating" aria-hidden="true" hidden>PERFECT!</div>
+    <div id="ff-fx" class="ff-fx" aria-hidden="true"></div>
     <p id="ff-battle-log" class="ff-battle-log" aria-live="polite">A FROST MITE BLOCKS THE PATH!</p>
     <p id="ff-telegraph" class="ff-telegraph" hidden>ATTACK INCOMING</p>
     <div id="ff-timing" class="ff-timing" hidden>
@@ -150,11 +156,11 @@
         </div>
       </div>
       <div id="ff-actions" class="ff-actions">
-        <button class="ff-action-btn" type="button" data-act="attack">ATTACK</button>
-        <button class="ff-action-btn" type="button" data-act="skill">SKILL</button>
-        <button class="ff-action-btn" type="button" data-act="guard">GUARD</button>
-        <button class="ff-action-btn" type="button" data-act="item">COCOA <span id="ff-cocoa-count">2</span></button>
-        <button class="ff-action-btn" type="button" data-act="run">RUN</button>
+        <button class="ff-action-btn act-attack" type="button" data-act="attack"><span class="ff-act-icon" aria-hidden="true">&#9876;</span><b>SWORD</b><small>ATTACK</small></button>
+        <button class="ff-action-btn act-skill" type="button" data-act="skill"><span class="ff-act-icon" aria-hidden="true">&#10022;</span><b>SKILLS</b><small>SP</small></button>
+        <button class="ff-action-btn act-guard" type="button" data-act="guard"><span class="ff-act-icon" aria-hidden="true">&#9670;</span><b>GUARD</b><small>+2 SP</small></button>
+        <button class="ff-action-btn act-item" type="button" data-act="item"><span class="ff-act-icon" aria-hidden="true">&#9749;</span><b>COCOA</b><small>&times;<span id="ff-cocoa-count">2</span></small></button>
+        <button class="ff-action-btn act-run" type="button" data-act="run"><span class="ff-act-icon" aria-hidden="true">&#10132;</span><b>RUN</b><small>AWAY</small></button>
       </div>
       <div id="ff-skills" class="ff-skills" hidden></div>
       <p id="ff-battle-hint" class="ff-battle-hint">CHOOSE AN ACTION</p>
@@ -233,7 +239,7 @@
     </div>
   </div>
 </div>
-<script src="/js/frostfall-engine.js?v=3"></script>
-<script src="/js/frostfall.js?v=17"></script>
+<script src="/js/frostfall-engine.js?v=4"></script>
+<script src="/js/frostfall.js?v=32"></script>
 </body>
 </html>
