@@ -42,6 +42,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   .event-logo small{color:#ffe18a;font-size:9px;letter-spacing:.18em;text-shadow:2px 2px #26334a}
   .event-logo b{color:#fff4d8;font-size:clamp(20px,3vw,30px);letter-spacing:.02em;text-shadow:4px 4px #7c2318,-2px -2px #26334a,2px -2px #26334a,-2px 2px #26334a}
   .event-logo:after{content:"";width:92px;max-width:72%;height:6px;background:repeating-linear-gradient(90deg,#e9bd59 0 10px,transparent 10px 20px)}
+  .event-logo em{font-style:normal;font-size:8px;line-height:1.7;letter-spacing:.14em;color:#9fe6ff}
   .event-body{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(22px,4vw,40px);font-family:"Press Start 2P",ui-monospace,monospace}
   .event-status{display:inline-flex;align-items:center;gap:9px;margin:0 0 16px;padding:8px 12px;border:2px solid #26334a;background:rgba(24,80,44,.55);box-shadow:inset 0 0 0 2px rgba(243,230,191,.35);color:#a9f0c4;font-size:8px;letter-spacing:.1em}
   .event-status:before{content:"";width:9px;height:9px;background:#69e08f;box-shadow:0 0 0 2px rgba(105,224,143,.25)}
@@ -57,6 +58,13 @@ SPDX-License-Identifier: AGPL-3.0-only
   .event-play:hover{transform:translateY(-3px);filter:brightness(1.08)}
   .event-play:focus-visible{outline:3px solid #fff;outline-offset:5px}
   .event-play[aria-disabled="true"]{background:#6b7a80;color:#1d2a30;cursor:not-allowed;transform:none;filter:none}
+  .event-card[data-event="frostfall"]{background:#3b2a63;border-color:#241740;box-shadow:inset 0 0 0 4px #cfe9ff,7px 7px 0 #150c28}
+  .event-card[data-event="frostfall"] .event-art{background:radial-gradient(circle at 50% 16%,#5b4a96 0,#2a1d4a 58%,#140c26 100%);border-color:#241740;box-shadow:inset 0 0 0 3px #cfe9ff}
+  .event-card[data-event="frostfall"] .event-logo small{color:#9fe6ff}
+  .event-card[data-event="frostfall"] .event-logo b{color:#fff4d8;text-shadow:4px 4px #b0521f,-2px -2px #241740,2px -2px #241740,-2px 2px #241740,0 -2px #241740}
+  .event-card[data-event="frostfall"] .event-logo:after{background:repeating-linear-gradient(90deg,#7ce7ff 0 10px,transparent 10px 20px)}
+  .event-card[data-event="frostfall"] .event-body h2{color:#eaf7ff}
+  .event-card[data-event="frostfall"] .event-window{color:#9fe6ff}
   .events-more{margin:0;color:rgba(255,255,255,.5);font-size:1rem}
   .footer{color:rgba(255,255,255,.55);font-size:.95rem}
   .footer a{color:rgba(255,255,255,.7);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,.4)}
@@ -72,17 +80,31 @@ SPDX-License-Identifier: AGPL-3.0-only
     <p>Competitions and limited-time adventures from around the BSMS Web.</p>
   </header>
 
-  <article class="event-card" data-event="last-harvest" data-phase="active" aria-labelledby="lh-event-title">
+  <article class="event-card" data-event="frostfall" data-start="2026-11-19T05:00:00.000Z" data-end="2027-01-05T04:59:00.000Z" data-label="PLAY FROSTFALL" data-href="/frostfall" aria-labelledby="ff-event-title">
+    <div class="event-art" role="img" aria-label="Frostfall: The Star That Went Out">
+      <span class="event-logo"><small>FROST</small><b>FALL</b><em>THE STAR THAT WENT OUT</em></span>
+    </div>
+    <div class="event-body">
+      <p class="event-status" data-role="status" role="status" aria-live="polite">LIVE NOW</p>
+      <h2 id="ff-event-title">Frostfall</h2>
+      <p class="event-dates" data-role="dates">November 19, 2026 – January 4, 2027 · Eastern time</p>
+      <p class="event-window" data-role="window"></p>
+      <p class="event-copy">A five-chapter 3D winter adventure. Explore a low-poly Roadtown, battle the cold in turn-based fights, and choose HP, SP or BP every time you level up. The Long Night is waiting at the top of the mountain.</p>
+      <a class="event-play" data-role="play" href="/frostfall">PLAY FROSTFALL</a>
+    </div>
+  </article>
+
+  <article class="event-card" data-event="last-harvest" data-start="2026-11-18T12:00:00.000Z" data-end="2026-11-24T20:10:00.000Z" data-label="PLAY THE EVENT" data-href="/last-harvest" aria-labelledby="lh-event-title">
     <div class="event-art" role="img" aria-label="The Last Harvest">
       <span class="event-logo"><small>THE LAST</small><b>HARVEST</b></span>
     </div>
     <div class="event-body">
-      <p class="event-status" id="lh-event-status" role="status" aria-live="polite">LIVE NOW</p>
+      <p class="event-status" data-role="status" role="status" aria-live="polite">LIVE NOW</p>
       <h2 id="lh-event-title">The Last Harvest</h2>
-      <p class="event-dates" id="lh-event-dates">November 18 – November 24, 2026 · Eastern time</p>
-      <p class="event-window" id="lh-event-window"></p>
+      <p class="event-dates" data-role="dates">November 18 – November 24, 2026 · Eastern time</p>
+      <p class="event-window" data-role="window"></p>
       <p class="event-copy">A 16-bit autumn adventure. Explore Hearthvale, help its residents save the Everfeast, then see how many towers you can conquer in a single Goldleaf Tower run.</p>
-      <a class="event-play" id="lh-event-play" href="/last-harvest">PLAY THE EVENT</a>
+      <a class="event-play" data-role="play" href="/last-harvest">PLAY THE EVENT</a>
     </div>
   </article>
 
@@ -92,47 +114,49 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script>
 (() => {
   'use strict';
-  /* Keep the window in sync with api/last-harvest.js and js/last-harvest.js. */
-  const START = Date.parse('2026-11-18T12:00:00.000Z');
-  const END = Date.parse('2026-11-24T20:10:00.000Z');
-  const dayFmt = new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric', timeZone:'America/New_York'});
-  const yearFmt = new Intl.DateTimeFormat('en-US', {year:'numeric', timeZone:'America/New_York'});
-  const momentFmt = new Intl.DateTimeFormat('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York', timeZoneName:'short'});
-  const card = document.querySelector('[data-event="last-harvest"]');
-  const status = document.getElementById('lh-event-status');
-  const windowLine = document.getElementById('lh-event-window');
-  const play = document.getElementById('lh-event-play');
-  const dates = document.getElementById('lh-event-dates');
-  if (!card || !status || !windowLine || !play || !dates) return;
-  dates.textContent = dayFmt.format(START) + ' – ' + dayFmt.format(END) + ', ' + yearFmt.format(END) + ' · Eastern time';
-  function tick() {
-    const now = Date.now();
-    const phase = now < START ? 'upcoming' : now < END ? 'active' : 'ended';
-    card.dataset.phase = phase;
-    if (phase === 'active') {
-      status.textContent = 'LIVE NOW';
-      windowLine.textContent = 'Open now · closes ' + momentFmt.format(END);
-      play.textContent = 'PLAY THE EVENT';
-      play.href = '/last-harvest';
-      play.removeAttribute('aria-disabled');
-    } else if (phase === 'upcoming') {
-      status.textContent = 'OPENS SOON';
-      windowLine.textContent = 'Opens ' + momentFmt.format(START);
-      play.textContent = 'NOT OPEN YET';
-      play.removeAttribute('href');
-      play.setAttribute('aria-disabled', 'true');
-    } else {
-      status.textContent = 'EVENT ENDED';
-      windowLine.textContent = 'Closed ' + momentFmt.format(END);
-      play.textContent = 'EVENT ENDED';
-      play.removeAttribute('href');
-      play.setAttribute('aria-disabled', 'true');
+  const dayFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+  const yearFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'America/New_York' });
+  const momentFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York', timeZoneName: 'short' });
+  document.querySelectorAll('[data-event]').forEach((card) => {
+    const start = Date.parse(card.dataset.start || '');
+    const end = Date.parse(card.dataset.end || '');
+    const status = card.querySelector('[data-role="status"]');
+    const dates = card.querySelector('[data-role="dates"]');
+    const windowLine = card.querySelector('[data-role="window"]');
+    const play = card.querySelector('[data-role="play"]');
+    if (!Number.isFinite(start) || !Number.isFinite(end) || !status || !dates || !windowLine || !play) return;
+    const label = card.dataset.label || 'PLAY THE EVENT';
+    const href = card.dataset.href || play.getAttribute('href') || '#';
+    dates.textContent = dayFmt.format(start) + ' – ' + dayFmt.format(end) + ', ' + yearFmt.format(end) + ' · Eastern time';
+    function tick() {
+      const now = Date.now();
+      const phase = now < start ? 'upcoming' : now < end ? 'active' : 'ended';
+      card.dataset.phase = phase;
+      if (phase === 'active') {
+        status.textContent = 'LIVE NOW';
+        windowLine.textContent = 'Open now · closes ' + momentFmt.format(end);
+        play.textContent = label;
+        play.href = href;
+        play.removeAttribute('aria-disabled');
+      } else if (phase === 'upcoming') {
+        status.textContent = 'OPENS SOON';
+        windowLine.textContent = 'Opens ' + momentFmt.format(start);
+        play.textContent = 'NOT OPEN YET';
+        play.removeAttribute('href');
+        play.setAttribute('aria-disabled', 'true');
+      } else {
+        status.textContent = 'EVENT ENDED';
+        windowLine.textContent = 'Closed ' + momentFmt.format(end);
+        play.textContent = 'EVENT ENDED';
+        play.removeAttribute('href');
+        play.setAttribute('aria-disabled', 'true');
+      }
     }
-  }
-  tick();
-  setInterval(tick, 60000);
+    tick();
+    setInterval(tick, 60000);
+  });
 })();
 </script>
-<script src="/js/last-harvest-announcement.js?v=2" defer></script>
+<script src="/js/frostfall-announcement.js?v=1" defer></script>
 </body>
 </html>

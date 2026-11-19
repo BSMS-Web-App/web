@@ -801,3 +801,24 @@ html { scroll-padding-top: 100px; }
 .lh-home-promo-play:focus-visible{outline:3px solid #fff;outline-offset:5px}
 @media(max-width:700px){.lh-home-promo{padding:28px 5vw 34px}.lh-home-promo-card{grid-template-columns:1fr}.lh-home-promo-art{min-height:160px;border-right:0;border-bottom:4px solid #26334a}.lh-home-promo-copy{padding:22px}.lh-home-promo-copy h2{font-size:clamp(14px,4vw,20px)}}
 @media(prefers-reduced-motion:reduce){.lh-home-promo-play{transition:none}}
+
+/* Frostfall event promotion */
+.ff-home-promo{padding:34px 5vw 10px;min-height:0}
+.ff-home-card{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(220px,.9fr) minmax(0,1.1fr);align-items:stretch;width:min(1120px,100%);min-height:270px;background:#3b2a63;border:5px solid #241740;box-shadow:inset 0 0 0 4px #cfe9ff,7px 7px 0 #150c28;color:#eaf7ff}
+.ff-home-art{position:relative;overflow:hidden;display:grid;place-items:center;min-height:260px;padding:22px;text-align:center;background:radial-gradient(circle at 50% 16%,#5b4a96 0,#2a1d4a 58%,#140c26 100%);border-right:4px solid #241740;box-shadow:inset 0 0 0 3px #cfe9ff;image-rendering:pixelated}
+.ff-home-art:before{content:"";position:absolute;inset:11px;border:2px dashed rgba(207,233,255,.24);pointer-events:none}
+.ff-home-logo{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;font-family:"Press Start 2P",ui-monospace,monospace;line-height:1.25}
+.ff-home-logo small{color:#9fe6ff;font-size:9px;letter-spacing:.22em;text-shadow:2px 2px #241740}
+.ff-home-logo b{color:#fff3d5;font-size:clamp(22px,3.4vw,32px);letter-spacing:.02em;text-shadow:4px 4px #b0521f,-2px -2px #241740,2px -2px #241740,-2px 2px #241740,0 -2px #241740}
+.ff-home-logo em{font-style:normal;color:#ffbd3e;font-size:8px;letter-spacing:.14em}
+.ff-home-logo:after{content:"";width:92px;max-width:72%;height:6px;background:repeating-linear-gradient(90deg,#7ce7ff 0 10px,transparent 10px 20px)}
+.ff-home-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(22px,4vw,42px);font-family:"Press Start 2P",ui-monospace,monospace}
+.ff-home-eyebrow{margin:0 0 16px;color:#9fe6ff;font-size:8px;line-height:1.8;letter-spacing:.1em}
+.ff-home-copy h2{margin:0 0 15px;color:#fff3d5;font-size:clamp(15px,2.7vw,23px);line-height:1.7;text-shadow:3px 3px #241740}
+.ff-home-copy h2 span{color:#ffbd3e}
+.ff-home-copy>p:not(.ff-home-eyebrow){max-width:570px;margin:0;color:#e9dcff;font-size:9px;line-height:2.1}
+.ff-home-play{display:inline-flex;align-items:center;gap:12px;margin-top:24px;padding:14px 18px;background:linear-gradient(180deg,#ffd05c,#ff9f2e);border:3px solid #0d0718;box-shadow:inset 0 0 0 2px #fff3c4,3px 3px 0 #0d0718;color:#2a1a08;text-decoration:none;font-size:9px;line-height:1.5;transition:transform .18s,filter .18s}
+.ff-home-play:hover{transform:translateY(-3px);filter:brightness(1.08)}
+.ff-home-play:focus-visible{outline:3px solid #fff;outline-offset:5px}
+@media(max-width:700px){.ff-home-promo{padding:28px 5vw 8px}.ff-home-card{grid-template-columns:1fr}.ff-home-art{min-height:170px;border-right:0;border-bottom:4px solid #241740}.ff-home-copy{padding:22px}.ff-home-copy h2{font-size:clamp(14px,4vw,20px)}}
+@media(prefers-reduced-motion:reduce){.ff-home-play{transition:none}}
