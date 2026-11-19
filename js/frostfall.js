@@ -146,6 +146,7 @@
   var battleEnemy = null;
   var levelQueue = 0;
   var titleObjects = [];
+  var titleGeometries = [];
   var titleHero = null;
   var pipTrail = [];
   var pipTimer = 0;
@@ -490,27 +491,45 @@
     '?': ['110', '001', '010', '000', '010'], '-': ['000', '000', '111', '000', '000']
   };
 
-  function pixelTextInto(push, text, centerX, bottomY, z, px, color) {
+  /* Each glyph pixel is a cube, so a word is ~100 cubes. They are baked per
+     colour into one buffer (same trick as the studs) so a sign costs a single
+     draw call. Baked buffers go into `bucket` so they can be released later. */
+  var GLYPH_BATCH_MAX = 400;
+  function pixelTextInto(bucket, objects, text, centerX, bottomY, z, px, color) {
     var chars = String(text).toUpperCase().split('');
     var width = chars.length * 4 * px - px;
     var startX = centerX - width / 2;
+    var queues = renderer ? {} : null;
     for (var letter = 0; letter < chars.length; letter++) {
       var glyph = FONT[chars[letter]] || FONT['?'];
       for (var row = 0; row < 5; row++) {
         for (var col = 0; col < 3; col++) {
           if (glyph[row].charAt(col) !== '1') continue;
-          push(makeStatic('cube',
-            startX + letter * 4 * px + col * px,
-            bottomY + (4 - row) * px,
-            z,
-            px * 0.92, px * 0.92, 0.18, color, {}));
+          var gx = startX + letter * 4 * px + col * px;
+          var gy = bottomY + (4 - row) * px;
+          if (!queues) {
+            objects.push(makeStatic('cube', gx, gy, z, px * 0.92, px * 0.92, 0.18, color, {}));
+            continue;
+          }
+          var queue = queues[color] || (queues[color] = { color: color, matrices: [] });
+          queue.matrices.push(mat.compose([gx, gy, z], [0, 0, 0], [px * 0.92, px * 0.92, 0.18]));
         }
       }
     }
+    if (!queues) return;
+    Object.keys(queues).forEach(function (key) {
+      var queue = queues[key];
+      for (var start = 0; start < queue.matrices.length; start += GLYPH_BATCH_MAX) {
+        var geo = renderer.batchGeometry('cube', queue.matrices.slice(start, start + GLYPH_BATCH_MAX));
+        if (!geo) continue;
+        if (bucket) bucket.push(geo);
+        objects.push({ geo: geo, model: mat.identity(), color: rgb(queue.color), alpha: 1, hidden: false });
+      }
+    });
   }
 
   function pixelText(text, centerX, bottomY, z, px, color) {
-    pixelTextInto(function (object) { world.objects.push(object); }, text, centerX, bottomY, z, px, color);
+    pixelTextInto(world.geometries, world.objects, text, centerX, bottomY, z, px, color);
   }
 
   function sign(text, x, z) {
@@ -889,6 +908,8 @@
 
   /* ---------------------------------------------------------------- title */
   function buildTitleScene() {
+    titleGeometries.forEach(function (geo) { renderer.releaseGeometry(geo); });
+    titleGeometries.length = 0;
     titleObjects.length = 0;
     titleHero = null;
     titlePip = null;
@@ -914,7 +935,7 @@
     tbox(0, 1.8, 6.5, 7.3, 3.2, 0.5, 0x6b4a32);
     tbox(-3.2, 0.8, 6.5, 0.35, 1.6, 0.35, 0x4c3323);
     tbox(3.2, 0.8, 6.5, 0.35, 1.6, 0.35, 0x4c3323);
-    pixelTextInto(function (object) { titleObjects.push(object); }, 'ROADTOWN', 0, 1.2, 6.8, 0.32, 0xfff3d5);
+    pixelTextInto(titleGeometries, titleObjects, 'ROADTOWN', 0, 1.2, 6.8, 0.32, 0xfff3d5);
     tbox(-4, 0.2, 4, 1.8, 0.5, 1.4, 0xf6fcff);
     tbox(5, 0.2, 1, 2.2, 0.4, 1.2, 0xf6fcff);
     titleHero = buildHero(heroPalette());
