@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=6">
+<link rel="stylesheet" href="/css/frostfall.css?v=15">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -126,7 +126,7 @@
 
   <div id="ff-battle" class="ff-battle" hidden>
     <div class="ff-battle-top">
-      <div class="ff-enemy-plate">
+      <div id="ff-enemy-plate" class="ff-enemy-plate">
         <span id="ff-enemy-name">FROST MITE</span>
         <div class="ff-battle-bar"><i id="ff-enemy-hp"></i></div>
         <small id="ff-enemy-hp-text">24 / 24</small>
@@ -145,25 +145,22 @@
     </div>
     <div class="ff-battle-bottom">
       <div class="ff-battle-player">
-        <div class="ff-battle-stats">
-          <span>LV <b id="ff-battle-level">1</b></span>
-          <span class="hp">HP <b id="ff-battle-hp">26/26</b></span>
-          <span class="sp">SP <b id="ff-battle-sp">10/10</b></span>
-        </div>
-        <div class="ff-battle-bars">
-          <div class="ff-battle-bar hp"><i id="ff-battle-hp-bar"></i></div>
-          <div class="ff-battle-bar sp"><i id="ff-battle-sp-bar"></i></div>
+        <div class="ff-battler-plate">
+          <div class="ff-battler-head"><span>BATTLER</span><b>LV <i id="ff-battle-level">1</i></b></div>
+          <div class="ff-gauge hp"><span class="ff-gauge-icon" aria-hidden="true">&#9829;</span><div class="ff-gauge-track"><i id="ff-battle-hp-bar"></i></div><b id="ff-battle-hp">30/30</b></div>
+          <div class="ff-gauge sp"><span class="ff-gauge-icon" aria-hidden="true">&#9889;</span><div class="ff-gauge-track"><i id="ff-battle-sp-bar"></i></div><b id="ff-battle-sp">10/10</b></div>
+          <div class="ff-gauge bp"><span class="ff-gauge-icon" aria-hidden="true">&#9636;</span><div class="ff-gauge-track"><i id="ff-battle-bp-bar"></i></div><b id="ff-battle-bp">4</b></div>
         </div>
       </div>
       <div id="ff-actions" class="ff-actions">
-        <button class="ff-action-btn act-attack" type="button" data-act="attack"><span class="ff-act-icon" aria-hidden="true">&#9876;</span><b>SWORD</b><small>ATTACK</small></button>
-        <button class="ff-action-btn act-skill" type="button" data-act="skill"><span class="ff-act-icon" aria-hidden="true">&#10022;</span><b>SKILLS</b><small>SP</small></button>
-        <button class="ff-action-btn act-guard" type="button" data-act="guard"><span class="ff-act-icon" aria-hidden="true">&#9670;</span><b>GUARD</b><small>+2 SP</small></button>
-        <button class="ff-action-btn act-item" type="button" data-act="item"><span class="ff-act-icon" aria-hidden="true">&#9749;</span><b>COCOA</b><small>&times;<span id="ff-cocoa-count">2</span></small></button>
-        <button class="ff-action-btn act-run" type="button" data-act="run"><span class="ff-act-icon" aria-hidden="true">&#10132;</span><b>RUN</b><small>AWAY</small></button>
+        <button class="ff-action-btn act-attack" type="button" data-act="attack" data-index="0"><b>SWORD</b><span class="ff-act-icon" aria-hidden="true">&#9876;</span><small>ATTACK</small></button>
+        <button class="ff-action-btn act-skill" type="button" data-act="skill" data-index="1"><b>SKILLS</b><span class="ff-act-icon" aria-hidden="true">&#10022;</span><small>SP</small></button>
+        <button class="ff-action-btn act-guard" type="button" data-act="guard" data-index="2"><b>GUARD</b><span class="ff-act-icon" aria-hidden="true">&#9670;</span><small>+2 SP</small></button>
+        <button class="ff-action-btn act-item" type="button" data-act="item" data-index="3"><b>COCOA</b><span class="ff-act-icon" aria-hidden="true">&#9749;</span><small>&times;<span id="ff-cocoa-count">2</span></small></button>
+        <button class="ff-action-btn act-run" type="button" data-act="run" data-index="4"><b>RUN</b><span class="ff-act-icon" aria-hidden="true">&#10132;</span><small>AWAY</small></button>
       </div>
       <div id="ff-skills" class="ff-skills" hidden></div>
-      <p id="ff-battle-hint" class="ff-battle-hint">CHOOSE AN ACTION</p>
+      <p id="ff-battle-hint" class="ff-battle-hint">ARROWS SELECT &middot; E CONFIRM</p>
     </div>
   </div>
 
@@ -240,6 +237,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=4"></script>
-<script src="/js/frostfall.js?v=32"></script>
+<script src="/js/frostfall.js?v=42"></script>
 </body>
 </html>

@@ -1240,3 +1240,382 @@ a { color: inherit; }
 /* rating badge sits above the fighters, below the enemy plate */
 .ff-rating { top: 27%; }
 @media (pointer: coarse), (max-width: 900px) { .ff-rating { top: 27%; } }
+
+/* ---------------------------------------------------------------------------
+   Block Tales battle pass: icon-card actions with a cursor, a compact
+   Battler HP/SP/BP plate, a louder action command and windup call-outs.
+   --------------------------------------------------------------------------- */
+
+#ff-battle .ff-battle-player {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.ff-battler-plate {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px 7px;
+  border: 3px solid #0b0714;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2a1f4a, #1a1130);
+  box-shadow: 0 4px 0 #0b0714, inset 0 0 0 2px #6b4fd0;
+}
+
+.ff-battler-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font: 800 10px/1 "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.16em;
+  color: #cbb9ff;
+}
+
+.ff-battler-head b {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #ffcf3f;
+}
+
+.ff-battler-head b i {
+  font-style: normal;
+}
+
+.ff-gauge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ff-gauge-icon {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 2px solid #0b0714;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1;
+  color: #2a1600;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.22);
+}
+
+.ff-gauge.hp .ff-gauge-icon { background: #ff6b7c; }
+.ff-gauge.sp .ff-gauge-icon { background: #6cc4ff; }
+.ff-gauge.bp .ff-gauge-icon { background: #ffc247; }
+
+.ff-gauge-track {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  overflow: hidden;
+  border: 2px solid #0b0714;
+  border-radius: 4px;
+  background: #0a0712;
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.ff-gauge-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transition: width 0.18s linear;
+}
+
+.ff-gauge.hp .ff-gauge-track i { background: linear-gradient(180deg, #ff98a3, #dc1f38); }
+.ff-gauge.sp .ff-gauge-track i { background: linear-gradient(180deg, #9edbff, #1f7fe0); }
+.ff-gauge.bp .ff-gauge-track i { background: linear-gradient(180deg, #ffdc94, #e0860e); }
+
+.ff-gauge b {
+  min-width: 56px;
+  text-align: right;
+  font: 800 11px/1 "Courier New", monospace;
+  color: #fff3d6;
+}
+
+#ff-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding-left: 12px;
+}
+
+.ff-action-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 3px 5px;
+  border: 3px solid #0b0714;
+  border-radius: 9px;
+  background: #fdf3d8;
+  color: #241a3f;
+  box-shadow: 0 4px 0 #0b0714;
+  transition: transform 0.07s ease-out, box-shadow 0.07s ease-out;
+}
+
+.ff-action-btn b {
+  font: 800 10px/1 "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.ff-action-btn .ff-act-icon {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 33px;
+  border: 3px solid #0b0714;
+  border-radius: 7px;
+  font-size: 19px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.28);
+}
+
+.act-attack .ff-act-icon { background: #e0455c; }
+.act-skill .ff-act-icon { background: #8a6cff; }
+.act-guard .ff-act-icon { background: #2f8fd8; }
+.act-item .ff-act-icon { background: #c9864a; }
+.act-run .ff-act-icon { background: #5f6b8a; }
+
+.ff-action-btn small {
+  font: 700 8px/1 "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.1em;
+  opacity: 0.72;
+}
+
+.ff-action-btn.selected {
+  transform: translateY(-3px) rotate(-1deg);
+  border-color: #ffcf3f;
+  box-shadow: 0 6px 0 #0b0714, 0 0 0 3px #ffcf3f, 0 0 18px rgba(255, 207, 63, 0.55);
+}
+
+.ff-action-btn.selected::before {
+  content: "\25B6";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(90deg);
+  font-size: 11px;
+  color: #ffcf3f;
+  text-shadow: 0 2px 0 #0b0714;
+}
+
+.ff-action-btn.selected .ff-act-icon {
+  animation: ff-icon-wiggle 0.45s ease-in-out infinite alternate;
+}
+
+.ff-action-btn:disabled {
+  filter: grayscale(0.75) brightness(0.8);
+  opacity: 0.7;
+}
+
+@keyframes ff-icon-wiggle {
+  from { transform: scale(1); }
+  to { transform: scale(1.07); }
+}
+
+.ff-timing {
+  border: 3px solid #0b0714;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2a1f4a, #170f2b);
+  box-shadow: 0 5px 0 #0b0714, inset 0 0 0 2px #6b4fd0;
+  padding: 9px 10px 8px;
+}
+
+#ff-timing-label {
+  color: #ffe6a8;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-shadow: 0 2px 0 #0b0714;
+}
+
+.ff-timing-track {
+  height: 26px;
+  border: 3px solid #0b0714;
+  border-radius: 6px;
+  background: #09060f;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.07);
+}
+
+#ff-timing-zone {
+  background: repeating-linear-gradient(135deg, #ffdc6b 0 6px, #f0a41c 6px 12px);
+  box-shadow: 0 0 14px #ffcf3f, inset 0 0 0 2px #fff2b8;
+}
+
+#ff-timing-marker {
+  width: 6px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 0 10px #fff, 0 0 0 2px #0b0714;
+}
+
+.ff-timing.hit {
+  animation: ff-timing-pop 0.22s ease-out;
+}
+
+@keyframes ff-timing-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.035); filter: brightness(1.6); }
+  100% { transform: scale(1); }
+}
+
+.ff-enemy-plate.windup {
+  animation: ff-windup 0.44s steps(2, end) infinite alternate;
+}
+
+.ff-enemy-plate.windup.white { box-shadow: 0 4px 0 #0b0714, 0 0 0 4px rgba(255, 255, 255, 0.6), 0 0 22px rgba(255, 255, 255, 0.5); }
+.ff-enemy-plate.windup.orange { box-shadow: 0 4px 0 #0b0714, 0 0 0 4px rgba(255, 159, 46, 0.65), 0 0 22px rgba(255, 159, 46, 0.55); }
+.ff-enemy-plate.windup.red { box-shadow: 0 4px 0 #0b0714, 0 0 0 4px rgba(255, 59, 92, 0.7), 0 0 24px rgba(255, 59, 92, 0.6); }
+
+@keyframes ff-windup {
+  from { transform: scale(1); }
+  to { transform: scale(1.025); }
+}
+
+.ff-level-option {
+  border: 3px solid #0b0714;
+  border-radius: 10px;
+  background: #fdf3d8;
+  box-shadow: 0 5px 0 #0b0714;
+}
+
+.ff-level-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto;
+  border: 3px solid #0b0714;
+  border-radius: 8px;
+  font-size: 28px;
+  line-height: 1;
+  background: #fff;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18);
+}
+
+.ff-level-option.hp .ff-level-icon { background: #ffe1e5; color: #d81f3c; }
+.ff-level-option.sp .ff-level-icon { background: #dcefff; color: #1f7fe0; }
+.ff-level-option.bp .ff-level-icon { background: #ffeac6; color: #c97400; }
+
+#ff-battle .ff-battle-player {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+.ff-battler-plate {
+  width: 100%;
+}
+
+#ff-actions {
+  padding-top: 12px;
+  align-items: stretch;
+}
+
+.ff-action-btn.selected::before {
+  top: -13px;
+  left: 7px;
+  transform: rotate(90deg);
+}
+
+.ff-gimmick {
+  border-radius: 6px;
+}
+
+.ff-battle-hint {
+  letter-spacing: 0.08em;
+}
+
+/* Five cards in one strip (Block Tales reads left-to-right) so the stage keeps
+   its height on short phones. */
+#ff-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 10px 0 0;
+}
+
+.ff-action-btn {
+  gap: 2px;
+  padding: 3px 1px 4px;
+  border-width: 2px;
+  border-radius: 8px;
+  box-shadow: 0 3px 0 #0b0714;
+}
+
+.ff-action-btn b {
+  font-size: 8px;
+  letter-spacing: 0.02em;
+}
+
+.ff-action-btn .ff-act-icon {
+  width: 30px;
+  height: 26px;
+  font-size: 15px;
+  border-width: 2px;
+  border-radius: 6px;
+}
+
+.ff-action-btn small {
+  font-size: 6px;
+  letter-spacing: 0.04em;
+}
+
+.ff-action-btn.selected {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 #0b0714, 0 0 0 2px #ffcf3f, 0 0 14px rgba(255, 207, 63, 0.55);
+}
+
+.ff-action-btn.selected::before {
+  top: -11px;
+  left: 4px;
+  font-size: 9px;
+}
+
+.ff-battler-plate {
+  gap: 3px;
+  padding: 5px 7px 6px;
+}
+
+.ff-gauge-track {
+  height: 11px;
+}
+
+/* Cursor: a clean pointer above the selected card instead of a glyph arrow. */
+.ff-action-btn.selected::before {
+  content: "";
+  top: -11px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #ffcf3f;
+  transform: translateX(-50%);
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 #0b0714);
+}
+
+.ff-timing {
+  padding-bottom: 12px;
+}
+
+.ff-timing small {
+  color: #cbb9ff;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  opacity: 0.9;
+}
+
+.ff-battle-bottom {
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+/* The plain telegraph type arrives as "standard" — give it the white cue. */
+.ff-enemy-plate.windup.standard {
+  box-shadow: 0 4px 0 #0b0714, 0 0 0 3px rgba(255, 255, 255, 0.7), 0 0 12px rgba(255, 255, 255, 0.45);
+}

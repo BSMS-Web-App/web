@@ -55,6 +55,7 @@
     battle: $('ff-battle'), enemyName: $('ff-enemy-name'), enemyHp: $('ff-enemy-hp'), enemyHpText: $('ff-enemy-hp-text'),
     battleLog: $('ff-battle-log'), battleLevel: $('ff-battle-level'), battleHp: $('ff-battle-hp'), battleSp: $('ff-battle-sp'),
     battleHpBar: $('ff-battle-hp-bar'), battleSpBar: $('ff-battle-sp-bar'), actions: $('ff-actions'),
+    battleBp: $('ff-battle-bp'), battleBpBar: $('ff-battle-bp-bar'), enemyPlate: $('ff-enemy-plate'),
     cocoa: $('ff-cocoa-count'), skills: $('ff-skills'), battleHint: $('ff-battle-hint'),
     timing: $('ff-timing'), timingLabel: $('ff-timing-label'), timingMarker: $('ff-timing-marker'),
     timingButton: $('ff-timing-button'), timingNote: $('ff-timing-note'), telegraph: $('ff-telegraph'),
@@ -147,6 +148,7 @@
   var battlePlayer = null;
   var battleEnemy = null;
   var levelQueue = 0;
+  var battleSelect = 0;
   var freezeUntil = 0;
   var punchTimer = null;
   var titleObjects = [];
@@ -1740,10 +1742,10 @@
   /* Portrait screens need a wider ortho box, otherwise the ROADTOWN gantry
      leaves the frame at spawn. Desktop stays tight and low. */
   function baseOrtho() {
+    // Keep at least ~12.6 world units across the screen so the ROADTOWN gantry
+    // never clips, then let tall screens pull back rather than crop.
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    if (aspect < 0.9) return 18;
-    if (aspect < 1.35) return 16;
-    return 14;
+    return clamp(12.6 / aspect, 14, 26);
   }
 
   function cameraPunch(amount) {
@@ -2020,13 +2022,13 @@
       battleObjects.push(makeStatic(opts.geo || 'cube', x, y, z, sx, sy, sz, color, opts));
     }
     for (var ix = -4; ix <= 4; ix++) {
-      for (var iz = -2; iz <= 3; iz++) {
-        bpush(ix * 1.55, -0.2, iz * 1.55, 1.55, 0.35, 1.55, (ix + iz) % 2 === 0 ? 0x7f6bb4 : 0x2f2050);
+      for (var iz = -3; iz <= 8; iz++) {
+        bpush(ix * 1.55, -0.2, iz * 1.55, 1.55, 0.35, 1.55, (ix + iz) % 2 === 0 ? 0x5f9ae6 : 0x2f5fa8);
       }
     }
-    bpush(0, -0.5, 0.6, 17, 0.4, 12, 0x140c26);
-    bpush(-5.4, 1.6, -4.2, 1.4, 4.6, 1.4, 0x3a2564);
-    bpush(5.4, 1.6, -4.2, 1.4, 4.6, 1.4, 0x3a2564);
+    bpush(0, -0.5, 0.6, 24, 0.4, 28, 0x1b3566);
+    bpush(-5.4, 1.6, -4.2, 1.4, 4.6, 1.4, 0x3f6cb8);
+    bpush(5.4, 1.6, -4.2, 1.4, 4.6, 1.4, 0x3f6cb8);
     bpush(-5.4, 4.2, -4.2, 2.0, 0.5, 2.0, 0x7ce7ff, { alpha: 0.2 });
     bpush(5.4, 4.2, -4.2, 2.0, 0.5, 2.0, 0x7ce7ff, { alpha: 0.2 });
     bpush(0, 5.4, -6.4, 12, 0.4, 2, 0x7bc9ff, { alpha: 0.12 });
@@ -2037,7 +2039,7 @@
     battlePlayer.yaw = 0.72;
     battlePlayer.scale = 0.86;
     battleEnemy = buildEnemy(def.model);
-    battleEnemy.x = 2.2;
+    battleEnemy.x = 2.05;
     battleEnemy.z = 1.0;
     battleEnemy.yaw = -0.72;
     battleEnemy.scale = def.boss ? 1.28 : 1.05;
@@ -2047,7 +2049,11 @@
     updateActor(battlePlayer);
     updateActor(battleEnemy);
     renderer.setScene({ objects: battleObjects, fogColor: [0.26, 0.19, 0.46], fogNear: 16, fogFar: 44 });
-    renderer.setCamera([0, 3.3, 12.2], [0, 1.55, 0.8], 52 * Math.PI / 180);
+    /* Fighters sit ~4 units apart; portrait phones need a wider ortho box or
+       the boss's arms clip off the right edge. The camera looks low so both
+       battlers stand in the upper stage, clear of the command plate. */
+    var battleFit = window.innerWidth / Math.max(1, window.innerHeight) < 0.9 ? 17 : 14.5;
+    renderer.setCamera([0, 3.3, 12.2], [0, -0.2, 0.9], 52 * Math.PI / 180, battleFit);
   }
 
   function updateBattle(dt, time) {
@@ -2083,6 +2089,9 @@
     ui.battleHpBar.style.width = clamp(battle.displayHp / save.maxHp * 100, 0, 100) + '%';
     ui.battleSp.textContent = save.sp + '/' + save.maxSp;
     ui.battleSpBar.style.width = clamp(save.sp / save.maxSp * 100, 0, 100) + '%';
+    var liveBp = cardCost();
+    if (ui.battleBpBar) ui.battleBpBar.style.width = clamp(liveBp / Math.max(1, liveBp + save.bp) * 100, 0, 100) + '%';
+    if (ui.battleBp) ui.battleBp.textContent = save.bp;
     ui.battleLevel.textContent = save.level;
     ui.cocoa.textContent = save.cocoa;
     if (battle.mortal && battle.displayHp <= 0.05 && !battle.ended) {
@@ -2141,6 +2150,37 @@
       if (enabled && buttons[i].dataset.act === 'item' && save.cocoa <= 0) buttons[i].disabled = true;
       if (enabled && buttons[i].dataset.act === 'run' && battle && battle.def.boss) buttons[i].disabled = true;
     }
+    if (enabled) selectAction(battleSelect, true);
+  }
+
+  /* Block Tales-style cursor: a highlighted card you can drive with arrows,
+     number keys or the pointer, confirmed with E / Enter / Space. */
+  function actionButtons() {
+    if (!ui.actions) return [];
+    return Array.prototype.slice.call(ui.actions.querySelectorAll('button'));
+  }
+
+  function selectAction(index, silent) {
+    var buttons = actionButtons();
+    if (!buttons.length) return;
+    var count = buttons.length;
+    var next = ((index % count) + count) % count;
+    for (var i = 0; i < count; i++) buttons[i].classList.toggle('selected', i === next && !buttons[i].disabled);
+    battleSelect = next;
+    if (!silent) sound('menu');
+  }
+
+  function activateSelected() {
+    var buttons = actionButtons();
+    var button = buttons[battleSelect];
+    if (!button || button.disabled) { sound('deny'); return; }
+    chooseAction(button.dataset.act);
+  }
+
+  function timingFlash() {
+    if (!ui.timing) return;
+    ui.timing.classList.add('hit');
+    setTimeout(function () { if (ui.timing) ui.timing.classList.remove('hit'); }, 220);
   }
 
   function updateGimmickUi() {
@@ -2169,6 +2209,9 @@
     ui.battleSp.textContent = save.sp + '/' + save.maxSp;
     ui.battleHpBar.style.width = clamp(battle.displayHp / save.maxHp * 100, 0, 100) + '%';
     ui.battleSpBar.style.width = clamp(save.sp / save.maxSp * 100, 0, 100) + '%';
+    var spentBp = cardCost();
+    if (ui.battleBpBar) ui.battleBpBar.style.width = clamp(spentBp / Math.max(1, spentBp + save.bp) * 100, 0, 100) + '%';
+    if (ui.battleBp) ui.battleBp.textContent = save.bp;
     ui.cocoa.textContent = save.cocoa;
     updateHud();
   }
@@ -2266,16 +2309,22 @@
     ui.actions.hidden = false;
     ui.skills.hidden = true;
     setBattleButtons(true);
-    ui.battleHint.textContent = 'CHOOSE AN ACTION';
+    selectAction(battleSelect, true);
+    ui.battleHint.textContent = 'ARROWS SELECT · E CONFIRM';
   }
 
   function showTiming(kind, label) {
     ui.timing.hidden = false;
+    /* Keep the enemy's telegraph colour ring lit while the guard window is up. */
+    if (kind === 'guard' && ui.enemyPlate && battle) {
+      ui.enemyPlate.className = 'ff-enemy-plate windup ' + (battle.telegraph || 'standard');
+    }
     var blind = !!(battle && battle.gimmick && battle.gimmick.obscured && kind === 'strike');
     var narrow = !!(battle && battle.mods && battle.mods.narrow && kind === 'strike');
     ui.timing.className = 'ff-timing' + (kind === 'guard' ? ' guard' : '') + (blind ? ' blind' : '') + (narrow ? ' narrow' : '');
     ui.timingLabel.textContent = label;
     ui.timingButton.textContent = kind === 'guard' ? 'GUARD' : 'STRIKE';
+    ui.timing.classList.remove('hit');
     ui.timingNote.textContent = kind === 'guard'
       ? 'SPACE / E / TAP · INNER ZONE = SUPERGUARD'
       : 'SPACE / E / TAP · GOLD ZONE = PERFECT';
@@ -2305,6 +2354,7 @@
       w.quality = now >= w.perfectAt ? 'perfect' : 'good';
       w.closeAt = now + 90;
       ui.timingLabel.textContent = w.quality === 'perfect' ? 'PERFECT!' : 'GOOD!';
+      timingFlash();
       sound('click');
       return;
     }
@@ -2314,12 +2364,14 @@
         w.superguard = true;
         w.guard = true;
         ui.timingLabel.textContent = 'SUPERGUARD!';
+        timingFlash();
         sound('guard');
         return;
       }
       if (!w.guard) {
         w.guard = true;
         ui.timingLabel.textContent = 'GUARD';
+        timingFlash();
         sound('guard');
       }
     }
@@ -2527,12 +2579,14 @@
     if (type === 'heavy') ui.telegraph.textContent = 'ORANGE · HEAVY · NO SUPERGUARD';
     else if (type === 'unblockable') ui.telegraph.textContent = 'RED · UNBLOCKABLE';
     else ui.telegraph.textContent = 'WHITE · GUARD OR SUPERGUARD';
+    if (ui.enemyPlate) ui.enemyPlate.className = 'ff-enemy-plate windup ' + type;
     sound(type === 'heavy' ? 'chimeOrange' : type === 'unblockable' ? 'chimeRed' : 'chimeWhite');
     flashStage(type === 'heavy' ? 'orange' : type === 'unblockable' ? 'red' : 'white');
   }
 
   function hideTelegraph() {
     ui.telegraph.hidden = true;
+    if (ui.enemyPlate) ui.enemyPlate.className = 'ff-enemy-plate';
   }
 
   function rollTelegraph() {
@@ -2887,9 +2941,29 @@
   function onKeyDown(event) {
     if (event.target && /INPUT|TEXTAREA/.test(event.target.tagName)) return;
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(event.code) >= 0) event.preventDefault();
+    /* Battle keyboard: arrows drive the card cursor, E confirms, and E during
+       a timing window is the action command press. */
+    if (mode === 'battle' && battle) {
+      if (battle.window) {
+        if (event.code === 'KeyE' || event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); timingPress(); }
+        return;
+      }
+      if (battle.state === 'menu') {
+        if (event.code === 'ArrowLeft' || event.code === 'KeyA') { event.preventDefault(); selectAction(battleSelect - 1); return; }
+        if (event.code === 'ArrowRight' || event.code === 'KeyD') { event.preventDefault(); selectAction(battleSelect + 1); return; }
+        if (event.code === 'ArrowUp' || event.code === 'KeyW') { event.preventDefault(); selectAction(battleSelect - 3); return; }
+        if (event.code === 'ArrowDown' || event.code === 'KeyS') { event.preventDefault(); selectAction(battleSelect + 3); return; }
+        if (event.code === 'KeyE' || event.code === 'Space' || event.code === 'Enter') { event.preventDefault(); activateSelected(); return; }
+        if (/^Digit[1-5]$/.test(event.code)) {
+          event.preventDefault();
+          selectAction(Number(event.code.slice(5)) - 1, true);
+          activateSelected();
+          return;
+        }
+      }
+    }
     if (event.code === 'KeyE' || event.code === 'Space' || event.code === 'Enter') {
       if (mode === 'cutscene') { event.preventDefault(); advanceCutscene(); return; }
-      if (mode === 'battle') { event.preventDefault(); timingPress(); return; }
       if (mode === 'world' || mode === 'dialogue') { event.preventDefault(); interact(); }
       return;
     }
@@ -3005,6 +3079,10 @@
       var button = event.target.closest('button');
       if (button && button.dataset.act) chooseAction(button.dataset.act);
     });
+    ui.actions.addEventListener('pointerover', function (event) {
+      var button = event.target.closest('button');
+      if (button && button.dataset.index !== undefined) selectAction(Number(button.dataset.index), true);
+    });
     ui.skills.addEventListener('click', function (event) {
       var button = event.target.closest('button');
       if (!button) return;
@@ -3081,7 +3159,11 @@
       chapter: function (index) { if (!save) { save = freshSave(); save.started = true; } buildWorld(index); },
       teleport: function (x, z) { if (player) { player.x = x; player.z = z; snapCamera(); } },
       fight: function (model, hp, boss) {
-        startBattle({ name: boss ? 'TEST BOSS' : 'TEST SHADE', hp: hp || 22, atk: 4, xp: 10, model: model || 'shade', boss: !!boss, agility: 4 }, {});
+        var screens = document.querySelectorAll('.ff-screen');
+        for (var s = 0; s < screens.length; s++) screens[s].hidden = true;
+        var names = { mite: 'FROST MITE', wisp: 'SNOW WISP', crab: 'ICE CRAB', wraith: 'PINE WRAITH', serpent: 'ICE SERPENT', bell: 'HOLLOW BELL', night: 'THE LONG NIGHT' };
+        var key = model || 'shade';
+        startBattle({ name: names[key] || 'FROST SHADE', hp: hp || 22, atk: 4, xp: 10, model: key, boss: !!boss, agility: 4 }, {});
       },
       win: function () { if (battle && !battle.ended) { battle.hp = 0; winBattle(); } },
       grant: function (amount) { var gained = grantXp(amount || 50); updateHud(); return gained; },
