@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=15">
+<link rel="stylesheet" href="/css/frostfall.css?v=16">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -147,17 +147,17 @@
       <div class="ff-battle-player">
         <div class="ff-battler-plate">
           <div class="ff-battler-head"><span>BATTLER</span><b>LV <i id="ff-battle-level">1</i></b></div>
-          <div class="ff-gauge hp"><span class="ff-gauge-icon" aria-hidden="true">&#9829;</span><div class="ff-gauge-track"><i id="ff-battle-hp-bar"></i></div><b id="ff-battle-hp">30/30</b></div>
-          <div class="ff-gauge sp"><span class="ff-gauge-icon" aria-hidden="true">&#9889;</span><div class="ff-gauge-track"><i id="ff-battle-sp-bar"></i></div><b id="ff-battle-sp">10/10</b></div>
-          <div class="ff-gauge bp"><span class="ff-gauge-icon" aria-hidden="true">&#9636;</span><div class="ff-gauge-track"><i id="ff-battle-bp-bar"></i></div><b id="ff-battle-bp">4</b></div>
+          <div class="ff-gauge hp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-hp-bar"></i></div><b id="ff-battle-hp">30/30</b></div>
+          <div class="ff-gauge sp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-sp-bar"></i></div><b id="ff-battle-sp">10/10</b></div>
+          <div class="ff-gauge bp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-bp-bar"></i></div><b id="ff-battle-bp">4</b></div>
         </div>
       </div>
       <div id="ff-actions" class="ff-actions">
-        <button class="ff-action-btn act-attack" type="button" data-act="attack" data-index="0"><b>SWORD</b><span class="ff-act-icon" aria-hidden="true">&#9876;</span><small>ATTACK</small></button>
-        <button class="ff-action-btn act-skill" type="button" data-act="skill" data-index="1"><b>SKILLS</b><span class="ff-act-icon" aria-hidden="true">&#10022;</span><small>SP</small></button>
-        <button class="ff-action-btn act-guard" type="button" data-act="guard" data-index="2"><b>GUARD</b><span class="ff-act-icon" aria-hidden="true">&#9670;</span><small>+2 SP</small></button>
-        <button class="ff-action-btn act-item" type="button" data-act="item" data-index="3"><b>COCOA</b><span class="ff-act-icon" aria-hidden="true">&#9749;</span><small>&times;<span id="ff-cocoa-count">2</span></small></button>
-        <button class="ff-action-btn act-run" type="button" data-act="run" data-index="4"><b>RUN</b><span class="ff-act-icon" aria-hidden="true">&#10132;</span><small>AWAY</small></button>
+        <button class="ff-action-btn act-attack" type="button" data-act="attack" data-index="0"><b>SWORD</b><span class="ff-act-icon" aria-hidden="true"></span><small>ATTACK</small></button>
+        <button class="ff-action-btn act-skill" type="button" data-act="skill" data-index="1"><b>SKILLS</b><span class="ff-act-icon" aria-hidden="true"></span><small>SP</small></button>
+        <button class="ff-action-btn act-guard" type="button" data-act="guard" data-index="2"><b>GUARD</b><span class="ff-act-icon" aria-hidden="true"></span><small>+2 SP</small></button>
+        <button class="ff-action-btn act-item" type="button" data-act="item" data-index="3"><b>COCOA</b><span class="ff-act-icon" aria-hidden="true"></span><small>&times;<span id="ff-cocoa-count">2</span></small></button>
+        <button class="ff-action-btn act-run" type="button" data-act="run" data-index="4"><b>RUN</b><span class="ff-act-icon" aria-hidden="true"></span><small>AWAY</small></button>
       </div>
       <div id="ff-skills" class="ff-skills" hidden></div>
       <p id="ff-battle-hint" class="ff-battle-hint">ARROWS SELECT &middot; E CONFIRM</p>
@@ -169,9 +169,9 @@
       <h2>LEVEL UP!</h2>
       <p id="ff-level-sub">LEVEL 2</p>
       <div class="ff-level-options">
-        <button class="ff-level-option hp" type="button" data-stat="hp"><span class="ff-level-icon">♥</span><b>HP</b><em id="ff-lv-hp">26 → 31</em></button>
-        <button class="ff-level-option sp" type="button" data-stat="sp"><span class="ff-level-icon">⚡</span><b>SP</b><em id="ff-lv-sp">10 → 15</em></button>
-        <button class="ff-level-option bp" type="button" data-stat="bp"><span class="ff-level-icon">▤</span><b>BP</b><em id="ff-lv-bp">4 → 9</em></button>
+        <button class="ff-level-option hp" type="button" data-stat="hp"><span class="ff-level-icon" aria-hidden="true"></span><b>HP</b><em id="ff-lv-hp">26 → 31</em></button>
+        <button class="ff-level-option sp" type="button" data-stat="sp"><span class="ff-level-icon" aria-hidden="true"></span><b>SP</b><em id="ff-lv-sp">10 → 15</em></button>
+        <button class="ff-level-option bp" type="button" data-stat="bp"><span class="ff-level-icon" aria-hidden="true"></span><b>BP</b><em id="ff-lv-bp">4 → 9</em></button>
       </div>
       <p class="ff-level-hint">SELECT ONE TO UPGRADE!</p>
       <p class="ff-level-note">HP is health. SP fuels skills. BP is badge points — spend it on cards in the pause menu.</p>

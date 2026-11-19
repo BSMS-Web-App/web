@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64" viewBox="0 0 128 64">
+  <!--
+    Frostfall icon sprites — 4 columns x 2 rows of 32x32 cells.
+    Row 1: sword, skills sparkle, guard shield, cocoa mug
+    Row 2: run boot, HP heart, SP bolt, BP badge
+    Chunky dark outlines, flat pastel fills: the Block Tales card-icon look.
+  -->
+  <g stroke="#17102a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+
+    <!-- 1,1 sword -->
+    <g transform="translate(16 15) rotate(45)">
+      <path d="M-3.4 2 L-3.4 -9 L0 -14 L3.4 -9 L3.4 2 Z" fill="#e8f4ff"/>
+      <path d="M0 -12.4 L3.4 -8.6 L3.4 1.6 L0 1.6 Z" fill="#a8c8e8" stroke="none"/>
+      <rect x="-7" y="1.4" width="14" height="4" rx="1.6" fill="#ffd24a"/>
+      <rect x="-2" y="5.2" width="4" height="6.4" rx="1.2" fill="#b06a33"/>
+      <circle cx="0" cy="12.6" r="2.4" fill="#ffd24a"/>
+    </g>
+
+    <!-- 2,1 skills sparkle -->
+    <path d="M48 3 C49.4 10.4 53.6 14.6 61 16 C53.6 17.4 49.4 21.6 48 29 C46.6 21.6 42.4 17.4 35 16 C42.4 14.6 46.6 10.4 48 3 Z" fill="#ffd24a"/>
+    <path d="M48 8 C48.6 12.2 50.8 14.4 55 15 C50.8 15.6 48.6 17.8 48 22 C47.4 17.8 45.2 15.6 41 15 C45.2 14.4 47.4 12.2 48 8 Z" fill="#fff3b8" stroke="none"/>
+    <path d="M38 5.4 L39.4 7.4 L38 9.4 L36.6 7.4 Z" fill="#c9b8ff" stroke-width="1.2"/>
+    <path d="M58 22.6 L59.4 24.6 L58 26.6 L56.6 24.6 Z" fill="#c9b8ff" stroke-width="1.2"/>
+
+    <!-- 3,1 guard shield -->
+    <path d="M80 3.4 C85 6.4 88.6 7.4 90.6 7.6 C90.6 17 87 24.4 80 28.6 C73 24.4 69.4 17 69.4 7.6 C71.4 7.4 75 6.4 80 3.4 Z" fill="#6a8fe8"/>
+    <path d="M77 7.8 L83 7.8 L83 22.4 L80 24.6 L77 22.4 Z" fill="#a8c0ff" stroke="none"/>
+    <path d="M73.6 12.4 L80 17.6 L86.4 12.4" fill="none" stroke="#fff6de" stroke-width="2.2"/>
+    <circle cx="72.6" cy="10.4" r="1.3" fill="#ffd24a" stroke-width="1.2"/>
+    <circle cx="87.4" cy="10.4" r="1.3" fill="#ffd24a" stroke-width="1.2"/>
+
+    <!-- 4,1 cocoa mug -->
+    <path d="M114 18 C120 18 120 25 114 25" fill="none" stroke="#17102a" stroke-width="6"/>
+    <path d="M114 18 C120 18 120 25 114 25" fill="none" stroke="#fff6de" stroke-width="2.4"/>
+    <path d="M100 14.5 L116 14.5 L114.6 26.4 C114.5 27.8 113.3 28.8 111.9 28.8 L104.1 28.8 C102.7 28.8 101.5 27.8 101.4 26.4 Z" fill="#fff6de"/>
+    <path d="M102 17 L114 17 L113.4 24.6 L102.6 24.6 Z" fill="#ffd98f" stroke="none"/>
+    <rect x="98" y="11" width="20" height="5" rx="2.2" fill="#ffd98f"/>
+    <rect x="101" y="12.4" width="14" height="2.2" rx="1.1" fill="#6b3a1e" stroke="none"/>
+    <rect x="104" y="12.2" width="3.2" height="1.8" rx=".7" fill="#fffdf2" stroke="none"/>
+    <path d="M104.5 8.6 C104.5 6.6 106.4 6.8 106.4 4.6" fill="none" stroke="#cfe0f5" stroke-width="1.8"/>
+    <path d="M110.5 8.6 C110.5 6.6 112.4 6.8 112.4 4.6" fill="none" stroke="#cfe0f5" stroke-width="1.8"/>
+
+    <!-- 1,2 run boot -->
+    <path d="M2.6 41 L8.4 41" fill="none" stroke="#ffd24a" stroke-width="2"/>
+    <path d="M1.6 45.6 L7 45.6" fill="none" stroke="#ffd24a" stroke-width="2" stroke-opacity=".75"/>
+    <rect x="13" y="38" width="10" height="12" rx="1.6" fill="#58b46f"/>
+    <path d="M3 49 L23 49 L23 55.4 L5 55.4 C2.6 55.4 1.7 53.9 2.3 52.4 Z" fill="#58b46f"/>
+    <path d="M15.4 43 L20.6 43" fill="none" stroke="#9ae3ad" stroke-width="1.8"/>
+    <path d="M15.4 46.4 L20.6 46.4" fill="none" stroke="#9ae3ad" stroke-width="1.8"/>
+    <rect x="12.2" y="36.2" width="11.6" height="3.8" rx="1.4" fill="#2f7a45"/>
+    <rect x="1.4" y="54.8" width="22" height="3.8" rx="1.9" fill="#2f7a45"/>
+
+    <!-- 2,2 HP heart -->
+    <path d="M48 57 C48 57 37 50.4 37 43.8 C37 39.4 41 36.8 44.6 38.9 C46.5 40 47.5 41.7 48 42.7 C48.5 41.7 49.5 40 51.4 38.9 C55 36.8 59 39.4 59 43.8 C59 50.4 48 57 48 57 Z" fill="#e42346"/>
+    <path d="M41.4 43.6 C41.6 41.6 43 40.6 44.4 41.2" fill="none" stroke="#ff9aa8" stroke-width="2"/>
+
+    <!-- 3,2 SP bolt -->
+    <path d="M83 35.6 L72 50.6 L79.2 50.6 L77 60.4 L88 45.4 L80.8 45.4 Z" fill="#ffd24a"/>
+    <path d="M81.4 38.4 L75.6 47.2" fill="none" stroke="#fff3b8" stroke-width="1.6"/>
+
+    <!-- 4,2 BP badge -->
+    <circle cx="112" cy="48" r="8.6" fill="#ffc247"/>
+    <path d="M112 42.4 L113.4 46.1 L117.3 46.3 L114.3 48.7 L115.3 52.5 L112 50.4 L108.7 52.5 L109.7 48.7 L106.7 46.3 L110.6 46.1 Z" fill="#fff6de" stroke-width="1.2"/>
+  </g>
+</svg>

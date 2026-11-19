@@ -1290,21 +1290,21 @@ a { color: inherit; }
 }
 
 .ff-gauge-icon {
-  display: grid;
-  place-items: center;
-  width: 19px;
-  height: 19px;
+  display: block;
+  width: 21px;
+  height: 21px;
   border: 2px solid #0b0714;
   border-radius: 5px;
-  font-size: 11px;
-  line-height: 1;
-  color: #2a1600;
+  background-color: #fff6de;
+  background-image: url("../img/frostfall/action-sprites.svg?v=3");
+  background-repeat: no-repeat;
+  background-size: 400% 200%;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.22);
 }
 
-.ff-gauge.hp .ff-gauge-icon { background: #ff6b7c; }
-.ff-gauge.sp .ff-gauge-icon { background: #6cc4ff; }
-.ff-gauge.bp .ff-gauge-icon { background: #ffc247; }
+.ff-gauge.hp .ff-gauge-icon { background-position: 33.333% 100%; }
+.ff-gauge.sp .ff-gauge-icon { background-position: 66.667% 100%; }
+.ff-gauge.bp .ff-gauge-icon { background-position: 100% 100%; }
 
 .ff-gauge-track {
   position: relative;
@@ -1363,24 +1363,23 @@ a { color: inherit; }
 }
 
 .ff-action-btn .ff-act-icon {
-  display: grid;
-  place-items: center;
-  width: 39px;
-  height: 33px;
+  display: block;
+  width: 40px;
+  height: 40px;
   border: 3px solid #0b0714;
-  border-radius: 7px;
-  font-size: 19px;
-  line-height: 1;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.28);
+  border-radius: 8px;
+  background-color: #fff6de;
+  background-image: url("../img/frostfall/action-sprites.svg?v=3");
+  background-repeat: no-repeat;
+  background-size: 400% 200%;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
 }
 
-.act-attack .ff-act-icon { background: #e0455c; }
-.act-skill .ff-act-icon { background: #8a6cff; }
-.act-guard .ff-act-icon { background: #2f8fd8; }
-.act-item .ff-act-icon { background: #c9864a; }
-.act-run .ff-act-icon { background: #5f6b8a; }
+.act-attack .ff-act-icon { background-position: 0% 0%; }
+.act-skill .ff-act-icon { background-position: 33.333% 0%; }
+.act-guard .ff-act-icon { background-position: 66.667% 0%; }
+.act-item .ff-act-icon { background-position: 100% 0%; }
+.act-run .ff-act-icon { background-position: 0% 100%; }
 
 .ff-action-btn small {
   font: 700 8px/1 "Trebuchet MS", "Segoe UI", sans-serif;
@@ -1482,6 +1481,7 @@ a { color: inherit; }
   border-radius: 10px;
   background: #fdf3d8;
   box-shadow: 0 5px 0 #0b0714;
+  color: #241033;
 }
 
 .ff-level-icon {
@@ -1497,10 +1497,6 @@ a { color: inherit; }
   background: #fff;
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18);
 }
-
-.ff-level-option.hp .ff-level-icon { background: #ffe1e5; color: #d81f3c; }
-.ff-level-option.sp .ff-level-icon { background: #dcefff; color: #1f7fe0; }
-.ff-level-option.bp .ff-level-icon { background: #ffeac6; color: #c97400; }
 
 #ff-battle .ff-battle-player {
   display: block;
@@ -1553,9 +1549,8 @@ a { color: inherit; }
 }
 
 .ff-action-btn .ff-act-icon {
-  width: 30px;
-  height: 26px;
-  font-size: 15px;
+  width: 28px;
+  height: 28px;
   border-width: 2px;
   border-radius: 6px;
 }
@@ -1619,3 +1614,20 @@ a { color: inherit; }
 .ff-enemy-plate.windup.standard {
   box-shadow: 0 4px 0 #0b0714, 0 0 0 3px rgba(255, 255, 255, 0.7), 0 0 12px rgba(255, 255, 255, 0.45);
 }
+
+/* Sprite icons for the level-up cards, cut from the same battle sheet. */
+.ff-level-icon {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border: 3px solid #0b0714;
+  border-radius: 8px;
+  background-color: #fff6de;
+  background-image: url("../img/frostfall/action-sprites.svg?v=3");
+  background-repeat: no-repeat;
+  background-size: 400% 200%;
+}
+
+.ff-level-option.hp .ff-level-icon { background-position: 33.333% 100%; }
+.ff-level-option.sp .ff-level-icon { background-position: 66.667% 100%; }
+.ff-level-option.bp .ff-level-icon { background-position: 100% 100%; }
