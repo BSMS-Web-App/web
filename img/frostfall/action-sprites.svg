@@ -1,9 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="96" viewBox="0 0 128 96">
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <!--
-    Frostfall icon sprites — 4 columns x 3 rows of 32x32 cells.
+    Frostfall icon sprites — 4 columns x 4 rows of 32x32 cells.
     Row 1: sword, skills sparkle, guard shield, cocoa mug
     Row 2: run boot, HP heart, SP bolt, BP badge
     Row 3: hero portrait, touch press (cells 3-4 are empty)
+    Row 4: narrator star, Mayor Bram, Pip, cracked shard
     Chunky dark outlines, flat pastel fills: the Block Tales card-icon look.
     Every icon slot points at this one file through the shared sprite variable in frostfall.css.
   -->
@@ -87,6 +88,59 @@
       <path d="M17.6 9 L17.6 14.6" fill="none" stroke="#c98d63" stroke-width="1.4"/>
       <rect x="6.6" y="24.8" width="18.8" height="5.8" rx="2.9" fill="#ffd24a"/>
       <rect x="9.6" y="26.4" width="12.8" height="1.8" rx=".9" fill="#fff3b8" stroke="none"/>
+    </g>
+
+    <!-- 1,4 narrator: a gold star on a night sky -->
+    <g transform="translate(0 96)">
+      <circle cx="16" cy="16" r="12.4" fill="#2b2250"/>
+      <path d="M16 4.6 C17.7 12 19.9 14.2 26.8 16 C19.9 17.8 17.7 20 16 27.4 C14.3 20 12.1 17.8 5.2 16 C12.1 14.2 14.3 12 16 4.6 Z" fill="#ffd24a"/>
+      <path d="M16 9.6 C16.9 13.6 18.3 15 22.3 16 C18.3 17 16.9 18.4 16 22.4 C15.1 18.4 13.7 17 9.7 16 C13.7 15 15.1 13.6 16 9.6 Z" fill="#fff3b8" stroke="none"/>
+      <circle cx="7.4" cy="7.8" r="1.3" fill="#cfe0f5" stroke="none"/>
+      <circle cx="24.8" cy="23.4" r="1.5" fill="#cfe0f5" stroke="none"/>
+      <circle cx="23.6" cy="8.2" r="1" fill="#cfe0f5" stroke="none"/>
+    </g>
+
+    <!-- 2,4 Mayor Bram: top hat, goggles, big moustache -->
+    <g transform="translate(32 96)">
+      <path d="M3.6 32 C3.6 25.4 8.8 21.8 16 21.8 C23.2 21.8 28.4 25.4 28.4 32 Z" fill="#4a6b8a"/>
+      <path d="M11 22.6 L16 27.2 L21 22.6 C19.4 21.9 12.6 21.9 11 22.6 Z" fill="#9a4436" stroke-width="1.4"/>
+      <rect x="12" y="17.6" width="8" height="4.8" fill="#e7b78e"/>
+      <circle cx="16" cy="13.6" r="8.4" fill="#e7b78e"/>
+      <path d="M8.6 11.6 C9.4 8.2 12.4 6.6 16 6.6 C19.6 6.6 22.6 8.2 23.4 11.6 Z" fill="#8a8070"/>
+      <rect x="9.8" y="2.2" width="12.4" height="9.6" rx="1.2" fill="#2b2633"/>
+      <rect x="9.8" y="6" width="12.4" height="2.6" fill="#9a4436"/>
+      <rect x="6.2" y="11.2" width="19.6" height="3.4" rx="1.5" fill="#2b2633"/>
+      <rect x="11.4" y="13.8" width="3.2" height="3.2" rx="1.1" fill="#17102a" stroke="none"/>
+      <rect x="17.4" y="13.8" width="3.2" height="3.2" rx="1.1" fill="#17102a" stroke="none"/>
+      <path d="M10.4 18.6 C12.6 20.4 19.4 20.4 21.6 18.6 C20 20 12 20 10.4 18.6 Z" fill="#d8d2c4" stroke-width="1.6"/>
+      <circle cx="9.4" cy="13.4" r="2.6" fill="#9a4436" stroke-width="1.6"/>
+      <circle cx="22.6" cy="13.4" r="2.6" fill="#9a4436" stroke-width="1.6"/>
+    </g>
+
+    <!-- 3,4 Pip: a snowman head in a scarf -->
+    <g transform="translate(64 96)">
+      <path d="M6.4 6.4 L2.6 2.6" fill="none" stroke="#6b4a32" stroke-width="2"/>
+      <path d="M25.6 6.4 L29.4 2.6" fill="none" stroke="#6b4a32" stroke-width="2"/>
+      <circle cx="16" cy="14.4" r="9.8" fill="#f6fcff"/>
+      <circle cx="12.2" cy="12.2" r="1.5" fill="#17102a" stroke="none"/>
+      <circle cx="19.8" cy="12.2" r="1.5" fill="#17102a" stroke="none"/>
+      <path d="M16 14.8 L23.4 16.6 L16 18.4 Z" fill="#ff8a3c" stroke-width="1.4"/>
+      <circle cx="13.4" cy="20.4" r=".9" fill="#17102a" stroke="none"/>
+      <circle cx="16.6" cy="21.2" r=".9" fill="#17102a" stroke="none"/>
+      <circle cx="19.4" cy="20.4" r=".9" fill="#17102a" stroke="none"/>
+      <path d="M5.4 24.6 L26.6 24.6 L25.2 29.6 L6.8 29.6 Z" fill="#e42346"/>
+      <path d="M11.4 29 L11.4 31.4" fill="none" stroke="#a3122f" stroke-width="2"/>
+      <rect x="13.6" y="8.6" width="4.8" height="2.2" rx="1.1" fill="#aeeee0" stroke="none"/>
+    </g>
+
+    <!-- 4,4 the cracked star shard -->
+    <g transform="translate(96 96)">
+      <path d="M16 2.6 L25.4 13.6 L21.2 27.2 L10.8 27.2 L6.6 13.6 Z" fill="#9fe6ff"/>
+      <path d="M16 2.6 L25.4 13.6 L16 16.4 Z" fill="#e6fbff" stroke="none"/>
+      <path d="M16 16.4 L21.2 27.2 L10.8 27.2 Z" fill="#6fc4e8" stroke="none"/>
+      <path d="M16 2.6 L14.2 11.4 L17.8 17.4 L15.2 27.2" fill="none" stroke="#2a6f96" stroke-width="1.4"/>
+      <circle cx="26.4" cy="7.4" r="1.5" fill="#ffd24a" stroke-width="1.2"/>
+      <circle cx="5.6" cy="21.4" r="1.3" fill="#ffd24a" stroke-width="1.2"/>
     </g>
   </g>
 </svg>

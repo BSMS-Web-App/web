@@ -579,8 +579,8 @@ a { color: inherit; }
   height: 46px;
   background-image: var(--ff-sprite);
   background-repeat: no-repeat;
-  background-size: 400% 300%;
-  background-position: 33.333% 100%;
+  background-size: 400% 400%;
+  background-position: 33.333% 66.667%;
 }
 .ff-action small { display: block; margin-top: 3px; font: 6px 'Press Start 2P', monospace; }
 .ff-action:active { transform: translate(2px, 2px); }
@@ -834,8 +834,8 @@ a { color: inherit; }
   background-color: #fff6de;
   background-image: var(--ff-sprite);
   background-repeat: no-repeat;
-  background-size: 400% 300%;
-  background-position: 0% 100%;
+  background-size: 400% 400%;
+  background-position: 0% 66.667%;
   border: 3px solid var(--ff-outline);
   box-shadow: inset 0 0 0 2px #fff1d8, 2px 2px 0 rgba(8, 3, 18, .55);
 }
@@ -1301,13 +1301,13 @@ a { color: inherit; }
   background-color: #fff6de;
   background-image: var(--ff-sprite);
   background-repeat: no-repeat;
-  background-size: 400% 300%;
+  background-size: 400% 400%;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.22);
 }
 
-.ff-gauge.hp .ff-gauge-icon { background-position: 33.333% 50%; }
-.ff-gauge.sp .ff-gauge-icon { background-position: 66.667% 50%; }
-.ff-gauge.bp .ff-gauge-icon { background-position: 100% 50%; }
+.ff-gauge.hp .ff-gauge-icon { background-position: 33.333% 33.333%; }
+.ff-gauge.sp .ff-gauge-icon { background-position: 66.667% 33.333%; }
+.ff-gauge.bp .ff-gauge-icon { background-position: 100% 33.333%; }
 
 .ff-gauge-track {
   position: relative;
@@ -1374,7 +1374,7 @@ a { color: inherit; }
   background-color: #fff6de;
   background-image: var(--ff-sprite);
   background-repeat: no-repeat;
-  background-size: 400% 300%;
+  background-size: 400% 400%;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
 }
 
@@ -1382,7 +1382,7 @@ a { color: inherit; }
 .act-skill .ff-act-icon { background-position: 33.333% 0%; }
 .act-guard .ff-act-icon { background-position: 66.667% 0%; }
 .act-item .ff-act-icon { background-position: 100% 0%; }
-.act-run .ff-act-icon { background-position: 0% 50%; }
+.act-run .ff-act-icon { background-position: 0% 33.333%; }
 
 .ff-action-btn small {
   font: 700 8px/1 "Trebuchet MS", "Segoe UI", sans-serif;
@@ -1614,10 +1614,100 @@ a { color: inherit; }
   background-color: #fff6de;
   background-image: var(--ff-sprite);
   background-repeat: no-repeat;
-  background-size: 400% 300%;
+  background-size: 400% 400%;
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16);
 }
 
-.ff-level-option.hp .ff-level-icon { background-position: 33.333% 50%; }
-.ff-level-option.sp .ff-level-icon { background-position: 66.667% 50%; }
-.ff-level-option.bp .ff-level-icon { background-position: 100% 50%; }
+.ff-level-option.hp .ff-level-icon { background-position: 33.333% 33.333%; }
+.ff-level-option.sp .ff-level-icon { background-position: 66.667% 33.333%; }
+.ff-level-option.bp .ff-level-icon { background-position: 100% 33.333%; }
+
+/* ============================================================
+   COMPACT HUD SHELF — capped width so the 3D view keeps air
+   ============================================================ */
+.ff-hud {
+  right: auto;
+  width: min(430px, calc(100% - 28px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "hero buttons"
+    "bars chips";
+  align-items: center;
+  gap: 8px 10px;
+  padding: 9px 11px;
+}
+.ff-hud-hero { grid-area: hero; justify-self: start; }
+.ff-hud-buttons { grid-area: buttons; margin-left: 0; justify-self: end; }
+.ff-hud-bars { grid-area: bars; min-width: 0; }
+.ff-hud-chips {
+  grid-area: chips;
+  flex-direction: column;
+  justify-content: center;
+  align-self: stretch;
+  gap: 6px;
+}
+.ff-hud-chips .ff-chip { justify-content: center; padding: 5px 7px; font-size: 7px; }
+
+@media (max-width: 560px) {
+  .ff-hud { width: calc(100% - 24px); padding: 8px 9px; gap: 7px 8px; }
+  .ff-hud-bar { grid-template-columns: 24px minmax(0, 1fr) 52px; gap: 5px; }
+  .ff-hud-chips .ff-chip { font-size: 6px; padding: 4px 5px; }
+  .ff-hud-buttons { gap: 4px; }
+}
+
+/* ============================================================
+   CUTSCENE PRESENTATION — speaker plate, typewriter, sky break
+   ============================================================ */
+.ff-cut-panel { padding: 12px 16px 10px; }
+.ff-cut-body { display: flex; align-items: flex-start; gap: 12px; }
+.ff-cut-face {
+  flex: 0 0 auto;
+  width: 60px;
+  height: 60px;
+  background-color: #fff6de;
+  background-image: var(--ff-sprite);
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  background-position: 0% 100%;
+  border: 3px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 2px #fff1d8, 3px 3px 0 rgba(6, 3, 14, .7);
+  transform: rotate(-1.5deg);
+}
+.ff-cut-face.narrator { background-position: 0% 100%; }
+.ff-cut-face.bram { background-position: 33.333% 100%; }
+.ff-cut-face.pip { background-position: 66.667% 100%; }
+.ff-cut-face.shard { background-position: 100% 100%; }
+.ff-cut-face.player { background-position: 0% 66.667%; }
+.ff-cut-lines { flex: 1 1 auto; min-width: 0; }
+.ff-cut-speaker {
+  display: inline-block;
+  margin: 0 0 6px;
+  padding: 3px 8px 2px;
+  background: linear-gradient(180deg, #ffcf63, #ff9c22);
+  border: 2px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 1px #fff2c2, 2px 2px 0 rgba(6, 3, 14, .55);
+  color: #401a08;
+  font: 8px 'Press Start 2P', monospace;
+  letter-spacing: .08em;
+}
+.ff-cut-text { min-height: 62px; }
+.ff-cut-next.typing { opacity: .55; }
+@media (max-width: 560px) {
+  .ff-cut-face { width: 50px; height: 50px; }
+  .ff-cut-text { min-height: 70px; }
+  .ff-cut-body { gap: 9px; }
+}
+
+.ff-flash.sky {
+  background:
+    radial-gradient(ellipse 90% 62% at 50% 26%, rgba(245, 253, 255, .95) 0%, rgba(160, 214, 255, .6) 38%, rgba(110, 140, 255, .18) 68%, rgba(20, 10, 40, 0) 88%),
+    linear-gradient(rgba(190, 226, 255, .28), rgba(190, 226, 255, .1) 70%, transparent);
+  animation: ff-skyflash .64s ease-out both;
+}
+@keyframes ff-skyflash {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  46% { opacity: .55; }
+  100% { opacity: 0; }
+}

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=17">
+<link rel="stylesheet" href="/css/frostfall.css?v=18">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -92,8 +92,13 @@
     <div class="ff-cut-bar top"></div>
     <p class="ff-cut-brand">A CHRISTMAS TALE</p>
     <div class="ff-cut-panel">
-      <p id="ff-cut-speaker" class="ff-cut-speaker">NARRATOR</p>
-      <p id="ff-cut-text" class="ff-cut-text"></p>
+      <div class="ff-cut-body">
+        <div id="ff-cut-face" class="ff-cut-face narrator" aria-hidden="true"></div>
+        <div class="ff-cut-lines">
+          <p id="ff-cut-speaker" class="ff-cut-speaker">NARRATOR</p>
+          <p id="ff-cut-text" class="ff-cut-text"></p>
+        </div>
+      </div>
       <div class="ff-cut-actions">
         <button id="ff-cut-next" class="ff-button gold" type="button">CONTINUE</button>
         <button id="ff-cut-skip" class="ff-cut-skip" type="button">SKIP CUTSCENE</button>
@@ -237,6 +242,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=4"></script>
-<script src="/js/frostfall.js?v=43"></script>
+<script src="/js/frostfall.js?v=44"></script>
 </body>
 </html>

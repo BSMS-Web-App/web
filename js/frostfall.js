@@ -68,7 +68,7 @@
     ending: $('ff-ending'), endingLines: $('ff-ending-lines'), endingStats: $('ff-ending-stats'), endingAgain: $('ff-ending-again'),
     ended: $('ff-ended'), fallback: $('ff-fallback'),
     cutscene: $('ff-cutscene'), cutSpeaker: $('ff-cut-speaker'), cutText: $('ff-cut-text'),
-    cutNext: $('ff-cut-next'), cutSkip: $('ff-cut-skip')
+    cutFace: $('ff-cut-face'), cutNext: $('ff-cut-next'), cutSkip: $('ff-cut-skip')
   };
 
   var FF = window.FFEngine;
@@ -170,8 +170,16 @@
   var snowFlakes = [];
   var dialogue = { lines: [], index: 0, speaker: '', onDone: null };
   var PARTY = { max: 4, active: [{ id: 'player', name: 'PLAYER' }], leader: 'player', ready: 0 };
-  var CUTSCENE_MARKS = [[-0.9, 2.8], [1.9, 2.8], [-2.9, 4.4], [3.4, 4.4]];
-  var cutscene = { active: false, index: 0, t: 0, lines: [], star: null, shard: null };
+  /* The opening shot stands in front of the ROADTOWN archway (the sign board
+     faces +z at z=7.6), so the cast waits between the lens and the sign: the
+     sign reads behind them instead of sitting in front of the camera. */
+  var CUTSCENE_MARKS = [[-2.4, 10.5], [2.35, 10.45], [0.15, 10.95]];
+  var CUTSCENE_ORTHO = 21.5;
+  var cutscene = {
+    active: false, index: 0, t: 0, lines: [], star: null, shard: null,
+    crack: null, shards: [], shardsOn: false, speaker: null, lineT: 0,
+    typing: false, full: '', shown: 0, lastCount: -1, pitch: 1
+  };
 
   var SWING_TIME = 0.3;
   var SKILLS = [
@@ -498,13 +506,15 @@
     snowCtx.globalAlpha = 1;
   }
 
-  function sound(name) {
+  function sound(name, pitch) {
     if (muted) return;
     try {
       if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === 'suspended') audio.resume();
       var presets = {
         click: [{ f: 620, t: 0.05 }, { f: 930, at: 0.03, t: 0.05 }],
+        blip: [{ f: 560, t: 0.028, type: 'square', gain: 0.018 }],
+        crack: [{ f: 92, t: 0.55, type: 'sawtooth' }, { f: 54, at: 0.04, t: 0.8, type: 'square' }, { f: 1380, at: 0, t: 0.16, type: 'square', gain: 0.026 }],
         menu: [{ f: 440, t: 0.04 }, { f: 660, at: 0.04, t: 0.06 }],
         battle: [{ f: 196, t: 0.1 }, { f: 262, at: 0.1, t: 0.12 }, { f: 392, at: 0.2, t: 0.16 }],
         swing: [{ f: 880, t: 0.09, type: 'sawtooth' }, { f: 360, at: 0.03, t: 0.1, type: 'triangle' }],
@@ -529,14 +539,15 @@
       };
       var notes = presets[name] || presets.click;
       var start = audio.currentTime;
+      var rate = pitch || 1;
       notes.forEach(function (note) {
         var at = start + (note.at || 0);
         var osc = audio.createOscillator();
         var gain = audio.createGain();
         osc.type = note.type || 'square';
-        osc.frequency.setValueAtTime(note.f, at);
+        osc.frequency.setValueAtTime(note.f * rate, at);
         gain.gain.setValueAtTime(0.0001, at);
-        gain.gain.linearRampToValueAtTime(0.045, at + 0.012);
+        gain.gain.linearRampToValueAtTime(note.gain || 0.045, at + 0.012);
         gain.gain.exponentialRampToValueAtTime(0.0001, at + note.t);
         osc.connect(gain);
         gain.connect(audio.destination);
@@ -677,9 +688,11 @@
   function sign(text, x, z) {
     var px = 0.22;
     var width = String(text).length * 4 * px;
-    var boardY = 2.7;
-    box(x - width / 2 - 0.62, 1.35, z, 0.34, 2.7, 0.34, 0x6b4a32);
-    box(x + width / 2 + 0.62, 1.35, z, 0.34, 2.7, 0.34, 0x6b4a32);
+    /* Tall enough to arch over the R6 cast (2.4 units), low enough that the
+       top of the board still clears the compact HUD at spawn. */
+    var boardY = 3.3;
+    box(x - width / 2 - 0.62, boardY / 2, z, 0.34, boardY, 0.34, 0x6b4a32);
+    box(x + width / 2 + 0.62, boardY / 2, z, 0.34, boardY, 0.34, 0x6b4a32);
     box(x, boardY, z, width + 1.8, 1.55, 0.44, 0x6b4a32);
     box(x, boardY + 0.88, z, width + 2.1, 0.22, 0.52, 0x8a6242);
     pixelText(text, x, boardY - 0.5, z + 0.30, px, 0xfff3d5);
@@ -907,7 +920,7 @@
   var CHAPTERS = [
     {
       num: 'ONE', title: 'ROADTOWN IN THE SNOW', sub: 'Where the star fell first',
-      theme: 'day', fog: [0.78, 0.87, 0.96], spawn: [0, 11],
+      theme: 'day', fog: [0.78, 0.87, 0.96], spawn: [0.9, 12],
       intro: [
         'The Aurora Star cracked at midnight. Five pieces fell out of the sky.',
         'By morning, Roadtown was buried, and the cold had teeth.',
@@ -918,7 +931,7 @@
         'One down. Four to go. The pines are whispering your name.'
       ],
       npc: {
-        name: 'MAYOR BRAM', x: 4.2, z: 5.2, palette: 'bram',
+        name: 'MAYOR BRAM', x: 2.2, z: 9, palette: 'bram',
         lines: [
           'You saw it fall, didn\'t you? The whole town felt the sky crack.',
           'A shard landed in the fountain. But the cold brought shades with it. They\'re lurking in the drifts.',
@@ -1311,6 +1324,18 @@
   }
 
   /* ------------------------------------------------------------- cutscene */
+  /* Voice pitch per speaker: narration floats, Bram rumbles, Pip squeaks. */
+  var CUT_VOICE = { 'NARRATOR': 1.3, 'MAYOR BRAM': 0.78, 'PIP': 1.55, 'PLAYER': 1.05 };
+  var CUT_FACE = { 'NARRATOR': 'narrator', 'MAYOR BRAM': 'bram', 'PIP': 'pip', 'PLAYER': 'player' };
+
+  function cutsceneNpc() {
+    if (!world) return null;
+    for (var i = 0; i < world.actors.length; i++) {
+      if (world.actors[i].kind === 'npc') return world.actors[i];
+    }
+    return null;
+  }
+
   function buildCutsceneProps() {
     var star = makeActor('cutscene-star');
     addPart(star, 0xffe08a, [0, 0, 0], [0, 0, 0], [1.1, 1.1, 0.8], { rz: Math.PI / 4 });
@@ -1319,7 +1344,8 @@
     addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [0.3, 2.3, 0.3]);
     addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [1.7, 0.22, 0.22], { rz: 0.78 });
     addPart(star, 0xffd76a, [0, 0, 0], [0, 0, 0], [1.7, 0.22, 0.22], { rz: -0.78 });
-    star.x = 0; star.y = 5.7; star.z = -11;
+    /* High above the archway but close enough to stay in the cutscene frame. */
+    star.x = 0; star.y = 5.9; star.z = 6.3;
     pushActor(world.objects, star);
     updateActor(star);
     cutscene.star = star;
@@ -1331,6 +1357,35 @@
     pushActor(world.objects, shard);
     updateActor(shard);
     cutscene.shard = shard;
+
+    /* The fracture that opens across the star when the sky breaks. */
+    var crack = makeActor('cutscene-crack');
+    addPart(crack, 0x9fe6ff, [0, 0, 0], [0, 0, 0], [0.14, 2.5, 0.14], { rz: 0.4 });
+    addPart(crack, 0xe8ffff, [0, 0, 0], [0.46, 0.42, 0.04], [0.1, 1.5, 0.1], { rz: -0.95 });
+    addPart(crack, 0xe8ffff, [0, 0, 0], [-0.62, 0.06, 0.04], [0.09, 1.2, 0.09], { rz: 1.2 });
+    crack.x = 0; crack.y = 6.0; crack.z = 6.5;
+    crack.hidden = true;
+    pushActor(world.objects, crack);
+    updateActor(crack);
+    cutscene.crack = crack;
+
+    /* Glowing shard rain. It hangs hidden in the sky until the star cracks. */
+    cutscene.shards = [];
+    cutscene.shardsOn = false;
+    for (var pieceIndex = 0; pieceIndex < 16; pieceIndex++) {
+      var piece = makeActor('cutscene-fall');
+      addPart(piece, 0xd8f8ff, [0, 0, 0], [0, 0, 0], [0.3, 0.86, 0.3], { geo: 'cone6', rz: Math.PI });
+      addPart(piece, 0x9fe6ff, [0, 0, 0], [0, 0, 0], [0.72, 0.72, 0.72], { alpha: 0.22 });
+      piece.x = -5.4 + Math.random() * 10.8;
+      piece.z = 7.98 + Math.random() * 0.85;
+      piece.y = 1.6 + Math.random() * 6.4;
+      piece.fall = 1.5 + Math.random() * 1.8;
+      piece.spin = (Math.random() - 0.5) * 4;
+      piece.hidden = true;
+      pushActor(world.objects, piece);
+      updateActor(piece);
+      cutscene.shards.push(piece);
+    }
   }
 
   function startIntroCutscene(resume) {
@@ -1351,22 +1406,28 @@
     cutscene.t = 0;
     cutscene.lines = [
       { who: 'NARRATOR', text: 'Every winter, Roadtown hangs one golden star above the square.' },
-      { who: 'NARRATOR', text: 'This year, the star cracked before midnight.' },
-      { who: 'MAYOR BRAM', text: 'The sky just broke. Get inside, kid. The cold is coming down the mountain.' },
+      { who: 'NARRATOR', face: 'shard', text: 'This year, the star cracked before midnight.', cue: 'soft' },
+      { who: 'MAYOR BRAM', text: 'The sky just broke. Get inside, kid. The cold is coming down the mountain.', cue: 'hard' },
       { who: 'PIP', text: 'Look! A piece landed in the fountain!' },
       { who: 'NARRATOR', text: 'Five shards. One star. One very long night.' }
     ];
-    if (player) {
-      player.x = CUTSCENE_MARKS[0][0];
-      player.z = CUTSCENE_MARKS[0][1];
-      player.yaw = 0.35;
-      updateActor(player);
-    }
-    if (pip) {
-      pip.x = CUTSCENE_MARKS[1][0];
-      pip.z = CUTSCENE_MARKS[1][1];
-      pip.yaw = -0.35;
-      updateActor(pip);
+    cutscene.typing = false;
+    cutscene.speaker = null;
+    cutscene.lineT = 0;
+    var cast = [player, pip, cutsceneNpc()];
+    var marks = [CUTSCENE_MARKS[0], CUTSCENE_MARKS[1], CUTSCENE_MARKS[2]];
+    for (var castIndex = 0; castIndex < cast.length; castIndex++) {
+      var actor = cast[castIndex];
+      if (!actor || !marks[castIndex]) continue;
+      actor.x = marks[castIndex][0];
+      actor.z = marks[castIndex][1];
+      actor.y = 0;
+      actor.yaw = 0;
+      actor.turnTo = 0;
+      actor.squashX = 1;
+      actor.squashY = 1;
+      actor.lean = 0;
+      updateActor(actor);
     }
     buildCutsceneProps();
     showCutsceneLine();
@@ -1375,17 +1436,89 @@
     sound('shard');
   }
 
+  /* Who is on screen for a given speaker name. */
+  function cutsceneSpeaker(who) {
+    if (who === 'MAYOR BRAM') return cutsceneNpc();
+    if (who === 'PIP') return pip;
+    if (who === 'PLAYER') return player;
+    return null;
+  }
+
+  /* Everyone angles a little toward the person they are answering, but only
+     part way round so their R6 faces stay readable from the camera. */
+  function faceCutsceneCast() {
+    var npc = cutsceneNpc();
+    var focus = npc || player;
+    var cast = [player, pip, npc];
+    for (var i = 0; i < cast.length; i++) {
+      var actor = cast[i];
+      if (!actor || !focus) continue;
+      var listener = actor === focus ? player : focus;
+      if (!listener) continue;
+      var directed = Math.atan2(listener.x - actor.x, listener.z - actor.z);
+      var eased = ((directed + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      actor.turnTo = eased * 0.45;
+    }
+  }
+
+  function finishCutsceneLine() {
+    cutscene.typing = false;
+    cutscene.shown = cutscene.full.length;
+    cutscene.lastCount = cutscene.full.length;
+    ui.cutText.textContent = cutscene.full;
+    ui.cutNext.classList.remove('typing');
+  }
+
   function showCutsceneLine() {
     var line = cutscene.lines[cutscene.index];
     if (!line) return;
     ui.cutSpeaker.textContent = line.who;
-    ui.cutText.textContent = line.text;
+    ui.cutFace.className = 'ff-cut-face ' + (line.face || CUT_FACE[line.who] || 'narrator');
     ui.cutNext.textContent = cutscene.index === cutscene.lines.length - 1 ? 'BEGIN CHAPTER ONE' : 'CONTINUE';
+    ui.cutNext.classList.add('typing');
+    ui.cutText.textContent = '';
+    cutscene.full = line.text;
+    cutscene.shown = 0;
+    cutscene.lastCount = -1;
+    cutscene.typing = true;
+    cutscene.lineT = 0;
+    cutscene.speaker = cutsceneSpeaker(line.who);
+    cutscene.pitch = CUT_VOICE[line.who] || 1;
+    faceCutsceneCast();
     sound('click');
+    if (line.cue === 'soft') triggerSkyCrack(false);
+    else if (line.cue === 'hard') triggerSkyCrack(true);
+  }
+
+  function flashCutSky() {
+    if (!ui.flash) return;
+    ui.flash.className = 'ff-flash';
+    void ui.flash.offsetWidth;
+    ui.flash.className = 'ff-flash sky';
+    ui.flash.hidden = false;
+    clearTimeout(ui.flashTimer);
+    ui.flashTimer = setTimeout(function () { ui.flash.hidden = true; }, 680);
+  }
+
+  /* The star breaks: sky flash, camera kick, and the shard rain starts. */
+  function triggerSkyCrack(hard) {
+    flashCutSky();
+    if (cutscene.crack) {
+      cutscene.crack.hidden = false;
+      updateActor(cutscene.crack);
+    }
+    cameraPunch(hard ? 0.36 : 0.14);
+    if (!hard) { sound('chimeWhite'); return; }
+    sound('crack');
+    shake();
+    cutscene.shardsOn = true;
+    clearTimeout(cutscene.secondFlash);
+    cutscene.secondFlash = setTimeout(flashCutSky, 260);
   }
 
   function advanceCutscene() {
     if (!cutscene.active) return;
+    if (cutscene.typing) { finishCutsceneLine(); return; }
     cutscene.index += 1;
     if (cutscene.index >= cutscene.lines.length) { endCutscene(); return; }
     showCutsceneLine();
@@ -1395,9 +1528,24 @@
     var resume = cutscene.resume;
     cutscene.active = false;
     cutscene.resume = false;
+    cutscene.typing = false;
+    cutscene.shardsOn = false;
+    cutscene.speaker = null;
     ui.cutscene.hidden = true;
+    ui.flash.hidden = true;
+    clearTimeout(cutscene.secondFlash);
+    clearTimeout(ui.flashTimer);
     cutscene.star = null;
     cutscene.shard = null;
+    cutscene.crack = null;
+    cutscene.shards = [];
+    [player, pip].forEach(function (actor) {
+      if (!actor) return;
+      actor.y = 0;
+      actor.squashX = 1;
+      actor.squashY = 1;
+      actor.lean = 0;
+    });
     /* Continuing a chapter-one save returns straight to the world; a new
        story still gets the chapter card. */
     if (resume && save) { buildWorld(save.chapter); return; }
@@ -1407,10 +1555,49 @@
   function updateCutscene(dt, time) {
     if (!cutscene.active) return;
     cutscene.t += dt;
+
+    /* Typewriter reveal with a retro voice blip every couple of letters. */
+    if (cutscene.typing) {
+      cutscene.shown = Math.min(cutscene.full.length, cutscene.shown + dt * 40);
+      var visible = Math.floor(cutscene.shown);
+      if (visible !== cutscene.lastCount) {
+        ui.cutText.textContent = cutscene.full.slice(0, visible);
+        var letter = cutscene.full.charAt(visible - 1);
+        if (visible % 2 === 0 && letter && letter !== ' ') {
+          sound('blip', cutscene.pitch + (visible % 5) * 0.03);
+        }
+        cutscene.lastCount = visible;
+      }
+      if (cutscene.shown >= cutscene.full.length) finishCutsceneLine();
+    }
+
+    /* Per-line hop and squash on whoever is talking, plus the turn-in. */
+    cutscene.lineT += dt;
+    var cast = [player, pip, cutsceneNpc()];
+    for (var c = 0; c < cast.length; c++) {
+      var actor = cast[c];
+      if (!actor) continue;
+      var speaking = actor === cutscene.speaker;
+      var beat = speaking ? Math.min(1, cutscene.lineT / 0.46) : 1;
+      var bounce = speaking ? Math.abs(Math.sin(beat * Math.PI)) : 0;
+      actor.squashY = 1 + bounce * 0.2;
+      actor.squashX = 1 - bounce * 0.1;
+      actor.y = bounce * 0.32;
+      actor.lean = bounce * 0.05 * (actor.x < 0 ? 1 : -1);
+      actor.yaw = lerp(actor.yaw, actor.turnTo === undefined ? 0 : actor.turnTo, Math.min(1, dt * 8));
+      updateActor(actor);
+    }
+
     if (cutscene.star) {
-      cutscene.star.y = 5.6 + Math.sin(time * 1.4) * 0.12;
+      cutscene.star.y = 5.9 + Math.sin(time * 1.4) * 0.14;
       cutscene.star.yaw += dt * 0.35;
       updateActor(cutscene.star);
+    }
+    if (cutscene.crack) {
+      var glow = 0.55 + Math.abs(Math.sin(time * 6.4)) * 0.45;
+      for (var p = 0; p < cutscene.crack.parts.length; p++) cutscene.crack.parts[p].obj.alpha = glow;
+      cutscene.crack.yaw += dt * 0.12;
+      updateActor(cutscene.crack);
     }
     if (cutscene.shard) {
       var fall = Math.min(1, cutscene.t / 7);
@@ -1419,8 +1606,29 @@
       cutscene.shard.yaw += dt * 1.6;
       updateActor(cutscene.shard);
     }
-    var dolly = Math.min(1, cutscene.t / 26);
-    renderer.setCamera([0, 2.8 + dolly * 0.3, 12 - dolly * 1.5], [0, 1.0, 1.5], 50 * Math.PI / 180);
+    if (cutscene.shardsOn) {
+      for (var s = 0; s < cutscene.shards.length; s++) {
+        var piece = cutscene.shards[s];
+        piece.hidden = false;
+        piece.y -= piece.fall * dt;
+        piece.yaw += piece.spin * dt;
+        if (piece.y < 0.9) {
+          piece.y = 7.2 + Math.random() * 2.2;
+          piece.x = -5.4 + Math.random() * 10.8;
+        }
+        updateActor(piece);
+      }
+    }
+
+    /* Camera stands in front of the archway, aimed a touch low so the sign
+       and the star sit high in frame and the cast lands above the panel. */
+    var dolly = Math.min(1, cutscene.t / 34);
+    renderer.setCamera(
+      [0.1 - dolly * 0.1, 2.0 + dolly * 0.1, 16.6 - dolly * 1.1],
+      [0, -0.8, 9.1],
+      50 * Math.PI / 180,
+      CUTSCENE_ORTHO
+    );
   }
 
   function scaleEnemyForParty(def) {
@@ -1604,8 +1812,8 @@
     pipTimer = 0;
     addNpc(chapter, index);
     spawnEnemies(chapter);
-    camera.yaw = 0.26;
-    camera.pitch = 0.46;
+    camera.yaw = 0.2;
+    camera.pitch = 0.44;
     camera.dist = 16;
     camera.ortho = baseOrtho();
     camera.punch = 0;
