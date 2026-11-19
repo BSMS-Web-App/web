@@ -1631,7 +1631,6 @@
 
   function updateHud() {
     if (!save) return;
-    ui.face.textContent = save.name.charAt(0);
     ui.hudName.textContent = save.name;
     ui.hudLevel.textContent = save.level;
     ui.hudChapter.textContent = 'CHAPTER ' + CHAPTERS[clamp(save.chapter, 0, 4)].num;

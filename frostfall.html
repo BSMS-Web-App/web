@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=16">
+<link rel="stylesheet" href="/css/frostfall.css?v=17">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -26,7 +26,7 @@
 
   <header id="ff-hud" class="ff-hud" hidden>
     <div class="ff-hud-hero">
-      <div class="ff-hud-face" id="ff-hud-face" aria-hidden="true">N</div>
+      <div class="ff-hud-face" id="ff-hud-face" aria-hidden="true"></div>
       <div class="ff-hud-id">
         <b id="ff-hud-name">NICO</b>
         <span>LV <em id="ff-hud-level">1</em> · <i id="ff-hud-chapter">CHAPTER 1</i></span>
@@ -59,7 +59,7 @@
 
   <div id="ff-touch" class="ff-touch" hidden>
     <div id="ff-joystick" class="ff-joystick" role="application" aria-label="Movement joystick"><div id="ff-stick" class="ff-stick"></div></div>
-    <button id="ff-action" class="ff-action" type="button">E<small>ACT</small></button>
+    <button id="ff-action" class="ff-action" type="button"><span class="ff-action-icon" aria-hidden="true"></span><small>ACT</small></button>
   </div>
 
   <div id="ff-loading" class="ff-screen ff-loading">
@@ -237,6 +237,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=4"></script>
-<script src="/js/frostfall.js?v=42"></script>
+<script src="/js/frostfall.js?v=43"></script>
 </body>
 </html>
