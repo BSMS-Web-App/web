@@ -1448,6 +1448,532 @@
     for (var i = 0; i < CAST_ROSTER.length; i++) CAST_BY_ID[CAST_ROSTER[i].id] = CAST_ROSTER[i];
   })();
 
+  /* ==================================================================
+     === NEW: CHARACTER FACTORY ===
+     One line of config per character: pull a row out of a sprite contact
+     sheet, key its blue card to transparency, swap the neutral clothing
+     and armour tones for a palette, stamp an accessory on the head/hand
+     anchors, and hand back an actor the existing world and battle code
+     already knows how to draw. Combat maths, HP, the HUD and the save
+     hooks are untouched.
+     ================================================================== */
+  var FROSTFALL_SHEETS = {
+    cast: { src: '/img/frostfall/cast.JPG' },
+    extras: { src: '/img/frostfall/extras.JPG' },
+    terry: { src: '/img/frostfall/terry.JPG' }
+  };
+  var FROSTFALL_SHEET_COLS = 5;
+  var FROSTFALL_SHEET_ROWS = 4;
+  var FROSTFALL_FRAME = 160;
+  var FROSTFALL_ATLAS_COLS = 8;      /* idle x3, walk, talk, cheer, ready, hurt */
+  var frostfallSheetState = {};
+  var frostfallArtBoxes = {};
+  var frostfallPaletteCache = {};
+  var frostfallCharacters = {};
+
+  /* === NEW: CHARACTER FACTORY === lazily load a contact sheet, JPEG case
+     handled the same way the animation sheet does it. */
+  function frostfallSheet(name) {
+    var spec = FROSTFALL_SHEETS[name];
+    if (!spec) return { state: 'missing', canvas: null, waiting: [] };
+    var known = frostfallSheetState[name];
+    if (known) return known;
+    var state = { state: 'loading', canvas: null, waiting: [] };
+    frostfallSheetState[name] = state;
+    var sources = [spec.src + '?v=1', spec.src.replace('.JPG', '.jpg') + '?v=1'];
+    var attempt = function (index) {
+      if (index >= sources.length) { state.state = 'error'; return; }
+      var image = new Image();
+      image.onload = function () {
+        var canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth || image.width;
+        canvas.height = image.naturalHeight || image.height;
+        var ctx = canvas.getContext('2d');
+        if (ctx) ctx.drawImage(image, 0, 0);
+        state.canvas = canvas;
+        state.state = 'ready';
+        var jobs = state.waiting.slice();
+        state.waiting.length = 0;
+        for (var i = 0; i < jobs.length; i++) jobs[i]();
+      };
+      image.onerror = function () { attempt(index + 1); };
+      image.src = sources[index];
+    };
+    attempt(0);
+    return state;
+  }
+
+  /* === NEW: CHARACTER FACTORY === the biggest solid blob in a card is the
+     character; the rounded card border and the lettering are either hollow
+     or tiny, so they fall out of the pick. */
+  function frostfallArtBox(sheet, row, sheetName) {
+    var boxKey = (sheetName || 'sheet') + '|' + row;
+    if (frostfallArtBoxes[boxKey]) return frostfallArtBoxes[boxKey];
+    var cw = sheet.width / FROSTFALL_SHEET_COLS;
+    var ch = sheet.height / FROSTFALL_SHEET_ROWS;
+    var ctx = sheet.getContext('2d');
+    if (!ctx) return null;
+    var box = null;
+    for (var col = 1; col < FROSTFALL_SHEET_COLS && !box; col++) {
+      var ox = Math.round(col * cw), oy = Math.round(row * ch);
+      var iw = Math.ceil(cw), ih = Math.ceil(ch);
+      var data = ctx.getImageData(ox, oy, iw, ih).data;
+      var bg = [data[(6 * iw + 6) * 4], data[(6 * iw + 6) * 4 + 1], data[(6 * iw + 6) * 4 + 2]];
+      var mask = new Uint8Array(iw * ih);
+      for (var y = 0; y < ih; y++) {
+        for (var x = 0; x < iw; x++) {
+          var i = (y * iw + x) * 4;
+          var d = Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) + Math.abs(data[i + 2] - bg[2]);
+          mask[y * iw + x] = d > 96 ? 1 : 0;
+        }
+      }
+      var seen = new Uint8Array(iw * ih);
+      var stack = [];
+      var best = null;
+      for (var s = 0; s < mask.length; s++) {
+        if (!mask[s] || seen[s]) continue;
+        var count = 0, minX = iw, minY = ih, maxX = -1, maxY = -1;
+        stack.length = 0;
+        stack.push(s);
+        seen[s] = 1;
+        while (stack.length) {
+          var p = stack.pop();
+          var px = p % iw, py = (p - px) / iw;
+          count++;
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+          for (var dy = -1; dy <= 1; dy++) {
+            for (var dx = -1; dx <= 1; dx++) {
+              var nx = px + dx, ny = py + dy;
+              if (nx < 0 || ny < 0 || nx >= iw || ny >= ih) continue;
+              var np = ny * iw + nx;
+              if (!mask[np] || seen[np]) continue;
+              seen[np] = 1;
+              stack.push(np);
+            }
+          }
+        }
+        var edges = (minX <= 1 ? 1 : 0) + (minY <= 1 ? 1 : 0) + (maxX >= iw - 2 ? 1 : 0) + (maxY >= ih - 2 ? 1 : 0);
+        if (edges >= 3) continue;          /* the card border */
+        if (!best || count > best.count) best = { count: count, x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+      }
+      if (best && best.count > 400) {
+        box = { x: best.x, y: best.y, w: best.w, h: best.h, cellW: iw, cellH: ih };
+      }
+    }
+    frostfallArtBoxes[boxKey] = box;
+    return box;
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     Palette swapper: every low-saturation pixel in the row (the neutral
+     white/grey template clothing, plate armour, fur trim) is replaced by a
+     palette tone, keeping the original shading by scaling through the old
+     luminance. Coloured art (eyes, gems, ice) is left alone. The result is
+     cached in an offscreen canvas with smoothing off. */
+  function recolorSpriteSheet(source, palette, cacheKey) {
+    if (!source) return null;
+    var key = cacheKey || '';
+    if (frostfallPaletteCache[key]) return frostfallPaletteCache[key];
+    var canvas = document.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(source, 0, 0);
+    var primary = palette && palette.primary !== undefined ? palette.primary : 0xd8333f;
+    var secondary = palette && palette.secondary !== undefined ? palette.secondary : 0x2b3550;
+    var accent = palette && palette.accent !== undefined ? palette.accent : 0xf2c49c;
+    var tone = [hexBytes(primary), hexBytes(secondary), hexBytes(accent)];
+    var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = image.data;
+    for (var i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 8) continue;
+      var r = data[i], g = data[i + 1], b = data[i + 2];
+      var max = Math.max(r, g, b), min = Math.min(r, g, b);
+      var sat = max ? (max - min) / max : 0;
+      if (sat > 0.24 || max < 70) continue;      /* coloured art or deep ink */
+      var lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      var target = lum > 0.86 ? tone[2] : lum > 0.6 ? tone[0] : tone[1];
+      var shadeK = clamp(lum / (lum > 0.86 ? 0.93 : lum > 0.6 ? 0.74 : 0.46), 0.55, 1.35);
+      data[i] = clamp(target[0] * shadeK, 0, 255);
+      data[i + 1] = clamp(target[1] * shadeK, 0, 255);
+      data[i + 2] = clamp(target[2] * shadeK, 0, 255);
+    }
+    ctx.putImageData(image, 0, 0);
+    frostfallPaletteCache[key] = canvas;
+    return canvas;
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     Pixel-art accessory stamped onto the head (above the art) and hand
+     (right side, about halfway down). Everything is drawn with fillRect on
+     a small grid so it stays crisp at any zoom. */
+  function drawCharacterAccessory(ctx, head, hand, kind, palette) {
+    if (!kind || kind === 'none' || !ctx) return;
+    var u = Math.max(2, Math.round(head.w / 10));
+    var cx = head.x + head.w / 2;
+    var top = head.y;
+    var accent = palette && palette.accent !== undefined ? palette.accent : 0xe9c96a;
+    var primary = palette && palette.primary !== undefined ? palette.primary : 0xd8333f;
+    var ink = '#160d1e';
+    function box(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    }
+    if (kind === 'beanie') {
+      box(cx - head.w * 0.34, top - u * 1.2, head.w * 0.68, u * 1.6, ink);
+      box(cx - head.w * 0.3, top - u * 1.1, head.w * 0.6, u * 1.4, cssHex(primary));
+      for (var b = 0; b < 4; b++) {
+        box(cx - head.w * 0.3 + b * head.w * 0.16, top - u * 2.1, head.w * 0.14, u * 1.1, cssHex(shadeHex(primary, 1.15)));
+      }
+      box(cx - u * 0.9, top - u * 2.9, u * 1.8, u * 1.1, cssHex(accent));
+    } else if (kind === 'crown') {
+      box(cx - head.w * 0.32, top - u * 1.0, head.w * 0.64, u * 1.5, ink);
+      box(cx - head.w * 0.3, top - u * 1.0, head.w * 0.6, u * 1.2, cssHex(accent));
+      for (var c = 0; c < 3; c++) {
+        var px = cx - head.w * 0.3 + c * head.w * 0.2;
+        box(px, top - u * 2.6, head.w * 0.16, u * 1.8, cssHex(accent));
+        box(px + head.w * 0.04, top - u * 3.2, head.w * 0.08, u * 0.8, cssHex(shadeHex(accent, 1.25)));
+      }
+      box(cx - u * 0.5, top - u * 0.7, u, u, '#ff5f7a');
+    } else if (kind === 'wizard_hat') {
+      box(cx - head.w * 0.46, top - u * 1.1, head.w * 0.92, u * 1.3, ink);
+      box(cx - head.w * 0.44, top - u * 1.0, head.w * 0.88, u * 1.0, cssHex(shadeHex(primary, 0.8)));
+      for (var w = 0; w < 6; w++) {
+        var ww = head.w * (0.62 - w * 0.09);
+        box(cx - ww / 2, top - u * (1.4 + w), ww, u * 1.1, cssHex(w % 2 ? shadeHex(primary, 0.9) : primary));
+      }
+      box(cx - u * 0.6, top - u * 7.4, u * 1.2, u * 1.2, cssHex(accent));
+    } else if (kind === 'scarf') {
+      var sx = cx - head.w * 0.38;
+      var sy = top + head.h * 0.9;
+      box(sx, sy, head.w * 0.76, u * 1.5, ink);
+      box(sx + u * 0.3, sy + u * 0.3, head.w * 0.7, u * 1.0, cssHex(primary));
+      box(sx + head.w * 0.42, sy + u * 1.2, head.w * 0.3, u * 1.6, ink);
+      box(sx + head.w * 0.46, sy + u * 1.3, head.w * 0.22, u * 1.4, cssHex(shadeHex(primary, 1.15)));
+    } else if (kind === 'lantern') {
+      var lx = hand.x + u * 0.6;
+      var ly = hand.y;
+      box(lx + u * 0.4, ly - u * 1.8, u * 0.8, u * 1.8, '#7a5a32');
+      box(lx, ly - u * 0.4, u * 2.2, u * 3.0, ink);
+      box(lx + u * 0.2, ly, u * 1.8, u * 2.2, cssHex(accent));
+      box(lx + u * 0.6, ly + u * 0.4, u * 1.0, u * 1.3, '#fff6c4');
+      ctx.globalAlpha = 0.22;
+      box(lx - u, ly - u * 1.1, u * 4.2, u * 4.4, cssHex(accent));
+      ctx.globalAlpha = 1;
+    } else if (kind === 'ice_spear') {
+      var bx = hand.x + u * 0.4;
+      var by = hand.y + u * 0.6;
+      ctx.lineWidth = u;
+      ctx.strokeStyle = ink;
+      ctx.beginPath();
+      ctx.moveTo(bx - u, by + u * 5.5);
+      ctx.lineTo(bx + u, by - u * 5.5);
+      ctx.stroke();
+      ctx.lineWidth = Math.max(1, u * 0.5);
+      ctx.strokeStyle = '#bfe9ff';
+      ctx.beginPath();
+      ctx.moveTo(bx - u, by + u * 5.5);
+      ctx.lineTo(bx + u, by - u * 5.5);
+      ctx.stroke();
+      box(bx + u * 0.2, by - u * 7.4, u * 2.0, u * 2.4, '#8fdcff');
+      box(bx + u * 0.8, by - u * 8.2, u * 1.0, u * 1.4, '#ffffff');
+    }
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     Cut four frames (idle, walk, attack, hurt) out of a row, key the blue
+     card, recolour, stamp the accessory, and lay them into an 8 column
+     atlas that matches SPRITE_FRAMES indices the rest of the game uses. */
+  function frostfallBuildAtlas(def) {
+    var sheetState = frostfallSheet(def.spriteSource);
+    if (!sheetState || sheetState.state !== 'ready' || !sheetState.canvas) return null;
+    var sheet = sheetState.canvas;
+    var sctx = sheet.getContext('2d');
+    if (!sctx) return null;
+    var box = frostfallArtBox(sheet, def.row, def.spriteSource);
+    if (!box) return null;
+    var cw = sheet.width / FROSTFALL_SHEET_COLS;
+    var ch = sheet.height / FROSTFALL_SHEET_ROWS;
+    var pad = 8;
+    var cropX = Math.max(1, box.x - pad);
+    var cropY = Math.max(1, box.y - pad);
+    var cropW = Math.min(box.cellW - cropX - 1, box.w + pad * 2);
+    var cropH = Math.min(box.cellH - cropY - 1, box.h + pad * 2);
+    var frame = FROSTFALL_FRAME;
+    var frames = [];
+    for (var f = 0; f < 4; f++) {
+      var cell = document.createElement('canvas');
+      cell.width = frame;
+      cell.height = frame;
+      var cctx = cell.getContext('2d');
+      if (!cctx) continue;
+      cctx.imageSmoothingEnabled = false;
+      var ox = Math.round((f + 1) * cw) + cropX;
+      var oy = Math.round(def.row * ch) + cropY;
+      /* leave headroom above the art so hats and crowns are not clipped */
+      var scale = Math.min((frame - 10) / cropW, (frame - 40) / cropH);
+      var dw = cropW * scale, dh = cropH * scale;
+      cctx.drawImage(sheet, ox, oy, cropW, cropH, (frame - dw) / 2, frame - 4 - dh, dw, dh);
+      /* key the card blue AND its lighter border to transparency; both are
+         sampled from the untouched cell, not from the art */
+      var cellX = Math.round((f + 1) * cw);
+      var cellY = Math.round(def.row * ch);
+      var bgPixel = sctx.getImageData(cellX + 6, cellY + 6, 1, 1).data;
+      var borderPixel = sctx.getImageData(cellX + 3, Math.round(cellY + ch / 2), 1, 1).data;
+      var img = cctx.getImageData(0, 0, frame, frame);
+      var data = img.data;
+      for (var i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 8) continue;
+        var db = Math.abs(data[i] - bgPixel[0]) + Math.abs(data[i + 1] - bgPixel[1]) + Math.abs(data[i + 2] - bgPixel[2]);
+        var dr = Math.abs(data[i] - borderPixel[0]) + Math.abs(data[i + 1] - borderPixel[1]) + Math.abs(data[i + 2] - borderPixel[2]);
+        if (db < 96 || dr < 70) data[i + 3] = 0;
+      }
+      cctx.putImageData(img, 0, 0);
+      frames.push(cell);
+    }
+    if (!frames.length) return null;
+    var recolored = [];
+    for (var fi = 0; fi < frames.length; fi++) {
+      recolored.push(recolorSpriteSheet(frames[fi], def.palette, def.id + '|frame' + fi) || frames[fi]);
+    }
+    for (var af = 0; af < recolored.length; af++) {
+      var canvas = recolored[af];
+      var ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      var art = ctx.getImageData(0, 0, frame, frame).data;
+      var minX = frame, minY = frame, maxX = -1, maxY = -1;
+      for (var y2 = 0; y2 < frame; y2++) {
+        for (var x2 = 0; x2 < frame; x2++) {
+          if (art[(y2 * frame + x2) * 4 + 3] < 24) continue;
+          if (x2 < minX) minX = x2;
+          if (x2 > maxX) maxX = x2;
+          if (y2 < minY) minY = y2;
+          if (y2 > maxY) maxY = y2;
+        }
+      }
+      if (maxX < 0) continue;
+      var artW = maxX - minX + 1;
+      var headW = artW * 0.52;
+      var head = { x: minX + (artW - headW) / 2, y: minY, w: headW, h: (maxY - minY + 1) * 0.34 };
+      var hand = { x: minX + (maxX - minX) * 0.72, y: minY + (maxY - minY) * 0.52 };
+      drawCharacterAccessory(ctx, head, hand, def.accessory, def.palette);
+    }
+    /* 8 column atlas: idle x3, walk, talk, cheer, ready, hurt */
+    var order = [0, 0, 0, 1, 2, 2, 0, 3];
+    var atlas = document.createElement('canvas');
+    atlas.width = frame * FROSTFALL_ATLAS_COLS;
+    atlas.height = frame;
+    var actx = atlas.getContext('2d');
+    if (!actx) return null;
+    actx.imageSmoothingEnabled = false;
+    for (var oi = 0; oi < order.length; oi++) {
+      actx.drawImage(recolored[order[oi]], oi * frame, 0);
+    }
+    return { canvas: atlas, cols: FROSTFALL_ATLAS_COLS, rows: 1 };
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     The one-line config table. Add a character by adding a line here; the
+     factory handles the art, the palette, the accessory and both spawners. */
+  var FROSTFALL_ROSTER = {
+    mayorBram: {
+      name: 'MAYOR BRAM', role: 'npc', spriteSource: 'cast', row: 0,
+      palette: { primary: 0x30456e, secondary: 0x1d2740, accent: 0xe9c96a },
+      accessory: 'none', hp: 40, atk: 3, dialogue: [
+        'FROSTFALL IS A WEEK OUT AND THE TOWN TREE IS ALREADY NAKED.',
+        'FIVE RELICS. FIVE THIEVES. YOU SEE THE SHAPE OF MY PROBLEM.'
+      ], blipPitch: 0.86
+    },
+    tutorialTerry: {
+      name: 'TUTORIAL TERRY', role: 'npc', spriteSource: 'terry', row: 1,
+      palette: { primary: 0x3f56b8, secondary: 0x1e2660, accent: 0xffd257 },
+      accessory: 'scarf', hp: 30, atk: 4, dialogue: [
+        'I AM A PENGUIN. I DO NOT ENJOY THE COLD. DO NOT ASK.',
+        'PRESS SWORD, THEN STOP THE BAR IN THE GOLD. THAT IS THE WHOLE GAME, KID.'
+      ], blipPitch: 1.35
+    },
+    roadtownShopkeeper: {
+      name: 'ROADTOWN SHOPKEEPER', role: 'npc', spriteSource: 'extras', row: 1,
+      palette: { primary: 0x6b4a2a, secondary: 0x2f2418, accent: 0xffb347 },
+      accessory: 'beanie', hp: 26, atk: 2, dialogue: [
+        'COCOA, HOT. ONE MUG PER PLAYER PER NIGHT.',
+        'THE WOLVES HAVE BEEN EATING MY DELIVERIES. SO IF YOU SEE ONE...'
+      ], blipPitch: 1.0
+    },
+    frostWolf: {
+      name: 'FROST WOLF', role: 'enemy', spriteSource: 'extras', row: 0,
+      palette: { primary: 0x8fd4ff, secondary: 0x3f7fb8, accent: 0xe8fbff },
+      accessory: 'none', hp: 22, atk: 4, xp: 14, agility: 6, blipPitch: 1.5,
+      dialogue: ['THE PACK IS THIN THIS YEAR. IT IS NOT YOUR FAULT. IT IS ALSO NOT NOT YOUR FAULT.']
+    },
+    snowSlime: {
+      name: 'SNOW SLIME', role: 'enemy', spriteSource: 'extras', row: 3,
+      palette: { primary: 0xbfe9ff, secondary: 0x7fb8e0, accent: 0xffffff },
+      accessory: 'none', hp: 16, atk: 3, xp: 9, agility: 3, blipPitch: 1.75,
+      dialogue: ['IT IS MOSTLY WATER AND MOSTLY ANGRY.']
+    },
+    iceGolem: {
+      name: 'ICE GOLEM', role: 'enemy', spriteSource: 'extras', row: 2,
+      palette: { primary: 0x6fb8e8, secondary: 0x2f5f88, accent: 0xd9f6ff },
+      accessory: 'none', hp: 38, atk: 6, xp: 26, agility: 2, blipPitch: 0.62,
+      dialogue: ['IT WAS BUILT TO WAIT. IT HAS GOTTEN VERY GOOD AT IT.']
+    },
+    theLongNight: {
+      name: 'THE LONG NIGHT', role: 'boss', spriteSource: 'cast', row: 3,
+      palette: { primary: 0x4a2f66, secondary: 0x241533, accent: 0x9fe6ff },
+      accessory: 'crown', hp: 60, atk: 7, xp: 70, agility: 4, blipPitch: 0.5,
+      dialogue: ['THE STAR WENT OUT. I ONLY MADE IT COMFORTABLE.']
+    },
+    crimsonGuard: {
+      name: 'CRIMSON GUARD', role: 'npc', spriteSource: 'extras', row: 3,
+      palette: { primary: 0xa3232f, secondary: 0x5c1219, accent: 0xffd257 },
+      accessory: 'crown', hp: 30, atk: 5, dialogue: [
+        'THE MAYOR POSTED A GUARD. I AM THE GUARD. I AM ALSO THE PARADE.',
+        'NOTHING HAS GOTTEN PAST ME. NOTHING HAS TRIED EITHER.'
+      ], blipPitch: 0.74
+    },
+    lanternScout: {
+      name: 'LANTERN SCOUT', role: 'npc', spriteSource: 'extras', row: 3,
+      palette: { primary: 0x2f6b4a, secondary: 0x1b3325, accent: 0xffb347 },
+      accessory: 'lantern', hp: 24, atk: 3, dialogue: [
+        'I LIGHT THE PATH OUT OF TOWN. SOMEBODY HAS TO.',
+        'IF YOU SEE A LANTERN BURNING BLUE IN THE PINES, DO NOT FOLLOW IT.'
+      ], blipPitch: 1.12
+    },
+    villagerPip: {
+      name: 'VILLAGER PIP', role: 'npc', spriteSource: 'extras', row: 3,
+      palette: { primary: 0xf2f8ff, secondary: 0x9fd7e6, accent: 0xff8a2b },
+      accessory: 'scarf', hp: 18, atk: 1, dialogue: [
+        'YOU LOOK JUST LIKE THE OTHER ONE. ARE YOU THE OTHER ONE?',
+        'I AM NOT A SNOWMAN. I AM A VILLAGER. IT IS A WHOLE THING.'
+      ], blipPitch: 1.6
+    }
+  };
+
+  /* === NEW: CHARACTER FACTORY ===
+     Build (and cache) a character: atlas canvas, scale and spawn helpers. */
+  function createFrostfallCharacter(id) {
+    var def = FROSTFALL_ROSTER[id];
+    if (!def) return null;
+    if (frostfallCharacters[id]) return frostfallCharacters[id];
+    def.id = id;                       /* palette cache key needs the id */
+    var char = { id: id, def: def, atlas: null, cols: FROSTFALL_ATLAS_COLS, rows: 1, ready: false, waiting: [] };
+    frostfallCharacters[id] = char;
+    var settle = function () {
+      var built = frostfallBuildAtlas(def);
+      if (!built) return;
+      char.atlas = built.canvas;
+      char.cols = built.cols;
+      char.rows = built.rows;
+      char.ready = true;
+      var jobs = char.waiting.slice();
+      char.waiting.length = 0;
+      for (var i = 0; i < jobs.length; i++) jobs[i](char);
+    };
+    var sheet = frostfallSheet(def.spriteSource);
+    if (sheet.state === 'ready') settle();
+    else if (sheet.state === 'loading') sheet.waiting.push(settle);
+    return char;
+  }
+
+  function frostfallReadyAtlas(char) {
+    if (!char || !char.ready || !char.atlas) return null;
+    return { canvas: char.atlas, cols: char.cols || FROSTFALL_ATLAS_COLS, rows: char.rows || 1 };
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     A world/battle actor built from a factory character. It is a normal
+     sprite actor, so updateActor, the battle camera and the HUD treat it
+     exactly like every other sprite in the game. */
+  function buildCharacterActor(char) {
+    var actor = makeActor(char && char.def && char.def.role === 'npc' ? 'npc' : 'enemy');
+    if (!char) return actor;
+    actor.character = char;
+    actor.characterId = char.id;
+    actor.scale = char.def.scale || 1;
+    actor.baseY = 0;
+    actor.frame = 0;
+    actor.facing = 1;
+    var dress = function () {
+      var atlas = frostfallReadyAtlas(char);
+      if (!atlas) return;
+      actor.parts.length = 0;
+      actor.atlas = atlas;
+      actor.spriteObj = {
+        sprite: { image: atlas.canvas, uv: spriteWindow(atlas, 0) },
+        pos: [0, 0, 0],
+        size: [SPRITE_W * actor.scale, SPRITE_H * actor.scale],
+        flip: false,
+        alpha: 1,
+        hidden: false
+      };
+      actor.windowIndex = -1;
+      updateActor(actor);
+    };
+    if (frostfallReadyAtlas(char)) dress();
+    else {
+      /* placeholder cube until the sheet decodes, then the pixels swap in */
+      addPart(actor, 0x9fb4d8, [0, 0.5, 0], [0, 0.5, 0], [0.9, 1.0, 0.8]);
+      char.waiting.push(dress);
+    }
+    return actor;
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     Drop a roster character anywhere in the live world. One call: actor,
+     idle animation, talk prompt and the dialogue lines from the roster. */
+  function spawnOverworldNPC(id, x, z, opts) {
+    if (!world) return null;
+    var char = createFrostfallCharacter(id);
+    if (!char) return null;
+    opts = opts || {};
+    var actor = buildCharacterActor(char);
+    actor.x = x;
+    actor.z = z;
+    actor.y = 0;
+    actor.yaw = opts.yaw === undefined ? Math.PI : opts.yaw;
+    actor.phase = Math.random() * 6;
+    addActor(actor);
+    var lines = char.def.dialogue || [];
+    if (lines.length) {
+      world.interactables.push({
+        x: x, z: z, r: 2.4, label: char.def.role === 'npc' ? 'TALK' : 'APPROACH',
+        action: function () {
+          sound('blip', char.def.blipPitch || 1);
+          talk(char.def.name, lines, null);
+        }
+      });
+    }
+    return actor;
+  }
+
+  /* === NEW: CHARACTER FACTORY ===
+     Start a fight with a roster character in one call. The sprite reaches
+     buildBattleScene through def.character, so the battle loop, Rolling HP,
+     action commands and HUD are untouched. */
+  function spawnBattleEnemy(id, opts) {
+    var char = createFrostfallCharacter(id);
+    if (!char) return null;
+    var def = char.def;
+    var battleDef = {
+      name: def.name,
+      hp: def.hp || 20,
+      atk: def.atk || 4,
+      xp: def.xp || 10,
+      agility: def.agility || 4,
+      boss: def.role === 'boss',
+      character: char,
+      model: 'mite'
+    };
+    startBattle(battleDef, opts || {});
+    return battleDef;
+  }
+
   function addVillagers(chapter, index) {
     var count = 10;
     for (var i = 0; i < count; i++) {
@@ -1617,6 +2143,104 @@
     ctx.putImageData(image, 0, 0);
   }
 
+  /* ==================================================================
+     === NEW: SPRITE ISLAND SLICING ===
+     The measured grid in ACTION_SHEET is a fixed lattice; a wide pose (the
+     sword toss, a raised bomb) paints past its own cell, so the neighbour's
+     cell picks up a stray sword tip on load. After the chroma key removes
+     the blue backing and the light-blue frame boxes, every sprite is its
+     own island of opaque pixels: flood fill the cell, keep the island that
+     sits lowest (the character's feet) and swap the grid box for its tight
+     pixel bounds. White header text is a separate island and never wins.
+     ================================================================== */
+  var sheetIslands = {};
+  var sheetBandScales = {};
+
+  function sheetIslandBox(rowIndex, colIndex, gender) {
+    var key = gender + '|' + rowIndex + '|' + colIndex;
+    if (sheetIslands[key]) return sheetIslands[key];
+    var cell = gridCellBox(rowIndex, colIndex, gender);
+    if (!cell) return null;
+    var sheet = actionSheet.sheet;
+    var ctx = sheet.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return cell;
+    var iw = Math.max(1, Math.round(cell.w));
+    var ih = Math.max(1, Math.round(cell.h));
+    var ox = Math.round(cell.x);
+    var oy = Math.round(cell.y);
+    if (ox < 0 || oy < 0 || ox + iw > sheet.width || oy + ih > sheet.height) return cell;
+    var data = ctx.getImageData(ox, oy, iw, ih).data;
+    var mask = new Uint8Array(iw * ih);
+    for (var p = 0; p < mask.length; p++) mask[p] = data[p * 4 + 3] > 40 ? 1 : 0;
+    var seen = new Uint8Array(iw * ih);
+    var stack = [];
+    var best = null;
+    for (var s = 0; s < mask.length; s++) {
+      if (!mask[s] || seen[s]) continue;
+      var count = 0, minX = iw, minY = ih, maxX = -1, maxY = -1;
+      stack.length = 0;
+      stack.push(s);
+      seen[s] = 1;
+      while (stack.length) {
+        var q = stack.pop();
+        var px = q % iw, py = (q - px) / iw;
+        count++;
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            var nx = px + dx, ny = py + dy;
+            if (nx < 0 || ny < 0 || nx >= iw || ny >= ih) continue;
+            var nq = ny * iw + nx;
+            if (!mask[nq] || seen[nq]) continue;
+            seen[nq] = 1;
+            stack.push(nq);
+          }
+        }
+      }
+      if (count < 90) continue;                 /* stray pixels and lettering */
+      if (maxX - minX < 6 || maxY - minY < 6) continue;
+      /* the feet: the island that reaches lowest in the cell wins, ties by size */
+      if (!best || maxY > best.maxY + 2 || (Math.abs(maxY - best.maxY) <= 2 && count > best.count)) {
+        best = { count: count, minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+      }
+    }
+    if (!best) return cell;
+    var box = {
+      x: ox + best.minX, y: oy + best.minY,
+      w: best.maxX - best.minX + 1, h: best.maxY - best.minY + 1,
+      /* feet anchor inside the cell: used for bottom-centre placement */
+      feetX: (best.minX + best.maxX + 1) / 2,
+      feetY: best.maxY + 1,
+      cellW: iw, cellH: ih
+    };
+    sheetIslands[key] = box;
+    return box;
+  }
+
+  /* One scale per band so frames cut from islands of different sizes do not
+     pop in scale, and everything still sits on the same baseline. */
+  function sheetBandScale(rowIndex, gender) {
+    var key = gender + '|' + rowIndex;
+    if (sheetBandScales[key]) return sheetBandScales[key];
+    var band = actionSheet.layout[rowIndex];
+    if (!band) return 1;
+    var side = gender === 'girl' ? band.girl : band.boy;
+    if (!side || !side.cols) return 1;
+    var maxW = 1, maxH = 1;
+    for (var c = 0; c < side.cols; c++) {
+      var box = sheetIslandBox(rowIndex, c, gender);
+      if (!box) continue;
+      if (box.w > maxW) maxW = box.w;
+      if (box.h > maxH) maxH = box.h;
+    }
+    var scale = Math.min(SPRITE_CELL / maxW, SPRITE_CELL / maxH);
+    sheetBandScales[key] = scale;
+    return scale;
+  }
+
   /* A different-sized upload still works: fall back to an even 7-row grid with
      ?sheetCols=N deciding the frame count. */
   function buildSheetLayout(width, height) {
@@ -1676,6 +2300,10 @@
           buildSheetLayout(canvas.width, canvas.height);
           actionSheet.sheet = canvas;
           actionSheet.cache = {};
+          /* === NEW: SPRITE ISLAND SLICING === re-measure from the new sheet */
+          sheetIslands = {};
+          sheetBandScales = {};
+          worldAtlasCache = {};
           actionSheet.state = 'ready';
           if (battlePlayer) refreshBattleSheet();
           refreshHeroArt();
@@ -1703,7 +2331,7 @@
      ================================================================== */
   var worldAtlasCache = {};
 
-  function sheetCellBox(rowIndex, colIndex, gender) {
+  function gridCellBox(rowIndex, colIndex, gender) {
     if (actionSheet.state !== 'ready') return null;
     var band = actionSheet.layout[rowIndex];
     if (!band) return null;
@@ -1717,6 +2345,16 @@
       x: side.x + side.w * Math.min(Math.max(0, colIndex), cols - 1),
       y: band.y, w: side.w, h: band.h
     };
+  }
+
+  /* === NEW: SPRITE ISLAND SLICING === tight bounds per frame, feet anchored */
+  function sheetCellBox(rowIndex, colIndex, gender) {
+    var who = gender === 'girl' ? 'girl' : gender === 'boy' ? 'boy' : selectedGender;
+    var grid = gridCellBox(rowIndex, colIndex, who);
+    if (!grid) return null;
+    if (actionSheet.state !== 'ready' || !actionSheet.sheet) return grid;
+    var island = sheetIslandBox(rowIndex, colIndex, who);
+    return island || grid;
   }
 
   function heroWorldAtlas(gender) {
@@ -1745,7 +2383,9 @@
     for (var i = 0; i < plan.length; i++) {
       var box = sheetCellBox(plan[i][0], plan[i][1], who);
       if (!box) continue;
-      var scale = Math.min(SPRITE_CELL / box.w, SPRITE_CELL / box.h);
+      /* === NEW: SPRITE ISLAND SLICING === one scale per band, feet on the
+         bottom of the cell, centred on the island's feet */
+      var scale = sheetBandScale(plan[i][0], who);
       var w = box.w * scale;
       var h = box.h * scale;
       var dx = (i % SPRITE_COLS) * SPRITE_CELL + (SPRITE_CELL - w) / 2;
@@ -1830,12 +2470,19 @@
     var ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.imageSmoothingEnabled = false;
+    /* === NEW: SPRITE ISLAND SLICING === each frame is its own tight island,
+       bottom-centred on the feet, at one shared scale for the row. */
+    var scale = sheetBandScale(row, selectedGender);
     for (var col = 0; col < cells.cols; col++) {
+      var frame = sheetCellBox(row, col, selectedGender);
+      if (!frame) continue;
+      var fw = frame.w * scale;
+      var fh = frame.h * scale;
       ctx.drawImage(
         actionSheet.sheet,
-        cells.x + col * cells.w, info.y, cells.w, info.h,
-        col * size + Math.round((size - cells.w) / 2), size - info.h,
-        cells.w, info.h
+        frame.x, frame.y, frame.w, frame.h,
+        col * size + Math.round((size - fw) / 2), size - fh,
+        fw, fh
       );
     }
     actionSheet.cache[key] = { canvas: canvas, cols: cells.cols, rows: 1 };
@@ -3084,7 +3731,7 @@
     updateActor(titleHero);
     updateActor(titlePip);
     app.dataset.theme = 'day';
-    renderer.setScene({ objects: titleObjects, fogColor: [0.8, 0.88, 0.96], fogNear: 22, fogFar: 70 });
+    renderer.setScene({ objects: titleObjects, fogColor: [0.8, 0.88, 0.96], fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
   }
 
   function updateTitle(time) {
@@ -3534,7 +4181,8 @@
     var chapter = CHAPTERS[clamp(save ? save.chapter : 0, 0, 4)];
     view = 'world';
     mode = 'world';
-    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
+    /* === NEW: HORIZON FILL === the sky behind the geometry matches the winter fog */
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
     app.dataset.theme = chapter.theme;
     ui.hud.hidden = false;
     ui.objective.hidden = false;
@@ -4200,6 +4848,11 @@
       world.geometries.forEach(function (geo) { renderer.releaseGeometry(geo); });
     }
     world = { objects: [], colliders: [], interactables: [], actors: [], geometries: [], chapter: index, theme: chapter.theme, spawn: chapter.spawn.slice() };
+    /* === NEW: HORIZON FILL === one huge snow shelf under the chapter so the
+       bottom of the viewport is never empty sky/void when the terrain stops. */
+    var horizon = makeStatic('cube', 0, -0.58, 0, 260, 0.5, 260, 0xdfeefb, { pattern: false });
+    horizon.keepInBattle = true;
+    world.objects.push(horizon);
     loadModels();
     chapter.build();
     flushStuds();
@@ -4225,7 +4878,7 @@
     camera.ortho = baseOrtho();
     camera.punch = 0;
     snapCamera();
-    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
     app.dataset.theme = chapter.theme;
     hideScreens();
     view = 'world';
@@ -5005,7 +5658,7 @@
       }
       for (var oi = 0; oi < world.objects.length; oi++) {
         var prop = world.objects[oi];
-        if (!prop.geo || prop.hidden) continue;
+        if (!prop.geo || prop.hidden || prop.keepInBattle) continue;
         var spot = battleSpotOf(prop);
         if (!spot) continue;
         var radius = battleBoxRadius(prop);
@@ -5033,7 +5686,9 @@
     battlePlayer.y = stage.ground;
     battlePlayer.yaw = stage.playerYaw;
     battlePlayer.scale = 0.86;
-    battleEnemy = buildEnemy(def.model);
+    /* === NEW: CHARACTER FACTORY === roster enemies bring their own sprite
+       actor; procedural models still build exactly as before. */
+    battleEnemy = def.character ? buildCharacterActor(def.character) : buildEnemy(def.model);
     battleEnemy.x = stage.center[0] + stage.axis[0] * 2.2;
     battleEnemy.z = stage.center[1] + stage.axis[1] * 2.2;
     battleEnemy.yaw = stage.enemyYaw;
@@ -5057,7 +5712,7 @@
     /* Keep the chapter's own fog and lighting so the fight sits inside the
        living town instead of a separate room. */
     var stageChapter = CHAPTERS[clamp(save.chapter, 0, 4)];
-    renderer.setScene({ objects: battleObjects, fogColor: stageChapter.fog, fogNear: 22, fogFar: 70 });
+    renderer.setScene({ objects: battleObjects, fogColor: stageChapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
     if (battle) battle.fit = stage.fit;
     /* Smash cut: the white flash and the punch land here, then updateBattle()
        walks the camera from the exploration shot to the battle shot in 350ms. */
@@ -5130,6 +5785,11 @@
     battleEnemy.tiltX = battle.windup ? -0.26 : battle.lunge > 0 ? 0.34 : 0;
     battleEnemy.squashY = battle.windup ? 0.9 : 1;
     battleEnemy.squashX = battle.windup ? 1.1 : 1;
+    /* === NEW: CHARACTER FACTORY === sheet enemies play their own strip:
+       idle, walk while winding up, attack on the lunge. */
+    if (battleEnemy.character) {
+      battleEnemy.frame = battle.lunge > 0 ? 5 : battle.windup ? 3 : 0;
+    }
     battleEnemy.lean = battle.lunge > 0 ? 0.28 : 0;
     /* A two-frame shoulder shake while the telegraph is up. */
     if (battle.windup) battleEnemy.x += Math.floor(time * 24) % 2 ? 0.05 : -0.05;
@@ -6506,7 +7166,7 @@
       });
       battleObjects = [];
     }
-    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
     app.dataset.theme = chapter.theme;
     ui.hud.hidden = false;
     ui.objective.hidden = false;
@@ -6918,6 +7578,11 @@
           extras: st.extras.length
         };
       },
+      /* === NEW: CHARACTER FACTORY === roster + spawners for testing */
+      roster: function () { return Object.keys(FROSTFALL_ROSTER); },
+      character: function (id) { return createFrostfallCharacter(id); },
+      spawn: function (id, x, z) { return spawnOverworldNPC(id, x, z); },
+      spawnEnemy: function (id, opts) { return spawnBattleEnemy(id, opts); },
       /* === NEW: IN-WORLD BATTLE CAMERA === camera + scene probe for testing */
       cam: function () {
         return {

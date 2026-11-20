@@ -783,7 +783,10 @@
       stats.calls = 0;
       stats.objects = scene.objects.length;
       const size = resize();
-      gl.clearColor(0, 0, 0, 0);
+      /* === NEW: HORIZON FILL === clear to the winter sky instead of transparent,
+         so a viewport taller than the terrain never shows the page behind it. */
+      const sky = scene.skyColor || scene.fogColor || [0.7216, 0.8314, 0.9098];
+      gl.clearColor(sky[0], sky[1], sky[2], 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       useSceneProgram(size);
 
