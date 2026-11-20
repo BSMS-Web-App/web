@@ -618,13 +618,63 @@
     ];
   }
 
+  /* The hero is cut from the Super Mario RPG sheet (The Spriters Resource) and
+     baked into img/frostfall/hero-atlas.png on this same 8x4 grid: idle, walk,
+     run, hurt, strike and victory frames, keyed off the sheet's green cells. */
+  var HERO_ATLAS_URL = '/img/frostfall/hero-atlas.png?v=2';
+  var heroSheet = { canvas: null, blank: null, waiting: [], loading: false };
+
+  function blankHeroAtlas() {
+    if (!heroSheet.blank) {
+      var canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      heroSheet.blank = canvas;
+    }
+    return heroSheet.blank;
+  }
+
+  function loadHeroAtlas() {
+    if (heroSheet.canvas || heroSheet.loading) return;
+    heroSheet.loading = true;
+    var image = new Image();
+    image.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(image, 0, 0);
+        heroSheet.canvas = canvas;
+      }
+      /* Sprites built before the atlas decoded get the real pixels now; the
+         fresh canvas is a new texture key, so the renderer uploads it. */
+      for (var i = 0; i < heroSheet.waiting.length; i++) {
+        var actor = heroSheet.waiting[i];
+        if (!actor.spriteObj) continue;
+        actor.atlas = { canvas: canvas };
+        actor.spriteObj.sprite.image = canvas;
+        actor.windowIndex = -1;
+        updateActor(actor);
+      }
+      heroSheet.waiting.length = 0;
+    };
+    image.onerror = function () { heroSheet.loading = false; };
+    image.src = HERO_ATLAS_URL;
+  }
+
+  function heroSpriteAtlas() {
+    loadHeroAtlas();
+    return { canvas: heroSheet.canvas || blankHeroAtlas() };
+  }
+
   function buildHero(palette) {
     var pal = palette || heroPalette();
     var actor = makeActor('player');
     actor.flip = 0;
     actor.facing = 1;
     actor.frame = 0;
-    actor.atlas = spriteAtlas(pal);
+    actor.atlas = pal.hero ? heroSpriteAtlas() : spriteAtlas(pal);
     if (!actor.atlas) return actor;
     actor.spriteObj = {
       sprite: { image: actor.atlas.canvas, uv: spriteWindow(actor.atlas, 0) },
@@ -634,11 +684,12 @@
       alpha: 1,
       hidden: false
     };
+    if (pal.hero && !heroSheet.canvas) heroSheet.waiting.push(actor);
     return actor;
   }
 
   function heroPalette() {
-    return { coat: 0xd8333f, pants: 0x2f5fb0, scarf: 0xfff4e6, cap: 0xd8333f, skin: 0xf6c9a0, hair: 0x6b432c, shoe: 0x5a3a22, hat: 'cap', glove: 0xfff4e6, button: 0xffd257, trim: 0xfff4e6 };
+    return { hero: true, coat: 0xd8333f, pants: 0x2f5fb0, scarf: 0xfff4e6, cap: 0xd8333f, skin: 0xf6c9a0, hair: 0x6b432c, shoe: 0x5a3a22, hat: 'cap', glove: 0xfff4e6, button: 0xffd257, trim: 0xfff4e6 };
   }
 
   var PALETTES = {
