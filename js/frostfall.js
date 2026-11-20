@@ -3403,9 +3403,9 @@
   function grantStarterCards() {
     if (!save) return false;
     if (Array.isArray(save.cards) && save.cards.length) return false;
-    /* Two BP only buys one of the two starters; the other waits for a
-       level-up point. */
-    save.cards = ['ante-up'];
+    /* The starter is the ball: BOUNCER buys a fifth bounce and a point of
+       damage per bounce, and it spends the whole opening 2 BP. */
+    save.cards = ['bouncer'];
     persist();
     updateHud();
     return true;
@@ -3419,8 +3419,8 @@
       finalLabel: 'BEGIN CHAPTER ONE',
       lines: [
         { who: 'PIP', text: 'Wait wait wait. Before you go out there: **cards**. Bram found a shoebox of them in the lost-and-found and called it "loadout management".' },
-        { who: 'PIP', text: '**ANTE UP** tightens every action window but adds +1 damage. **DEFENDER** trades a point of your damage for a point of armour.' },
-        { who: 'PIP', text: 'You start with **2 BP**, so I equipped Ante Up. Take **BP** on a level-up and Defender fits too. Four is the ceiling.' }
+        { who: 'PIP', text: '**BOUNCER** is the ball card: Line Bounce gets a **fifth bounce** and every bounce hits a point harder. Ante Up and Defender are still in the box.' },
+        { who: 'PIP', text: 'Two **BP** buys one card, so the ball is your whole hand. Take **BP** on a level-up for a second card. Four is the ceiling.' }
       ],
       onEnd: function () {
         showChapterScreen(0);
@@ -4572,6 +4572,7 @@
   /* Passive Cards: equipped with BP in the pause menu, before a fight. */
   var CARDS = [
     { id: 'ante-up', name: 'ANTE UP', cost: 2, desc: 'Windows 30% tighter. Hits deal +1 damage.', mods: { narrow: 1, bonus: 1 } },
+    { id: 'bouncer', name: 'BOUNCER', cost: 2, desc: 'Line Bounce gets a fifth bounce and +1 per bounce.', mods: { ballBounce: 1, ballBonus: 1 } },
     { id: 'defender', name: 'DEFENDER', cost: 2, desc: 'Take 1 less damage, deal 1 less damage.', mods: { attack: -1, incoming: -1 } },
     { id: 'sp-saver', name: 'SP SAVER', cost: 3, desc: 'Action Cards cost 1 less SP (min 1).', mods: { skillDiscount: 1 } },
     { id: 'happy-hp-sp', name: 'HAPPY HP / SP', cost: 2, desc: 'Start each turn with +1 HP and +1 SP.', mods: { regenHp: 1, regenSp: 1 } },
@@ -4589,7 +4590,7 @@
   }
 
   function cardMods() {
-    var mods = { maxHp: 0, attack: 0, guardMs: 0, revive: false, agility: 0, skillDiscount: 0, narrow: 0, incoming: 0, bonus: 0, regenHp: 0, regenSp: 0, thorns: false, hard: false };
+    var mods = { maxHp: 0, attack: 0, guardMs: 0, revive: false, agility: 0, skillDiscount: 0, narrow: 0, incoming: 0, bonus: 0, regenHp: 0, regenSp: 0, thorns: false, hard: false, ballBounce: 0, ballBonus: 0 };
     equippedCards().forEach(function (id) {
       CARDS.forEach(function (card) {
         if (card.id !== id) return;
@@ -5451,7 +5452,12 @@
     battle.sheetPreview = actionRowForCmd(move.cmd);
     setBattleButtons(false);
     ui.skills.hidden = true;
-    if (move.cmd === 'chain') { beginChainWindow(move, 0); return; }
+    if (move.cmd === 'chain') {
+      /* BOUNCER adds a fifth bounce; the window count travels with the move. */
+      move.bounces = 4 + (battle.mods.ballBounce || 0);
+      beginChainWindow(move, 0);
+      return;
+    }
     var now = Date.now();
     var charge = move.cmd === 'charge';
     /* A charge needs a longer runway than a tap: hold for about a second,
@@ -5490,8 +5496,9 @@
     };
     battle.pose = 'windup';
     battle.poseAt = now;
+    var total = move.bounces || 4;
     showTiming('strike', index === 0 ? move.name + '!' : 'BOUNCE ' + (index + 1) + '!');
-    ui.timingNote.textContent = 'PRESS ON EVERY BOUNCE · ' + (4 - index) + ' LEFT';
+    ui.timingNote.textContent = 'PRESS ON EVERY BOUNCE · ' + (total - index) + ' LEFT';
   }
 
   function moveMultiplier(quality) {
@@ -5502,8 +5509,9 @@
     var mods = battle.mods;
     var flat = (quality === 'perfect' || quality === 'good') ? mods.bonus : 0;
     var soften = battle.soften > 0 ? 1 : 0;
+    var bonus = quality === 'miss' ? 0 : (move.bonus || 0);
     var base = (3 + save.level + mods.attack) * (move.mult || 1);
-    return Math.max(1, Math.round(base * moveMultiplier(quality) + flat + soften));
+    return Math.max(1, Math.round(base * moveMultiplier(quality) + flat + soften + bonus));
   }
 
   /* One damage pipeline for every card, so burrows, coils, echo shields and
@@ -5634,7 +5642,8 @@
   function resolveChain(move, quality, win) {
     var index = win && win.chain ? win.chain : 0;
     fxLineBounce(index);
-    var bounce = { kind: 'skill', name: move.name, mult: 0.4 + index * 0.2 };
+    var total = move.bounces || 4;
+    var bounce = { kind: 'skill', name: move.name, mult: 0.4 + index * 0.2, bonus: battle.mods.ballBonus || 0 };
     var result = hitEnemy(bounce, quality, {});
     battle.anim.p = 1;
     battle.pose = 'strike';
@@ -5643,10 +5652,10 @@
     shake();
     if (quality === 'perfect') cameraPunch(0.24);
     pop(String(result.damage), quality === 'perfect' ? 'perfect' : quality === 'good' ? 'nice' : 'weak');
-    log('BOUNCE ' + (index + 1) + '/4 · ' + result.damage + ' DAMAGE.' + (quality === 'perfect' ? ' PERFECT!' : '') + (result.note ? ' ' + result.note : ''));
+    log('BOUNCE ' + (index + 1) + '/' + total + ' · ' + result.damage + ' DAMAGE.' + (quality === 'perfect' ? ' PERFECT!' : '') + (result.note ? ' ' + result.note : ''));
     updateBattleUI();
     if (battle.hp <= 0) { winBattle(); return; }
-    var endChain = quality === 'miss' || index >= 3;
+    var endChain = quality === 'miss' || index >= total - 1;
     setTimeout(function () {
       if (!battle || battle.ended) return;
       if (endChain) { flashEnemy(); playerTurnDone(); }
