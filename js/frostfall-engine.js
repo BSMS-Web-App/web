@@ -322,6 +322,56 @@
     '}'
   ].join('\n');
 
+  /* Kit props (Kenney OBJ models) share one texture atlas each: same light
+     and fog as the primitives, but sampled colour instead of flat fill. */
+  const MESH_VS = [
+    'attribute vec3 aPos;',
+    'attribute vec2 aUV;',
+    'attribute vec3 aNormal;',
+    'uniform mat4 uProj;',
+    'uniform mat4 uView;',
+    'uniform mat4 uModel;',
+    'varying vec2 vUV;',
+    'varying vec3 vNormal;',
+    'varying vec3 vWorld;',
+    'void main() {',
+    '  vec4 world = uModel * vec4(aPos, 1.0);',
+    '  vWorld = world.xyz;',
+    '  vNormal = normalize(mat3(uModel) * aNormal);',
+    '  vUV = aUV;',
+    '  gl_Position = uProj * uView * world;',
+    '}'
+  ].join('\n');
+
+  const MESH_FS = [
+    'precision mediump float;',
+    'varying vec2 vUV;',
+    'varying vec3 vNormal;',
+    'varying vec3 vWorld;',
+    'uniform sampler2D uTex;',
+    'uniform vec3 uColor;',
+    'uniform float uAlpha;',
+    'uniform vec3 uCam;',
+    'uniform vec3 uFogColor;',
+    'uniform float uFogNear;',
+    'uniform float uFogFar;',
+    'void main() {',
+    '  vec4 texel = texture2D(uTex, vUV);',
+    '  if (texel.a < 0.05) discard;',
+    '  vec3 n = normalize(vNormal);',
+    '  vec3 light = normalize(vec3(0.42, 0.86, 0.32));',
+    '  float diffuse = max(dot(n, light), 0.0);',
+    '  float bounce = max(dot(n, vec3(-0.4, 0.2, -0.6)), 0.0);',
+    '  float stepped = smoothstep(0.34, 0.40, diffuse);',
+    '  vec3 col = texel.rgb * uColor * (0.76 + stepped * 0.40 + bounce * 0.10);',
+    '  float lum = dot(col, vec3(0.299, 0.587, 0.114));',
+    '  col = mix(vec3(lum), col, 1.12);',
+    '  float fog = clamp((distance(vWorld, uCam) - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
+    '  col = mix(col, uFogColor, fog * 0.62);',
+    '  gl_FragColor = vec4(col, texel.a * uAlpha);',
+    '}'
+  ].join('\n');
+
   function createRenderer(canvas) {
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: false });
     if (!gl) return null;
@@ -424,6 +474,39 @@
       }
     }
 
+    /* Mesh program for textured kit models; without it those props stay
+       invisible and the blocky world still draws. */
+    let meshProgram = null;
+    let meshLoc = null;
+    const mvs = compile(gl.VERTEX_SHADER, MESH_VS);
+    const mfs = compile(gl.FRAGMENT_SHADER, MESH_FS);
+    if (mvs && mfs) {
+      meshProgram = gl.createProgram();
+      gl.attachShader(meshProgram, mvs);
+      gl.attachShader(meshProgram, mfs);
+      gl.linkProgram(meshProgram);
+      if (gl.getProgramParameter(meshProgram, gl.LINK_STATUS)) {
+        meshLoc = {
+          aPos: gl.getAttribLocation(meshProgram, 'aPos'),
+          aUV: gl.getAttribLocation(meshProgram, 'aUV'),
+          aNormal: gl.getAttribLocation(meshProgram, 'aNormal'),
+          uProj: gl.getUniformLocation(meshProgram, 'uProj'),
+          uView: gl.getUniformLocation(meshProgram, 'uView'),
+          uModel: gl.getUniformLocation(meshProgram, 'uModel'),
+          uTex: gl.getUniformLocation(meshProgram, 'uTex'),
+          uColor: gl.getUniformLocation(meshProgram, 'uColor'),
+          uAlpha: gl.getUniformLocation(meshProgram, 'uAlpha'),
+          uCam: gl.getUniformLocation(meshProgram, 'uCam'),
+          uFogColor: gl.getUniformLocation(meshProgram, 'uFogColor'),
+          uFogNear: gl.getUniformLocation(meshProgram, 'uFogNear'),
+          uFogFar: gl.getUniformLocation(meshProgram, 'uFogFar')
+        };
+      } else {
+        console.error('[Frostfall] mesh link:', gl.getProgramInfoLog(meshProgram));
+        meshProgram = null;
+      }
+    }
+
     /* One unit quad, bottom-centre pinned, drawn with a per-sprite UV window. */
     const spriteQuad = (function () {
       const position = gl.createBuffer();
@@ -456,6 +539,43 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       spriteTextures.set(image, texture);
       return texture;
+    }
+
+    const meshTextures = new WeakMap();
+    function meshTexture(image) {
+      let texture = meshTextures.get(image);
+      if (texture) return texture;
+      texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      meshTextures.set(image, texture);
+      return texture;
+    }
+
+    /* Kenney OBJs are tiny, so their vertices are uploaded once and shared by
+       every placement of that prop. */
+    function uploadMesh(data) {
+      if (!data || !data.position || !data.index.length) return null;
+      const vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, data.position, gl.STATIC_DRAW);
+      const uvbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, uvbo);
+      gl.bufferData(gl.ARRAY_BUFFER, data.uv, gl.STATIC_DRAW);
+      const nbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, nbo);
+      gl.bufferData(gl.ARRAY_BUFFER, data.normal, gl.STATIC_DRAW);
+      const ibo = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data.index, gl.STATIC_DRAW);
+      return { vbo, uvbo, nbo, ibo, count: data.index.length, type: gl.UNSIGNED_SHORT };
     }
 
     let scene = { objects: [], fogColor: [0.72, 0.83, 0.94], fogNear: 26, fogFar: 74 };
@@ -555,6 +675,46 @@
       }
     }
 
+    function useMeshProgram(size) {
+      gl.useProgram(meshProgram);
+      gl.uniformMatrix4fv(meshLoc.uProj, false, projectionFor(size));
+      gl.uniformMatrix4fv(meshLoc.uView, false, M.lookAt(camera.eye, camera.target, [0, 1, 0]));
+      sceneFog(meshLoc);
+      gl.uniform1i(meshLoc.uTex, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      currentGeo = null;
+    }
+
+    function drawMeshes(list) {
+      let bound = null;
+      for (let i = 0; i < list.length; i++) {
+        const object = list[i];
+        const mesh = object.mesh;
+        if (!mesh || !mesh.geo || !mesh.texture) continue;
+        const geo = mesh.geo;
+        if (bound !== geo) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, geo.vbo);
+          gl.enableVertexAttribArray(meshLoc.aPos);
+          gl.vertexAttribPointer(meshLoc.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.bindBuffer(gl.ARRAY_BUFFER, geo.uvbo);
+          gl.enableVertexAttribArray(meshLoc.aUV);
+          gl.vertexAttribPointer(meshLoc.aUV, 2, gl.FLOAT, false, 0, 0);
+          gl.bindBuffer(gl.ARRAY_BUFFER, geo.nbo);
+          gl.enableVertexAttribArray(meshLoc.aNormal);
+          gl.vertexAttribPointer(meshLoc.aNormal, 3, gl.FLOAT, false, 0, 0);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.ibo);
+          gl.bindTexture(gl.TEXTURE_2D, meshTexture(mesh.texture));
+          bound = geo;
+        }
+        gl.uniformMatrix4fv(meshLoc.uModel, false, object.model);
+        gl.uniform3fv(meshLoc.uColor, object.color || [1, 1, 1]);
+        gl.uniform1f(meshLoc.uAlpha, object.alpha === undefined ? 1 : object.alpha);
+        gl.drawElements(gl.TRIANGLES, geo.count, geo.type || gl.UNSIGNED_SHORT, 0);
+        stats.calls += 1;
+      }
+      currentGeo = null;
+    }
+
     function projectionFor(size) {
       const aspect = size.width / size.height;
       if (camera.orthoSize) {
@@ -630,15 +790,21 @@
       const opaque = [];
       const alpha = [];
       const sprites = [];
+      const meshes = [];
       for (let i = 0; i < scene.objects.length; i++) {
         const object = scene.objects[i];
         if (!object || object.hidden) continue;
         const objectAlpha = object.alpha === undefined ? 1 : object.alpha;
-        if (object.sprite) { if (objectAlpha > 0.01) sprites.push(object); }
+        if (object.mesh) { if (objectAlpha > 0.01) meshes.push(object); }
+        else if (object.sprite) { if (objectAlpha > 0.01) sprites.push(object); }
         else if (objectAlpha < 1) alpha.push(object);
         else opaque.push(object);
       }
       draw(opaque);
+      if (meshProgram && meshes.length) {
+        useMeshProgram(size);
+        drawMeshes(meshes);
+      }
       if (spriteProgram && sprites.length) {
         sprites.sort((a, b) => {
           const ap = a.pos || [0, 0, 0], bp = b.pos || [0, 0, 0];
@@ -669,6 +835,9 @@
       setScene(next) { scene = next; },
       batchGeometry,
       releaseGeometry,
+      uploadMesh,
+      meshTexture,
+      hasMesh() { return !!meshProgram; },
       stats() { return { calls: stats.calls, objects: stats.objects }; },
       setCamera(eye, target, fov, orthoSize) {
         camera.eye = eye;

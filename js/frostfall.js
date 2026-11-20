@@ -1875,6 +1875,113 @@
     ui.ratingTimer = setTimeout(function () { ui.rating.hidden = true; }, 900);
   }
 
+  /* ---------------------------------------------------------- kit models
+     Kenney's holiday kit: each prop is a small OBJ sharing one 512px
+     colormap. Meshes load in the background and attach to whatever the
+     chapter builders already placed, so a chapter never waits on them. */
+  var MODEL_URL = '/img/models/holiday/';
+  var MODEL_NAMES = [
+    'tree-snow-a', 'tree-snow-b', 'tree-snow-c', 'lantern', 'bench', 'snow-pile',
+    'snowman', 'present-a-cube', 'present-b-cube', 'candy-cane-red', 'sled',
+    'rocks-large', 'wreath'
+  ];
+  var modelGeo = {};
+  var modelTexture = null;
+  var modelLoading = false;
+
+  function parseModelOBJ(text) {
+    var positions = [], uvs = [], normals = [];
+    var outPos = [], outUV = [], outNrm = [], indices = [];
+    var lookup = {};
+    var lines = text.split('\n');
+    for (var l = 0; l < lines.length; l++) {
+      var line = lines[l].trim();
+      if (!line || line.charAt(0) === '#') continue;
+      var parts = line.split(/\s+/);
+      var tag = parts[0];
+      if (tag === 'v') positions.push(+parts[1], +parts[2], +parts[3]);
+      else if (tag === 'vt') uvs.push(+parts[1], +parts[2]);
+      else if (tag === 'vn') normals.push(+parts[1], +parts[2], +parts[3]);
+      else if (tag === 'f') {
+        for (var p = 1; p < parts.length; p++) {
+          var corner = parts[p];
+          if (lookup[corner] === undefined) {
+            var bits = corner.split('/');
+            var vi = (parseInt(bits[0], 10) - 1) * 3;
+            var ti = bits[1] ? (parseInt(bits[1], 10) - 1) * 2 : -1;
+            var ni = bits[2] ? (parseInt(bits[2], 10) - 1) * 3 : -1;
+            lookup[corner] = outPos.length / 3;
+            outPos.push(positions[vi] || 0, positions[vi + 1] || 0, positions[vi + 2] || 0);
+            outUV.push(ti >= 0 ? (uvs[ti] || 0) : 0, ti >= 0 ? (uvs[ti + 1] || 0) : 0);
+            var nn = normalsFor(normals, ni);
+            outNrm.push(nn[0], nn[1], nn[2]);
+          }
+          indices.push(lookup[corner]);
+        }
+      }
+    }
+    if (!indices.length || indices.length > 65532) return null;
+    return {
+      position: new Float32Array(outPos),
+      uv: new Float32Array(outUV),
+      normal: new Float32Array(outNrm),
+      index: new Uint16Array(indices)
+    };
+  }
+
+  function normalsFor(normals, base) {
+    if (base < 0) return [0, 1, 0];
+    return [normals[base] || 0, normals[base + 1] || 1, normals[base + 2] || 0];
+  }
+
+  /* Finished meshes are handed to any placed prop still waiting for them. */
+  function attachMeshes() {
+    if (!world || !modelTexture) return;
+    for (var i = 0; i < world.objects.length; i++) {
+      var object = world.objects[i];
+      var geo = object.pendingModel ? modelGeo[object.pendingModel] : null;
+      if (geo) object.mesh = { geo: geo, texture: modelTexture };
+    }
+  }
+
+  function loadModels() {
+    if (modelLoading || !renderer) return;
+    modelLoading = true;
+    var texture = new Image();
+    texture.onload = function () { modelTexture = texture; attachMeshes(); };
+    texture.onerror = function () { modelLoading = false; };
+    texture.src = MODEL_URL + 'colormap.png';
+    MODEL_NAMES.forEach(function (name) {
+      var request = new XMLHttpRequest();
+      request.open('GET', MODEL_URL + name + '.obj', true);
+      request.onload = function () {
+        if (request.status && request.status !== 200) return;
+        var geo = renderer.uploadMesh(parseModelOBJ(request.responseText));
+        if (geo) modelGeo[name] = geo;
+        attachMeshes();
+      };
+      request.send();
+    });
+  }
+
+  function modelProp(name, x, z, opts) {
+    if (!world) return null;
+    opts = opts || {};
+    var size = opts.s === undefined ? 1 : opts.s;
+    var object = {
+      pendingModel: name,
+      mesh: null,
+      model: mat.compose([x, opts.y || 0, z], [opts.rx || 0, opts.ry || 0, 0], [size, size, size]),
+      color: rgb(opts.color === undefined ? 0xffffff : opts.color),
+      alpha: opts.alpha === undefined ? 1 : opts.alpha,
+      hidden: false
+    };
+    var geo = modelGeo[name];
+    if (geo && modelTexture) object.mesh = { geo: geo, texture: modelTexture };
+    world.objects.push(object);
+    return object;
+  }
+
   /* ------------------------------------------------------------- scenery */
   function makeStatic(geo, x, y, z, sx, sy, sz, color, opts) {
     opts = opts || {};
@@ -1989,20 +2096,47 @@
     world.colliders.push({ x: x, z: z, hw: w / 2, hd: d / 2 });
   }
 
-  function lamp(x, z) {
-    box(x, 1.5, z, 0.16, 3.0, 0.16, 0x2b2b3a, { geo: 'cylinder' });
-    box(x, 3.05, z, 0.5, 0.5, 0.5, 0xffe9a0);
-    box(x, 3.05, z, 1.0, 1.0, 1.0, 0xffd76a, { alpha: 0.16 });
+  function lamp(x, z, tint) {
+    modelProp('lantern', x, z, { s: 1.85, ry: Math.PI / 4, color: tint });
+    box(x, 2.78, z, 0.5, 0.5, 0.5, 0xffe9a0, { geo: 'cylinder', alpha: 0.6 });
+    box(x, 2.78, z, 1.4, 1.4, 1.4, 0xffd76a, { geo: 'cylinder', alpha: 0.12 });
   }
 
-  function tree(x, z, s) {
+  var PINES = ['tree-snow-a', 'tree-snow-b', 'tree-snow-c'];
+  function tree(x, z, s, tint) {
     s = s || 1;
-    box(x, 0.9 * s, z, 0.5 * s, 1.8 * s, 0.5 * s, 0x6a4a32, { geo: 'cylinder' });
-    box(x, 1.3 * s, z, 1.35 * s, 2.0 * s, 1.35 * s, 0x2f6b52, { geo: 'cone6' });
-    box(x, 2.2 * s, z, 1.05 * s, 1.8 * s, 1.05 * s, 0x377a5c, { geo: 'cone6' });
-    box(x, 3.1 * s, z, 0.75 * s, 1.4 * s, 0.75 * s, 0x2f6b52, { geo: 'cone6' });
-    box(x, 3.75 * s, z, 0.6 * s, 0.6 * s, 0.6 * s, 0xf2fbff, { geo: 'cone6' });
+    var pick = PINES[Math.abs(Math.round(x * 3 + z * 5)) % PINES.length];
+    modelProp(pick, x, z, { s: 2.15 * s, ry: (x * 0.7 + z * 1.1) % 6.283, color: tint });
     world.colliders.push({ x: x, z: z, hw: 0.42 * s, hd: 0.42 * s });
+  }
+
+  function snowman(x, z, s, tint) {
+    modelProp('snowman', x, z, { s: 1.55 * (s || 1), ry: Math.PI, color: tint });
+  }
+
+  function bench(x, z, ry, tint) {
+    modelProp('bench', x, z, { s: 1.5, ry: ry || 0, color: tint });
+  }
+
+  function sled(x, z, ry, tint) {
+    modelProp('sled', x, z, { s: 1.6, ry: ry || 0, color: tint });
+  }
+
+  function candyCane(x, z, s, tint) {
+    modelProp('candy-cane-red', x, z, { s: 2.7 * (s || 1), ry: (x + z) * 0.6, color: tint });
+  }
+
+  function presents(x, z, tint) {
+    modelProp('present-a-cube', x, z, { s: 1.35, ry: 0.35, color: tint });
+    modelProp('present-b-cube', x + 0.5, z + 0.35, { s: 1.05, ry: -0.5, color: tint });
+  }
+
+  function rocks(x, z, s, tint) {
+    modelProp('rocks-large', x, z, { s: 1.3 * (s || 1), ry: (x * 0.4 + z * 0.9) % 6.283, color: tint });
+  }
+
+  function wreathOn(x, y, z, ry, tint) {
+    modelProp('wreath', x, z, { y: y, s: 1.35, ry: ry || 0, color: tint });
   }
 
   /* Studs are collected per colour and baked into one buffer (see flushStuds),
@@ -2036,8 +2170,8 @@
     world.studGroups = null;
   }
 
-  function snowPile(x, z, s) {
-    box(x, 0.16 * (s || 1), z, 1.8 * (s || 1), 0.32 * (s || 1), 1.4 * (s || 1), 0xf6fcff);
+  function snowPile(x, z, s, tint) {
+    modelProp('snow-pile', x, z, { s: 1.7 * (s || 1), ry: (x * 0.9 + z * 0.5) % 6.283, color: tint });
   }
 
   function fountain(x, z) {
@@ -2092,6 +2226,13 @@
     tree(-6.5, -19, 0.9); tree(7, -20, 1.0);
     snowPile(-7, 10, 1); snowPile(7, -13, 0.9); snowPile(13, 12, 1.1);
     snowPile(-14, 14, 0.8); snowPile(5, -16, 0.7);
+    bench(-2.4, 1.6, -0.55); bench(2.4, -6.4, 2.55);
+    snowman(-7.6, 6.4, 1);
+    presents(9.2, 4.8);
+    candyCane(-3.0, 4.6); candyCane(3.0, 1.2); candyCane(-3.0, -3.4); candyCane(3.0, -8.4);
+    sled(-13.4, 6.6, 0.45);
+    wreathOn(10.5, 2.0, 4.56, 0);
+    wreathOn(-10.5, 2.4, 6.06, 0);
   }
 
   function buildPines() {
@@ -2117,6 +2258,10 @@
     lamp(3.2, 5);
     lamp(-3.2, -10);
     snowPile(-6, 9, 0.9); snowPile(5, -6, 1.1); snowPile(10, 11, 0.8);
+    rocks(-6.2, 12.5, 1); rocks(7.4, -12.6, 0.9); rocks(-17, 8, 0.8);
+    bench(-4.6, 2.6, 0.35);
+    snowman(1.8, -7.2, 0.9);
+    candyCane(-2.8, 12); candyCane(2.8, -13.5);
   }
 
   function buildLake() {
@@ -2141,6 +2286,10 @@
     lamp(-3, 7); lamp(3, -3);
     tree(-16, -2, 1.1); tree(-15, -14, 1.0); tree(16, -6, 1.1); tree(15, 10, 0.9);
     snowPile(-13, 9, 1); snowPile(12, 3, 0.8); snowPile(-7, -18, 1.1); snowPile(8, -17, 0.9);
+    sled(6.4, -3.6, 0.9); sled(-11.8, 8.2, -0.3);
+    snowman(-11.2, 9.4, 1); snowman(12.6, 6.4, 0.8);
+    rocks(-18, 6, 1); rocks(17, -14, 0.9);
+    bench(-6.6, -1.2, 0.8);
   }
 
   function buildClocktower() {
@@ -2173,6 +2322,11 @@
     ], 2.8);
     tree(-18, 11, 1); tree(18, 12, 1); tree(-18, -17, 0.9); tree(18, -18, 1);
     snowPile(-7, 8, 0.8); snowPile(8, -8, 0.9);
+    candyCane(-3.2, 8.4); candyCane(3.2, -5.6); candyCane(-3.2, -12); candyCane(3.2, 13);
+    bench(-6.4, -3.2, 0.6); bench(6.4, -6.4, -0.6);
+    presents(-9.4, 8.2); sled(9.6, 8.6, -0.5);
+    wreathOn(13, 2.0, 5.56, 0);
+    rocks(-19, 4, 0.9);
   }
 
   function buildSummit() {
@@ -2194,7 +2348,10 @@
     box(0, 2.0, -12, 0.5, 2.2, 0.5, 0x8a7ab0);
     box(0, 3.4, -12, 0.9, 1.0, 0.9, 0x7ce7ff, { alpha: 0.35 });
     world.colliders.push({ x: 0, z: -12, hw: 1.8, hd: 1.8 });
-    lamp(-3, 7); lamp(3, 7);
+    lamp(-3, 7, 0x9aa0c0); lamp(3, 7, 0x9aa0c0);
+    presents(-3.6, -8.4, 0x9aa0c0); presents(3.6, -8.4, 0x9aa0c0);
+    rocks(-5.4, 4.6, 1, 0x9aa0c0); rocks(5.6, -3.4, 0.9, 0x9aa0c0);
+    wreathOn(0, 0.8, -10.2, 0, 0x9aa0c0);
     inspect(0, -9.4, 'ALTAR', [
       'Five grooves wait in the stone. All five are warm now.',
       'Carved underneath: THE STAR IS NOT LOST. IT IS WAITING TO BE LIT. Under that: "OR PUT OUT. WE NEVER FINISHED THE SENTENCE."',
@@ -2204,7 +2361,7 @@
       'From up here, Roadtown looks like a handful of lights someone dropped.',
       'The wind is saying your name. It is getting the pronunciation wrong on purpose.'
     ], 2.4);
-    snowPile(-5, 3, 0.8); snowPile(6, -2, 0.9);
+    snowPile(-5, 3, 0.8, 0x9aa0c0); snowPile(6, -2, 0.9, 0x9aa0c0);
   }
 
   /* -------------------------------------------------------------- chapters */
@@ -3109,6 +3266,7 @@
       world.geometries.forEach(function (geo) { renderer.releaseGeometry(geo); });
     }
     world = { objects: [], colliders: [], interactables: [], actors: [], geometries: [], chapter: index, theme: chapter.theme, spawn: chapter.spawn.slice() };
+    loadModels();
     chapter.build();
     flushStuds();
     player = buildHero(heroPalette());
@@ -4834,6 +4992,17 @@
       },
       cards: function () { return { equipped: save.cards.slice(), mods: cardMods(), spent: cardCost(), bp: save.bp }; },
       drawCalls: function () { return renderer && renderer.stats ? renderer.stats() : null; },
+      models: function () {
+        var placed = 0, drawn = 0;
+        if (world) {
+          for (var i = 0; i < world.objects.length; i++) {
+            if (!world.objects[i].pendingModel) continue;
+            placed += 1;
+            if (world.objects[i].mesh) drawn += 1;
+          }
+        }
+        return { loaded: Object.keys(modelGeo).length, of: MODEL_NAMES.length, texture: !!modelTexture, program: renderer.hasMesh(), placed: placed, drawn: drawn };
+      },
       heroArt: function () {
         var art = castAtlas(HERO_CHAR, 4);
         if (!art) return null;
