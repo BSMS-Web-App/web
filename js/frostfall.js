@@ -216,7 +216,7 @@
       sprite.pos[0] = actor.x;
       sprite.pos[1] = actor.y;
       sprite.pos[2] = actor.z;
-      sprite.size[0] = SPRITE_W * actor.scale * (actor.squashX === undefined ? 1 : actor.squashX);
+      sprite.size[0] = SPRITE_W * actor.scale * (actor.squashX === undefined ? 1 : actor.squashX) * (actor.girth === undefined ? 1 : actor.girth);
       sprite.size[1] = SPRITE_H * actor.scale * (actor.squashY === undefined ? 1 : actor.squashY);
       sprite.flip = (actor.facing || 1) < 0;
       sprite.hidden = !!actor.hidden;
@@ -608,14 +608,827 @@
   }
 
   function spriteWindow(atlas, index) {
-    var col = index % SPRITE_COLS;
-    var row = Math.floor(index / SPRITE_COLS);
+    var cols = atlas && atlas.cols ? atlas.cols : SPRITE_COLS;
+    var rows = atlas && atlas.rows ? atlas.rows : SPRITE_ROWS;
+    var col = index % cols;
+    var row = Math.floor(index / cols);
     return [
-      col / SPRITE_COLS,
-      1 - (row + 1) / SPRITE_ROWS,
-      (col + 1) / SPRITE_COLS,
-      1 - row / SPRITE_ROWS
+      col / cols,
+      1 - (row + 1) / rows,
+      (col + 1) / cols,
+      1 - row / rows
     ];
+  }
+
+  /* ----------------------------------------------------------- cast roster */
+  /* The townsfolk are the sheet's own pose art recoloured through these colour
+     roles, with a hat drawn over the cap anchor. Same proportions, same
+     animation, a different character per entry. */
+  var CAST_ROLES = [
+    ['shirt', 168, 24, 40],     /* cap and sleeves */
+    ['pants', 40, 48, 200],     /* overalls */
+    ['skin', 184, 136, 88],
+    ['leather', 72, 32, 16],    /* hair, moustache, boots */
+    ['trim', 176, 176, 176],    /* gloves */
+    ['emblem', 255, 255, 255],
+    ['button', 208, 154, 99],
+    ['ink', 24, 16, 16]
+  ];
+  var CAST_INK = 0x241010;
+
+  function hexBytes(hex) {
+    return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
+  }
+
+  function castRoleAt(r, g, b) {
+    var best = -1, bestD = 78 * 78 * 3;
+    for (var i = 0; i < CAST_ROLES.length; i++) {
+      var role = CAST_ROLES[i];
+      var dr = r - role[1], dg = g - role[2], db = b - role[3];
+      var d = dr * dr + dg * dg + db * db;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  /* The cap is the topmost red run in each cell, so hats can be anchored to
+     the head instead of guessing cell coordinates. */
+  var castBoxes = {};
+  function castCapBox(base, index) {
+    if (castBoxes[index]) return castBoxes[index];
+    var ctx = base.__ctx || (base.__ctx = base.getContext('2d'));
+    var ox = (index % SPRITE_COLS) * SPRITE_CELL;
+    var oy = Math.floor(index / SPRITE_COLS) * SPRITE_CELL;
+    var data = ctx.getImageData(ox, oy, SPRITE_CELL, SPRITE_CELL).data;
+    var topY = -1, y, x, p;
+    for (y = 0; y < 76 && topY < 0; y++) {
+      for (x = 18; x < SPRITE_CELL - 18; x++) {
+        p = (y * SPRITE_CELL + x) * 4;
+        if (data[p + 3] > 60 && castRoleAt(data[p], data[p + 1], data[p + 2]) === 0) { topY = y; break; }
+      }
+    }
+    if (topY < 0) topY = 16;
+    var minX = SPRITE_CELL, maxX = -1, maxY = topY;
+    for (y = topY; y < Math.min(SPRITE_CELL, topY + 22); y++) {
+      for (x = 0; x < SPRITE_CELL; x++) {
+        p = (y * SPRITE_CELL + x) * 4;
+        if (data[p + 3] < 60) continue;
+        if (castRoleAt(data[p], data[p + 1], data[p + 2]) !== 0) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) { minX = 46; maxX = 82; }
+    var box = { x: minX, y: topY, w: maxX - minX + 1, h: clamp(maxY - topY + 1, 12, 26) };
+    castBoxes[index] = box;
+    return box;
+  }
+
+  function drawCastHat(ctx, style, box, hex) {
+    if (!style || style === 'cap') return;
+    var x = box.x, y = box.y, w = box.w, h = box.h;
+    var cx = x + w / 2;
+    var fill = cssHex(hex);
+    var dark = cssHex(shadeHex(hex, 0.74));
+    var light = cssHex(shadeHex(hex, 1.24));
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = cssHex(CAST_INK);
+    ctx.lineJoin = 'round';
+    if (style === 'beanie') {
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y + h * 0.66);
+      ctx.quadraticCurveTo(cx, y - h * 0.82, x + w + 1, y + h * 0.66);
+      ctx.lineTo(x + w + 1, y + h);
+      ctx.lineTo(x - 1, y + h);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(x - 1, y + h * 0.6, w + 2, h * 0.32);
+      ctx.fillStyle = dark;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, y - h * 0.72, Math.max(2.5, w * 0.15), 0, Math.PI * 2);
+      ctx.fillStyle = light;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'tophat') {
+      ctx.beginPath();
+      ctx.ellipse(cx, y + h * 0.88, w * 0.76, h * 0.17, 0, 0, Math.PI * 2);
+      ctx.fillStyle = dark;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(cx - w * 0.4, y - h * 0.5, w * 0.8, h * 1.32);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(cx - w * 0.4, y + h * 0.44, w * 0.8, h * 0.26);
+      ctx.fillStyle = light;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'hood') {
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.08, y + h * 1.02);
+      ctx.quadraticCurveTo(cx, y - h * 0.95, x + w * 1.08, y + h * 1.02);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'crown') {
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y + h * 0.62);
+      var step = (w + 2) / 3, i, bx;
+      for (i = 0; i < 3; i++) {
+        bx = x - 1 + step * i;
+        ctx.lineTo(bx + step * 0.18, y - h * 0.46);
+        ctx.lineTo(bx + step * 0.44, y + h * 0.2);
+        ctx.lineTo(bx + step * 0.68, y - h * 0.46);
+        ctx.lineTo(bx + step, y + h * 0.62);
+      }
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'horns') {
+      ctx.fillStyle = cssHex(0xe8ddc8);
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.04, y + h * 0.42);
+      ctx.lineTo(x - w * 0.14, y - h * 0.5);
+      ctx.lineTo(x + w * 0.32, y + h * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.96, y + h * 0.42);
+      ctx.lineTo(x + w * 1.14, y - h * 0.5);
+      ctx.lineTo(x + w * 0.68, y + h * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'helm') {
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y + h * 0.95);
+      ctx.quadraticCurveTo(cx, y - h * 0.92, x + w + 2, y + h * 0.95);
+      ctx.closePath();
+      ctx.fillStyle = cssHex(shadeHex(hex, 1.32));
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(cx - w * 0.07, y + h * 0.28, w * 0.14, h * 0.72);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'bun') {
+      ctx.beginPath();
+      ctx.arc(x + w * 0.16, y + h * 0.08, Math.max(3, w * 0.2), 0, Math.PI * 2);
+      ctx.fillStyle = cssHex(shadeHex(hex, 0.92));
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'widebrim') {
+      ctx.beginPath();
+      ctx.ellipse(cx, y + h * 0.82, w * 1.15, h * 0.3, 0, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.16, y + h * 0.86);
+      ctx.lineTo(cx, y - h * 0.5);
+      ctx.lineTo(x + w * 0.84, y + h * 0.86);
+      ctx.closePath();
+      ctx.fillStyle = cssHex(shadeHex(hex, 1.1));
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'wizard') {
+      ctx.beginPath();
+      ctx.ellipse(cx, y + h * 0.9, w * 0.72, h * 0.16, 0, 0, Math.PI * 2);
+      ctx.fillStyle = dark;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.12, y + h * 0.9);
+      ctx.lineTo(cx + w * 0.2, y - h * 1.6);
+      ctx.lineTo(x + w * 0.88, y + h * 0.9);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'antler') {
+      ctx.strokeStyle = cssHex(0x8a6a44);
+      ctx.lineWidth = 3;
+      var side, sx;
+      for (side = -1; side <= 1; side += 2) {
+        sx = cx + side * w * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(sx, y + h * 0.2);
+        ctx.lineTo(sx + side * w * 0.22, y - h * 0.75);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(sx + side * w * 0.1, y - h * 0.2);
+        ctx.lineTo(sx + side * w * 0.38, y - h * 0.5);
+        ctx.stroke();
+      }
+    } else if (style === 'flap') {
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y + h * 0.7);
+      ctx.quadraticCurveTo(cx, y - h * 0.8, x + w + 1, y + h * 0.7);
+      ctx.lineTo(x + w + 1, y + h * 0.95);
+      ctx.lineTo(x - 1, y + h * 0.95);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(x - w * 0.18, y + h * 0.62, w * 0.22, h * 0.8);
+      ctx.fillStyle = dark;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(x + w * 0.96, y + h * 0.62, w * 0.22, h * 0.8);
+      ctx.fillStyle = dark;
+      ctx.fill();
+      ctx.stroke();
+    } else if (style === 'none') {
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y + h * 0.92);
+      ctx.quadraticCurveTo(cx, y - h * 0.55, x + w + 1, y + h * 0.92);
+      ctx.closePath();
+      ctx.fillStyle = cssHex(shadeHex(hex, 0.9));
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* Silhouette work: hair, clothing and held props, anchored to the same cap
+     and body boxes so every new character reads differently at a glance. */
+  var castSpriteBoxes = {};
+  function castSpriteBox(base, index) {
+    if (castSpriteBoxes[index]) return castSpriteBoxes[index];
+    var ctx = base.__ctx || (base.__ctx = base.getContext('2d'));
+    var ox = (index % SPRITE_COLS) * SPRITE_CELL;
+    var oy = Math.floor(index / SPRITE_COLS) * SPRITE_CELL;
+    var data = ctx.getImageData(ox, oy, SPRITE_CELL, SPRITE_CELL).data;
+    var minX = SPRITE_CELL, maxX = -1, minY = SPRITE_CELL, maxY = -1;
+    for (var y = 0; y < SPRITE_CELL; y++) {
+      for (var x = 0; x < SPRITE_CELL; x++) {
+        if (data[(y * SPRITE_CELL + x) * 4 + 3] < 40) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) { minX = 34; maxX = 94; minY = 8; maxY = 118; }
+    var box = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+    castSpriteBoxes[index] = box;
+    return box;
+  }
+
+  function drawCastBody(ctx, char, cap, sprite) {
+    var cx = sprite.x + sprite.w / 2;
+    /* The chin sits at ~41% of the sprite height in every pose, which is a far
+       steadier anchor than the cap box (hats vary in height). */
+    var headBottom = sprite.y + sprite.h * 0.45;
+    var bw = Math.max(cap.w, sprite.w * 0.62);
+    var feet = sprite.y + sprite.h - 2;
+    var ink = cssHex(CAST_INK);
+    var hairC = cssHex(char.leather);
+    var trimC = cssHex(char.trim);
+    var coatC = cssHex(char.shirt);
+    var pantsC = cssHex(char.pants);
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = ink;
+    ctx.lineJoin = 'round';
+
+    if (char.wear === 'cloak') {
+      ctx.beginPath();
+      ctx.moveTo(cx - bw * 0.4, headBottom + 3);
+      ctx.lineTo(cx + bw * 0.4, headBottom + 3);
+      ctx.lineTo(cx + bw * 0.56, feet - 10);
+      ctx.lineTo(cx - bw * 0.56, feet - 10);
+      ctx.closePath();
+      ctx.fillStyle = cssHex(shadeHex(char.shirt, 0.8));
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.wear === 'skirt') {
+      var waist = feet - 36;
+      ctx.beginPath();
+      ctx.moveTo(cx - bw * 0.34, waist);
+      ctx.lineTo(cx + bw * 0.34, waist);
+      ctx.lineTo(cx + bw * 0.5, feet - 10);
+      ctx.lineTo(cx - bw * 0.5, feet - 10);
+      ctx.closePath();
+      ctx.fillStyle = cssHex(shadeHex(char.pants, 1.6));
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.wear === 'apron') {
+      ctx.beginPath();
+      ctx.rect(cx - bw * 0.19, headBottom + 11, bw * 0.38, feet - headBottom - 25);
+      ctx.fillStyle = trimC;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - bw * 0.16, headBottom + 8);
+      ctx.lineTo(cx - bw * 0.28, headBottom);
+      ctx.moveTo(cx + bw * 0.16, headBottom + 8);
+      ctx.lineTo(cx + bw * 0.28, headBottom);
+      ctx.stroke();
+    } else if (char.wear === 'belt') {
+      ctx.beginPath();
+      ctx.rect(cx - bw * 0.4, feet - 34, bw * 0.8, 5);
+      ctx.fillStyle = cssHex(CAST_INK);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.rect(cx - 3, feet - 36, 6, 8);
+      ctx.fillStyle = trimC;
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.wear === 'satchel') {
+      ctx.beginPath();
+      ctx.moveTo(cx - bw * 0.3, headBottom + 2);
+      ctx.lineTo(cx + bw * 0.26, feet - 28);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = cssHex(shadeHex(char.leather, 1.2));
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = ink;
+      ctx.beginPath();
+      ctx.rect(cx + bw * 0.14, feet - 30, 10, 10);
+      ctx.fillStyle = cssHex(shadeHex(char.leather, 1.25));
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    if (char.wear === 'scarf' || char.wear === 'cloak') {
+      ctx.beginPath();
+      ctx.rect(cx - bw * 0.3, headBottom + 2, bw * 0.6, 6);
+      ctx.fillStyle = trimC;
+      ctx.fill();
+      ctx.stroke();
+      if (char.wear === 'scarf') {
+        ctx.beginPath();
+        ctx.rect(cx + bw * 0.12, headBottom + 4, 6, 14);
+        ctx.fillStyle = trimC;
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    if (char.hair === 'long') {
+      ctx.beginPath();
+      ctx.rect(cx - bw * 0.66 - 2, headBottom - 30, 7, 32);
+      ctx.fillStyle = hairC;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(cx + bw * 0.66 - 5, headBottom - 30, 7, 32);
+      ctx.fillStyle = hairC;
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.hair === 'pony') {
+      ctx.beginPath();
+      ctx.arc(cx - bw * 0.55, headBottom - 14, 6, 0, Math.PI * 2);
+      ctx.fillStyle = hairC;
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(cx - bw * 0.55 - 3, headBottom - 14, 6, 16);
+      ctx.fillStyle = hairC;
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.hair === 'spiky') {
+      var sp;
+      for (sp = -1; sp <= 1; sp += 2) {
+        ctx.beginPath();
+        ctx.moveTo(cx + sp * 7, cap.y + 3);
+        ctx.lineTo(cx + sp * 17, cap.y - 11);
+        ctx.lineTo(cx + sp * 2, cap.y - 1);
+        ctx.closePath();
+        ctx.fillStyle = hairC;
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    if (char.face === 'beard') {
+      ctx.beginPath();
+      ctx.ellipse(cx + 1, headBottom - 3, 6, 5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = hairC;
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.face === 'glasses') {
+      ctx.beginPath();
+      ctx.rect(cx - 5, headBottom - 13, 14, 4);
+      ctx.fillStyle = 'rgba(120,180,210,0.6)';
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.face === 'patch') {
+      ctx.beginPath();
+      ctx.rect(cx - 7, headBottom - 14, 6, 6);
+      ctx.fillStyle = '#2c2430';
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 7, headBottom - 13);
+      ctx.lineTo(cx + bw * 0.42, headBottom - 16);
+      ctx.stroke();
+    }
+
+    if (char.prop === 'staff') {
+      var sx = cx + bw * 0.5;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#6b4a32';
+      ctx.beginPath();
+      ctx.moveTo(sx, cap.y - 4);
+      ctx.lineTo(sx, feet - 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(sx, cap.y - 7, 4, 0, Math.PI * 2);
+      ctx.fillStyle = trimC;
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.prop === 'lantern') {
+      var lx = cx - bw * 0.54;
+      ctx.beginPath();
+      ctx.moveTo(lx + 4, feet - 34);
+      ctx.lineTo(cx - bw * 0.24, headBottom + 10);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(lx, feet - 36, 9, 12);
+      ctx.fillStyle = '#ffd678';
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.prop === 'broom') {
+      var bx = cx + bw * 0.46;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#8a6a44';
+      ctx.beginPath();
+      ctx.moveTo(bx, cap.y - 2);
+      ctx.lineTo(bx, feet - 16);
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = ink;
+      ctx.beginPath();
+      ctx.moveTo(bx - 7, feet - 2);
+      ctx.lineTo(bx + 7, feet - 2);
+      ctx.lineTo(bx + 4, feet - 17);
+      ctx.lineTo(bx - 4, feet - 17);
+      ctx.closePath();
+      ctx.fillStyle = '#b08a4a';
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.prop === 'sack') {
+      var kx = cx - bw * 0.52;
+      ctx.beginPath();
+      ctx.ellipse(kx, feet - 20, 8, 10, 0, 0, Math.PI * 2);
+      ctx.fillStyle = cssHex(shadeHex(char.leather, 1.4));
+      ctx.fill();
+      ctx.stroke();
+    } else if (char.prop === 'umbrella') {
+      var ux = cx + bw * 0.42;
+      ctx.beginPath();
+      ctx.moveTo(ux, cap.y - 6);
+      ctx.lineTo(ux, feet - 10);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(ux, cap.y - 6, 11, 6, 0, Math.PI, 0);
+      ctx.fillStyle = cssHex(char.trim);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  var castCache = {};
+  function castAtlas(char, rows) {
+    var key = char.id + '|' + rows;
+    if (castCache[key]) return castCache[key];
+    loadHeroAtlas();
+    var base = heroSheet.canvas;
+    if (!base || !base.getContext) return null;
+    var width = SPRITE_CELL * SPRITE_COLS;
+    var height = SPRITE_CELL * rows;
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(base, 0, 0, width, height, 0, 0, width, height);
+    var image = ctx.getImageData(0, 0, width, height);
+    var data = image.data;
+    var targets = [
+      hexBytes(char.shirt), hexBytes(char.pants), hexBytes(char.skin), hexBytes(char.leather),
+      hexBytes(char.trim), hexBytes(char.emblem === undefined ? char.shirt : char.emblem),
+      hexBytes(char.button === undefined ? 0xe9c96a : char.button), null, null
+    ];
+    var hatSrc = char.hatStyle === 'none' ? char.leather : (char.hat === undefined ? char.shirt : char.hat);
+    var hatDark = hexBytes(shadeHex(hatSrc, 0.6));
+    targets[9] = hatDark;
+    /* Head zones let the pass reshape the face: the sheet's cap and moustache
+       are swapped per character instead of showing through the new hat. */
+    var hatHex = char.hatStyle === 'none' ? char.leather : (char.hat === undefined ? char.shirt : char.hat);
+    var hatBytes = hexBytes(hatHex);
+    var zones = [];
+    for (var zc = 0; zc < SPRITE_COLS * rows; zc++) {
+      var zb = castCapBox(base, zc);
+      zones.push({ x0: zb.x - 10, x1: zb.x + zb.w + 10, y0: zb.y - 2, y1: zb.y + zb.h + 27, brim: zb.y + zb.h + 5 });
+    }
+    var cellW = SPRITE_CELL;
+    var reshaped = char.hatStyle && char.hatStyle !== 'cap';
+    for (var i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 8) continue;
+      var role = castRoleAt(data[i], data[i + 1], data[i + 2]);
+      if (role < 0 || role === 7) continue;
+      var pix = i >> 2;
+      var px = pix % width;
+      var py = (pix - px) / width;
+      var cx = px % cellW;
+      var cy = py % cellW;
+      var zone = zones[Math.floor(py / cellW) * SPRITE_COLS + Math.floor(px / cellW)];
+      if (zone && cx > zone.x0 && cx < zone.x1) {
+        if (role === 0 && reshaped && cy > zone.y0 && cy < zone.brim) role = 8;
+        else if (role === 7 && reshaped && cy > zone.y0 && cy < zone.brim) role = 9; /* brim outline joins the hat */
+        else if (role === 3 && char.cleanFace && cy > zone.brim - 6 && cy < zone.y1) role = 2; /* shave */
+      }
+      var target = role === 8 ? hatBytes : targets[role];
+      if (!target) continue;
+      var from = role === 8 || role === 9 ? CAST_ROLES[0] : CAST_ROLES[role];
+      var fromLum = from[1] * 0.299 + from[2] * 0.587 + from[3] * 0.114;
+      var lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      var k = fromLum ? lum / fromLum : 1;
+      data[i] = clamp(target[0] * k, 0, 255);
+      data[i + 1] = clamp(target[1] * k, 0, 255);
+      data[i + 2] = clamp(target[2] * k, 0, 255);
+    }
+    ctx.putImageData(image, 0, 0);
+
+    for (var cell2 = 0; cell2 < SPRITE_COLS * rows; cell2++) {
+      var anchor = castCapBox(base, cell2);
+      var box2 = {
+        x: anchor.x + (cell2 % SPRITE_COLS) * SPRITE_CELL,
+        y: anchor.y + Math.floor(cell2 / SPRITE_COLS) * SPRITE_CELL,
+        w: anchor.w,
+        h: anchor.h
+      };
+      var hatHex = char.hatStyle === 'none' ? char.leather : (char.hat === undefined ? char.shirt : char.hat);
+      drawCastHat(ctx, char.hatStyle, box2, hatHex);
+      var sprite = castSpriteBox(base, cell2);
+      drawCastBody(ctx, char, box2, {
+        x: sprite.x + (cell2 % SPRITE_COLS) * SPRITE_CELL,
+        y: sprite.y + Math.floor(cell2 / SPRITE_COLS) * SPRITE_CELL,
+        w: sprite.w,
+        h: sprite.h
+      });
+    }
+
+    castCache[key] = canvas;
+    return canvas;
+  }
+
+  function buildCastActor(char, rows) {
+    var actor = makeActor('player');
+    actor.castChar = char;
+    actor.castRows = rows || 1;
+    actor.facing = 1;
+    actor.frame = 0;
+    actor.scale = char.scale || 1;
+    actor.girth = char.girth || 1;
+    var atlas = castAtlas(char, actor.castRows);
+    var canvas = atlas || blankHeroAtlas();
+    actor.atlas = { canvas: canvas, cols: SPRITE_COLS, rows: actor.castRows };
+    actor.spriteObj = {
+      sprite: { image: canvas, uv: spriteWindow(actor.atlas, 0) },
+      pos: [0, 0, 0],
+      size: [SPRITE_W * actor.scale, SPRITE_H * actor.scale],
+      flip: false,
+      alpha: 1,
+      hidden: false
+    };
+    if (!atlas) heroSheet.waiting.push(actor);
+    return actor;
+  }
+
+  /* id, name, coat/cap, overalls, skin, hair+boots, gloves, hat, hat style, scale */
+  function cast(id, name, shirt, pants, skin, leather, trim, hat, style, scale) {
+    style = style || 'cap';
+    return {
+      id: id, name: name, shirt: shirt, pants: pants, skin: skin, leather: leather, trim: trim,
+      hat: hat, hatStyle: style, scale: scale || 1,
+      /* knit hats and buns read as the younger, clean-shaven half of town */
+      cleanFace: style === 'beanie' || style === 'hood' || style === 'bun'
+    };
+  }
+
+  /* Sixty-odd townsfolk, all built from the sheet: Roadtown, the pines, the
+     lake, the clocktower and the mountain each field ten of them. */
+  var CAST_ROSTER = [
+    cast('bram', 'MAYOR BRAM', 0x3a2f4a, 0x232a3d, 0xe8c39a, 0x9a917f, 0xf2ede2, 0x2b2633, 'tophat', 1.02),
+    cast('juniper', 'JUNIPER', 0x3f6b52, 0x2a3a2f, 0xd9a276, 0x6b3f2a, 0xf2ede2, 0x2f5d46, 'beanie', 0.97),
+    cast('finn', 'OLD FINN', 0x6a5a3e, 0x3d3428, 0xd8a87e, 0xcfcfcf, 0xf2ede2, 0x5a4632, 'cap', 1),
+    cast('odette', 'BELLKEEPER ODETTE', 0x5b3f78, 0x352345, 0xe8c19c, 0x2f2038, 0xf2ede2, 0x472f5c, 'bun', 0.96),
+    cast('aurora', 'AURORA', 0x9fd7e6, 0x7fc7e0, 0xf7e7ff, 0xffffff, 0xffffff, 0xbfeaf7, 'crown', 0.98),
+    cast('tobias', 'TOBIAS', 0x8c3b2a, 0x3a2b22, 0xe4b083, 0x4a2a18, 0xf4efe2, 0x8c3b2a, 'cap'),
+    cast('wren', 'WREN', 0x2f7078, 0x24262e, 0xc98d63, 0x2e2018, 0xf4efe2, 0x2f7078, 'beanie'),
+    cast('hollis', 'HOLLIS', 0xb07a2c, 0x444a52, 0xf2c49c, 0x6b432c, 0xf4efe2, 0xb07a2c, 'hood'),
+    cast('mabel', 'MABEL', 0xd9cbb0, 0x5a4632, 0xf7d3b0, 0x8a8070, 0xffffff, 0xc9a86a, 'bun'),
+    cast('fergus', 'FERGUS', 0x3b4a63, 0x24262e, 0xa86b45, 0x2e2018, 0xf4efe2, 0x3b4a63, 'tophat'),
+    cast('ingrid', 'INGRID', 0x7a2f3f, 0x352345, 0xf2c49c, 0xd8c9a8, 0xf4efe2, 0x7a2f3f, 'helm'),
+    cast('caleb', 'CALEB', 0x4a5a2f, 0x2a3a2f, 0xc98d63, 0x4a2a18, 0xf4efe2, 0x4a5a2f, 'horns'),
+    cast('nella', 'NELLA', 0x6a4b7a, 0x2b3550, 0xe8c19c, 0x2f2038, 0xf4efe2, 0x6a4b7a, 'beanie'),
+    cast('oswin', 'OSWIN', 0x5a4632, 0x3d3428, 0xd8a87e, 0xcfcfcf, 0xf4efe2, 0x5a4632, 'cap'),
+    cast('pru', 'PRU', 0x2c3d5a, 0x24262e, 0xf2c49c, 0x8a4a2a, 0xf4efe2, 0xc05a3a, 'beanie'),
+    cast('rook', 'ROOK', 0x3a3a44, 0x24262e, 0x8a5636, 0x1e1610, 0xd8d2c4, 0x3a3a44, 'hood'),
+    cast('sable', 'SABLE', 0x2d2a33, 0x24262e, 0xa86b45, 0x1e1610, 0xd8d2c4, 0x6a2b3a, 'bun'),
+    cast('tamsin', 'TAMSIN', 0x8a6b3f, 0x4a3a2a, 0xf2c49c, 0x6b432c, 0xf4efe2, 0x8a6b3f, 'crown'),
+    cast('ulf', 'ULF', 0x4a3a2a, 0x2a2420, 0xd8a87e, 0x8a8070, 0xd8d2c4, 0x4a3a2a, 'helm'),
+    cast('vera', 'VERA', 0x9a4a6a, 0x352345, 0xe8c19c, 0x2f2038, 0xf4efe2, 0x9a4a6a, 'beanie'),
+    cast('wendel', 'WENDEL', 0x3f6b52, 0x2a3a2f, 0xc98d63, 0x4a2a18, 0xf4efe2, 0xd9a03c, 'cap'),
+    cast('yara', 'YARA', 0xb0562c, 0x3a2b22, 0x8a5636, 0x2e2018, 0xf4efe2, 0xb0562c, 'horns'),
+    cast('zeke', 'ZEKE', 0x2f4a6b, 0x24262e, 0xe4b083, 0x6b432c, 0xf4efe2, 0x2f4a6b, 'tophat'),
+    cast('astrid', 'ASTRID', 0xd9cbb0, 0x5a4632, 0xf7d3b0, 0xc9b48a, 0xffffff, 0x8a6b3f, 'crown'),
+    cast('bjorn', 'BJORN', 0x4a2f2f, 0x2a2420, 0xd8a87e, 0x8a4a2a, 0xd8d2c4, 0x4a2f2f, 'helm'),
+    cast('cora', 'CORA', 0x6a8a5a, 0x2a3a2f, 0xf2c49c, 0x8a5a2a, 0xf4efe2, 0x6a8a5a, 'beanie'),
+    cast('dagmar', 'DAGMAR', 0x7a2f3f, 0x352345, 0xe8c19c, 0x2f2038, 0xf4efe2, 0x2b2633, 'tophat'),
+    cast('edda', 'EDDA', 0x3b4a63, 0x24262e, 0xf7d3b0, 0xd8c9a8, 0xffffff, 0x3b4a63, 'bun'),
+    cast('fenn', 'FENN', 0x5a6b3a, 0x3d3428, 0xc98d63, 0x4a2a18, 0xf4efe2, 0xc9a86a, 'cap'),
+    cast('greta', 'GRETA', 0x9a7a3c, 0x444a52, 0xf2c49c, 0x6b432c, 0xf4efe2, 0x9a7a3c, 'hood'),
+    cast('halvor', 'HALVOR', 0x33475a, 0x24262e, 0xa86b45, 0x2e2018, 0xd8d2c4, 0x33475a, 'horns'),
+    cast('ivo', 'IVO', 0x7a3a5a, 0x352345, 0xd8a87e, 0x2f2038, 0xf4efe2, 0x7a3a5a, 'beanie'),
+    cast('jory', 'JORY', 0x2f6b4a, 0x2a3a2f, 0xe4b083, 0x4a2a18, 0xf4efe2, 0x2f6b4a, 'cap'),
+    cast('kaja', 'KAJA', 0xb0703c, 0x3a2b22, 0xf2c49c, 0x8a5a2a, 0xf4efe2, 0xb0703c, 'bun'),
+    cast('lars', 'LARS', 0x3a4a5a, 0x24262e, 0xe4b083, 0xcfcfcf, 0xf4efe2, 0x3a4a5a, 'tophat'),
+    cast('mira', 'MIRA', 0xa04a5a, 0x352345, 0xf7d3b0, 0x6b3320, 0xf4efe2, 0xa04a5a, 'beanie'),
+    cast('nils', 'NILS', 0x4a6a4a, 0x2a3a2f, 0xc98d63, 0x4a2a18, 0xd8d2c4, 0x4a6a4a, 'helm'),
+    cast('ora', 'ORA', 0x8a5a7a, 0x352345, 0xe8c19c, 0x2f2038, 0xf4efe2, 0x8a5a7a, 'crown'),
+    cast('perrin', 'PERRIN', 0x6a5a3e, 0x3d3428, 0xd8a87e, 0x8a8070, 0xf4efe2, 0x6a5a3e, 'cap'),
+    cast('quill', 'QUILL', 0x2f3a4a, 0x24262e, 0xa86b45, 0x1e1610, 0xd8d2c4, 0x2f3a4a, 'hood'),
+    cast('rask', 'RASK', 0x8a3a2a, 0x3a2b22, 0xc98d63, 0x4a2a18, 0xf4efe2, 0x8a3a2a, 'horns'),
+    cast('sigrid', 'SIGRID', 0x4a7a8a, 0x2b3550, 0xf2c49c, 0xd8c9a8, 0xffffff, 0x4a7a8a, 'bun'),
+    cast('torv', 'TORV', 0x5a4a3a, 0x2a2420, 0xe4b083, 0x6b432c, 0xd8d2c4, 0x5a4a3a, 'cap'),
+    cast('una', 'UNA', 0x7a6a4a, 0x444a52, 0xf7d3b0, 0xc9b48a, 0xf4efe2, 0x7a6a4a, 'beanie'),
+    cast('vidar', 'VIDAR', 0x3a5a6a, 0x24262e, 0xa86b45, 0x2e2018, 0xf4efe2, 0x3a5a6a, 'helm'),
+    cast('wrenna', 'WRENNA', 0x9a5a3a, 0x3a2b22, 0xf2c49c, 0x8a4a2a, 0xf4efe2, 0x9a5a3a, 'hood'),
+    cast('ylva', 'YLVA', 0x5a7a5a, 0x2a3a2f, 0xf7d3b0, 0xd8c9a8, 0xffffff, 0x5a7a5a, 'crown'),
+    cast('zora', 'ZORA', 0x6a3a6a, 0x352345, 0xe8c19c, 0x2f2038, 0xf4efe2, 0x6a3a6a, 'beanie'),
+    cast('alva', 'ALVA', 0x4a6a7a, 0x2b3550, 0xe4b083, 0x6b432c, 0xf4efe2, 0x4a6a7a, 'cap'),
+    cast('brann', 'BRANN', 0x8a4a3a, 0x3a2b22, 0xd8a87e, 0x4a2a18, 0xf4efe2, 0x8a4a3a, 'horns'),
+    cast('cyra', 'CYRA', 0x2f6b6b, 0x24262e, 0xc98d63, 0x2e2018, 0xf4efe2, 0x2f6b6b, 'bun'),
+    cast('dov', 'DOV', 0x5a5a3a, 0x3d3428, 0xe4b083, 0x8a8070, 0xd8d2c4, 0x5a5a3a, 'tophat'),
+    cast('elske', 'ELSKE', 0x8a7a5a, 0x444a52, 0xf7d3b0, 0xc9b48a, 0xf4efe2, 0x8a7a5a, 'hood'),
+    cast('frode', 'FRODE', 0x3a4a3a, 0x24262e, 0xd8a87e, 0x4a2a18, 0xf4efe2, 0x3a4a3a, 'cap'),
+    cast('gull', 'GULL', 0x6a5a7a, 0x2b3550, 0xf2c49c, 0x6b3320, 0xf4efe2, 0x6a5a7a, 'beanie'),
+    cast('hagen', 'HAGEN', 0x4a3a5a, 0x2a2420, 0xa86b45, 0x1e1610, 0xd8d2c4, 0x4a3a5a, 'helm'),
+    cast('ines', 'INES', 0x9a3a5a, 0x352345, 0xe8c19c, 0x2f2038, 0xf4efe2, 0x9a3a5a, 'crown'),
+    cast('jonte', 'JONTE', 0x2f4a3a, 0x24262e, 0xe4b083, 0x8a5a2a, 0xf4efe2, 0x2f4a3a, 'cap')
+  ];
+
+  /* Silhouette and wardrobe per character: hair, clothing, held props, face
+     and build, so no two townsfolk read the same at a glance. */
+  var CAST_STYLE = {
+    bram: 'beard+belt+wide',
+    juniper: 'long+scarf+belt',
+    finn: 'beard+belt+sack',
+    odette: 'pony+cloak',
+    aurora: 'long+staff+clean',
+    tobias: 'patch+belt',
+    wren: 'scarf+satchel+slim',
+    hollis: 'cloak+slim+hood',
+    mabel: 'apron+clean',
+    fergus: 'beard+lantern+wide',
+    ingrid: 'long+belt',
+    caleb: 'beard+apron+antler',
+    nella: 'pony+scarf',
+    oswin: 'staff+beard',
+    pru: 'spiky+satchel+slim',
+    rook: 'cloak+patch',
+    sable: 'pony+cloak',
+    tamsin: 'skirt+clean',
+    ulf: 'beard+wide+belt',
+    vera: 'long+apron',
+    wendel: 'scarf+wide+belt',
+    yara: 'spiky+belt',
+    zeke: 'beard+staff+wizard',
+    astrid: 'skirt+clean+long',
+    bjorn: 'beard+wide+lantern',
+    cora: 'pony+apron',
+    dagmar: 'long+cloak+glasses',
+    edda: 'pony+skirt+belt',
+    fenn: 'satchel+glasses+slim',
+    greta: 'apron+clean+wizard',
+    halvor: 'beard+belt+wide',
+    ivo: 'long+scarf',
+    jory: 'spiky+belt',
+    kaja: 'skirt+lantern',
+    lars: 'glasses+beard+slim',
+    mira: 'long+cloak',
+    nils: 'beard+staff',
+    ora: 'skirt+clean+pony',
+    perrin: 'beard+wide+sack',
+    quill: 'cloak+slim+patch',
+    rask: 'spiky+belt+antler',
+    sigrid: 'long+apron',
+    torv: 'beard+satchel',
+    una: 'scarf+clean+slim',
+    vidar: 'beard+belt+umbrella',
+    wrenna: 'long+broom',
+    ylva: 'long+skirt+clean',
+    zora: 'pony+cloak+glasses',
+    alva: 'glasses+belt+slim',
+    brann: 'beard+wide+apron',
+    cyra: 'long+scarf+slim',
+    dov: 'beard+staff+wizard',
+    elske: 'apron+clean+wide',
+    frode: 'beard+belt+satchel',
+    gull: 'pony+scarf',
+    hagen: 'beard+cloak+wide',
+    ines: 'long+skirt+clean+flap',
+    jonte: 'spiky+satchel+umbrella'
+  };
+
+  /* Height varies a lot in Roadtown: the older folk run tall, the kids short. */
+  var CAST_BUILD = {
+    finn: 'tall', ulf: 'tall', bjorn: 'tall', halvor: 'tall', perrin: 'tall',
+    hagen: 'tall', brann: 'tall', fergus: 'tall', vidar: 'tall', lars: 'tall',
+    bram: 'tall', oswin: 'tall', nils: 'tall', dov: 'tall',
+    elske: 'short', mabel: 'short', pru: 'short', kaja: 'short', gull: 'short',
+    ines: 'short', una: 'short', wren: 'short', fenn: 'short', alva: 'short',
+    quill: 'short', jonte: 'short', cora: 'short', mira: 'short', edda: 'short'
+  };
+
+  function applyCastStyle(char, spec) {
+    var tokens = spec ? spec.split('+') : [];
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i];
+      if (t === 'long' || t === 'pony' || t === 'spiky') char.hair = t;
+      else if (t === 'scarf' || t === 'cloak' || t === 'apron' || t === 'skirt' || t === 'belt' || t === 'satchel') char.wear = t;
+      else if (t === 'beard' || t === 'glasses' || t === 'patch') char.face = t;
+      else if (t === 'clean') { char.face = 'clean'; char.cleanFace = true; }
+      else if (t === 'staff' || t === 'lantern' || t === 'broom' || t === 'sack' || t === 'umbrella') char.prop = t;
+      else if (t === 'widebrim' || t === 'wizard' || t === 'antler' || t === 'flap' || t === 'bucket') char.hatStyle = t;
+      else if (t === 'wide') char.girth = 1.16;
+      else if (t === 'slim') char.girth = 0.88;
+      else if (t === 'tall') char.scale = (char.scale || 1) * 1.12;
+      else if (t === 'short') char.scale = (char.scale || 1) * 0.88;
+    }
+  }
+
+  (function () {
+    for (var i = 0; i < CAST_ROSTER.length; i++) {
+      var member = CAST_ROSTER[i];
+      member.hair = 'short';
+      member.wear = 'none';
+      member.face = member.cleanFace ? 'clean' : 'stache';
+      member.girth = 1;
+      applyCastStyle(member, (CAST_STYLE[member.id] || '') + '+' + (CAST_BUILD[member.id] || ''));
+    }
+  })();
+
+  /* The player: the sheet's build and animation, but his own character — short
+     spiky hair, teal coat, cream scarf, clean shaven. */
+  var HERO_CHAR = {
+    id: 'hero', name: 'NICO', hero: true, cleanFace: true, hair: 'spiky',
+    wear: 'scarf', face: 'clean', girth: 1,
+    shirt: 0x2f7d6b, pants: 0x2b3550, skin: 0xf2c49c, leather: 0x8a3d22,
+    trim: 0xf6f1e4, emblem: 0x2f7d6b, button: 0xe9c96a,
+    hat: 0x2f7d6b, hatStyle: 'none', scale: 1
+  };
+
+  var CAST_BY_ID = {};
+  (function () {
+    for (var i = 0; i < CAST_ROSTER.length; i++) CAST_BY_ID[CAST_ROSTER[i].id] = CAST_ROSTER[i];
+  })();
+
+  function addVillagers(chapter, index) {
+    var count = 10;
+    for (var i = 0; i < count; i++) {
+      var char = CAST_ROSTER[(index * count + i) % CAST_ROSTER.length];
+      if (!char) continue;
+      var actor = buildCastActor(char, 1);
+      actor.kind = 'npc';
+      actor.phase = Math.random() * 6;
+      var placed = false;
+      for (var tries = 0; tries < 14 && !placed; tries++) {
+        var ang = (i / count) * Math.PI * 2 + tries * 0.7 + index * 0.9;
+        var radius = 5.4 + ((i + tries) % 6) * 1.5;
+        var x = chapter.spawn[0] + Math.cos(ang) * radius;
+        var z = chapter.spawn[1] + Math.sin(ang) * radius - 1.4;
+        if (blocked(x, z)) continue;
+        if (Math.hypot(x - chapter.npc.x, z - chapter.npc.z) < 1.8) continue;
+        actor.x = x;
+        actor.z = z;
+        placed = true;
+      }
+      if (!placed) continue;
+      actor.yaw = Math.PI;
+      addActor(actor);
+    }
   }
 
   /* The hero is cut from the Super Mario RPG sheet (The Spriters Resource) and
@@ -652,8 +1465,11 @@
       for (var i = 0; i < heroSheet.waiting.length; i++) {
         var actor = heroSheet.waiting[i];
         if (!actor.spriteObj) continue;
-        actor.atlas = { canvas: canvas };
-        actor.spriteObj.sprite.image = canvas;
+        var rows = actor.castRows || 1;
+        var built = actor.castChar ? castAtlas(actor.castChar, rows) : null;
+        var image2 = built || canvas;
+        actor.atlas = { canvas: image2, cols: SPRITE_COLS, rows: rows };
+        actor.spriteObj.sprite.image = image2;
         actor.windowIndex = -1;
         updateActor(actor);
       }
@@ -670,11 +1486,12 @@
 
   function buildHero(palette) {
     var pal = palette || heroPalette();
+    if (pal.hero) return buildCastActor(HERO_CHAR, SPRITE_ROWS);
     var actor = makeActor('player');
     actor.flip = 0;
     actor.facing = 1;
     actor.frame = 0;
-    actor.atlas = pal.hero ? heroSpriteAtlas() : spriteAtlas(pal);
+    actor.atlas = spriteAtlas(pal);
     if (!actor.atlas) return actor;
     actor.spriteObj = {
       sprite: { image: actor.atlas.canvas, uv: spriteWindow(actor.atlas, 0) },
@@ -684,7 +1501,6 @@
       alpha: 1,
       hidden: false
     };
-    if (pal.hero && !heroSheet.canvas) heroSheet.waiting.push(actor);
     return actor;
   }
 
@@ -2144,7 +2960,7 @@
 
   /* ---------------------------------------------------------------- world */
   function addNpc(chapter, index) {
-    var actor = buildHero(PALETTES[chapter.npc.palette] || PALETTES.bram);
+    var actor = buildCastActor(CAST_BY_ID[chapter.npc.palette] || CAST_ROSTER[0], 1);
     actor.kind = 'npc';
     actor.x = chapter.npc.x;
     actor.z = chapter.npc.z;
@@ -2309,6 +3125,7 @@
     for (var trailIndex = 0; trailIndex < 12; trailIndex++) pipTrail.push({ x: pip.x, z: pip.z });
     pipTimer = 0;
     addNpc(chapter, index);
+    addVillagers(chapter, index);
     spawnEnemies(chapter);
     camera.yaw = 0.2;
     camera.pitch = 0.44;
@@ -4017,6 +4834,54 @@
       },
       cards: function () { return { equipped: save.cards.slice(), mods: cardMods(), spent: cardCost(), bp: save.bp }; },
       drawCalls: function () { return renderer && renderer.stats ? renderer.stats() : null; },
+      heroArt: function () {
+        var art = castAtlas(HERO_CHAR, 4);
+        if (!art) return null;
+        var sheet = document.createElement('canvas');
+        sheet.width = art.width;
+        sheet.height = art.height;
+        var ctx = sheet.getContext('2d');
+        if (!ctx) return null;
+        ctx.fillStyle = '#262834';
+        ctx.fillRect(0, 0, sheet.width, sheet.height);
+        ctx.drawImage(art, 0, 0);
+        return sheet.toDataURL('image/png');
+      },
+      castSheet: function () {
+        var cols = 10;
+        var size = SPRITE_CELL;
+        var rows = Math.ceil(CAST_ROSTER.length / cols);
+        var sheet = document.createElement('canvas');
+        sheet.width = cols * size;
+        sheet.height = rows * size;
+        var ctx = sheet.getContext('2d');
+        if (!ctx) return null;
+        ctx.fillStyle = '#262834';
+        ctx.fillRect(0, 0, sheet.width, sheet.height);
+        for (var i = 0; i < CAST_ROSTER.length; i++) {
+          var art = castAtlas(CAST_ROSTER[i], 1);
+          if (!art) continue;
+          ctx.drawImage(art, 0, 0, size, size, (i % cols) * size, Math.floor(i / cols) * size, size, size);
+        }
+        return sheet.toDataURL('image/png');
+      },
+      cast: function () {
+        return {
+          atlas: heroSheet.canvas ? heroSheet.canvas.width + 'x' + heroSheet.canvas.height : 'none',
+          roster: CAST_ROSTER.length,
+          actors: (world ? world.actors : []).map(function (a) {
+            return {
+              kind: a.kind,
+              x: Math.round(a.x * 10) / 10,
+              z: Math.round(a.z * 10) / 10,
+              rows: a.castRows || 0,
+              img: a.spriteObj && a.spriteObj.sprite.image ? a.spriteObj.sprite.image.width : 0,
+              frame: a.frame,
+              hidden: !!a.hidden
+            };
+          })
+        };
+      },
       openChapter: function (index) { if (!save) { save = freshSave(); save.started = true; } save.chapter = index; showChapterScreen(index); },
       strike: function () {
         var item = nearestInteractable();
