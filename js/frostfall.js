@@ -166,6 +166,12 @@
   var battleObjects = [];
   var battlePlayer = null;
   var battleEnemy = null;
+  /* === NEW: IN-WORLD BATTLE CAMERA ===
+     An in-world fight keeps the chapter scene on screen and only stages the two
+     fighters at the spot where the player met the enemy. These globals are pure
+     presentation: nothing below reads them for combat maths. */
+  var BATTLE_STAGE_RADIUS = 4;      // props/NPCs inside this hide for the shot
+  var BATTLE_CAM_TWEEN = 0.35;      // camera swing into and out of the fight
   var levelQueue = 0;
   var battleSelect = 0;
   var freezeUntil = 0;
@@ -4074,6 +4080,7 @@
             {
               advantage: advantage,
               opening: opening,
+              foe: actor,
               onWin: function () {
                 save.defeated[shade.key] = true;
                 actor.hidden = true;
@@ -4130,6 +4137,7 @@
                 bossVictory: true,
                 bossActor: bossActor,
                 bossName: boss.name,
+                foe: bossActor,
                 onWin: function () {
                   save.defeated[boss.key] = true;
                   bossActor.hidden = true;
@@ -4544,6 +4552,21 @@
       camera.eye[i] = lerp(camera.eye[i], eye[i], Math.min(1, dt * 7));
     }
     camera.punch = Math.max(0, camera.punch - dt * 26);
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       350ms swing back from the fight: blend the exploration shot from the last
+       battle camera instead of snapping. */
+    if (camera.ret) {
+      camera.ret.t = Math.min(1, camera.ret.t + dt / (camera.ret.dur || BATTLE_CAM_TWEEN));
+      var retEase = 1 - Math.pow(1 - camera.ret.t, 3);
+      for (var ri = 0; ri < 3; ri++) {
+        eye[ri] = battleMix(camera.ret.from.eye[ri], eye[ri], retEase);
+        target[ri] = battleMix(camera.ret.from.target[ri], target[ri], retEase);
+      }
+      for (var rj = 0; rj < 3; rj++) { camera.eye[rj] = eye[rj]; camera.target[rj] = target[rj]; }
+      renderer.setCamera(eye, target, 55 * Math.PI / 180, battleMix(camera.ret.from.ortho, camera.ortho, retEase));
+      if (camera.ret.t >= 1) camera.ret = null;
+      return;
+    }
     renderer.setCamera(camera.eye, camera.target, 55 * Math.PI / 180, camera.ortho);
   }
 
@@ -4814,8 +4837,143 @@
     sound('click');
   }
 
+  /* === NEW: IN-WORLD BATTLE CAMERA ===
+     Pull a draw object's ground spot out of either its sprite position or its
+     baked model matrix. Stud batches sit at the origin with an identity matrix
+     and are skipped so a fight near spawn never blanks the ground. */
+  function battleSpotOf(obj) {
+    if (!obj) return null;
+    if (obj.pos && obj.pos.length >= 3) return [obj.pos[0], obj.pos[2]];
+    if (obj.model && obj.model.length >= 16) {
+      var identity = Math.abs(obj.model[0] - 1) < 1e-4 && Math.abs(obj.model[5] - 1) < 1e-4 &&
+        Math.abs(obj.model[10] - 1) < 1e-4 && !obj.model[12] && !obj.model[14];
+      if (identity) return null;
+      return [obj.model[12], obj.model[14]];
+    }
+    return null;
+  }
+
+  function battleMix(a, b, t) { return a + (b - a) * t; }
+
+  /* === NEW: IN-WORLD BATTLE CAMERA ===
+     Half-diagonal of a prop's footprint, read off its model matrix. A whole
+     building is one big box whose origin can sit far from the wall the player
+     is standing next to, so radius-only distance tests miss it. */
+  function battleBoxRadius(obj) {
+    if (!obj || !obj.model || obj.model.length < 16) return 0.6;
+    var sx = Math.hypot(obj.model[0], obj.model[1], obj.model[2]);
+    var sz = Math.hypot(obj.model[8], obj.model[9], obj.model[10]);
+    return Math.max(0.6, 0.5 * Math.hypot(sx, sz));
+  }
+
+  /* === NEW: IN-WORLD BATTLE CAMERA ===
+     Distance from a point to a segment, in the XZ plane. */
+  function battleSegDistance(px, pz, ax, az, bx, bz) {
+    var vx = bx - ax, vz = bz - az;
+    var len2 = vx * vx + vz * vz;
+    var t = len2 > 0.0001 ? ((px - ax) * vx + (pz - az) * vz) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
+  }
+
+  /* === NEW: IN-WORLD BATTLE CAMERA ===
+     How many building footprints the camera-to-stage line crosses. Used to pick
+     the side of the fight that is not walled off, so the shot never ends up
+     inside a Roadtown wall. */
+  function battleCamBlocks(cx, cz, dir, dist) {
+    if (!world || !world.colliders.length) return 0;
+    var ex = cx + dir[0] * dist;
+    var ez = cz + dir[1] * dist;
+    var blocked = 0;
+    for (var i = 0; i < world.colliders.length; i++) {
+      var box = world.colliders[i];
+      /* 2D slab test against the footprint, padded a little. */
+      var pad = 0.55;
+      var minX = box.x - box.hw - pad, maxX = box.x + box.hw + pad;
+      var minZ = box.z - box.hd - pad, maxZ = box.z + box.hd + pad;
+      var ax = cx, az = cz;
+      var dxs = ex - ax, dzs = ez - az;
+      var t0 = 0, t1 = 1, hit = true;
+      var planes = [[-dxs, ax - minX], [dxs, maxX - ax], [-dzs, az - minZ], [dzs, maxZ - az]];
+      for (var p = 0; p < 4; p++) {
+        var pd = planes[p][0], pe = planes[p][1];
+        if (Math.abs(pd) < 1e-6) { if (pe < 0) { hit = false; break; } continue; }
+        var tHit = pe / pd;
+        if (pd < 0) { if (tHit > t0) t0 = tHit; }
+        else if (tHit < t1) t1 = tHit;
+        if (t0 > t1) { hit = false; break; }
+      }
+      if (hit) blocked++;
+    }
+    return blocked;
+  }
+
+  /* === NEW: IN-WORLD BATTLE CAMERA ===
+     Where the fight happens: midpoint between the player and the enemy, the
+     axis they stand on, the side-profile camera 11 units off that axis (on the
+     side the exploration camera is already on, so the swing is short), and the
+     ground height at the spot. */
+  function battleStage() {
+    var px = player ? player.x : 0;
+    var pz = player ? player.z : 0;
+    var foe = battle && battle.opts ? battle.opts.foe : null;
+    var ex = foe ? foe.x : px + Math.sin(camera.yaw) * 3.4;
+    var ez = foe ? foe.z : pz + Math.cos(camera.yaw) * 3.4;
+    var dx = ex - px;
+    var dz = ez - pz;
+    var len = Math.hypot(dx, dz);
+    if (len < 0.001) { dx = Math.sin(camera.yaw); dz = Math.cos(camera.yaw); len = 1; }
+    var cx = (px + ex) * 0.5;
+    var cz = (pz + ez) * 0.5;
+    var axis = [dx / len, dz / len];
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       Try 90° either side of the fighters, then 26° and 52° off that, and take
+       the angle with the fewest buildings in the way (with a nudge toward the
+       side the player is already looking from). */
+    var axisAngle = Math.atan2(axis[1], axis[0]);
+    var camDist = 7.4;
+    var camOffsets = [Math.PI / 2, -Math.PI / 2, Math.PI / 2 + 0.45, -Math.PI / 2 - 0.45,
+      Math.PI / 2 - 0.45, -Math.PI / 2 + 0.45, Math.PI / 2 + 0.9, -Math.PI / 2 - 0.9];
+    var bestDir = [axis[1], -axis[0]];
+    var bestScore = Infinity;
+    for (var ci = 0; ci < camOffsets.length; ci++) {
+      var angle = axisAngle + camOffsets[ci];
+      var dir = [Math.cos(angle), Math.sin(angle)];
+      var score = battleCamBlocks(cx, cz, dir, camDist) * 10;
+      score += Math.abs(dir[0] * axis[0] + dir[1] * axis[1]) * 4;
+      if (dir[0] * (camera.eye[0] - cx) + dir[1] * (camera.eye[2] - cz) < 0) score += 1.5;
+      if (score < bestScore) { bestScore = score; bestDir = dir; }
+    }
+    var perp = bestDir;
+    /* Screen right for that camera: keep the hero on the left of frame. */
+    var right = [perp[1], -perp[0]];
+    var side = axis[0] * right[0] + axis[1] * right[1] >= 0 ? 1 : -1;
+    axis = [axis[0] * side, axis[1] * side];
+    var fit = window.innerWidth / Math.max(1, window.innerHeight) < 0.9 ? 13.5 : 11.5;
+    var ground = 0;
+    /* Lift the rig above the rooftops: a ground-level camera ends up staring
+       into a town wall whenever the fight lands beside a building. */
+    var eye = [cx + perp[0] * camDist, 4.8, cz + perp[1] * camDist];
+    var target = [cx, 0.8, cz];
+    return {
+      center: [cx, cz], axis: axis, perp: perp, ground: ground, fit: fit,
+      playerYaw: Math.atan2(axis[0], axis[1]),
+      enemyYaw: Math.atan2(-axis[0], -axis[1]),
+      from: { eye: camera.eye.slice(), target: camera.target.slice(), ortho: camera.ortho, fov: 55 * Math.PI / 180 },
+      to: { eye: eye, target: target, ortho: fit, fov: 55 * Math.PI / 180 },
+      t: 0, dur: BATTLE_CAM_TWEEN, last: null,
+      extras: [], shadows: [], shadowSize: [[1.5, 0.04, 1.0], [1.6, 0.04, 1.05]],
+      hidden: [], hiddenActors: []
+    };
+  }
+
   function buildBattleScene(def) {
-    battleObjects = [];
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       Replaces the old blue checkered room: the live chapter scene (buildings,
+       snow, pines, fences, sky) stays rendered and the fight is staged where the
+       enemy was met. */
+    var stage = battle.stage = battleStage();
+    battleObjects = world && world.objects ? world.objects : [];
     function bpush(x, y, z, sx, sy, sz, color, opts) {
       opts = opts || {};
       battleObjects.push(makeStatic(opts.geo || 'cube', x, y, z, sx, sy, sz, color, opts));
@@ -4832,28 +4990,81 @@
     bpush(5.4, 4.2, -4.2, 2.0, 0.5, 2.0, 0x7ce7ff, { alpha: 0.2 });
     bpush(0, 5.4, -6.4, 12, 0.4, 2, 0x7bc9ff, { alpha: 0.12 });
     bpush(0, -0.19, 0.6, 15, 0.02, 10, 0x0d0718, { alpha: 0.25 });
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       Local stage clearance: NPCs, villagers, Pip, the overworld hero, the
+       overworld enemy and small props within 4 units of the midpoint are hidden
+       so nothing stands between the camera and the fighters. Everything listed
+       here is handed back in finishBattle(). */
+    if (world) {
+      for (var ai = 0; ai < world.actors.length; ai++) {
+        var actor = world.actors[ai];
+        if (Math.hypot(actor.x - stage.center[0], actor.z - stage.center[1]) > BATTLE_STAGE_RADIUS) continue;
+        stage.hiddenActors.push({ actor: actor, hidden: actor.hidden });
+        actor.hidden = true;
+        updateActor(actor);
+      }
+      for (var oi = 0; oi < world.objects.length; oi++) {
+        var prop = world.objects[oi];
+        if (!prop.geo || prop.hidden) continue;
+        var spot = battleSpotOf(prop);
+        if (!spot) continue;
+        var radius = battleBoxRadius(prop);
+        var toStage = Math.hypot(spot[0] - stage.center[0], spot[1] - stage.center[1]);
+        /* Whole buildings count from their nearest face, not their origin. */
+        var nearStage = toStage - radius <= BATTLE_STAGE_RADIUS;
+        /* Trees and fences just off the stage still block the lens: clear the
+           corridor between the camera and the fighters too. */
+        var nearLens = toStage <= 9 &&
+          battleSegDistance(spot[0], spot[1], stage.center[0], stage.center[1], stage.to.eye[0], stage.to.eye[2]) - radius <= 2.8;
+        /* Nothing may stand in the gap between the two fighters either. */
+        var nearLine = toStage <= 8 &&
+          battleSegDistance(spot[0], spot[1],
+            stage.center[0] - stage.axis[0] * 2.2, stage.center[1] - stage.axis[1] * 2.2,
+            stage.center[0] + stage.axis[0] * 2.2, stage.center[1] + stage.axis[1] * 2.2) - radius <= 1.4;
+        if (!nearStage && !nearLens && !nearLine) continue;
+        prop.hidden = true;
+        stage.hidden.push(prop);
+      }
+    }
+
     battlePlayer = buildHero(heroPalette());
-    battlePlayer.x = -2.1;
-    battlePlayer.z = 1.7;
-    battlePlayer.yaw = 0.72;
+    battlePlayer.x = stage.center[0] - stage.axis[0] * 2.2;
+    battlePlayer.z = stage.center[1] - stage.axis[1] * 2.2;
+    battlePlayer.y = stage.ground;
+    battlePlayer.yaw = stage.playerYaw;
     battlePlayer.scale = 0.86;
     battleEnemy = buildEnemy(def.model);
-    battleEnemy.x = 2.05;
-    battleEnemy.z = 1.0;
-    battleEnemy.yaw = -0.72;
+    battleEnemy.x = stage.center[0] + stage.axis[0] * 2.2;
+    battleEnemy.z = stage.center[1] + stage.axis[1] * 2.2;
+    battleEnemy.yaw = stage.enemyYaw;
     battleEnemy.scale = def.boss ? 1.28 : 1.05;
-    battleEnemy.y = battleEnemy.baseY * battleEnemy.scale;
-    pushActor(battleObjects, battlePlayer);
-    pushActor(battleObjects, battleEnemy);
+    battleEnemy.y = stage.ground + battleEnemy.baseY * battleEnemy.scale;
+    /* Soft dark contact shadows: flat discs just above the ground. */
+    stage.shadowSize = [[1.5, 0.04, 1.0], [def.boss ? 2.1 : 1.6, 0.04, def.boss ? 1.5 : 1.05]];
+    stage.shadows = [
+      makeStatic('disc', battlePlayer.x, stage.ground + 0.03, battlePlayer.z, stage.shadowSize[0][0], stage.shadowSize[0][1], stage.shadowSize[0][2], 0x0d0718, { alpha: 0.34, pattern: false }),
+      makeStatic('disc', battleEnemy.x, stage.ground + 0.03, battleEnemy.z, stage.shadowSize[1][0], stage.shadowSize[1][1], stage.shadowSize[1][2], 0x0d0718, { alpha: 0.34, pattern: false })
+    ];
+    stage.extras = [];
+    [battlePlayer, battleEnemy].forEach(function (fighter) {
+      if (fighter.spriteObj) stage.extras.push(fighter.spriteObj);
+      for (var pi = 0; pi < fighter.parts.length; pi++) stage.extras.push(fighter.parts[pi].obj);
+    });
+    stage.shadows.forEach(function (shadow) { stage.extras.push(shadow); });
+    stage.extras.forEach(function (obj) { battleObjects.push(obj); });
     updateActor(battlePlayer);
     updateActor(battleEnemy);
-    renderer.setScene({ objects: battleObjects, fogColor: [0.26, 0.19, 0.46], fogNear: 16, fogFar: 44 });
-    /* Fighters sit ~4 units apart; portrait phones need a wider ortho box or
-       the boss's arms clip off the right edge. The camera looks low so both
-       battlers stand in the upper stage, clear of the command plate. */
-    var battleFit = window.innerWidth / Math.max(1, window.innerHeight) < 0.9 ? 17 : 14.5;
-    if (battle) battle.fit = battleFit;
-    renderer.setCamera([0, 3.3, 12.2], [0, -0.2, 0.9], 52 * Math.PI / 180, battleFit);
+    /* Keep the chapter's own fog and lighting so the fight sits inside the
+       living town instead of a separate room. */
+    var stageChapter = CHAPTERS[clamp(save.chapter, 0, 4)];
+    renderer.setScene({ objects: battleObjects, fogColor: stageChapter.fog, fogNear: 22, fogFar: 70 });
+    if (battle) battle.fit = stage.fit;
+    /* Smash cut: the white flash and the punch land here, then updateBattle()
+       walks the camera from the exploration shot to the battle shot in 350ms. */
+    stage.last = { eye: stage.from.eye.slice(), target: stage.from.target.slice(), ortho: stage.from.ortho, fov: stage.from.fov };
+    renderer.setCamera(stage.from.eye, stage.from.target, stage.from.fov, stage.from.ortho);
+    flashStage('white');
+    cameraPunch(0.55);
   }
 
   function updateBattle(dt, time) {
@@ -4868,7 +5079,7 @@
     anim.p = Math.max(0, anim.p - dt * 3.2);
     anim.e = Math.max(0, anim.e - dt * 3.2);
     battlePlayer.y = Math.abs(Math.sin(st * 2.4)) * 0.04;
-    battleEnemy.y = battleEnemy.baseY * battleEnemy.scale + Math.sin(st * 1.9) * 0.1;
+    battleEnemy.y = (battle.stage ? battle.stage.ground : 0) + battleEnemy.baseY * battleEnemy.scale + Math.sin(st * 1.9) * 0.1;
     battlePlayer.facing = 1;
     var bframe = SPRITE_FRAMES.idle[Math.floor(st * 1.6) % 2];
     battlePlayer.squashY = 1 + anim.p * 0.06;
@@ -4922,6 +5133,26 @@
     battleEnemy.lean = battle.lunge > 0 ? 0.28 : 0;
     /* A two-frame shoulder shake while the telegraph is up. */
     if (battle.windup) battleEnemy.x += Math.floor(time * 24) % 2 ? 0.05 : -0.05;
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       Everything above animates in stage-local units (the old arena's -1.7 /
+       1.8 anchors). Fold those offsets onto the encounter axis so the same
+       lunge, windup and knockback maths plays out in the live world at
+       center.x - 2.2 and center.x + 2.2. */
+    if (battle.stage) {
+      var stageRef = battle.stage;
+      var heroDev = battlePlayer.x + 1.7;
+      var foeDev = battleEnemy.x - 1.8;
+      battlePlayer.x = stageRef.center[0] + stageRef.axis[0] * (heroDev - 2.2);
+      battlePlayer.z = stageRef.center[1] + stageRef.axis[1] * (heroDev - 2.2);
+      battleEnemy.x = stageRef.center[0] + stageRef.axis[0] * (foeDev + 2.2);
+      battleEnemy.z = stageRef.center[1] + stageRef.axis[1] * (foeDev + 2.2);
+      if (stageRef.shadows.length === 2) {
+        var heroShadow = stageRef.shadowSize[0];
+        var foeShadow = stageRef.shadowSize[1];
+        stageRef.shadows[0].model = mat.compose([battlePlayer.x, stageRef.ground + 0.03, battlePlayer.z], [0, 0, 0], heroShadow);
+        stageRef.shadows[1].model = mat.compose([battleEnemy.x, stageRef.ground + 0.03, battleEnemy.z], [0, 0, 0], foeShadow);
+      }
+    }
     updateActor(battlePlayer);
     updateActor(battleEnemy);
     /* Battle camera: push in on windups, snap wide on the hit, plus the same
@@ -4929,12 +5160,35 @@
     camera.punch = Math.max(0, camera.punch - dt * 26);
     var kick = punchOffset();
     var push = battle.pose === 'strike' ? 1.6 : battle.windup ? 1 : 0;
-    renderer.setCamera(
-      [kick[0], 3.3 + kick[1] - push * 0.12, 12.2 - push * 0.5],
-      [0, -0.2, 0.9],
-      52 * Math.PI / 180,
-      (battle.fit || 14.5) * (1 - push * 0.022)
-    );
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       350ms swing from the exploration shot into the side-profile shot, then
+       the same windup push-in and strike kick the arena used, applied to the
+       in-world camera. */
+    if (battle.stage) {
+      var shot = battle.stage;
+      shot.t = Math.min(1, (shot.t || 0) + dt / (shot.dur || BATTLE_CAM_TWEEN));
+      var ease = shot.t < 1 ? 1 - Math.pow(1 - shot.t, 3) : 1;
+      var camEye = [
+        battleMix(shot.from.eye[0], shot.to.eye[0], ease) + kick[0],
+        battleMix(shot.from.eye[1], shot.to.eye[1], ease) + kick[1] - push * 0.12,
+        battleMix(shot.from.eye[2], shot.to.eye[2], ease)
+      ];
+      var camTarget = [
+        battleMix(shot.from.target[0], shot.to.target[0], ease),
+        battleMix(shot.from.target[1], shot.to.target[1], ease),
+        battleMix(shot.from.target[2], shot.to.target[2], ease)
+      ];
+      var camOrtho = battleMix(shot.from.ortho, shot.to.ortho, ease) * (1 - push * 0.022);
+      renderer.setCamera(camEye, camTarget, shot.to.fov, camOrtho);
+      shot.last = { eye: camEye.slice(), target: camTarget.slice(), ortho: camOrtho, fov: shot.to.fov };
+    } else {
+      renderer.setCamera(
+        [kick[0], 3.3 + kick[1] - push * 0.12, 12.2 - push * 0.5],
+        [0, -0.2, 0.9],
+        52 * Math.PI / 180,
+        (battle.fit || 14.5) * (1 - push * 0.022)
+      );
+    }
 
     // Rolling HP: save.hp is the real value, battle.displayHp drains toward it.
     var target = save.hp;
@@ -5106,6 +5360,8 @@
     opts = opts || {};
     def = scaleEnemyForParty(def);
     battle = {
+      /* === NEW: IN-WORLD BATTLE CAMERA === stage is filled by buildBattleScene */
+      stage: null,
       def: def, hp: def.hp, max: def.hp, displayHp: Math.max(1, save.hp),
       busy: false, ended: false, turn: 1, opts: opts, anim: { p: 0, e: 0 },
       state: 'intro', telegraph: 'standard', extraTurns: opts.advantage === 'player' ? 1 : 0,
@@ -6223,6 +6479,10 @@
 
   function finishBattle(won) {
     var options = battle ? battle.opts : null;
+    /* === NEW: IN-WORLD BATTLE CAMERA === keep the last battle shot so the
+       camera can tween back rather than cut, and keep the stage bookkeeping. */
+    var lastShot = battle && battle.stage ? battle.stage.last : null;
+    var stageInfo = battle && battle.stage ? battle.stage : null;
     /* === NEW: remember a boss win so the victory scene can play first === */
     var bossVictoryOpts = won && options && options.bossVictory ? options : null;
     battle = null;
@@ -6231,6 +6491,21 @@
     view = 'world';
     mode = 'world';
     var chapter = CHAPTERS[clamp(save.chapter, 0, 4)];
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       Take the fighters and their shadows back out of the live scene and
+       unhide every NPC/prop the fight cleared. */
+    if (stageInfo && world) {
+      stageInfo.extras.forEach(function (obj) {
+        var at = world.objects.indexOf(obj);
+        if (at >= 0) world.objects.splice(at, 1);
+      });
+      stageInfo.hidden.forEach(function (obj) { obj.hidden = false; });
+      stageInfo.hiddenActors.forEach(function (entry) {
+        entry.actor.hidden = entry.hidden;
+        updateActor(entry.actor);
+      });
+      battleObjects = [];
+    }
     renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
     app.dataset.theme = chapter.theme;
     ui.hud.hidden = false;
@@ -6238,7 +6513,16 @@
     ui.touch.hidden = false;
     updateHud();
     updateObjective();
-    snapCamera();
+    /* === NEW: IN-WORLD BATTLE CAMERA ===
+       Tween from the battle shot back to the player's exploration angle over
+       350ms; updateCamera() drives the blend. */
+    if (lastShot && player) {
+      snapCamera();
+      camera.ret = { from: lastShot, t: 0, dur: BATTLE_CAM_TWEEN };
+      renderer.setCamera(lastShot.eye, lastShot.target, lastShot.fov || 55 * Math.PI / 180, lastShot.ortho);
+    } else {
+      snapCamera();
+    }
     persist();
     if (bossVictoryOpts) { playBossVictory(bossVictoryOpts); return; }
     if (won && options && options.onWin) setTimeout(options.onWin, 160);
@@ -6615,6 +6899,33 @@
           lean: battlePlayer && Math.round((battlePlayer.lean || 0) * 100) / 100,
           squashX: battlePlayer && Math.round((battlePlayer.squashX || 1) * 100) / 100,
           squashY: battlePlayer && Math.round((battlePlayer.squashY || 1) * 100) / 100
+        };
+      },
+      /* === NEW: IN-WORLD BATTLE CAMERA === read the staged shot for testing */
+      stage: function () {
+        if (!battle || !battle.stage) return null;
+        var st = battle.stage;
+        return {
+          t: st.t, center: st.center, axis: st.axis,
+          eye: st.last ? st.last.eye : null, ortho: st.last ? st.last.ortho : null,
+          hero: battlePlayer ? [battlePlayer.x, battlePlayer.z] : null,
+          foe: battleEnemy ? [battleEnemy.x, battleEnemy.z] : null,
+          shadows: st.shadows.length, hiddenProps: st.hidden.length, hiddenActors: st.hiddenActors.length,
+          heroY: battlePlayer ? battlePlayer.y : null, heroScale: battlePlayer ? battlePlayer.scale : null,
+          heroHidden: battlePlayer ? !!battlePlayer.hidden : null,
+          heroSprite: battlePlayer ? (battlePlayer.spriteObj ? { hidden: !!battlePlayer.spriteObj.hidden, alpha: battlePlayer.spriteObj.alpha, size: battlePlayer.spriteObj.size } : null) : null,
+          heroAtlas: battlePlayer ? !!battlePlayer.spriteObj : null,
+          extras: st.extras.length
+        };
+      },
+      /* === NEW: IN-WORLD BATTLE CAMERA === camera + scene probe for testing */
+      cam: function () {
+        return {
+          eye: camera.eye.slice(), target: camera.target.slice(), ortho: camera.ortho,
+          ret: camera.ret ? camera.ret.t : null,
+          mode: mode, view: view,
+          objects: world ? world.objects.length : 0,
+          hidden: world ? world.objects.filter(function (o) { return o.hidden; }).length : 0
         };
       },
       phase: function () { return phaseAt(); },
