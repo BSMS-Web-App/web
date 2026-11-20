@@ -186,10 +186,16 @@
      to ~14 fps so limbs snap between readable frames like an action figure. */
   var STEP_FPS = 14;
   function stepped(t) { return Math.floor(t * STEP_FPS) / STEP_FPS; }
+  /* Action Cards: the active moves in battle. Each one carries an action
+     command (charge, chain, mash, timed) that the timing meter interprets. */
   var SKILLS = [
-    { id: 'icicle', name: 'ICICLE', cost: 3, level: 1, mult: 1.8, desc: 'A spear of ice. Heavy damage.' },
-    { id: 'warmth', name: 'WARMTH', cost: 4, level: 2, heal: true, desc: 'Melt the cold. Restore HP.' },
-    { id: 'starfall', name: 'STARFALL', cost: 7, level: 4, mult: 2.7, desc: 'Call the star down. Huge damage.' }
+    { id: 'power-stab', name: 'POWER STAB', cat: 'SWORD', cost: 2, level: 1, cmd: 'charge', mult: 1.15, desc: 'Hold, release in gold. +2 piercing.' },
+    { id: 'sword-toss', name: 'SWORD TOSS', cat: 'SWORD', cost: 3, level: 1, cmd: 'toss', mult: 1.45, desc: 'Timed throw. Reaches burrowed foes.' },
+    { id: 'line-bounce', name: 'LINE BOUNCE', cat: 'BALL', cost: 3, level: 1, cmd: 'chain', mult: 0.4, desc: 'Press on each bounce. Four hits.' },
+    { id: 'soften', name: 'SOFTEN', cat: 'BALL', cost: 2, level: 1, cmd: 'soften', mult: 0.9, desc: 'Timed hit. -1 DEF for 3 turns.' },
+    { id: 'power-shot', name: 'POWER SHOT', cat: 'SLINGSHOT', cost: 2, level: 1, cmd: 'shot', mult: 0.55, hits: 3, desc: 'Timed burst. Three pellets break shields.' },
+    { id: 'dynamite', name: 'DYNAMITE', cat: 'EXPLOSIVE', cost: 4, level: 1, cmd: 'mash', mult: 1.9, desc: 'Mash for power. Splash and Burn 2.' },
+    { id: 'cure', name: 'CURE', cat: 'SUPPORT', cost: 3, level: 1, cmd: 'cure', mult: 0, desc: 'Timed press. 5 HP, 7 HP on PERFECT.' }
   ];
 
   /* ---------------------------------------------------------------- actors */
@@ -3789,23 +3795,27 @@
  */
 
   /* ----------------------------------------------------------- battle scene */
+  /* Passive Cards: equipped with BP in the pause menu, before a fight. */
   var CARDS = [
-    { id: 'warm-heart', name: 'WARM HEART', cost: 2, desc: '+6 max HP while equipped.', mods: { maxHp: 6 } },
-    { id: 'ice-fang', name: 'ICE FANG', cost: 3, desc: '+2 damage on attacks and skills.', mods: { attack: 2 } },
-    { id: 'guard-charm', name: 'GUARD CHARM', cost: 2, desc: 'Wider guard and superguard windows.', mods: { guardMs: 160 } },
-    { id: 'second-wind', name: 'SECOND WIND', cost: 4, desc: 'Get up once per battle at 5 HP.', mods: { revive: true } },
-    { id: 'swift-boots', name: 'SWIFT BOOTS', cost: 2, desc: '+3 agility: act before the enemy.', mods: { agility: 3 } },
-    { id: 'snowball', name: 'SNOWBALL CHARM', cost: 3, desc: 'Skills cost 1 less SP.', mods: { skillDiscount: 1 } },
-    { id: 'ante-up', name: 'ANTE UP', cost: 3, desc: 'Narrow gold zone, but PERFECT hits deal 2× damage.', mods: { narrow: 1, ante: true } },
-    { id: 'glass-cannon', name: 'GLASS CANNON', cost: 3, desc: '+3 attack, but every hit you take deals +2.', mods: { attack: 3, incoming: 2 } }
+    { id: 'ante-up', name: 'ANTE UP', cost: 2, desc: 'Windows 30% tighter. Hits deal +1 damage.', mods: { narrow: 1, bonus: 1 } },
+    { id: 'defender', name: 'DEFENDER', cost: 2, desc: 'Take 1 less damage, deal 1 less damage.', mods: { attack: -1, incoming: -1 } },
+    { id: 'sp-saver', name: 'SP SAVER', cost: 3, desc: 'Action Cards cost 1 less SP (min 1).', mods: { skillDiscount: 1 } },
+    { id: 'happy-hp-sp', name: 'HAPPY HP / SP', cost: 2, desc: 'Start each turn with +1 HP and +1 SP.', mods: { regenHp: 1, regenSp: 1 } },
+    { id: 'thorns', name: 'THORNS', cost: 2, desc: 'Guard counters 1. Superguard counters 2.', mods: { thorns: true } },
+    { id: 'hard-mode', name: 'HARD MODE', cost: 0, desc: 'Enemy damage ×2, tighter superguard, +50% XP.', mods: { hard: true } }
   ];
 
+  /* Older saves can still name retired cards. Keep them out of the totals and
+     the equipment list rather than letting dead ids eat BP. */
   function equippedCards() {
-    return (save && Array.isArray(save.cards)) ? save.cards : [];
+    if (!save || !Array.isArray(save.cards)) return [];
+    return save.cards.filter(function (id) {
+      return CARDS.some(function (card) { return card.id === id; });
+    });
   }
 
   function cardMods() {
-    var mods = { maxHp: 0, attack: 0, guardMs: 0, revive: false, agility: 0, skillDiscount: 0, narrow: 0, incoming: 0, ante: false };
+    var mods = { maxHp: 0, attack: 0, guardMs: 0, revive: false, agility: 0, skillDiscount: 0, narrow: 0, incoming: 0, bonus: 0, regenHp: 0, regenSp: 0, thorns: false, hard: false };
     equippedCards().forEach(function (id) {
       CARDS.forEach(function (card) {
         if (card.id !== id) return;
@@ -3850,7 +3860,8 @@
     if (!card) return;
     var index = equippedCards().indexOf(id);
     if (index >= 0) {
-      save.cards.splice(index, 1);
+      var rawIndex = save.cards.indexOf(id);
+      if (rawIndex >= 0) save.cards.splice(rawIndex, 1);
       if (card.mods.maxHp) {
         save.maxHp = Math.max(1, save.maxHp - card.mods.maxHp);
         save.hp = clamp(save.hp, 1, save.maxHp);
@@ -4009,10 +4020,16 @@
         var progress = clamp((now - w.startAt) / span, 0, 1);
         ui.timingMarker.style.left = (progress * 100) + '%';
       }
+      /* A charge only counts once the bar is actually moving, so the key or
+         tap that opened the move cannot release it by accident. */
+      if (w.charge && !w.armed && now >= w.openAt) w.armed = true;
       if (!w.resolving && now >= w.closeAt) {
         w.resolving = true;
-        if (w.type === 'strike') resolvePlayerMove(w.move, w.quality || 'miss');
-        else if (w.type === 'guard') resolveEnemyHit(w.telegraph, w.superguard ? 'superguard' : w.guard ? 'guard' : null);
+        if (w.type === 'strike') {
+          var strikeQuality = w.quality || 'miss';
+          if (w.mash) strikeQuality = w.presses >= 6 ? 'perfect' : w.presses >= 3 ? 'good' : 'miss';
+          resolvePlayerMove(w.move, strikeQuality, w);
+        } else if (w.type === 'guard') resolveEnemyHit(w.telegraph, w.superguard ? 'superguard' : w.guard ? 'guard' : null);
         else if (w.type === 'unblockable') resolveEnemyHit('unblockable', null);
       }
     }
@@ -4093,7 +4110,7 @@
       if (g.burrowed) text = 'BURROWED · YOUR NEXT HIT IS HALVED';
       else if (g.coils > 0) text = 'ARMORED COILS · ' + g.coils + ' LEFT · PERFECT BREAKS ONE';
       else if (g.threshold) text = 'ECHO ' + g.charge + '/3 · ' + Math.max(0, g.threshold - (g.chargeDamage || 0)) + ' DAMAGE TO BREAK IT';
-      else if (g.obscured) text = 'THE DARK HIDES THE BEAT · USE WARMTH';
+      else if (g.obscured) text = 'THE DARK HIDES THE BEAT · USE CURE';
       else if (g.burrowEvery) text = 'BURROWS EVERY ' + g.burrowEvery + 'RD TURN';
       else text = g.name || '';
     }
@@ -4152,6 +4169,7 @@
       state: 'intro', telegraph: 'standard', extraTurns: opts.advantage === 'player' ? 1 : 0,
       revived: false, mortal: false, mods: cardMods(), window: null, windowTimer: null, raged: false,
       gimmick: bossGimmick(def), windup: 0, lunge: 0, echo: false, stunned: false,
+      soften: 0, burn: null,
       pose: 'idle', poseAt: 0, fit: 14.5
     };
     if (opts.opening) battle.hp = Math.max(1, battle.hp - opts.opening);
@@ -4202,6 +4220,18 @@
 
   function beginPlayerMenu() {
     if (!battle || battle.ended) return;
+    /* Happy HP / SP tops the player up at the start of their turn, never past
+       the cap. */
+    if (battle.mods.regenHp && save.hp < save.maxHp) {
+      var regenHp = Math.min(save.maxHp - save.hp, battle.mods.regenHp);
+      save.hp += regenHp;
+      pop('+' + regenHp + ' HP', 'nice');
+    }
+    if (battle.mods.regenSp && save.sp < save.maxSp) {
+      var regenSp = Math.min(save.maxSp - save.sp, battle.mods.regenSp);
+      save.sp += regenSp;
+      pop('+' + regenSp + ' SP', 'sp');
+    }
     battle.state = 'menu';
     battle.busy = false;
     battle.window = null;
@@ -4250,7 +4280,16 @@
     var now = Date.now();
     if (now < w.openAt || now > w.closeAt) return;
     if (w.type === 'strike') {
+      if (w.charge) return;
       if (w.resolved) return;
+      if (w.mash) {
+        w.presses += 1;
+        ui.timingLabel.textContent = w.presses >= 6 ? 'MAX POWER!' : 'POWER ' + w.presses;
+        ui.timingNote.textContent = w.presses >= 6 ? 'LET IT GO!' : 'MASH! ' + Math.max(0, 6 - w.presses) + ' MORE FOR MAX';
+        timingFlash();
+        sound('click');
+        return;
+      }
       w.resolved = true;
       w.quality = now >= w.perfectAt ? 'perfect' : 'good';
       w.closeAt = now + 90;
@@ -4278,6 +4317,22 @@
     }
   }
 
+  /* Hold-and-release for Power Stab: the release, not the press, decides the
+     timing. A release before the bar is armed is ignored. */
+  function chargeRelease() {
+    if (!battle || battle.ended) return;
+    var w = battle.window;
+    if (!w || !w.charge || w.resolved || !w.armed) return;
+    var now = Date.now();
+    if (now < w.openAt) return;
+    w.resolved = true;
+    w.quality = now >= w.perfectAt ? 'perfect' : 'good';
+    w.closeAt = now + 90;
+    ui.timingLabel.textContent = w.quality === 'perfect' ? 'PIERCE!' : 'RELEASED!';
+    timingFlash();
+    sound('click');
+  }
+
   function beginPlayerMove(move) {
     if (!battle || battle.ended || battle.state !== 'menu') return;
     battle.state = 'strike';
@@ -4285,40 +4340,81 @@
     battle.move = move;
     setBattleButtons(false);
     ui.skills.hidden = true;
+    if (move.cmd === 'chain') { beginChainWindow(move, 0); return; }
     var now = Date.now();
+    var charge = move.cmd === 'charge';
+    /* A charge needs a longer runway than a tap: hold for about a second,
+       then release in the gold band before it overcharges. */
+    var perfectAt = charge ? now + (battle.mods.narrow ? 1205 : 1100) : now + (battle.mods.narrow ? 898 : 820);
+    var closeAt = charge ? now + 1450 : now + 1080;
     battle.window = {
       type: 'strike', move: move, startAt: now, openAt: now + 220,
-      perfectAt: now + (battle.mods.narrow ? 930 : 820), closeAt: now + 1080, quality: null, resolved: false
+      perfectAt: perfectAt, closeAt: closeAt,
+      quality: null, resolved: false, charge: charge, mash: move.cmd === 'mash',
+      presses: 0, armed: false
     };
     battle.pose = 'windup';
     battle.poseAt = now;
     showTiming('strike', move.kind === 'skill' ? move.name + '!' : 'STRIKE!');
+    if (move.cmd === 'charge') {
+      ui.timingNote.textContent = 'HOLD, THEN RELEASE IN THE GOLD ZONE';
+      ui.timingButton.textContent = 'RELEASE';
+    } else if (move.cmd === 'mash') {
+      ui.timingNote.textContent = 'MASH! SIX PRESSES FILL THE CHARGE';
+      ui.timingButton.textContent = 'MASH';
+    }
     if (battle.gimmick && battle.gimmick.obscured) ui.timingLabel.textContent = 'THE DARK IS LISTENING...';
   }
 
-  function resolvePlayerMove(move, quality) {
+  /* Line Bounce opens a fresh short window for each of its four bounces. */
+  function beginChainWindow(move, index) {
     if (!battle || battle.ended) return;
-    hideTiming();
-    var perfectMult = battle.mods.ante ? 2 : 1.5;
-    var multiplier = quality === 'perfect' ? perfectMult : quality === 'good' ? 1 : 0.65;
-    var base = (3 + save.level + battle.mods.attack) * (move.mult || 1) * multiplier;
-    var damage = Math.max(1, Math.round(base));
+    battle.state = 'strike';
+    battle.busy = true;
+    setBattleButtons(false);
+    var now = Date.now();
+    battle.window = {
+      type: 'strike', move: move, chain: index, startAt: now, openAt: now + 140,
+      perfectAt: now + (battle.mods.narrow ? 515 : 470), closeAt: now + 620, quality: null, resolved: false
+    };
+    battle.pose = 'windup';
+    battle.poseAt = now;
+    showTiming('strike', index === 0 ? move.name + '!' : 'BOUNCE ' + (index + 1) + '!');
+    ui.timingNote.textContent = 'PRESS ON EVERY BOUNCE · ' + (4 - index) + ' LEFT';
+  }
+
+  function moveMultiplier(quality) {
+    return quality === 'perfect' ? 1.5 : quality === 'good' ? 1 : 0.65;
+  }
+
+  function moveDamage(move, quality) {
+    var mods = battle.mods;
+    var flat = (quality === 'perfect' || quality === 'good') ? mods.bonus : 0;
+    var soften = battle.soften > 0 ? 1 : 0;
+    var base = (3 + save.level + mods.attack) * (move.mult || 1);
+    return Math.max(1, Math.round(base * moveMultiplier(quality) + flat + soften));
+  }
+
+  /* One damage pipeline for every card, so burrows, coils, echo shields and
+     burn react the same way whichever card touched them. */
+  function hitEnemy(move, quality, opts) {
+    opts = opts || {};
+    var damage = moveDamage(move, quality);
     var g = battle.gimmick;
+    var note = '';
     if (g && g.burrowed) {
-      damage = Math.max(1, Math.round(damage * 0.5));
       g.burrowed = 0;
       battleEnemy.hidden = false;
-      log('IT WAS BURROWED. HALF DAMAGE: ' + damage + '.');
+      if (!opts.reach) damage = Math.max(1, Math.round(damage * 0.5));
+      note = opts.reach ? 'CLEAN HIT THROUGH THE SNOW!' : 'IT WAS BURIED. HALF DAMAGE.';
     }
-    if (g && g.coils > 0) {
+    if (g && g.coils > 0 && !opts.pierce) {
       if (quality === 'perfect') {
         g.coils -= 1;
-        sound('break');
-        shake();
-        log('COIL SHATTERS! ' + g.coils + ' LEFT.');
+        note = 'COIL SHATTERS! ' + g.coils + ' LEFT.';
       } else {
         damage = Math.min(damage, 2);
-        log('ARMORED COILS ABSORB IT. PERFECT HITS BREAK THEM.');
+        note = 'ARMORED COILS ABSORB IT. PERFECT BREAKS THEM.';
       }
     }
     if (g && g.threshold) {
@@ -4326,37 +4422,84 @@
       while (g.chargeDamage >= g.threshold && g.charge > 0) {
         g.chargeDamage -= g.threshold;
         g.charge -= 1;
-        sound('break');
-        log('THE ECHO BREAKS! CHARGE ' + g.charge + '/3.');
+        note = 'THE ECHO BREAKS! CHARGE ' + g.charge + '/3.';
       }
     }
     battle.hp = Math.max(0, battle.hp - damage);
+    return { damage: damage, note: note };
+  }
+
+  function hitFeedback(quality, damage) {
     battle.anim.p = 1;
     battle.pose = 'strike';
     battle.poseAt = Date.now();
     sound('hit');
     shake();
     if (quality === 'perfect') {
-      log('PERFECT! ' + (move.kind === 'skill' ? move.name : 'YOUR HIT') + ' LANDS FOR ' + damage + '!');
       sound('perfect');
       rate('PERFECT!', 'perfect');
       pop(String(damage), 'perfect');
       hitStop(70);
       cameraPunch(0.42);
     } else if (quality === 'good') {
-      log('GOOD! ' + damage + ' DAMAGE.');
       rate('NICE!', 'nice');
       pop(String(damage), 'nice');
       cameraPunch(0.18);
     } else {
-      log('OFF BEAT... ONLY ' + damage + ' DAMAGE.');
       pop(String(damage), 'weak');
     }
     updateBattleUI();
+  }
+
+  function resolvePlayerMove(move, quality, win) {
+    if (!battle || battle.ended) return;
+    hideTiming();
+    if (move.cmd === 'chain') { resolveChain(move, quality, win); return; }
+    if (move.cmd === 'cure') { resolveCure(move, quality); return; }
+
+    var opts = {};
+    var pierceBonus = 0;
+    if (move.cmd === 'charge' && quality === 'perfect') {
+      opts.pierce = true;
+      opts.reach = true;
+      pierceBonus = 2;
+    }
+    if (move.cmd === 'toss') opts.reach = true;
+
+    var total = 0;
+    var note = '';
+    var hits = move.cmd === 'shot' ? 3 : 1;
+    for (var i = 0; i < hits; i++) {
+      var result = hitEnemy(move, quality, opts);
+      total += result.damage;
+      if (result.note) note = result.note;
+    }
+    if (pierceBonus) {
+      battle.hp = Math.max(0, battle.hp - pierceBonus);
+      total += pierceBonus;
+    }
+    if (move.cmd === 'soften' && quality !== 'miss') {
+      battle.soften = 3;
+      note = 'ITS DEFENSE DROPS. -1 DEF FOR 3 TURNS.';
+    }
+    if (move.cmd === 'mash') {
+      battle.burn = { turns: 2, dmg: 1 };
+      note = 'SPLASH AND BURNING FOR 2 TURNS.';
+    }
+
+    hitFeedback(quality, total);
+    var suffix = note ? ' ' + note : '';
+    if (move.cmd === 'shot') log((quality === 'perfect' ? 'PERFECT!' : quality === 'good' ? 'GOOD!' : 'OFF BEAT...') + ' POWER SHOT! THREE PELLETS FOR ' + total + '.' + suffix);
+    else if (move.cmd === 'charge' && quality === 'perfect') log('PERFECT PIERCE! POWER STAB IGNORES ARMOR FOR ' + total + '.' + suffix);
+    else if (quality === 'perfect') log('PERFECT! ' + (move.name || 'YOUR HIT') + ' HITS FOR ' + total + '!' + suffix);
+    else if (quality === 'good') log('GOOD! ' + (move.name || 'YOUR HIT') + ' HITS FOR ' + total + '.' + suffix);
+    else log('OFF BEAT... ' + (move.name || 'YOUR HIT') + ' ONLY HITS FOR ' + total + '.' + suffix);
+    if (move.cmd === 'mash' && quality !== 'miss') rate('BOOM!', 'boss');
+
     if (quality === 'perfect' && move.kind === 'attack') {
       setTimeout(function () {
         if (!battle || battle.ended || battle.hp <= 0) return;
-        var extra = Math.max(1, Math.round(base * 0.5));
+        var extra = Math.max(1, Math.round(total * 0.5));
         battle.hp = Math.max(0, battle.hp - extra);
         battle.anim.p = 1;
         log('PERFECT LOOP! A SECOND HIT FOR ' + extra + '!');
@@ -4372,8 +4515,51 @@
     }, 720);
   }
 
+  function resolveChain(move, quality, win) {
+    var index = win && win.chain ? win.chain : 0;
+    var bounce = { kind: 'skill', name: move.name, mult: 0.4 + index * 0.2 };
+    var result = hitEnemy(bounce, quality, {});
+    battle.anim.p = 1;
+    battle.pose = 'strike';
+    battle.poseAt = Date.now();
+    sound('hit');
+    shake();
+    if (quality === 'perfect') cameraPunch(0.24);
+    pop(String(result.damage), quality === 'perfect' ? 'perfect' : quality === 'good' ? 'nice' : 'weak');
+    log('BOUNCE ' + (index + 1) + '/4 · ' + result.damage + ' DAMAGE.' + (quality === 'perfect' ? ' PERFECT!' : '') + (result.note ? ' ' + result.note : ''));
+    updateBattleUI();
+    if (battle.hp <= 0) { winBattle(); return; }
+    var endChain = quality === 'miss' || index >= 3;
+    setTimeout(function () {
+      if (!battle || battle.ended) return;
+      if (endChain) { flashEnemy(); playerTurnDone(); }
+      else beginChainWindow(move, index + 1);
+    }, endChain ? 560 : 220);
+  }
+
+  function resolveCure(move, quality) {
+    var healed = Math.min(save.maxHp - save.hp, quality === 'perfect' ? 7 : 5);
+    save.hp += healed;
+    battle.pose = 'strike';
+    battle.poseAt = Date.now();
+    battle.anim.p = 0.5;
+    sound('heal');
+    rate(quality === 'perfect' ? 'NICE CURE!' : 'CURE!', 'nice');
+    pop('+' + healed, 'nice');
+    log('CURE RESTORES ' + healed + ' HP.' + (quality === 'perfect' ? ' PERFECT BEAT!' : ''));
+    if (battle.gimmick && battle.gimmick.obscured) {
+      battle.gimmick.obscured = false;
+      updateGimmickUi();
+      log('WARMTH BURNS THE DARK AWAY. THE BEAT IS CLEAR AGAIN.');
+      rate('WARMED UP!', 'nice');
+    }
+    updateBattleUI();
+    setTimeout(function () { if (battle && !battle.ended) playerTurnDone(); }, 650);
+  }
+
   function playerTurnDone() {
     if (!battle || battle.ended) return;
+    if (battle.soften > 0) battle.soften -= 1;
     if (battle.extraTurns > 0) {
       battle.extraTurns -= 1;
       log('FIRST STRIKE! YOU ACT AGAIN.');
@@ -4438,7 +4624,7 @@
       button.className = 'ff-skill-btn';
       button.dataset.skill = skill.id;
       button.disabled = !unlocked || save.sp < cost;
-      button.innerHTML = '<b>' + skill.name + '</b><small>' + (unlocked ? skill.desc + ' · ' + cost + ' SP' : 'UNLOCKS AT LV ' + skill.level) + '</small>';
+      button.innerHTML = '<b>' + skill.name + '</b><small>' + (unlocked ? skill.cat + ' · ' + cost + ' SP' : 'UNLOCKS AT LV ' + skill.level) + '</small><em>' + (unlocked ? skill.desc : '') + '</em>';
       ui.skills.appendChild(button);
     });
     var back = document.createElement('button');
@@ -4449,7 +4635,7 @@
     ui.skills.appendChild(back);
     ui.skills.hidden = false;
     ui.actions.hidden = true;
-    ui.battleHint.textContent = 'CHOOSE A SKILL';
+    ui.battleHint.textContent = 'CHOOSE AN ACTION CARD';
   }
 
   function castSkill(skill) {
@@ -4458,24 +4644,7 @@
     if (save.level < skill.level || save.sp < cost) return;
     save.sp -= cost;
     hideSkills();
-    if (skill.heal) {
-      battle.busy = true;
-      setBattleButtons(false);
-      var healed = Math.min(save.maxHp - save.hp, 10 + save.level * 2);
-      save.hp += healed;
-      battle.anim.p = 0.5;
-      sound('heal');
-      log('WARMTH RESTORES ' + healed + ' HP.');
-      if (battle.gimmick && battle.gimmick.obscured) {
-        battle.gimmick.obscured = false;
-        log('WARMTH BURNS THE DARK AWAY. THE BEAT IS CLEAR AGAIN.');
-        rate('WARMED UP!', 'nice');
-      }
-      updateBattleUI();
-      setTimeout(function () { if (battle && !battle.ended) playerTurnDone(); }, 650);
-      return;
-    }
-    beginPlayerMove({ kind: 'skill', name: skill.name, mult: skill.mult });
+    beginPlayerMove({ kind: 'skill', name: skill.name, mult: skill.mult, cmd: skill.cmd, hits: skill.hits });
   }
 
   function showTelegraph(type) {
@@ -4505,6 +4674,15 @@
     if (!battle || battle.ended) return;
     var g = battle.gimmick;
     battle.turn += 1;
+    /* Dynamite's burn ticks before the enemy moves, for its two turns. */
+    if (battle.burn && battle.burn.turns > 0) {
+      battle.burn.turns -= 1;
+      battle.hp = Math.max(0, battle.hp - battle.burn.dmg);
+      log('BURN! THE BLAST SCORCHES IT FOR ' + battle.burn.dmg + '.');
+      pop(String(battle.burn.dmg), 'hurt');
+      updateBattleUI();
+      if (battle.hp <= 0) { winBattle(); return; }
+    }
     battle.busy = true;
     setBattleButtons(false);
     ui.skills.hidden = true;
@@ -4589,7 +4767,7 @@
     var extra = battle.mods.guardMs;
     battle.window = {
       type: 'guard', telegraph: type, startAt: now, openAt: now,
-      perfectAt: now + 520 + extra, closeAt: now + 720 + extra,
+      perfectAt: now + 520 + extra + (battle.mods.hard ? 110 : 0), closeAt: now + 720 + extra,
       allowSuper: type !== 'heavy', guard: false, superguard: false, quality: null
     };
     showTiming('guard', type === 'heavy' ? 'GUARD!' : 'GUARD!');
@@ -4633,6 +4811,7 @@
     if (type === 'heavy') raw += 1;
     if (type === 'unblockable') raw *= 1.35;
     if (battle.echo) { raw *= 1.9; battle.echo = false; }
+    if (battle.mods.hard) raw *= 2;
     raw += battle.mods.incoming || 0;
     var damage = Math.max(1, Math.round(raw));
     if (quality === 'superguard') damage = 0;
@@ -4668,10 +4847,15 @@
     else log(battle.def.name + ' HITS YOU FOR ' + damage + '!');
     applyDamage(damage);
     if (quality === 'superguard') {
-      var counter = 2 + Math.floor(save.level / 2);
+      var counter = battle.mods.thorns ? 2 : 2 + Math.floor(save.level / 2);
       battle.hp = Math.max(0, battle.hp - counter);
       log('SUPERGUARD! ZERO DAMAGE AND A ' + counter + ' COUNTER!');
       pop('COUNTER ' + counter, 'counter');
+      setTimeout(function () { if (battle) flashEnemy(); updateBattleUI(); }, 180);
+    } else if (quality === 'guard' && battle.mods.thorns) {
+      battle.hp = Math.max(0, battle.hp - 1);
+      log('THORNS! THE GUARD BITES BACK FOR 1.');
+      pop('THORNS 1', 'counter');
       setTimeout(function () { if (battle) flashEnemy(); updateBattleUI(); }, 180);
     }
     updateBattleUI();
@@ -4713,7 +4897,7 @@
     log('VICTORY!');
     sound('win');
     clearBattleFeedback();
-    grantXp(battle.def.xp);
+    grantXp(Math.round(battle.def.xp * (battle.mods.hard ? 1.5 : 1)));
     persist();
     updateHud();
     setTimeout(function () {
@@ -4900,6 +5084,10 @@
   }
 
   function onKeyUp(event) {
+    if (battle && battle.window && battle.window.charge &&
+      (event.code === 'KeyE' || event.code === 'Space' || event.code === 'Enter')) {
+      chargeRelease();
+    }
     keys[event.code] = false;
   }
 
@@ -4995,6 +5183,9 @@
     ui.action.addEventListener('click', interact);
     ui.timing.addEventListener('click', timingPress);
     ui.timingButton.addEventListener('click', function (event) { event.stopPropagation(); timingPress(); });
+    ui.timing.addEventListener('pointerup', function () {
+      if (battle && battle.window && battle.window.charge) chargeRelease();
+    });
     ui.cards.addEventListener('click', function (event) {
       var button = event.target.closest('button[data-card]');
       if (button) toggleCard(button.dataset.card);
@@ -5108,7 +5299,13 @@
         return {
           state: battle.state, hp: battle.hp, displayHp: battle.displayHp, hpSave: save.hp,
           mortal: battle.mortal, revived: battle.revived, extraTurns: battle.extraTurns,
-          window: battle.window ? { type: battle.window.type, guard: battle.window.guard, superguard: battle.window.superguard } : null,
+          soften: battle.soften, burn: battle.burn ? battle.burn.turns : 0, mods: battle.mods,
+          window: battle.window ? {
+            type: battle.window.type, guard: battle.window.guard, superguard: battle.window.superguard,
+            charge: !!battle.window.charge, mash: !!battle.window.mash, armed: !!battle.window.armed,
+            quality: battle.window.quality, presses: battle.window.presses || 0,
+            startAt: battle.window.startAt, perfectAt: battle.window.perfectAt, closeAt: battle.window.closeAt
+          } : null,
           telegraph: battle.telegraph,
           gimmick: battle.gimmick ? {
             coils: battle.gimmick.coils, charge: battle.gimmick.charge, turns: battle.gimmick.turns,
@@ -5121,6 +5318,23 @@
         if (battle && battle.window) battle.window.closeAt = Date.now() + (ms || 5000);
       },
       cards: function () { return { equipped: save.cards.slice(), mods: cardMods(), spent: cardCost(), bp: save.bp }; },
+      move: function (id) {
+        var skill = null;
+        for (var i = 0; i < SKILLS.length; i++) if (SKILLS[i].id === id) skill = SKILLS[i];
+        if (skill) castSkill(skill);
+        return !!skill;
+      },
+      setSp: function (n) { if (save) { save.sp = clamp(n, 0, save.maxSp); updateBattleUI(); } },
+      release: function () { chargeRelease(); },
+      equip: function (ids) {
+        if (!save) return false;
+        save.cards = (ids || []).slice(0, 8);
+        save.hp = Math.min(save.hp, save.maxHp);
+        persist();
+        renderCards();
+        updateHud();
+        return true;
+      },
       drawCalls: function () { return renderer && renderer.stats ? renderer.stats() : null; },
       models: function () {
         var placed = 0, drawn = 0;
