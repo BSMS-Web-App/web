@@ -209,6 +209,24 @@
   }
 
   function updateActor(actor) {
+    if (actor.spriteObj) {
+      /* A sprite is a billboard: place its feet, squash it, and swap the UV
+         window when the animation frame changes. */
+      var sprite = actor.spriteObj;
+      sprite.pos[0] = actor.x;
+      sprite.pos[1] = actor.y;
+      sprite.pos[2] = actor.z;
+      sprite.size[0] = SPRITE_W * actor.scale * (actor.squashX === undefined ? 1 : actor.squashX);
+      sprite.size[1] = SPRITE_H * actor.scale * (actor.squashY === undefined ? 1 : actor.squashY);
+      sprite.flip = (actor.facing || 1) < 0;
+      sprite.hidden = !!actor.hidden;
+      sprite.alpha = actor.alpha === undefined ? 1 : actor.alpha;
+      if (actor.windowIndex !== actor.frame) {
+        actor.windowIndex = actor.frame;
+        sprite.sprite.uv = spriteWindow(actor.atlas, actor.frame);
+      }
+      return;
+    }
     var squashY = actor.scale * (actor.squashY === undefined ? 1 : actor.squashY);
     var squashXZ = actor.scale * (actor.squashX === undefined ? 1 : actor.squashX);
     var root = mat.mul(
@@ -231,6 +249,7 @@
   }
 
   function pushActor(list, actor) {
+    if (actor.spriteObj) list.push(actor.spriteObj);
     for (var i = 0; i < actor.parts.length; i++) list.push(actor.parts[i].obj);
   }
 
@@ -242,125 +261,380 @@
     return actor;
   }
 
-  /* Proportions lifted from the 16-bit sprite sheet: the head is almost half
-     the character, the arms and legs are short and thick, the gloves and boots
-     are oversized, and the cap brim juts forward so the silhouette still reads
-     from the overworld camera. Every limb hangs off a shoulder or hip pivot, so
-     the stepped poses snap between frames like hand-drawn sprites. */
+  /* ------------------------------------------------------------ 2D sprites */
+  /* The cast is hand-drawn like the reference sheet: a big-headed cartoon kid
+     seen from the side, flat colours and a fat outline. Every pose is baked
+     once into a per-palette atlas, and each character in the world is a
+     camera-facing billboard slice of it — no polygonal bodies at all. */
+  var SPRITE_CELL = 128;
+  var SPRITE_COLS = 8;
+  var SPRITE_ROWS = 4;
+  var SPRITE_H = 2.62;
+  var SPRITE_W = 2.62;
+  var SPRITE_FRAMES = {
+    idle: [0, 1], blink: 2, talk: [3, 4], cheer: 5, ready: 6,
+    walk: [8, 9, 10, 11], run: [12, 13, 14, 15],
+    windup: 16, strike: 17, follow: 18, hurt: 19, guard: 20, cast: 21,
+    victory: [22, 23]
+  };
+
+  function shadeHex(hex, k) {
+    var r = Math.min(255, Math.round(((hex >> 16) & 255) * k));
+    var g = Math.min(255, Math.round(((hex >> 8) & 255) * k));
+    var b = Math.min(255, Math.round((hex & 255) * k));
+    return (r << 16) | (g << 8) | b;
+  }
+
+  function cssHex(hex, alpha) {
+    var r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
+    return alpha === undefined ? 'rgb(' + r + ',' + g + ',' + b + ')' : 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
+  /* Held poses, four to a cycle: legs and arms swing in the sagittal plane so
+     the silhouette reads as a side-view sprite even though the world is 3D. */
+  var SPRITE_POSES = (function () {
+    function pose(frontLeg, backLeg, frontArm, backArm, extra) {
+      extra = extra || {};
+      return {
+        legs: [frontLeg, backLeg], arms: [frontArm, backArm],
+        lean: extra.lean || 0, head: extra.head || 0, bob: extra.bob || 0,
+        armOut: extra.armOut || 0.085, eyes: extra.eyes || 'open', mouth: extra.mouth || 0
+      };
+    }
+    var list = [];
+    /* row 0 — idle, blink, talking, cheer */
+    list[0] = pose(0.05, -0.05, 0.06, -0.05, {});
+    list[1] = pose(0.04, -0.04, 0.02, -0.02, { bob: 0.008 });
+    list[2] = pose(0.05, -0.05, 0.06, -0.05, { eyes: 'shut' });
+    list[3] = pose(0.07, -0.06, 0.12, -0.1, { bob: -0.004, mouth: 2 });
+    list[4] = pose(0.05, -0.05, 0.05, -0.04, { bob: 0.004, mouth: 1 });
+    list[5] = pose(0.12, -0.16, -2.25, -0.5, { bob: -0.02, mouth: 2, armOut: 0.13 });
+    list[6] = pose(0.18, -0.18, 0.42, -0.42, { bob: -0.012, head: -0.04 });
+    list[7] = pose(0.05, -0.05, 0.06, -0.05, {});
+    /* row 1 — four-step walk, then the same beat opened into a run */
+    list[8] = pose(0.58, -0.52, -0.5, 0.55, {});
+    list[9] = pose(0.18, -0.14, -0.14, 0.2, { bob: 0.016 });
+    list[10] = pose(-0.52, 0.58, 0.55, -0.5, {});
+    list[11] = pose(-0.14, 0.18, 0.2, -0.14, { bob: 0.016 });
+    list[12] = pose(0.98, -0.88, -0.95, 0.9, { lean: 0.1 });
+    list[13] = pose(0.32, -0.22, -0.35, 0.4, { lean: 0.13, bob: 0.04 });
+    list[14] = pose(-0.88, 0.98, 0.9, -0.95, { lean: 0.1 });
+    list[15] = pose(-0.22, 0.32, 0.4, -0.35, { lean: 0.13, bob: 0.04 });
+    /* row 2 — cock back, whip through, hurt, guard, cast, victory */
+    list[16] = pose(0.18, -0.12, -1.5, 1.15, { lean: -0.14, head: 0.05 });
+    list[17] = pose(0.4, -0.34, 2.0, -1.0, { lean: 0.24, bob: -0.01, mouth: 2 });
+    list[18] = pose(0.32, -0.26, 1.35, -0.55, { lean: 0.14 });
+    list[19] = pose(-0.3, 0.34, -1.7, -1.45, { lean: -0.24, head: -0.2, eyes: 'hurt', mouth: 2, bob: -0.02 });
+    list[20] = pose(0.14, -0.14, 1.0, 0.85, { eyes: 'shut', head: 0.05 });
+    list[21] = pose(0.12, -0.12, -2.25, 0.35, { lean: -0.05, mouth: 1, armOut: 0.11 });
+    list[22] = pose(0.14, -0.2, -2.25, -0.55, { bob: -0.03, mouth: 2, head: -0.05, armOut: 0.13 });
+    list[23] = pose(0.22, -0.12, -1.95, -0.4, { bob: 0.01, mouth: 2, head: 0.03, armOut: 0.13 });
+    for (var i = 24; i < SPRITE_COLS * SPRITE_ROWS; i++) list[i] = list[0];
+    return list;
+  })();
+
+  /* One frame, drawn in a 0..1 box with the boots standing on 0.94. */
+  function drawSpriteFrame(ctx, ox, oy, unit, pose, pal) {
+    var INK = '#2c1a16';
+    var skin = pal.skin, hair = pal.hair, coat = pal.coat, pants = pal.pants, shoe = pal.shoe;
+    var glove = pal.glove === undefined ? 0xfff4e6 : pal.glove;
+    var button = pal.button === undefined ? 0xffd257 : pal.button;
+    var trim = pal.trim === undefined ? pal.scarf : pal.trim;
+    var cap = pal.cap;
+    var hat = pal.hat || 'beanie';
+    var cx = 0.47;
+
+    function solid(color, width) {
+      ctx.fillStyle = cssHex(color);
+      ctx.fill();
+      if (width !== 0) {
+        ctx.lineWidth = width || 0.011;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
+      }
+    }
+    function tint(color, alpha) {
+      ctx.fillStyle = cssHex(color, alpha);
+      ctx.fill();
+    }
+    function rrect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+    function disc(x, y, r) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+    function line(x0, y0, x1, y1, width, color) {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.lineWidth = width;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(unit, unit);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    tint(0x201410, 0.16);
+    ctx.beginPath();
+    ctx.ellipse(cx + 0.03, 0.935, 0.19, 0.03, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.translate(cx, 0.94);
+    ctx.rotate(pose.lean);
+    ctx.translate(-cx, -0.94 - pose.bob);
+
+    var HIP = 0.655;
+    var SHOULDER = 0.545;
+
+    function drawLeg(offset, angle, dark) {
+      ctx.save();
+      ctx.translate(cx + offset, HIP);
+      ctx.rotate(angle);
+      rrect(-0.055, -0.02, 0.11, 0.2, 0.05);
+      solid(dark ? shadeHex(pants, 0.7) : pants);
+      rrect(-0.07, 0.16, 0.18, 0.105, 0.05);
+      solid(dark ? shadeHex(shoe, 0.68) : shoe);
+      rrect(-0.065, 0.242, 0.19, 0.032, 0.016);
+      solid(shadeHex(shoe, 0.55), 0);
+      ctx.restore();
+    }
+
+    function drawArm(offset, angle, sleeve, mitten) {
+      ctx.save();
+      ctx.translate(cx + offset, SHOULDER);
+      ctx.rotate(angle);
+      rrect(-0.045, -0.02, 0.09, 0.17, 0.04);
+      solid(sleeve);
+      disc(0, 0.175, 0.056);
+      solid(mitten);
+      disc(-0.045, 0.152, 0.028);
+      solid(mitten, 0.008);
+      ctx.restore();
+    }
+
+    /* far arm and far leg first, then the body, then the near side */
+    drawArm(-0.055, pose.arms[1], shadeHex(coat, 0.76), shadeHex(glove, 0.8));
+    drawLeg(-0.055, pose.legs[1], true);
+    drawLeg(0.055, pose.legs[0], false);
+
+    /* shirt, overalls, and the bib with its gold button */
+    rrect(cx - 0.115, 0.44, 0.235, 0.2, 0.07);
+    solid(coat);
+    rrect(cx - 0.122, 0.56, 0.245, 0.12, 0.05);
+    solid(pants);
+    ctx.beginPath();
+    ctx.moveTo(cx + 0.02, 0.585);
+    ctx.lineTo(cx + 0.112, 0.535);
+    ctx.lineTo(cx + 0.112, 0.6);
+    ctx.lineTo(cx + 0.02, 0.625);
+    ctx.closePath();
+    solid(pants);
+    rrect(cx + 0.026, 0.462, 0.036, 0.115, 0.017);
+    solid(shadeHex(pants, 1.08), 0.008);
+    disc(cx + 0.078, 0.565, 0.023);
+    solid(button, 0.008);
+
+    /* the white frostfest collar and its tail */
+    rrect(cx - 0.075, 0.432, 0.235, 0.056, 0.028);
+    solid(trim);
+    ctx.beginPath();
+    ctx.moveTo(cx - 0.055, 0.46);
+    ctx.quadraticCurveTo(cx - 0.175, 0.472, cx - 0.16, 0.54);
+    ctx.quadraticCurveTo(cx - 0.1, 0.505, cx - 0.045, 0.496);
+    ctx.closePath();
+    solid(shadeHex(trim, 0.94));
+
+    /* head: hair behind, ear, big face, fat shaded nose */
+    ctx.save();
+    ctx.translate(cx, 0.47);
+    ctx.rotate(pose.head);
+    ctx.translate(-cx, -0.47);
+    disc(cx - 0.09, 0.32, 0.1);
+    solid(hair);
+    disc(cx - 0.145, 0.305, 0.048);
+    solid(shadeHex(skin, 0.92));
+    disc(cx, 0.27, 0.205);
+    solid(skin);
+    disc(cx + 0.18, 0.305, 0.062);
+    solid(skin);
+    disc(cx + 0.165, 0.285, 0.018);
+    solid(0xfff3e2, 0);
+    disc(cx + 0.125, 0.352, 0.036);
+    tint(0xf08a76, 0.45);
+
+    if (pose.eyes === 'shut') {
+      line(cx + 0.075, 0.25, cx + 0.135, 0.25, 0.016, INK);
+    } else if (pose.eyes === 'hurt') {
+      line(cx + 0.07, 0.225, cx + 0.135, 0.275, 0.016, INK);
+      line(cx + 0.135, 0.225, cx + 0.07, 0.275, 0.016, INK);
+    } else {
+      ctx.beginPath();
+      ctx.ellipse(cx + 0.09, 0.25, 0.052, 0.066, 0, 0, Math.PI * 2);
+      solid(0xfffdf6, 0.01);
+      ctx.beginPath();
+      ctx.ellipse(cx + 0.108, 0.258, 0.024, 0.036, 0, 0, Math.PI * 2);
+      solid(0x24203a, 0);
+      disc(cx + 0.098, 0.242, 0.012);
+      solid(0xffffff, 0);
+    }
+    line(cx + 0.038, 0.176, cx + 0.142, 0.166, 0.02, cssHex(hair));
+
+    if (pose.mouth === 2) {
+      ctx.beginPath();
+      ctx.ellipse(cx + 0.135, 0.368, 0.03, 0.024, 0, 0, Math.PI * 2);
+      solid(0x5a2226, 0.008);
+    } else if (pose.mouth === 1) {
+      ctx.beginPath();
+      ctx.ellipse(cx + 0.13, 0.362, 0.019, 0.016, 0, 0, Math.PI * 2);
+      solid(0x5a2226, 0.007);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(cx + 0.08, 0.352);
+      ctx.quadraticCurveTo(cx + 0.13, 0.4, cx + 0.178, 0.348);
+      ctx.lineWidth = 0.016;
+      ctx.strokeStyle = '#4a2220';
+      ctx.stroke();
+    }
+
+    /* hats: the brimmed cap is the hero's, the rest dress the townsfolk */
+    if (hat === 'cap') {
+      ctx.beginPath();
+      ctx.ellipse(cx, 0.205, 0.222, 0.15, 0, Math.PI, Math.PI * 2);
+      ctx.lineTo(cx + 0.222, 0.218);
+      ctx.lineTo(cx - 0.222, 0.218);
+      ctx.closePath();
+      solid(cap);
+      rrect(cx - 0.222, 0.19, 0.444, 0.05, 0.02);
+      solid(shadeHex(cap, 0.82));
+      ctx.beginPath();
+      ctx.moveTo(cx + 0.09, 0.198);
+      ctx.quadraticCurveTo(cx + 0.26, 0.182, cx + 0.325, 0.222);
+      ctx.quadraticCurveTo(cx + 0.27, 0.268, cx + 0.12, 0.25);
+      ctx.closePath();
+      solid(shadeHex(cap, 1.04));
+      disc(cx + 0.04, 0.148, 0.045);
+      solid(trim, 0.009);
+      ctx.save();
+      ctx.strokeStyle = cssHex(shadeHex(cap, 0.9));
+      ctx.lineWidth = 0.011;
+      for (var k = 0; k < 3; k++) {
+        var a = k * Math.PI / 3;
+        ctx.beginPath();
+        ctx.moveTo(cx + 0.04 - Math.cos(a) * 0.024, 0.148 - Math.sin(a) * 0.024);
+        ctx.lineTo(cx + 0.04 + Math.cos(a) * 0.024, 0.148 + Math.sin(a) * 0.024);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (hat === 'tophat') {
+      rrect(cx - 0.17, 0, 0.34, 0.2, 0.02);
+      solid(cap);
+      ctx.beginPath();
+      ctx.ellipse(cx, 0.202, 0.27, 0.045, 0, 0, Math.PI * 2);
+      solid(cap);
+      rrect(cx - 0.172, 0.158, 0.344, 0.045, 0.012);
+      solid(trim);
+    } else if (hat === 'bun') {
+      disc(cx - 0.21, 0.185, 0.085);
+      solid(hair);
+      rrect(cx - 0.22, 0.213, 0.44, 0.05, 0.02);
+      solid(cap);
+    } else if (hat === 'crown') {
+      rrect(cx - 0.21, 0.13, 0.42, 0.075, 0.02);
+      solid(cap);
+      for (var p = 0; p < 3; p++) {
+        ctx.beginPath();
+        ctx.moveTo(cx - 0.16 + p * 0.14, 0.135);
+        ctx.lineTo(cx - 0.12 + p * 0.14, 0.02);
+        ctx.lineTo(cx - 0.08 + p * 0.14, 0.135);
+        ctx.closePath();
+        solid(0xffd257);
+      }
+    } else {
+      ctx.beginPath();
+      ctx.ellipse(cx, 0.21, 0.235, 0.18, 0, Math.PI, Math.PI * 2);
+      ctx.lineTo(cx + 0.235, 0.245);
+      ctx.lineTo(cx - 0.235, 0.245);
+      ctx.closePath();
+      solid(cap);
+      rrect(cx - 0.235, 0.225, 0.47, 0.058, 0.022);
+      solid(trim);
+      disc(cx + 0.01, 0.052, 0.062);
+      solid(trim);
+    }
+    if (pal.goggles) {
+      rrect(cx - 0.2, 0.145, 0.4, 0.05, 0.022);
+      solid(shadeHex(cap, 0.7));
+      disc(cx + 0.06, 0.17, 0.052);
+      solid(pal.goggles);
+      disc(cx + 0.06, 0.17, 0.03);
+      solid(0xdfefff, 0.008);
+    }
+    ctx.restore();
+
+    /* near arm last so raised hands read in front of the face */
+    drawArm(pose.armOut, pose.arms[0], shadeHex(coat, 0.94), glove);
+    ctx.restore();
+  }
+
+  var spriteAtlases = {};
+  function spriteAtlas(pal) {
+    var key = [pal.coat, pal.pants, pal.scarf, pal.cap, pal.skin, pal.hair, pal.shoe, pal.hat, pal.glove, pal.button, pal.trim, pal.goggles].join('|');
+    if (spriteAtlases[key]) return spriteAtlases[key];
+    var canvas = document.createElement('canvas');
+    canvas.width = SPRITE_CELL * SPRITE_COLS;
+    canvas.height = SPRITE_CELL * SPRITE_ROWS;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    for (var i = 0; i < SPRITE_COLS * SPRITE_ROWS; i++) {
+      drawSpriteFrame(ctx, (i % SPRITE_COLS) * SPRITE_CELL, Math.floor(i / SPRITE_COLS) * SPRITE_CELL, SPRITE_CELL, SPRITE_POSES[i], pal);
+    }
+    spriteAtlases[key] = { canvas: canvas };
+    return spriteAtlases[key];
+  }
+
+  function spriteWindow(atlas, index) {
+    var col = index % SPRITE_COLS;
+    var row = Math.floor(index / SPRITE_COLS);
+    return [
+      col / SPRITE_COLS,
+      1 - (row + 1) / SPRITE_ROWS,
+      (col + 1) / SPRITE_COLS,
+      1 - row / SPRITE_ROWS
+    ];
+  }
+
   function buildHero(palette) {
     var pal = palette || heroPalette();
     var actor = makeActor('player');
     actor.flip = 0;
-    var hat = pal.hat || 'beanie';
-    var trim = pal.trim === undefined ? pal.scarf : pal.trim;
-    var glove = pal.glove === undefined ? 0xfff4e6 : pal.glove;
-    var button = pal.button === undefined ? 0xffd257 : pal.button;
-    var skin = pal.skin;
-    /* hat parts hang off the neck pivot too, so a head tilt carries them */
-    var neck = 1.66;
-
-    /* stubby legs and big boots, both swinging from the same hip */
-    actor.legL = addPart(actor, pal.pants, [-0.29, 0.92, 0], [0, -0.30, 0], [0.44, 0.62, 0.46]);
-    actor.legR = addPart(actor, pal.pants, [0.29, 0.92, 0], [0, -0.30, 0], [0.44, 0.62, 0.46]);
-    actor.shoeL = addPart(actor, pal.shoe, [-0.29, 0.92, 0], [0, -0.78, 0.12], [0.54, 0.30, 0.74]);
-    actor.shoeR = addPart(actor, pal.shoe, [0.29, 0.92, 0], [0, -0.78, 0.12], [0.54, 0.30, 0.74]);
-
-    /* red shirt, blue overalls over it, gold buttons on the bib */
-    addPart(actor, pal.coat, [0, 1.30, 0], [0, 0, 0], [1.00, 0.86, 0.62]);
-    addPart(actor, pal.pants, [0, 1.04, 0], [0, 0, 0], [1.04, 0.48, 0.66]);
-    addPart(actor, pal.pants, [0, 1.32, 0.28], [0, 0, 0], [0.80, 0.52, 0.12]);
-    addPart(actor, pal.pants, [0, 1.52, 0.27], [-0.28, 0, 0], [0.15, 0.42, 0.12], { rz: 0.14 });
-    addPart(actor, pal.pants, [0, 1.52, 0.27], [0.28, 0, 0], [0.15, 0.42, 0.12], { rz: -0.14 });
-    addPart(actor, button, [0, 1.44, 0.34], [-0.27, 0, 0], [0.15, 0.15, 0.08]);
-    addPart(actor, button, [0, 1.44, 0.34], [0.27, 0, 0], [0.15, 0.15, 0.08]);
-
-    /* fluffy collar with two short tails, so he still reads as the Frostfest kid */
-    addPart(actor, trim, [0, 0, 0], [0, 1.64, 0], [0.80, 0.22, 0.70]);
-    addPart(actor, trim, [0, 1.64, -0.30], [-0.24, 0, 0], [0.20, 0.44, 0.12], { rz: 0.16 });
-    addPart(actor, trim, [0, 1.64, -0.30], [0.24, 0, 0], [0.20, 0.34, 0.12], { rz: -0.20 });
-
-    /* short arms with oversized mitten gloves at the end */
-    actor.armL = addPart(actor, pal.coat, [-0.60, 1.64, 0], [0, -0.26, 0.02], [0.34, 0.56, 0.38]);
-    actor.armR = addPart(actor, pal.coat, [0.60, 1.64, 0], [0, -0.26, 0.02], [0.34, 0.56, 0.38]);
-    actor.gloveL = addPart(actor, glove, [-0.60, 1.64, 0], [0, -0.60, 0.04], [0.40, 0.36, 0.44]);
-    actor.gloveR = addPart(actor, glove, [0.60, 1.64, 0], [0, -0.60, 0.04], [0.40, 0.36, 0.44]);
-
-    /* one big round head: ears, a fat nose, wide eyes and a smile. Everything
-       from here on shares the neck pivot, so a head tilt carries the whole
-       face and hat instead of leaving the eyes behind. */
-    /* a shaded skin tone keeps the nose and ears from vanishing into the face */
-    function shaded(k) {
-      var r = Math.min(255, Math.round(((skin >> 16) & 255) * k));
-      var g = Math.min(255, Math.round(((skin >> 8) & 255) * k));
-      var b = Math.min(255, Math.round((skin & 255) * k));
-      return (r << 16) | (g << 8) | b;
-    }
-    actor.eyeH = 0.34;
-    var headStart = actor.parts.length;
-    actor.head = addPart(actor, skin, [0, neck, 0], [0, 0.52, 0], [1.06, 1.00, 0.98]);
-    addPart(actor, skin, [0, neck, 0], [-0.56, 0.46, 0], [0.18, 0.34, 0.34]);
-    addPart(actor, skin, [0, neck, 0], [0.56, 0.46, 0], [0.18, 0.34, 0.34]);
-    addPart(actor, shaded(0.84), [0, neck, 0], [0, 0.28, 0.54], [0.42, 0.34, 0.34]);
-    addPart(actor, shaded(0.97), [0, neck, 0], [-0.10, 0.37, 0.66], [0.15, 0.15, 0.06]);
-    addPart(actor, 0xf08a76, [0, neck, 0], [-0.40, 0.18, 0.44], [0.18, 0.14, 0.06]);
-    addPart(actor, 0xf08a76, [0, neck, 0], [0.40, 0.18, 0.44], [0.18, 0.14, 0.06]);
-    actor.eyeL = addPart(actor, 0xfffdf6, [0, neck, 0], [-0.24, 0.58, 0.46], [0.32, actor.eyeH, 0.06]);
-    actor.eyeR = addPart(actor, 0xfffdf6, [0, neck, 0], [0.24, 0.58, 0.46], [0.32, actor.eyeH, 0.06]);
-    addPart(actor, 0x24203a, [0, neck, 0], [-0.22, 0.56, 0.50], [0.15, 0.22, 0.05]);
-    addPart(actor, 0x24203a, [0, neck, 0], [0.22, 0.56, 0.50], [0.15, 0.22, 0.05]);
-    addPart(actor, 0xffffff, [0, neck, 0], [-0.26, 0.64, 0.52], [0.07, 0.08, 0.03]);
-    addPart(actor, 0xffffff, [0, neck, 0], [0.18, 0.64, 0.52], [0.07, 0.08, 0.03]);
-    addPart(actor, pal.hair, [0, neck, 0], [-0.26, 0.78, 0.47], [0.28, 0.09, 0.06], { rz: -0.08 });
-    addPart(actor, pal.hair, [0, neck, 0], [0.26, 0.78, 0.47], [0.28, 0.09, 0.06], { rz: 0.08 });
-    addPart(actor, 0x3a1f22, [0, neck, 0], [-0.14, 0.09, 0.52], [0.21, 0.09, 0.04], { rz: -0.30 });
-    addPart(actor, 0x3a1f22, [0, neck, 0], [0.14, 0.09, 0.52], [0.21, 0.09, 0.04], { rz: 0.30 });
-    addPart(actor, pal.hair, [0, neck, 0], [-0.50, 0.40, 0.22], [0.10, 0.30, 0.20]);
-    addPart(actor, pal.hair, [0, neck, 0], [0.50, 0.40, 0.22], [0.10, 0.30, 0.20]);
-    addPart(actor, pal.hair, [0, neck, 0], [0, 0.46, -0.48], [0.94, 0.42, 0.16]);
-
-    if (hat === 'pom') {
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.01, -0.02], [1.14, 0.34, 1.08], { geo: 'cylinder' });
-      addPart(actor, pal.cap, [0, neck, 0], [0, 0.85, -0.02], [1.18, 0.18, 1.12]);
-      addPart(actor, 0xfff3d5, [0, neck, 0], [0, 1.34, -0.06], [0.30, 0.30, 0.30]);
-    } else if (hat === 'tophat') {
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.16, -0.02], [0.80, 0.62, 0.76], { geo: 'cylinder' });
-      addPart(actor, pal.cap, [0, neck, 0], [0, 0.92, -0.02], [1.20, 0.14, 1.14]);
-      addPart(actor, pal.scarf, [0, neck, 0], [0, 0.99, -0.02], [0.82, 0.12, 0.78], { geo: 'cylinder' });
-    } else if (hat === 'cap') {
-      /* dome hugging the skull, a banded rim, a short brim, and an emblem on
-         top where the overhead camera can actually see it */
-      addPart(actor, pal.cap, [0, neck, 0], [0, 0.92, -0.04], [1.06, 0.14, 1.02]);
-      /* back panel: the cap wraps the skull instead of perching on top of it */
-      addPart(actor, pal.cap, [0, neck, 0], [0, 0.82, -0.44], [0.98, 0.38, 0.24]);
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.00, -0.04], [0.98, 0.20, 0.94], { geo: 'cylinder' });
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.13, -0.04], [0.82, 0.16, 0.78], { geo: 'cylinder' });
-      addPart(actor, pal.cap, [0, neck, 0], [0, 0.94, 0.52], [0.72, 0.12, 0.38]);
-      addPart(actor, trim, [0, neck, 0], [0, 1.22, -0.04], [0.24, 0.24, 0.24], { geo: 'disc' });
-    } else if (hat === 'bun') {
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.02, -0.06], [1.12, 0.28, 1.04], { geo: 'cylinder' });
-      addPart(actor, pal.hair, [0, neck, 0], [0, 0.84, -0.54], [0.48, 0.48, 0.40]);
-    } else if (hat === 'crown') {
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.02, 0], [1.04, 0.18, 0.98], { geo: 'cylinder' });
-      addPart(actor, pal.cap, [0, neck, 0], [-0.30, 1.24, 0], [0.16, 0.44, 0.16], { geo: 'cone4' });
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.32, 0], [0.18, 0.56, 0.18], { geo: 'cone4' });
-      addPart(actor, pal.cap, [0, neck, 0], [0.30, 1.24, 0], [0.16, 0.44, 0.16], { geo: 'cone4' });
-    } else {
-      addPart(actor, pal.cap, [0, neck, 0], [0, 1.00, -0.02], [1.14, 0.32, 1.08], { geo: 'cylinder' });
-      addPart(actor, pal.cap, [0, neck, 0], [0, 0.84, -0.02], [1.18, 0.20, 1.12]);
-    }
-    if (pal.goggles) {
-      addPart(actor, pal.goggles, [0, neck, 0], [0, 0.94, 0.46], [0.94, 0.16, 0.14]);
-      addPart(actor, pal.goggles, [0, neck, 0], [-0.23, 0.94, 0.52], [0.28, 0.28, 0.10]);
-      addPart(actor, pal.goggles, [0, neck, 0], [0.23, 0.94, 0.52], [0.28, 0.28, 0.10]);
-    }
-    actor.headParts = actor.parts.slice(headStart);
+    actor.facing = 1;
+    actor.frame = 0;
+    actor.atlas = spriteAtlas(pal);
+    if (!actor.atlas) return actor;
+    actor.spriteObj = {
+      sprite: { image: actor.atlas.canvas, uv: spriteWindow(actor.atlas, 0) },
+      pos: [0, 0, 0],
+      size: [SPRITE_W, SPRITE_H],
+      flip: false,
+      alpha: 1,
+      hidden: false
+    };
     return actor;
-  }
-
-  /* Nod every face part around the shared neck pivot. */
-  function tiltHead(actor, rx) {
-    if (!actor || !actor.headParts) return;
-    for (var i = 0; i < actor.headParts.length; i++) actor.headParts[i].rx = rx;
   }
 
   function heroPalette() {
@@ -1317,12 +1591,8 @@
     );
     if (titleHero) {
       titleHero.y = Math.abs(Math.sin(time * 1.7)) * 0.035;
-      titleHero.yaw = Math.PI + Math.sin(time * 0.4) * 0.18;
-      titleHero.armL.rx = Math.sin(time * 1.7) * 0.14;
-      titleHero.armR.rx = -Math.sin(time * 1.7) * 0.14;
-      titleHero.gloveL.rx = titleHero.armL.rx;
-      titleHero.gloveR.rx = titleHero.armR.rx;
-      tiltHead(titleHero, Math.sin(time * 1.7) * 0.03);
+      titleHero.facing = 1;
+      titleHero.frame = SPRITE_FRAMES.idle[Math.floor(stepped(time) * 1.6) % 2];
       updateActor(titleHero);
     }
     if (titlePip) {
@@ -1753,6 +2023,13 @@
       actor.y = bounce * 0.32;
       actor.lean = bounce * 0.05 * (actor.x < 0 ? 1 : -1);
       actor.yaw = lerp(actor.yaw, actor.turnTo === undefined ? 0 : actor.turnTo, Math.min(1, dt * 8));
+      if (actor.spriteObj) {
+        actor.frame = speaking
+          ? SPRITE_FRAMES.talk[Math.floor(stepped(cutscene.lineT) * 5) % 2]
+          : SPRITE_FRAMES.idle[Math.floor(stepped(cutscene.t) * 1.4) % 2];
+        /* Stage the shot: everyone on the left looks right, and vice versa. */
+        actor.facing = actor.x < 0 ? 1 : -1;
+      }
       updateActor(actor);
     }
 
@@ -2111,6 +2388,8 @@
     var cos = Math.cos(camera.yaw);
     var dx = -sin * forward + cos * strafe;
     var dz = -cos * forward - sin * strafe;
+    player.moveX = dx;
+    player.moveZ = dz;
     player.running = !!(keys.ShiftLeft || keys.ShiftRight);
     var speed = player.running ? 6.4 : 4.6;
     var nextX = player.x + dx * speed * dt;
@@ -2214,6 +2493,8 @@
     if (player.swing > 0) return;
     player.swing = SWING_TIME;
     player.yaw = Math.atan2(item.x - player.x, item.z - player.z);
+    var side = (item.x - player.x) * Math.cos(camera.yaw) - (item.z - player.z) * Math.sin(camera.yaw);
+    player.facing = side < 0 ? -1 : 1;
     updateActor(player);
     item.opening = 1 + (Math.random() < 0.5 ? 1 : 0);
     sound('swing');
@@ -2245,39 +2526,29 @@
     if (mode === 'world') handleMovement(dt);
     else player.moving = false;
 
-    /* Snappy 4-pose walk straight off the sprite sheet: limbs snap between
-       held poses instead of sliding, the torso squashes on each footfall, and
-       a run opens the stride and tips the body forward. */
+    /* Held sprite poses: four steps per stride off the atlas, the same blink
+       beat on the idle loop, and the body still squashes on each footfall. */
     var walkPhase = stepped(player.walk);
-    var walkSin = Math.sin(walkPhase);
-    var step = player.moving ? (walkSin > 0.55 ? 1 : walkSin < -0.55 ? -1 : walkSin * 0.3) : 0;
     var bounce = player.moving ? Math.abs(Math.cos(walkPhase)) : 0;
     var run = player.running ? 1 : 0;
-    var stride = 0.74 + run * 0.34;
-    player.legL.rx = step * stride;
-    player.legR.rx = -step * stride;
-    player.armL.rx = -step * (0.66 + run * 0.34);
-    player.armR.rx = step * (0.66 + run * 0.34);
-    player.armL.rz = 0.16;
-    player.armR.rz = -0.16;
-    tiltHead(player, 0);
-    player.squashY = 1 + bounce * (0.075 + run * 0.05);
-    player.squashX = 1 - bounce * (0.05 + run * 0.04);
-    if (!player.moving) {
-      /* Idle frames: a two-beat breath, arms swaying, and the sheet's blink */
-      var breath = Math.sin(stepped(time) * 1.7);
-      player.armL.rx = breath * 0.07;
-      player.armR.rx = -breath * 0.07;
-      player.armL.rz = 0.16 + breath * 0.05;
-      player.armR.rz = -0.16 - breath * 0.05;
-      tiltHead(player, breath * 0.035);
-      var blink = (time % 4.8) > 4.62 ? 0.12 : 1;
-      player.eyeL.size[1] = player.eyeH * blink;
-      player.eyeR.size[1] = player.eyeH * blink;
+    if (player.swing > 0) {
+      player.frame = (1 - player.swing / SWING_TIME) < 0.45 ? SPRITE_FRAMES.strike : SPRITE_FRAMES.follow;
+    } else if (player.moving) {
+      var cycle = Math.floor(walkPhase / (Math.PI / 2)) % 4;
+      player.frame = (run ? SPRITE_FRAMES.run : SPRITE_FRAMES.walk)[cycle];
+    } else if ((time % 4.8) > 4.62) {
+      player.frame = SPRITE_FRAMES.blink;
     } else {
-      player.eyeL.size[1] = player.eyeH;
-      player.eyeR.size[1] = player.eyeH;
+      player.frame = SPRITE_FRAMES.idle[Math.floor(stepped(time) * 1.6) % 2];
     }
+    /* Mirror the profile to the way he crosses the screen, not the world, so
+       left and right always match the camera's point of view. */
+    if (player.moving) {
+      var side = player.moveX * Math.cos(camera.yaw) - player.moveZ * Math.sin(camera.yaw);
+      if (Math.abs(side) > 0.12) player.facing = side < 0 ? -1 : 1;
+    }
+    player.squashY = 1 + bounce * (0.06 + run * 0.04);
+    player.squashX = 1 - bounce * (0.045 + run * 0.03);
     if (player.flip > 0) {
       /* Paper-thin pinch at the midpoint of the turn, then snap back. */
       player.flip = Math.max(0, player.flip - dt);
@@ -2285,24 +2556,12 @@
       player.squashX *= 0.22 + 0.78 * flipK;
       player.squashY *= 1 + (1 - flipK) * 0.1;
     }
-    player.lean = -step * 0.055;
-    player.tiltX = player.moving ? 0.05 + run * 0.09 : 0;
-    player.y = bounce * (0.09 + run * 0.05);
+    player.y = bounce * (0.07 + run * 0.04);
     if (player.swing > 0) {
       player.swing = Math.max(0, player.swing - dt);
-      var swingK = 1 - player.swing / SWING_TIME;
-      player.armR.rx = -2.2 + swingK * 3.3;
-      player.armL.rx = 0.5 - swingK * 0.8;
-      player.tiltX = 0.15 - swingK * 0.2;
       player.squashY = 1.04;
       player.squashX = 0.96;
     }
-    /* Boots and gloves have their own hip/shoulder pivots, so mirror the limb
-       pose onto them or they detach and hang in the air. */
-    player.gloveL.rx = player.armL.rx;
-    player.gloveR.rx = player.armR.rx;
-    player.shoeL.rx = player.legL.rx;
-    player.shoeR.rx = player.legR.rx;
 
     pipTimer += dt;
     if (pipTimer >= 0.12) {
@@ -2343,6 +2602,15 @@
           actor.squashY = 1;
           actor.squashX = 1;
         }
+        if (mode === 'dialogue' && dialogue.speaker === world.npcName) {
+          actor.frame = SPRITE_FRAMES.talk[Math.floor(stepped(time) * 5) % 2];
+        } else if (actor.hop > 0) {
+          actor.frame = SPRITE_FRAMES.cheer;
+        } else {
+          actor.frame = SPRITE_FRAMES.idle[Math.floor(stepped(time) * 1.2 + actor.phase) % 2];
+        }
+        var towardPlayer = (player.x - actor.x) * Math.cos(camera.yaw) - (player.z - actor.z) * Math.sin(camera.yaw);
+        if (Math.abs(towardPlayer) > 0.25) actor.facing = towardPlayer < 0 ? -1 : 1;
       } else if (actor.kind === 'enemy') {
         actor.y = actor.baseY * actor.scale + Math.sin(stepped(time) * 1.9 + actor.phase) * 0.12;
       } else if (actor.kind === 'relic') {
@@ -2512,69 +2780,44 @@
     anim.p = Math.max(0, anim.p - dt * 3.2);
     anim.e = Math.max(0, anim.e - dt * 3.2);
     battlePlayer.y = Math.abs(Math.sin(st * 2.4)) * 0.04;
-    battlePlayer.yaw = 0.72 + Math.sin(st * 0.8) * 0.03;
     battleEnemy.y = battleEnemy.baseY * battleEnemy.scale + Math.sin(st * 1.9) * 0.1;
-    battlePlayer.legL.rx = Math.sin(st * 2) * 0.05;
-    battlePlayer.legR.rx = -Math.sin(st * 2) * 0.05;
-    battlePlayer.armL.rx = -anim.p * 0.6;
-    battlePlayer.armR.rx = -anim.p * 2.5;
-    battlePlayer.tiltX = anim.p * 0.18;
+    battlePlayer.facing = 1;
+    var bframe = SPRITE_FRAMES.idle[Math.floor(st * 1.6) % 2];
     battlePlayer.squashY = 1 + anim.p * 0.06;
     battlePlayer.squashX = 1 - anim.p * 0.04;
-    battlePlayer.lean = 0;
-    battlePlayer.armL.rz = 0.16;
-    battlePlayer.armR.rz = -0.16;
-    tiltHead(battlePlayer, Math.sin(st * 1.6) * 0.03);
     /* Three held poses per swing: cock back, whip forward, rebound. The windup
        runs while the timing bar is still filling, so the pose itself teaches
        the player when to press. */
     if (battle.pose === 'windup') {
       battlePlayer.x -= 0.34;
-      battlePlayer.lean = -0.3;
-      battlePlayer.tiltX = -0.12;
-      battlePlayer.armR.rx = 1.35;
-      battlePlayer.armL.rx = 0.5;
       battlePlayer.squashY = 0.9;
       battlePlayer.squashX = 1.12;
       battlePlayer.y = 0;
+      bframe = SPRITE_FRAMES.windup;
     } else if (battle.pose === 'strike') {
       var hitK = clamp(1 - poseTime / 110, 0, 1);
       var recoilK = clamp((poseTime - 110) / 130, 0, 1);
       battlePlayer.x += 0.72 * hitK - 0.18 * recoilK;
-      battlePlayer.lean = 0.34 * hitK - 0.12 * recoilK;
-      battlePlayer.tiltX = 0.24 * hitK;
-      battlePlayer.armR.rx = -2.9 * hitK + 0.5 * recoilK;
-      battlePlayer.armL.rx = -1.1 * hitK;
       battlePlayer.squashY = 1 + 0.14 * hitK;
       battlePlayer.squashX = 1 - 0.12 * hitK;
+      bframe = poseTime < 130 ? SPRITE_FRAMES.strike : SPRITE_FRAMES.follow;
     } else if (battle.pose === 'hurt') {
-      /* Knocked back, head snapped away, the sheet's "Hurt" frame. */
+      /* Knockback, head snapped away: the sheet's hurt frame. */
       var hurtK = clamp(1 - poseTime / 300, 0, 1);
       battlePlayer.x -= 0.24 * hurtK;
-      battlePlayer.lean = -0.30 * hurtK;
-      battlePlayer.tiltX = -0.26 * hurtK;
       battlePlayer.squashY = 1 - 0.08 * hurtK;
       battlePlayer.squashX = 1 + 0.08 * hurtK;
-      battlePlayer.armL.rx = -1.3 * hurtK;
-      battlePlayer.armR.rx = -1.3 * hurtK;
-      tiltHead(battlePlayer, -0.22 * hurtK);
+      bframe = SPRITE_FRAMES.hurt;
     } else if (battle.pose === 'victory') {
       /* "Praises the sun": arms up, hopping in place, stretched at the top. */
       var victoryT = (Date.now() - battle.poseAt) % 640 / 640;
       var lift = Math.sin(stepped(victoryT * 0.64) * Math.PI);
       battlePlayer.y += lift * 0.4;
-      battlePlayer.armL.rx = -2.4;
-      battlePlayer.armR.rx = -2.4;
-      battlePlayer.armL.rz = 0.4;
-      battlePlayer.armR.rz = -0.4;
       battlePlayer.squashY = 1 + lift * 0.13;
       battlePlayer.squashX = 1 - lift * 0.1;
-      tiltHead(battlePlayer, -0.12 * lift);
+      bframe = SPRITE_FRAMES.victory[Math.floor((Date.now() - battle.poseAt) / 170) % 2];
     }
-    battlePlayer.gloveL.rx = battlePlayer.armL.rx;
-    battlePlayer.gloveR.rx = battlePlayer.armR.rx;
-    battlePlayer.shoeL.rx = battlePlayer.legL.rx;
-    battlePlayer.shoeR.rx = battlePlayer.legR.rx;
+    battlePlayer.frame = bframe;
     if (battle.lunge > 0) battle.lunge = Math.max(0, battle.lunge - dt * 4);
     battleEnemy.tiltX = battle.windup ? -0.26 : battle.lunge > 0 ? 0.34 : 0;
     battleEnemy.squashY = battle.windup ? 0.9 : 1;

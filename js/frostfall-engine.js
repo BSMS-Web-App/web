@@ -5,7 +5,8 @@
  *
  * A deliberately small flat-shaded WebGL renderer. It draws the boxes, cones,
  * cylinders and discs that make up Frostfall's low-poly world: one directional
- * light, distance fog, alpha and no textures. No dependencies, no build step.
+ * light, distance fog, alpha and no textures — plus a camera-facing textured
+ * quad for the 2D sprite characters. No dependencies, no build step.
  */
 (function (global) {
   'use strict';
@@ -283,6 +284,44 @@
     '}'
   ].join('\n');
 
+  /* 2D characters: one camera-facing textured quad, alpha-cut so the sprite
+     keeps its silhouette, and fogged so it sits in the scene like the rest. */
+  const SPRITE_VS = [
+    'attribute vec2 aPos;',
+    'attribute vec2 aUV;',
+    'uniform mat4 uProj;',
+    'uniform mat4 uView;',
+    'uniform mat4 uModel;',
+    'uniform vec4 uUV;',
+    'varying vec2 vUV;',
+    'varying vec3 vWorld;',
+    'void main() {',
+    '  vec4 world = uModel * vec4(aPos, 0.0, 1.0);',
+    '  vWorld = world.xyz;',
+    '  vUV = mix(uUV.xy, uUV.zw, aUV);',
+    '  gl_Position = uProj * uView * world;',
+    '}'
+  ].join('\n');
+
+  const SPRITE_FS = [
+    'precision mediump float;',
+    'varying vec2 vUV;',
+    'varying vec3 vWorld;',
+    'uniform sampler2D uTex;',
+    'uniform float uAlpha;',
+    'uniform vec3 uCam;',
+    'uniform vec3 uFogColor;',
+    'uniform float uFogNear;',
+    'uniform float uFogFar;',
+    'void main() {',
+    '  vec4 texel = texture2D(uTex, vUV);',
+    '  if (texel.a < 0.32) discard;',
+    '  float fog = clamp((distance(vWorld, uCam) - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);',
+    '  vec3 col = mix(texel.rgb, uFogColor, fog * 0.62);',
+    '  gl_FragColor = vec4(col, texel.a * uAlpha);',
+    '}'
+  ].join('\n');
+
   function createRenderer(canvas) {
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: false });
     if (!gl) return null;
@@ -352,6 +391,72 @@
     Object.keys(sources).forEach((name) => {
       geometries[name] = upload(sources[name]);
     });
+
+    /* Sprite program. If the context is too old for it, sprites simply do not
+       draw and the rest of the scene still renders. */
+    let spriteProgram = null;
+    let spriteLoc = null;
+    const svs = compile(gl.VERTEX_SHADER, SPRITE_VS);
+    const sfs = compile(gl.FRAGMENT_SHADER, SPRITE_FS);
+    if (svs && sfs) {
+      spriteProgram = gl.createProgram();
+      gl.attachShader(spriteProgram, svs);
+      gl.attachShader(spriteProgram, sfs);
+      gl.linkProgram(spriteProgram);
+      if (gl.getProgramParameter(spriteProgram, gl.LINK_STATUS)) {
+        spriteLoc = {
+          aPos: gl.getAttribLocation(spriteProgram, 'aPos'),
+          aUV: gl.getAttribLocation(spriteProgram, 'aUV'),
+          uProj: gl.getUniformLocation(spriteProgram, 'uProj'),
+          uView: gl.getUniformLocation(spriteProgram, 'uView'),
+          uModel: gl.getUniformLocation(spriteProgram, 'uModel'),
+          uUV: gl.getUniformLocation(spriteProgram, 'uUV'),
+          uTex: gl.getUniformLocation(spriteProgram, 'uTex'),
+          uAlpha: gl.getUniformLocation(spriteProgram, 'uAlpha'),
+          uCam: gl.getUniformLocation(spriteProgram, 'uCam'),
+          uFogColor: gl.getUniformLocation(spriteProgram, 'uFogColor'),
+          uFogNear: gl.getUniformLocation(spriteProgram, 'uFogNear'),
+          uFogFar: gl.getUniformLocation(spriteProgram, 'uFogFar')
+        };
+      } else {
+        console.error('[Frostfall] sprite link:', gl.getProgramInfoLog(spriteProgram));
+        spriteProgram = null;
+      }
+    }
+
+    /* One unit quad, bottom-centre pinned, drawn with a per-sprite UV window. */
+    const spriteQuad = (function () {
+      const position = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, position);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -0.5, -0.5, 0.5, -0.5, 0.5, 0.5,
+        -0.5, -0.5, 0.5, 0.5, -0.5, 0.5
+      ]), gl.STATIC_DRAW);
+      const uv = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, uv);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0, 0, 1, 0, 1, 1,
+        0, 0, 1, 1, 0, 1
+      ]), gl.STATIC_DRAW);
+      return { position, uv };
+    })();
+
+    const spriteTextures = new WeakMap();
+    function textureFor(image) {
+      let texture = spriteTextures.get(image);
+      if (texture) return texture;
+      texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      spriteTextures.set(image, texture);
+      return texture;
+    }
 
     let scene = { objects: [], fogColor: [0.72, 0.83, 0.94], fogNear: 26, fogFar: 74 };
     const camera = { eye: [0, 3, 9], target: [0, 1, 0], fov: 56 * Math.PI / 180, orthoSize: 0 };
@@ -450,37 +555,102 @@
       }
     }
 
+    function projectionFor(size) {
+      const aspect = size.width / size.height;
+      if (camera.orthoSize) {
+        const halfH = camera.orthoSize / 2;
+        const halfW = halfH * aspect;
+        return M.ortho(-halfW, halfW, -halfH, halfH, 0.1, 220);
+      }
+      return M.perspective(camera.fov, aspect, 0.1, 160);
+    }
+
+    function sceneFog(target) {
+      gl.uniform3fv(target.uCam, camera.eye);
+      gl.uniform3fv(target.uFogColor, scene.fogColor || [0.72, 0.83, 0.94]);
+      gl.uniform1f(target.uFogNear, scene.fogNear === undefined ? 26 : scene.fogNear);
+      gl.uniform1f(target.uFogFar, scene.fogFar === undefined ? 74 : scene.fogFar);
+    }
+
+    function useSceneProgram(size) {
+      gl.useProgram(program);
+      gl.uniformMatrix4fv(loc.uProj, false, projectionFor(size));
+      gl.uniformMatrix4fv(loc.uView, false, M.lookAt(camera.eye, camera.target, [0, 1, 0]));
+      sceneFog(loc);
+      currentGeo = null;
+    }
+
+    function useSpriteProgram(size) {
+      gl.useProgram(spriteProgram);
+      gl.uniformMatrix4fv(spriteLoc.uProj, false, projectionFor(size));
+      gl.uniformMatrix4fv(spriteLoc.uView, false, M.lookAt(camera.eye, camera.target, [0, 1, 0]));
+      sceneFog(spriteLoc);
+      gl.uniform1i(spriteLoc.uTex, 0);
+      currentGeo = null;
+    }
+
+    function drawSprites(list) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, spriteQuad.position);
+      gl.enableVertexAttribArray(spriteLoc.aPos);
+      gl.vertexAttribPointer(spriteLoc.aPos, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, spriteQuad.uv);
+      gl.enableVertexAttribArray(spriteLoc.aUV);
+      gl.vertexAttribPointer(spriteLoc.aUV, 2, gl.FLOAT, false, 0, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      const uv = new Float32Array(4);
+      for (let i = 0; i < list.length; i++) {
+        const object = list[i];
+        if (!object.sprite || !object.sprite.image) continue;
+        const pos = object.pos || [0, 0, 0];
+        const size = object.size || [1, 1];
+        const flat = Math.atan2(camera.eye[0] - pos[0], camera.eye[2] - pos[2]);
+        const model = M.mul(
+          M.translation(pos[0], pos[1] + size[1] / 2, pos[2]),
+          M.mul(M.rotY(flat), M.scaling(size[0] * (object.flip ? -1 : 1), size[1], 1))
+        );
+        gl.bindTexture(gl.TEXTURE_2D, textureFor(object.sprite.image));
+        gl.uniformMatrix4fv(spriteLoc.uModel, false, model);
+        const window = object.sprite.uv || [0, 0, 1, 1];
+        uv[0] = window[0]; uv[1] = window[1]; uv[2] = window[2]; uv[3] = window[3];
+        gl.uniform4fv(spriteLoc.uUV, uv);
+        gl.uniform1f(spriteLoc.uAlpha, object.alpha === undefined ? 1 : object.alpha);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        stats.calls += 1;
+      }
+    }
+
     function render() {
       stats.calls = 0;
       stats.objects = scene.objects.length;
       const size = resize();
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.useProgram(program);
-      const aspect = size.width / size.height;
-      if (camera.orthoSize) {
-        const halfH = camera.orthoSize / 2;
-        const halfW = halfH * aspect;
-        gl.uniformMatrix4fv(loc.uProj, false, M.ortho(-halfW, halfW, -halfH, halfH, 0.1, 220));
-      } else {
-        gl.uniformMatrix4fv(loc.uProj, false, M.perspective(camera.fov, aspect, 0.1, 160));
-      }
-      gl.uniformMatrix4fv(loc.uView, false, M.lookAt(camera.eye, camera.target, [0, 1, 0]));
-      gl.uniform3fv(loc.uCam, camera.eye);
-      gl.uniform3fv(loc.uFogColor, scene.fogColor || [0.72, 0.83, 0.94]);
-      gl.uniform1f(loc.uFogNear, scene.fogNear === undefined ? 26 : scene.fogNear);
-      gl.uniform1f(loc.uFogFar, scene.fogFar === undefined ? 74 : scene.fogFar);
+      useSceneProgram(size);
 
       const opaque = [];
       const alpha = [];
+      const sprites = [];
       for (let i = 0; i < scene.objects.length; i++) {
         const object = scene.objects[i];
         if (!object || object.hidden) continue;
-        if ((object.alpha === undefined ? 1 : object.alpha) < 1) alpha.push(object);
+        const objectAlpha = object.alpha === undefined ? 1 : object.alpha;
+        if (object.sprite) { if (objectAlpha > 0.01) sprites.push(object); }
+        else if (objectAlpha < 1) alpha.push(object);
         else opaque.push(object);
       }
       draw(opaque);
+      if (spriteProgram && sprites.length) {
+        sprites.sort((a, b) => {
+          const ap = a.pos || [0, 0, 0], bp = b.pos || [0, 0, 0];
+          const ad = (ap[0] - camera.eye[0]) ** 2 + (ap[1] - camera.eye[1]) ** 2 + (ap[2] - camera.eye[2]) ** 2;
+          const bd = (bp[0] - camera.eye[0]) ** 2 + (bp[1] - camera.eye[1]) ** 2 + (bp[2] - camera.eye[2]) ** 2;
+          return bd - ad;
+        });
+        useSpriteProgram(size);
+        drawSprites(sprites);
+      }
       if (alpha.length) {
+        useSceneProgram(size);
         alpha.sort((a, b) => {
           const ax = a.model[12] - camera.eye[0], ay = a.model[13] - camera.eye[1], az = a.model[14] - camera.eye[2];
           const bx = b.model[12] - camera.eye[0], by = b.model[13] - camera.eye[1], bz = b.model[14] - camera.eye[2];
