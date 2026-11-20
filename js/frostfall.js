@@ -41,8 +41,8 @@
     hud: $('ff-hud'), face: $('ff-hud-face'), hudName: $('ff-hud-name'), hudLevel: $('ff-hud-level'),
     hudChapter: $('ff-hud-chapter'), hudHp: $('ff-hud-hp'), hudHpText: $('ff-hud-hp-text'),
     hudSp: $('ff-hud-sp'), hudSpText: $('ff-hud-sp-text'), hudBp: $('ff-hud-bp'), hudShards: $('ff-hud-shards'),
-    hudBpBar: $('ff-hud-bp-fill'), hudBpText: $('ff-hud-bp-text'),
-    sound: $('ff-sound'), menuButton: $('ff-menu-button'),
+    hudHpRow: $('ff-hud-hp-row'),
+    sound: $('ff-sound'), menuButton: $('ff-menu-button'), battleFace: $('ff-battle-face'),
     objective: $('ff-objective'), objectiveText: $('ff-objective-text'),
     toast: $('ff-toast'), prompt: $('ff-prompt'), promptText: $('ff-prompt-text'),
     dialogue: $('ff-dialogue'), speaker: $('ff-speaker'), dialogueText: $('ff-dialogue-text'), dialogueNext: $('ff-dialogue-next'),
@@ -3310,6 +3310,126 @@
     toast('CHAPTER ' + chapter.num + ' · ' + chapter.title, 3200);
   }
 
+  /* The HP readout rolls like an odometer instead of snapping, so a hit that
+     takes 12 off is felt in the number as well as the bar. */
+  var hpReadout = { shown: null, max: 0, raf: 0 };
+  function setHpReadout(value, max) {
+    if (!ui.hudHpText) return;
+    var target = Math.max(0, Math.round(value));
+    if (hpReadout.shown === null || hpReadout.max !== max || Math.abs(hpReadout.shown - target) > max) {
+      hpReadout.shown = target;
+      hpReadout.max = max;
+      ui.hudHpText.textContent = target + '/' + max;
+      return;
+    }
+    if (hpReadout.shown === target) {
+      ui.hudHpText.textContent = target + '/' + max;
+      return;
+    }
+    var from = hpReadout.shown;
+    var started = performance.now();
+    cancelAnimationFrame(hpReadout.raf);
+    function step(now) {
+      var t = Math.min(1, (now - started) / 360);
+      var eased = 1 - Math.pow(1 - t, 3);
+      hpReadout.shown = Math.round(from + (target - from) * eased);
+      ui.hudHpText.textContent = hpReadout.shown + '/' + max;
+      if (t < 1) hpReadout.raf = requestAnimationFrame(step);
+      else hpReadout.shown = target;
+    }
+    hpReadout.raf = requestAnimationFrame(step);
+  }
+
+  /* HUD portrait: the hero's own head, cropped from the baked atlas, wearing
+     the current battle mood (hurt, nervous at low HP, smug after a guard). */
+  var PORTRAIT_PX = 76;
+  var portraitMood = null;
+  var portraitTimer = 0;
+
+  function portraitHead(mood) {
+    var canvas = document.createElement('canvas');
+    canvas.width = PORTRAIT_PX;
+    canvas.height = PORTRAIT_PX;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+    ctx.fillStyle = '#2b1e4a';
+    ctx.fillRect(0, 0, PORTRAIT_PX, PORTRAIT_PX);
+    var art = castAtlas(HERO_CHAR, 1);
+    if (art) {
+      var cap = castCapBox(art, 0);
+      var body = castSpriteBox(art, 0);
+      var middle = body.x + body.w / 2;
+      var top = Math.max(0, cap.y - 7);
+      var chin = Math.min(SPRITE_CELL, cap.y + cap.h + 31);
+      var half = 27;
+      var scale = (PORTRAIT_PX - 6) / Math.max(1, chin - top);
+      var width = half * 2 * scale;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(art, middle - half, top, half * 2, chin - top, (PORTRAIT_PX - width) / 2, 3, width, PORTRAIT_PX - 6);
+      if (mood === 'hurt' || mood === 'nervous') {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = mood === 'hurt' ? 'rgba(255, 70, 80, 0.42)' : 'rgba(90, 175, 255, 0.26)';
+        ctx.fillRect(0, 0, PORTRAIT_PX, PORTRAIT_PX);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+    return canvas;
+  }
+
+  /* Both the HUD and the battle plate carry the same head, so a hit reads
+     the same whichever one is on screen. */
+  function paintPortrait() {
+    var hosts = [ui.face, ui.battleFace];
+    var mood = portraitMood;
+    if (!mood && save) mood = save.hp / Math.max(1, save.maxHp) <= 0.34 ? 'nervous' : 'idle';
+    var head = portraitHead(mood || 'idle');
+    for (var i = 0; i < hosts.length; i++) {
+      var host = hosts[i];
+      if (!host) continue;
+      var canvas = host.__portrait;
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.width = PORTRAIT_PX;
+        canvas.height = PORTRAIT_PX;
+        host.appendChild(canvas);
+        host.__portrait = canvas;
+      }
+      var ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      ctx.clearRect(0, 0, PORTRAIT_PX, PORTRAIT_PX);
+      ctx.drawImage(head, 0, 0);
+      if (mood === 'nervous') {
+        ctx.fillStyle = '#bff0ff';
+        ctx.beginPath();
+        ctx.ellipse(57, 21, 6, 7.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#5ec8f5';
+        ctx.beginPath();
+        ctx.ellipse(57, 23, 4, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#eafaff';
+        ctx.fillRect(54, 17, 2, 3);
+      } else if (mood === 'confident') {
+        ctx.fillStyle = '#ffe27a';
+        ctx.fillRect(9, 11, 4, 4);
+        ctx.fillRect(63, 13, 3, 3);
+        ctx.fillRect(59, 58, 4, 4);
+        ctx.fillStyle = '#fff6c9';
+        ctx.fillRect(12, 45, 3, 3);
+      }
+      host.classList.toggle('hurt', mood === 'hurt');
+      host.classList.toggle('nervous', mood === 'nervous');
+      host.classList.toggle('confident', mood === 'confident');
+    }
+  }
+
+  function setPortraitMood(mood, ms) {
+    portraitMood = mood;
+    paintPortrait();
+    clearTimeout(portraitTimer);
+    if (ms) portraitTimer = setTimeout(function () { portraitMood = null; paintPortrait(); }, ms);
+  }
+
   function updateHud() {
     if (!save) return;
     ui.hudName.textContent = save.name;
@@ -3317,16 +3437,16 @@
     ui.hudChapter.textContent = 'CHAPTER ' + CHAPTERS[clamp(save.chapter, 0, 4)].num;
     ui.hudHp.style.width = clamp(save.hp / save.maxHp * 100, 0, 100) + '%';
     ui.hudSp.style.width = clamp(save.sp / save.maxSp * 100, 0, 100) + '%';
-    ui.hudHpText.textContent = save.hp + '/' + save.maxHp;
+    setHpReadout(save.hp, save.maxHp);
     ui.hudSpText.textContent = save.sp + '/' + save.maxSp;
     ui.hudBp.textContent = save.bp;
     ui.hudShards.textContent = save.shards;
-    if (ui.hudBpBar) {
-      var spentBp = cardCost();
-      var totalBp = Math.max(1, spentBp + save.bp);
-      ui.hudBpBar.style.width = clamp(spentBp / totalBp * 100, 0, 100) + '%';
-      if (ui.hudBpText) ui.hudBpText.textContent = spentBp + '/' + totalBp;
+    if (ui.hudHpRow) {
+      var ratio = save.hp / Math.max(1, save.maxHp);
+      ui.hudHpRow.classList.toggle('low', save.hp > 0 && ratio <= 0.34);
+      ui.hudHpRow.classList.toggle('mortal', !!(battle && battle.mortal));
     }
+    paintPortrait();
     placeObjective();
   }
 
@@ -4537,6 +4657,7 @@
       flashStage('red');
       cameraPunch(0.3);
     }
+    setPortraitMood(quality === 'superguard' ? 'confident' : (quality === 'guard' ? 'idle' : 'hurt'), quality === 'superguard' ? 1100 : 900);
     if (quality === 'superguard') log('SUPERGUARD! NO DAMAGE.');
     else if (quality === 'guard') log('GUARD! HALF DAMAGE: ' + damage + '.');
     else log(battle.def.name + ' HITS YOU FOR ' + damage + '!');
@@ -4726,7 +4847,8 @@
   }
 
   function updateSoundButton() {
-    ui.sound.textContent = muted ? 'X' : '♪';
+    if (!ui.sound) return;
+    ui.sound.classList.toggle('muted', muted);
     ui.sound.setAttribute('aria-pressed', muted ? 'false' : 'true');
     ui.sound.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
   }

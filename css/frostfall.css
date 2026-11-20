@@ -84,40 +84,107 @@ a { color: inherit; }
 .ff-hud > * { pointer-events: auto; }
 .ff-hud-hero { display: flex; align-items: center; gap: 10px; min-width: 150px; }
 .ff-hud-face {
-  width: 38px;
-  height: 38px;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  background: #2b1e4a;
   border: 3px solid var(--ff-border);
   box-shadow: inset 0 0 0 2px #ffe6c4;
+}
+.ff-hud-face canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.ff-hud-face.hurt { animation: ff-face-hurt .32s steps(2, end) 2; }
+.ff-hud-face.nervous { animation: ff-face-wobble .9s steps(2, end) infinite; }
+.ff-hud-face.confident { box-shadow: inset 0 0 0 2px #ffe27a, 0 0 12px rgba(255, 216, 106, .55); }
+@keyframes ff-face-hurt {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-2px); }
+}
+@keyframes ff-face-wobble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
 }
 .ff-hud-id { display: flex; flex-direction: column; gap: 5px; }
 .ff-hud-id b { font: 9px 'Press Start 2P', monospace; letter-spacing: .04em; }
 .ff-hud-id span { font: 8px 'Press Start 2P', monospace; color: var(--ff-muted); letter-spacing: .05em; }
 .ff-hud-id em, .ff-hud-id i { font-style: normal; color: var(--ff-gold); }
-.ff-hud-bars { display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px; min-width: 170px; }
-.ff-hud-bar { display: grid; grid-template-columns: 22px 1fr 64px; align-items: center; gap: 8px; }
-.ff-hud-bar span { font: 7px 'Press Start 2P', monospace; color: var(--ff-muted); }
-.ff-hud-bar > div { height: 13px; padding: 2px; background: #0b0616; border: 2px solid #0b0616; box-shadow: inset 0 0 0 1px #5f4b86; }
+.ff-hud-bars { display: flex; flex-direction: column; gap: 7px; flex: 1 1 260px; min-width: 190px; }
+.ff-hud-bar { display: grid; grid-template-columns: 24px 1fr 68px; align-items: center; gap: 8px; }
+.ff-hud-bar span {
+  font: 7px 'Press Start 2P', monospace;
+  color: #fff;
+  text-shadow: 1px 1px 0 #0b0616, -1px 1px 0 #0b0616, 1px -1px 0 #0b0616, -1px -1px 0 #0b0616;
+}
+.ff-hud-bar.hp span { color: #ffb6c1; }
+.ff-hud-bar.sp span { color: #9fe9ff; }
+.ff-hud-bar > div { height: 16px; padding: 2px; background: #0b0616; border: 2px solid #0b0616; box-shadow: inset 0 0 0 1px #5f4b86; }
 .ff-hud-bar i { display: block; height: 100%; width: 100%; transition: width .25s steps(6, end); }
 .ff-hud-bar.hp i { background: linear-gradient(180deg, #ff6b7f, #d22b4a); }
 .ff-hud-bar.sp i { background: linear-gradient(180deg, #9ef0ff, #2c9fdd); }
-.ff-hud-bar b { font: 7px 'Press Start 2P', monospace; color: var(--ff-ink); text-align: right; }
-.ff-hud-chips { display: flex; gap: 8px; }
+.ff-hud-bar b {
+  font: 8px 'Press Start 2P', monospace;
+  color: #fff;
+  text-align: right;
+  text-shadow: 1px 1px 0 #0b0616, -1px 1px 0 #0b0616, 1px -1px 0 #0b0616, -1px -1px 0 #0b0616;
+}
+
+/* Low HP: the red bar strobes yellow and the readout turns gold; mortal
+   damage adds a short shake so it reads before the next turn starts. */
+.ff-hud-bar.hp.low i { animation: ff-hp-alarm .5s steps(2, end) infinite; }
+.ff-hud-bar.hp.low b { color: #ffe066; }
+.ff-hud-bar.hp.mortal { animation: ff-hud-shake .3s steps(2, end) 3; }
+.ff-hud-bar.hp.mortal i { animation: ff-hp-alarm .28s steps(2, end) infinite; }
+@keyframes ff-hp-alarm {
+  0%, 100% { background: linear-gradient(180deg, #ff6b7f, #d22b4a); }
+  50% { background: linear-gradient(180deg, #fffbcf, #ffd93b); }
+}
+@keyframes ff-hud-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Right-hand stack: buttons over BP/RELICS on one two-column grid, so the
+   left and right edges line up as a single panel. */
+.ff-hud-side {
+  display: grid;
+  grid-template-columns: minmax(56px, 1fr) minmax(114px, 1.45fr);
+  gap: 8px;
+  margin-left: auto;
+  align-items: stretch;
+}
+.ff-hud-side > * {
+  width: 100%;
+  transition: transform .09s steps(2, end), box-shadow .09s steps(2, end), background .09s linear;
+}
+.ff-hud-side > *:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 2px #a98fd6, 3px 5px 0 rgba(6, 3, 14, .55);
+}
+.ff-hud-side > *:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 2px #8b73b7, 1px 1px 0 rgba(6, 3, 14, .8);
+}
 .ff-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 7px 9px;
   background: #1b1132;
   border: 2px solid #4f3a7d;
   font: 8px 'Press Start 2P', monospace;
   color: var(--ff-muted);
+  box-shadow: inset 0 0 0 1px #2f2054, 3px 3px 0 rgba(6, 3, 14, .7);
 }
 .ff-chip b { color: var(--ff-ink); }
 .ff-chip.bp { color: var(--ff-cyan); border-color: #356b86; }
 .ff-chip.shard { color: var(--ff-gold); border-color: #7c5a22; }
-.ff-hud-buttons { display: flex; gap: 8px; margin-left: auto; }
 .ff-icon-button {
-  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
   padding: 7px 10px;
   background: #3b2a63;
   border: 3px solid var(--ff-border);
@@ -127,6 +194,25 @@ a { color: inherit; }
   cursor: pointer;
 }
 .ff-icon-button:active { transform: translate(2px, 2px); box-shadow: inset 0 0 0 2px #8b73b7; }
+
+/* Sound toggle: a big note, and a struck-through muted state. */
+.ff-icon-sound { position: relative; overflow: hidden; }
+.ff-note { font: 700 20px/1 'Segoe UI Symbol', system-ui, sans-serif; }
+.ff-note-off {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 3px;
+  margin: -2px 0 0 -14px;
+  background: #ff7f96;
+  transform: rotate(-38deg);
+  opacity: 0;
+  box-shadow: 0 0 0 1px rgba(11, 6, 22, .9);
+}
+.ff-icon-sound.muted { background: #2a1d47; }
+.ff-icon-sound.muted .ff-note { opacity: .38; }
+.ff-icon-sound.muted .ff-note-off { opacity: 1; }
 
 .ff-objective {
   position: absolute;
@@ -593,9 +679,9 @@ a { color: inherit; }
   .ff-action-btn { min-height: 46px; font-size: 7px; }
   .ff-skills { grid-template-columns: 1fr; }
   .ff-hud { gap: 8px; padding: 8px 10px; }
-  .ff-hud-face { width: 32px; height: 32px; }
+  .ff-hud-face { width: 38px; height: 38px; }
   .ff-hud-bars { flex-basis: 100%; order: 4; }
-  .ff-hud-chips { order: 3; }
+  .ff-hud-side { order: 3; grid-template-columns: 52px 1fr; }
   .ff-objective { top: 156px; }
   .ff-level-options { grid-template-columns: 1fr; max-width: 340px; }
   .ff-level-option { flex-direction: row; justify-content: flex-start; gap: 14px; padding: 12px 16px; }
@@ -606,8 +692,8 @@ a { color: inherit; }
 
 @media (max-width: 560px) {
   .ff-hud-id b { font-size: 8px; }
-  .ff-hud-id span { font-size: 7px; }
-  .ff-hud-buttons { gap: 5px; }
+  .ff-hud-id span { font-size: 6px; letter-spacing: .02em; white-space: nowrap; }
+  .ff-hud-side { gap: 5px; }
   .ff-icon-button { padding: 6px 8px; font-size: 7px; }
   .ff-title { padding-bottom: 3vh; }
   .ff-title-copy { font-size: 19px; }
@@ -883,9 +969,9 @@ a { color: inherit; }
   background: linear-gradient(180deg, #2d1a4e, #1c1030);
   border: 3px solid var(--ff-outline);
   box-shadow: inset 0 0 0 2px #7a57d6, 3px 3px 0 rgba(8, 3, 18, .6);
-  transform: rotate(.8deg);
+  /* Straight, so the chips line up with the buttons above them. */
+  transform: none;
 }
-.ff-chip.shard { transform: rotate(-1deg); }
 .ff-icon-button {
   background: linear-gradient(180deg, #ffe9b8, #ffc25c);
   color: #2a1230;
@@ -1267,6 +1353,25 @@ a { color: inherit; }
   box-shadow: 0 4px 0 #0b0714, inset 0 0 0 2px #6b4fd0;
 }
 
+.ff-battler-top { display: flex; align-items: center; gap: 7px; }
+.ff-battler-top .ff-battler-head { flex: 1; }
+
+/* The same mood portrait as the HUD, so the battler plate shows the hit. */
+.ff-battler-face {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border: 2px solid #0b0714;
+  border-radius: 5px;
+  background: #2b1e4a;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.22);
+}
+.ff-battler-face canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.ff-battler-face.hurt { animation: ff-face-hurt .32s steps(2, end) 2; }
+.ff-battler-face.nervous { animation: ff-face-wobble .9s steps(2, end) infinite; }
+.ff-battler-face.confident { box-shadow: 0 0 10px rgba(255, 216, 106, .65), inset 0 0 0 1px #ffe27a; }
+
 .ff-battler-head {
   display: flex;
   align-items: baseline;
@@ -1627,33 +1732,36 @@ a { color: inherit; }
    ============================================================ */
 .ff-hud {
   right: auto;
-  width: min(430px, calc(100% - 28px));
+  width: min(478px, calc(100% - 28px));
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    "hero buttons"
-    "bars chips";
+    "hero side"
+    "bars side";
   align-items: center;
-  gap: 8px 10px;
+  gap: 8px 12px;
   padding: 9px 11px;
 }
 .ff-hud-hero { grid-area: hero; justify-self: start; }
-.ff-hud-buttons { grid-area: buttons; margin-left: 0; justify-self: end; }
 .ff-hud-bars { grid-area: bars; min-width: 0; }
-.ff-hud-chips {
-  grid-area: chips;
-  flex-direction: column;
-  justify-content: center;
-  align-self: stretch;
-  gap: 6px;
+/* One two-column grid for the whole right stack: the sound chip sits over BP
+   and MENU sits over RELICS, so both rows share exact vertical edges. */
+.ff-hud-side {
+  grid-area: side;
+  margin-left: 0;
+  align-self: center;
+  grid-template-columns: minmax(54px, 1fr) minmax(108px, 1.45fr);
+  gap: 7px;
 }
-.ff-hud-chips .ff-chip { justify-content: center; padding: 5px 7px; font-size: 7px; }
+.ff-hud-side .ff-chip { padding: 6px 7px; font-size: 7px; }
 
 @media (max-width: 560px) {
   .ff-hud { width: calc(100% - 24px); padding: 8px 9px; gap: 7px 8px; }
-  .ff-hud-bar { grid-template-columns: 24px minmax(0, 1fr) 52px; gap: 5px; }
-  .ff-hud-chips .ff-chip { font-size: 6px; padding: 4px 5px; }
-  .ff-hud-buttons { gap: 4px; }
+  .ff-hud-bar { grid-template-columns: 22px minmax(0, 1fr) 56px; gap: 5px; }
+  .ff-hud-side { gap: 5px; grid-template-columns: minmax(44px, 1fr) minmax(92px, 1.3fr); }
+  .ff-hud-side .ff-chip { font-size: 6px; padding: 5px 4px; }
+  .ff-icon-button { padding: 6px 4px; font-size: 7px; }
+  .ff-note { font-size: 17px; }
 }
 
 /* ============================================================

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=20">
+<link rel="stylesheet" href="/css/frostfall.css?v=24">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -33,17 +33,14 @@
       </div>
     </div>
     <div class="ff-hud-bars">
-      <div class="ff-hud-bar hp"><span>HP</span><div><i id="ff-hud-hp"></i></div><b id="ff-hud-hp-text">30/30</b></div>
+      <div class="ff-hud-bar hp" id="ff-hud-hp-row"><span>HP</span><div><i id="ff-hud-hp"></i></div><b id="ff-hud-hp-text">30/30</b></div>
       <div class="ff-hud-bar sp"><span>SP</span><div><i id="ff-hud-sp"></i></div><b id="ff-hud-sp-text">10/10</b></div>
-      <div class="ff-hud-bar bp"><span>BP</span><div><i id="ff-hud-bp-fill"></i></div><b id="ff-hud-bp-text">0/4</b></div>
     </div>
-    <div class="ff-hud-chips">
+    <div class="ff-hud-side">
+      <button id="ff-sound" class="ff-icon-button ff-icon-sound" type="button" aria-label="Toggle sound"><span class="ff-note" aria-hidden="true">♪</span><span class="ff-note-off" aria-hidden="true"></span></button>
+      <button id="ff-menu-button" class="ff-icon-button" type="button" aria-label="Open pause menu">MENU</button>
       <span class="ff-chip bp">BP <b id="ff-hud-bp">4</b></span>
       <span class="ff-chip shard">RELICS <b id="ff-hud-shards">0</b>/5</span>
-    </div>
-    <div class="ff-hud-buttons">
-      <button id="ff-sound" class="ff-icon-button" type="button" aria-label="Toggle sound">♪</button>
-      <button id="ff-menu-button" class="ff-icon-button" type="button" aria-label="Open pause menu">MENU</button>
     </div>
   </header>
 
@@ -151,7 +148,10 @@
     <div class="ff-battle-bottom">
       <div class="ff-battle-player">
         <div class="ff-battler-plate">
-          <div class="ff-battler-head"><span>BATTLER</span><b>LV <i id="ff-battle-level">1</i></b></div>
+          <div class="ff-battler-top">
+            <div class="ff-battler-face" id="ff-battle-face" aria-hidden="true"></div>
+            <div class="ff-battler-head"><span>BATTLER</span><b>LV <i id="ff-battle-level">1</i></b></div>
+          </div>
           <div class="ff-gauge hp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-hp-bar"></i></div><b id="ff-battle-hp">30/30</b></div>
           <div class="ff-gauge sp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-sp-bar"></i></div><b id="ff-battle-sp">10/10</b></div>
           <div class="ff-gauge bp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-bp-bar"></i></div><b id="ff-battle-bp">4</b></div>
@@ -242,6 +242,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=6"></script>
-<script src="/js/frostfall.js?v=74"></script>
+<script src="/js/frostfall.js?v=76"></script>
 </body>
 </html>
