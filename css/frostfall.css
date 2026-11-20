@@ -65,32 +65,59 @@ a { color: inherit; }
 }
 
 /* ------------------------------------------------------------------ HUD */
+/* The shelf is defined once, here: grid layout, paper-craft styling, the
+   portrait and the right-hand button/chip stack. Nothing later in this file
+   should restyle .ff-hud* / .ff-chip / .ff-icon-button. */
 .ff-hud {
   position: absolute;
   z-index: 10;
-  top: max(12px, env(safe-area-inset-top));
+  top: max(8px, env(safe-area-inset-top));
+  right: auto;
   left: 14px;
-  right: 14px;
-  display: flex;
-  flex-wrap: wrap;
+  width: min(478px, calc(100% - 28px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "hero side"
+    "bars side";
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  background: rgba(22, 13, 42, 0.88);
-  border: 3px solid var(--ff-border);
-  box-shadow: inset 0 0 0 2px #8d76b8, 4px 4px 0 rgba(6, 3, 14, 0.75);
+  gap: 9px 12px;
+  padding: 10px 13px;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 8px, transparent 8px 16px),
+    linear-gradient(180deg, #3a2166, #221238);
+  border: 4px solid var(--ff-outline);
+  box-shadow:
+    inset 0 0 0 3px var(--ff-paper),
+    inset 0 0 0 7px #7a57d6,
+    6px 6px 0 rgba(8, 3, 18, .82);
   pointer-events: none;
 }
 .ff-hud > * { pointer-events: auto; }
-.ff-hud-hero { display: flex; align-items: center; gap: 10px; min-width: 150px; }
+
+/* hero plate: portrait plus name/level/chapter sticker */
+.ff-hud-hero {
+  grid-area: hero;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 5px 11px 5px 5px;
+  background: linear-gradient(180deg, #ffe9b8, #ffc25c);
+  border: 3px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 2px #fff8e0, 3px 3px 0 rgba(8, 3, 18, .6);
+  transform: rotate(-1.2deg);
+}
 .ff-hud-face {
   position: relative;
-  width: 44px;
-  height: 44px;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
   overflow: hidden;
   background: #2b1e4a;
-  border: 3px solid var(--ff-border);
-  box-shadow: inset 0 0 0 2px #ffe6c4;
+  border: 3px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 2px #fff1d8, 2px 2px 0 rgba(8, 3, 18, .55);
 }
 .ff-hud-face canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 .ff-hud-face.hurt { animation: ff-face-hurt .32s steps(2, end) 2; }
@@ -104,32 +131,45 @@ a { color: inherit; }
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-1px); }
 }
-.ff-hud-id { display: flex; flex-direction: column; gap: 5px; }
-.ff-hud-id b { font: 9px 'Press Start 2P', monospace; letter-spacing: .04em; }
-.ff-hud-id span { font: 8px 'Press Start 2P', monospace; color: var(--ff-muted); letter-spacing: .05em; }
-.ff-hud-id em, .ff-hud-id i { font-style: normal; color: var(--ff-gold); }
-.ff-hud-bars { display: flex; flex-direction: column; gap: 7px; flex: 1 1 260px; min-width: 190px; }
-.ff-hud-bar { display: grid; grid-template-columns: 24px 1fr 68px; align-items: center; gap: 8px; }
+.ff-hud-id { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ff-hud-id b { font: 10px 'Press Start 2P', monospace; letter-spacing: .04em; color: #2a1230; }
+.ff-hud-id span { font: 8px 'Press Start 2P', monospace; letter-spacing: .04em; color: #6b3410; }
+.ff-hud-id em, .ff-hud-id i { font-style: normal; color: #a8241c; }
+
+/* HP / SP bars */
+.ff-hud-bars { grid-area: bars; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ff-hud-bar { display: grid; grid-template-columns: 30px minmax(0, 1fr) 70px; align-items: center; gap: 8px; }
 .ff-hud-bar span {
+  display: grid;
+  place-items: center;
+  padding: 2px 0;
+  background: #17102a;
+  border: 2px solid #17102a;
   font: 7px 'Press Start 2P', monospace;
-  color: #fff;
-  text-shadow: 1px 1px 0 #0b0616, -1px 1px 0 #0b0616, 1px -1px 0 #0b0616, -1px -1px 0 #0b0616;
+  color: #fff6de;
 }
 .ff-hud-bar.hp span { color: #ffb6c1; }
 .ff-hud-bar.sp span { color: #9fe9ff; }
-.ff-hud-bar > div { height: 16px; padding: 2px; background: #0b0616; border: 2px solid #0b0616; box-shadow: inset 0 0 0 1px #5f4b86; }
-.ff-hud-bar i { display: block; height: 100%; width: 100%; transition: width .25s steps(6, end); }
-.ff-hud-bar.hp i { background: linear-gradient(180deg, #ff6b7f, #d22b4a); }
-.ff-hud-bar.sp i { background: linear-gradient(180deg, #9ef0ff, #2c9fdd); }
-.ff-hud-bar b {
-  font: 8px 'Press Start 2P', monospace;
-  color: #fff;
-  text-align: right;
-  text-shadow: 1px 1px 0 #0b0616, -1px 1px 0 #0b0616, 1px -1px 0 #0b0616, -1px -1px 0 #0b0616;
+.ff-hud-bar > div { position: relative; height: 19px; padding: 3px; overflow: hidden; background: #120a22; border: 3px solid var(--ff-outline); box-shadow: inset 0 0 0 1px #7a57d6; }
+.ff-hud-bar i {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+  transition: width .25s steps(6, end);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .45), inset 0 -4px 0 rgba(0, 0, 0, .28);
 }
+.ff-hud-bar i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 12px, rgba(0, 0, 0, .18) 12px 14px);
+}
+.ff-hud-bar.hp i { background: linear-gradient(180deg, var(--ff-hp-1), var(--ff-hp-2) 62%, var(--ff-hp-3)); }
+.ff-hud-bar.sp i { background: linear-gradient(180deg, var(--ff-sp-1), var(--ff-sp-2) 62%, var(--ff-sp-3)); }
+.ff-hud-bar b { font: 8px 'Press Start 2P', monospace; color: #fff6de; text-align: right; text-shadow: 1px 1px 0 #17102a; }
 
-/* Low HP: the red bar strobes yellow and the readout turns gold; mortal
-   damage adds a short shake so it reads before the next turn starts. */
+/* low HP strobes the bar; mortal damage adds a short shake */
 .ff-hud-bar.hp.low i { animation: ff-hp-alarm .5s steps(2, end) infinite; }
 .ff-hud-bar.hp.low b { color: #ffe066; }
 .ff-hud-bar.hp.mortal { animation: ff-hud-shake .3s steps(2, end) 3; }
@@ -144,14 +184,14 @@ a { color: inherit; }
   75% { transform: translateX(3px); }
 }
 
-/* Right-hand stack: buttons over BP/RELICS on one two-column grid, so the
-   left and right edges line up as a single panel. */
+/* right stack: sound over BP, menu over RELICS, on one two-column grid */
 .ff-hud-side {
+  grid-area: side;
+  align-self: center;
   display: grid;
-  grid-template-columns: minmax(56px, 1fr) minmax(114px, 1.45fr);
-  gap: 8px;
-  margin-left: auto;
-  align-items: stretch;
+  grid-template-columns: minmax(52px, 1fr) minmax(104px, 1.45fr);
+  gap: 7px;
+  margin-left: 0;
 }
 .ff-hud-side > * {
   width: 100%;
@@ -159,43 +199,44 @@ a { color: inherit; }
 }
 .ff-hud-side > *:hover {
   transform: translateY(-2px);
-  box-shadow: inset 0 0 0 2px #a98fd6, 3px 5px 0 rgba(6, 3, 14, .55);
+  box-shadow: inset 0 0 0 2px #fff8e0, 4px 5px 0 rgba(8, 3, 18, .55);
 }
 .ff-hud-side > *:active {
   transform: translateY(2px);
-  box-shadow: inset 0 0 0 2px #8b73b7, 1px 1px 0 rgba(6, 3, 14, .8);
+  box-shadow: inset 0 0 0 2px #fff8e0, 1px 1px 0 rgba(8, 3, 18, .7);
 }
 .ff-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px 9px;
-  background: #1b1132;
-  border: 2px solid #4f3a7d;
-  font: 8px 'Press Start 2P', monospace;
-  color: var(--ff-muted);
-  box-shadow: inset 0 0 0 1px #2f2054, 3px 3px 0 rgba(6, 3, 14, .7);
+  padding: 7px 8px;
+  background: linear-gradient(180deg, #2d1a4e, #1c1030);
+  border: 3px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 2px #7a57d6, 3px 3px 0 rgba(8, 3, 18, .6);
+  font: 7px 'Press Start 2P', monospace;
+  color: #cbb9ff;
+  transform: none;
 }
-.ff-chip b { color: var(--ff-ink); }
-.ff-chip.bp { color: var(--ff-cyan); border-color: #356b86; }
-.ff-chip.shard { color: var(--ff-gold); border-color: #7c5a22; }
+.ff-chip b { color: #fff6de; }
+.ff-chip.bp { color: var(--ff-cyan); }
+.ff-chip.shard { color: var(--ff-gold); }
 .ff-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
-  padding: 7px 10px;
-  background: #3b2a63;
-  border: 3px solid var(--ff-border);
-  box-shadow: inset 0 0 0 2px #8b73b7, 3px 3px 0 rgba(6, 3, 14, .7);
-  color: var(--ff-ink);
-  font: 8px 'Press Start 2P', monospace;
+  min-height: 34px;
+  padding: 6px 8px;
+  background: linear-gradient(180deg, #ffe9b8, #ffc25c);
+  border: 3px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 2px #fff8e0, 3px 3px 0 rgba(8, 3, 18, .7);
+  color: #2a1230;
+  font: 7px 'Press Start 2P', monospace;
   cursor: pointer;
 }
-.ff-icon-button:active { transform: translate(2px, 2px); box-shadow: inset 0 0 0 2px #8b73b7; }
+.ff-icon-button:active { transform: translate(2px, 2px); box-shadow: inset 0 0 0 2px #fff8e0; }
 
-/* Sound toggle: a big note, and a struck-through muted state. */
+/* sound toggle: oversized note, red slash when muted */
 .ff-icon-sound { position: relative; overflow: hidden; }
 .ff-note { font: 700 20px/1 'Segoe UI Symbol', system-ui, sans-serif; }
 .ff-note-off {
@@ -205,7 +246,7 @@ a { color: inherit; }
   width: 28px;
   height: 3px;
   margin: -2px 0 0 -14px;
-  background: #ff7f96;
+  background: #ff5f78;
   transform: rotate(-38deg);
   opacity: 0;
   box-shadow: 0 0 0 1px rgba(11, 6, 22, .9);
@@ -213,6 +254,28 @@ a { color: inherit; }
 .ff-icon-sound.muted { background: #2a1d47; }
 .ff-icon-sound.muted .ff-note { opacity: .38; }
 .ff-icon-sound.muted .ff-note-off { opacity: 1; }
+
+@media (max-width: 900px) {
+  .ff-hud { padding: 9px 11px; gap: 9px; }
+  .ff-hud-bar { grid-template-columns: 26px minmax(0, 1fr) 62px; }
+  .ff-hud-bar > div { height: 17px; }
+}
+
+@media (max-width: 560px) {
+  .ff-hud { width: calc(100% - 24px); padding: 8px 9px; gap: 7px 8px; }
+  .ff-hud-hero { padding: 4px 8px 4px 4px; gap: 7px; }
+  .ff-hud-face { width: 36px; height: 36px; }
+  .ff-hud-id b { font-size: 9px; }
+  .ff-hud-id span { font-size: 6px; letter-spacing: .02em; white-space: nowrap; }
+  .ff-hud-bars { gap: 4px; }
+  .ff-hud-bar { grid-template-columns: 24px minmax(0, 1fr) 58px; gap: 5px; }
+  .ff-hud-bar > div { height: 15px; padding: 2px; }
+  .ff-hud-bar b { font-size: 7px; }
+  .ff-hud-side { grid-template-columns: minmax(44px, 1fr) minmax(88px, 1.3fr); gap: 5px; }
+  .ff-hud-side .ff-chip { font-size: 6px; padding: 5px 4px; }
+  .ff-icon-button { min-height: 30px; padding: 5px 4px; font-size: 7px; }
+  .ff-note { font-size: 17px; }
+}
 
 .ff-objective {
   position: absolute;
@@ -678,10 +741,6 @@ a { color: inherit; }
   .ff-actions { grid-template-columns: repeat(3, 1fr); }
   .ff-action-btn { min-height: 46px; font-size: 7px; }
   .ff-skills { grid-template-columns: 1fr; }
-  .ff-hud { gap: 8px; padding: 8px 10px; }
-  .ff-hud-face { width: 38px; height: 38px; }
-  .ff-hud-bars { flex-basis: 100%; order: 4; }
-  .ff-hud-side { order: 3; grid-template-columns: 52px 1fr; }
   .ff-objective { top: 156px; }
   .ff-level-options { grid-template-columns: 1fr; max-width: 340px; }
   .ff-level-option { flex-direction: row; justify-content: flex-start; gap: 14px; padding: 12px 16px; }
@@ -691,10 +750,6 @@ a { color: inherit; }
 }
 
 @media (max-width: 560px) {
-  .ff-hud-id b { font-size: 8px; }
-  .ff-hud-id span { font-size: 6px; letter-spacing: .02em; white-space: nowrap; }
-  .ff-hud-side { gap: 5px; }
-  .ff-icon-button { padding: 6px 8px; font-size: 7px; }
   .ff-title { padding-bottom: 3vh; }
   .ff-title-copy { font-size: 19px; }
   .ff-title-actions { flex-direction: column; width: min(300px, 100%); }
@@ -881,9 +936,6 @@ a { color: inherit; }
   --ff-sp-1: #9ff0ff;
   --ff-sp-2: #2b9fe0;
   --ff-sp-3: #12557f;
-  --ff-bp-1: #ffd766;
-  --ff-bp-2: #ff961f;
-  --ff-bp-3: #a34d00;
 }
 
 .ff-stage {
@@ -894,91 +946,6 @@ a { color: inherit; }
 #ff-app[data-theme="battle"] .ff-stage { background: radial-gradient(circle at 50% 34%, #6d4bb0 0%, #3a1f63 52%, #180c2c 100%); }
 .ff-vignette { background: radial-gradient(circle at 50% 40%, transparent 52%, rgba(20, 8, 40, 0.28) 100%); }
 
-/* ---- HUD: sticker plates on a coloured shelf ---- */
-.ff-hud {
-  gap: 14px;
-  padding: 11px 14px;
-  background:
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 8px, transparent 8px 16px),
-    linear-gradient(180deg, #3a2166, #221238);
-  border: 4px solid var(--ff-outline);
-  box-shadow:
-    inset 0 0 0 3px var(--ff-paper),
-    inset 0 0 0 7px #7a57d6,
-    6px 6px 0 rgba(8, 3, 18, .82);
-}
-.ff-hud-hero {
-  padding: 6px 12px 6px 6px;
-  background: linear-gradient(180deg, #ffe9b8, #ffc25c);
-  border: 3px solid var(--ff-outline);
-  box-shadow: inset 0 0 0 2px #fff8e0, 3px 3px 0 rgba(8, 3, 18, .6);
-  transform: rotate(-1.2deg);
-}
-.ff-hud-face {
-  width: 42px;
-  height: 42px;
-  background-color: #fff6de;
-  background-image: var(--ff-sprite);
-  background-repeat: no-repeat;
-  background-size: 400% 400%;
-  background-position: 0% 66.667%;
-  border: 3px solid var(--ff-outline);
-  box-shadow: inset 0 0 0 2px #fff1d8, 2px 2px 0 rgba(8, 3, 18, .55);
-}
-.ff-hud-id b { color: #2a1230; font-size: 10px; }
-.ff-hud-id span { color: #6b3410; font-size: 8px; }
-.ff-hud-id em, .ff-hud-id i { color: #a8241c; }
-
-.ff-hud-bars { gap: 7px; }
-.ff-hud-bar { grid-template-columns: 30px 1fr 70px; gap: 8px; }
-.ff-hud-bar span {
-  display: grid;
-  place-items: center;
-  padding: 2px 0;
-  background: #17102a;
-  border: 2px solid #17102a;
-  color: #fff6de;
-  font: 7px 'Press Start 2P', monospace;
-}
-.ff-hud-bar > div {
-  height: 19px;
-  padding: 3px;
-  background: #120a22;
-  border: 3px solid var(--ff-outline);
-  box-shadow: inset 0 0 0 1px #7a57d6;
-  position: relative;
-  overflow: hidden;
-}
-.ff-hud-bar i {
-  position: relative;
-  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .45), inset 0 -4px 0 rgba(0, 0, 0, .28);
-}
-.ff-hud-bar i::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(90deg, transparent 0 12px, rgba(0, 0, 0, .18) 12px 14px);
-}
-.ff-hud-bar.hp i { background: linear-gradient(180deg, var(--ff-hp-1), var(--ff-hp-2) 62%, var(--ff-hp-3)); }
-.ff-hud-bar.sp i { background: linear-gradient(180deg, var(--ff-sp-1), var(--ff-sp-2) 62%, var(--ff-sp-3)); }
-.ff-hud-bar.bp i { background: linear-gradient(180deg, var(--ff-bp-1), var(--ff-bp-2) 62%, var(--ff-bp-3)); }
-.ff-hud-bar b { color: #fff6de; text-shadow: 1px 1px 0 #17102a; font-size: 8px; }
-
-.ff-chip {
-  padding: 8px 10px;
-  background: linear-gradient(180deg, #2d1a4e, #1c1030);
-  border: 3px solid var(--ff-outline);
-  box-shadow: inset 0 0 0 2px #7a57d6, 3px 3px 0 rgba(8, 3, 18, .6);
-  /* Straight, so the chips line up with the buttons above them. */
-  transform: none;
-}
-.ff-icon-button {
-  background: linear-gradient(180deg, #ffe9b8, #ffc25c);
-  color: #2a1230;
-  border: 3px solid var(--ff-outline);
-  box-shadow: inset 0 0 0 2px #fff8e0, 3px 3px 0 rgba(8, 3, 18, .7);
-}
-.ff-icon-button:active { transform: translate(2px, 2px); box-shadow: inset 0 0 0 2px #fff8e0; }
 
 .ff-objective {
   background: linear-gradient(180deg, #fff6de, #ffe1a8);
@@ -1259,17 +1226,12 @@ a { color: inherit; }
 .ff-card-btn:hover:not(:disabled) { transform: translateY(-2px) rotate(-1deg); }
 
 @media (max-width: 900px) {
-  .ff-hud { padding: 9px 11px; gap: 9px; }
-  .ff-hud-bar { grid-template-columns: 26px 1fr 62px; }
-  .ff-hud-bar > div { height: 17px; }
   .ff-action-btn { min-height: 74px; }
   .ff-action-btn b { font-size: 8px; }
   .ff-rating { top: 17%; }
   .ff-gimmick { font-size: 6px; }
 }
 @media (max-width: 560px) {
-  .ff-hud-hero { padding: 5px 8px 5px 5px; }
-  .ff-hud-face { width: 34px; height: 34px; }
   .ff-action-btn { min-height: 68px; padding: 6px 4px; }
   .ff-action-btn b { font-size: 7px; }
   .ff-action-btn small { font-size: 6px; }
@@ -1297,17 +1259,6 @@ a { color: inherit; }
   .ff-objective { bottom: 118px; width: min(210px, 40vw); }
 }
 
-/* compact shelf so the world stays the star */
-.ff-hud { top: max(8px, env(safe-area-inset-top)); padding: 8px 10px; gap: 9px; }
-.ff-hud-hero { padding: 4px 9px 4px 5px; }
-.ff-hud-face { width: 34px; height: 34px; }
-.ff-hud-id b { font-size: 9px; }
-.ff-hud-bars { gap: 4px; }
-.ff-hud-bar { grid-template-columns: 26px 1fr 58px; }
-.ff-hud-bar > div { height: 15px; padding: 2px; }
-.ff-hud-bar b { font-size: 7px; }
-.ff-chip { padding: 6px 8px; font-size: 7px; }
-.ff-icon-button { min-height: 30px; padding: 5px 8px; font-size: 7px; }
 
 /* timing meter belongs in the command strip, not on top of the fighters */
 .ff-timing {
@@ -1412,7 +1363,6 @@ a { color: inherit; }
 
 .ff-gauge.hp .ff-gauge-icon { background-position: 33.333% 33.333%; }
 .ff-gauge.sp .ff-gauge-icon { background-position: 66.667% 33.333%; }
-.ff-gauge.bp .ff-gauge-icon { background-position: 100% 33.333%; }
 
 .ff-gauge-track {
   position: relative;
@@ -1434,7 +1384,6 @@ a { color: inherit; }
 
 .ff-gauge.hp .ff-gauge-track i { background: linear-gradient(180deg, #ff98a3, #dc1f38); }
 .ff-gauge.sp .ff-gauge-track i { background: linear-gradient(180deg, #9edbff, #1f7fe0); }
-.ff-gauge.bp .ff-gauge-track i { background: linear-gradient(180deg, #ffdc94, #e0860e); }
 
 .ff-gauge b {
   min-width: 56px;
@@ -1442,6 +1391,23 @@ a { color: inherit; }
   font: 800 11px/1 "Courier New", monospace;
   color: #fff3d6;
 }
+
+/* BP is equip capacity, not a draining resource: a badge, never an empty bar. */
+.ff-battle-badges { display: flex; justify-content: flex-end; }
+.ff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 2px solid #0b0714;
+  border-radius: 5px;
+  background: #1a1130;
+  font: 800 9px/1 "Courier New", monospace;
+  letter-spacing: .04em;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .3);
+}
+.ff-badge.bp { color: #ffcf3f; }
+.ff-badge b { font-size: 11px; color: #fff3d6; }
 
 #ff-actions {
   display: grid;
@@ -1727,42 +1693,6 @@ a { color: inherit; }
 .ff-level-option.sp .ff-level-icon { background-position: 66.667% 33.333%; }
 .ff-level-option.bp .ff-level-icon { background-position: 100% 33.333%; }
 
-/* ============================================================
-   COMPACT HUD SHELF — capped width so the 3D view keeps air
-   ============================================================ */
-.ff-hud {
-  right: auto;
-  width: min(478px, calc(100% - 28px));
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "hero side"
-    "bars side";
-  align-items: center;
-  gap: 8px 12px;
-  padding: 9px 11px;
-}
-.ff-hud-hero { grid-area: hero; justify-self: start; }
-.ff-hud-bars { grid-area: bars; min-width: 0; }
-/* One two-column grid for the whole right stack: the sound chip sits over BP
-   and MENU sits over RELICS, so both rows share exact vertical edges. */
-.ff-hud-side {
-  grid-area: side;
-  margin-left: 0;
-  align-self: center;
-  grid-template-columns: minmax(54px, 1fr) minmax(108px, 1.45fr);
-  gap: 7px;
-}
-.ff-hud-side .ff-chip { padding: 6px 7px; font-size: 7px; }
-
-@media (max-width: 560px) {
-  .ff-hud { width: calc(100% - 24px); padding: 8px 9px; gap: 7px 8px; }
-  .ff-hud-bar { grid-template-columns: 22px minmax(0, 1fr) 56px; gap: 5px; }
-  .ff-hud-side { gap: 5px; grid-template-columns: minmax(44px, 1fr) minmax(92px, 1.3fr); }
-  .ff-hud-side .ff-chip { font-size: 6px; padding: 5px 4px; }
-  .ff-icon-button { padding: 6px 4px; font-size: 7px; }
-  .ff-note { font-size: 17px; }
-}
 
 /* ============================================================
    CUTSCENE PRESENTATION — speaker plate, typewriter, sky break

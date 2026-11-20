@@ -55,7 +55,7 @@
     battle: $('ff-battle'), enemyName: $('ff-enemy-name'), enemyHp: $('ff-enemy-hp'), enemyHpText: $('ff-enemy-hp-text'),
     battleLog: $('ff-battle-log'), battleLevel: $('ff-battle-level'), battleHp: $('ff-battle-hp'), battleSp: $('ff-battle-sp'),
     battleHpBar: $('ff-battle-hp-bar'), battleSpBar: $('ff-battle-sp-bar'), actions: $('ff-actions'),
-    battleBp: $('ff-battle-bp'), battleBpBar: $('ff-battle-bp-bar'), enemyPlate: $('ff-enemy-plate'),
+    battleBp: $('ff-battle-bp'), enemyPlate: $('ff-enemy-plate'),
     cocoa: $('ff-cocoa-count'), skills: $('ff-skills'), battleHint: $('ff-battle-hint'),
     timing: $('ff-timing'), timingLabel: $('ff-timing-label'), timingMarker: $('ff-timing-marker'),
     timingButton: $('ff-timing-button'), timingNote: $('ff-timing-note'), telegraph: $('ff-telegraph'),
@@ -3993,8 +3993,6 @@
     ui.battleHpBar.style.width = clamp(battle.displayHp / save.maxHp * 100, 0, 100) + '%';
     ui.battleSp.textContent = save.sp + '/' + save.maxSp;
     ui.battleSpBar.style.width = clamp(save.sp / save.maxSp * 100, 0, 100) + '%';
-    var liveBp = cardCost();
-    if (ui.battleBpBar) ui.battleBpBar.style.width = clamp(liveBp / Math.max(1, liveBp + save.bp) * 100, 0, 100) + '%';
     if (ui.battleBp) ui.battleBp.textContent = save.bp;
     ui.battleLevel.textContent = save.level;
     ui.cocoa.textContent = save.cocoa;
@@ -4113,8 +4111,6 @@
     ui.battleSp.textContent = save.sp + '/' + save.maxSp;
     ui.battleHpBar.style.width = clamp(battle.displayHp / save.maxHp * 100, 0, 100) + '%';
     ui.battleSpBar.style.width = clamp(save.sp / save.maxSp * 100, 0, 100) + '%';
-    var spentBp = cardCost();
-    if (ui.battleBpBar) ui.battleBpBar.style.width = clamp(spentBp / Math.max(1, spentBp + save.bp) * 100, 0, 100) + '%';
     if (ui.battleBp) ui.battleBp.textContent = save.bp;
     ui.cocoa.textContent = save.cocoa;
     updateHud();
@@ -4601,6 +4597,15 @@
 
   }
 
+  /* Battle-only feedback must not leak into the world or the next fight: the
+     mortal shake, the red stage pulse and a hurt face all reset here. */
+  function clearBattleFeedback() {
+    if (ui.hudHpRow) ui.hudHpRow.classList.remove('mortal');
+    if (ui.battle) ui.battle.classList.remove('ff-mortal');
+    if (battle) battle.mortal = false;
+    setPortraitMood(null);
+  }
+
   function applyDamage(amount) {
     if (!battle || battle.ended) return;
     save.hp = Math.max(0, save.hp - amount);
@@ -4707,6 +4712,7 @@
     if (battlePlayer) { battle.pose = 'victory'; battle.poseAt = Date.now(); }
     log('VICTORY!');
     sound('win');
+    clearBattleFeedback();
     grantXp(battle.def.xp);
     persist();
     updateHud();
@@ -4719,6 +4725,7 @@
 
   function loseBattle() {
     if (!battle || battle.ended) return;
+    clearBattleFeedback();
     battle.ended = true;
     battle.busy = true;
     setBattleButtons(false);
@@ -4744,6 +4751,7 @@
   function finishBattle(won) {
     var options = battle ? battle.opts : null;
     battle = null;
+    clearBattleFeedback();
     hideBattle();
     view = 'world';
     mode = 'world';
