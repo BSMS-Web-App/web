@@ -1134,6 +1134,14 @@
     var key = char.id + '|' + rows;
     if (castCache[key]) return castCache[key];
     loadHeroAtlas();
+    /* === NEW: the hero wears the action sheet, everyone else keeps the atlas === */
+    if (char === HERO_CHAR) {
+      var sheetHero = heroWorldAtlas();
+      if (sheetHero) {
+        castCache[key] = sheetHero;
+        return sheetHero;
+      }
+    }
     var base = heroSheet.canvas;
     if (!base || !base.getContext) return null;
     var width = SPRITE_CELL * SPRITE_COLS;
@@ -1658,6 +1666,7 @@
           actionSheet.cache = {};
           actionSheet.state = 'ready';
           if (battlePlayer) refreshBattleSheet();
+          refreshHeroArt();
           buildSheetDebug();
         } catch (error) {
           actionSheet.state = 'failed';
@@ -1669,6 +1678,123 @@
       image.src = source;
     }
     tryNext();
+  }
+
+  /* ==================================================================
+     NEW: WORLD HERO FROM THE ACTION SHEET
+     The walking hero and the HUD portrait used to be cut from
+     img/frostfall/hero-atlas.png, a Super Mario RPG rip. Once the action
+     sheet is keyed, its cells are re-cut into the engine's 8x4 grid so the
+     overworld billboard, the portrait and the battle all show the same
+     character in the same gender. hero-atlas.png stays as the fallback for
+     browsers that never load the JPG.
+     ================================================================== */
+  var worldAtlasCache = {};
+
+  function sheetCellBox(rowIndex, colIndex) {
+    if (actionSheet.state !== 'ready') return null;
+    var band = actionSheet.layout[rowIndex];
+    if (!band) return null;
+    var side = selectedGender === 'girl' ? band.girl : band.boy;
+    if (!side || !side.w || !side.cols) return null;
+    var cols = Math.max(1, side.cols);
+    /* side.w is one cell, not the whole band (actionRowCanvas relies on that
+       too), so the column offset is a straight multiple of it. */
+    return {
+      x: side.x + side.w * Math.min(Math.max(0, colIndex), cols - 1),
+      y: band.y, w: side.w, h: band.h
+    };
+  }
+
+  function heroWorldAtlas() {
+    if (actionSheet.state !== 'ready' || !actionSheet.sheet) return null;
+    var key = selectedGender + '|' + actionSheet.cell;
+    if (worldAtlasCache[key]) return worldAtlasCache[key];
+    var canvas = document.createElement('canvas');
+    canvas.width = SPRITE_CELL * SPRITE_COLS;
+    canvas.height = SPRITE_CELL * SPRITE_ROWS;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = false;
+    /* row 0 is the stance band, 1 the sword swing, 2 the kick, 3 the shot,
+       4 the bomb throw, 5 the cure/cheer. The third flag mirrors a cell so
+       the two kick frames step onto opposite legs. */
+    var plan = [
+      [0, 0], [0, 9], [0, 0], [0, 9], [0, 0], [5, 9], [1, 0], [0, 0],
+      [2, 0], [0, 9], [2, 0, 1], [0, 9],
+      [2, 0], [0, 9], [2, 0, 1], [0, 9],
+      [1, 0], [1, 1], [1, 9], [4, 1],
+      [3, 0], [5, 0], [5, 9], [5, 0],
+      [5, 9], [5, 0], [5, 9], [5, 0],
+      [0, 0], [0, 0], [0, 0], [0, 0]
+    ];
+    for (var i = 0; i < plan.length; i++) {
+      var box = sheetCellBox(plan[i][0], plan[i][1]);
+      if (!box) continue;
+      var scale = Math.min(SPRITE_CELL / box.w, SPRITE_CELL / box.h);
+      var w = box.w * scale;
+      var h = box.h * scale;
+      var dx = (i % SPRITE_COLS) * SPRITE_CELL + (SPRITE_CELL - w) / 2;
+      var dy = Math.floor(i / SPRITE_COLS) * SPRITE_CELL + (SPRITE_CELL - h);
+      ctx.save();
+      if (plan[i][2]) {
+        ctx.translate(dx + w, dy);
+        ctx.scale(-1, 1);
+        ctx.drawImage(actionSheet.sheet, box.x, box.y, box.w, box.h, 0, 0, w, h);
+      } else {
+        ctx.drawImage(actionSheet.sheet, box.x, box.y, box.w, box.h, dx, dy, w, h);
+      }
+      ctx.restore();
+    }
+    worldAtlasCache[key] = canvas;
+    return canvas;
+  }
+
+  /* The new art is a bust rather than a whole-body sheet sprite, so the
+     portrait frames the top of the stance cell instead of a cap box. */
+  function drawSheetPortrait(ctx, atlas) {
+    var cells = atlas.getContext('2d');
+    if (!cells) return;
+    var data = cells.getImageData(0, 0, SPRITE_CELL, SPRITE_CELL).data;
+    var minX = SPRITE_CELL, maxX = -1, minY = SPRITE_CELL, maxY = -1;
+    for (var y = 0; y < SPRITE_CELL; y++) {
+      for (var x = 0; x < SPRITE_CELL; x++) {
+        if (data[(y * SPRITE_CELL + x) * 4 + 3] < 40) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) return;
+    var height = maxY - minY + 1;
+    var headH = Math.max(16, Math.round(height * 0.56));
+    var centre = (minX + maxX + 1) / 2;
+    var srcW = Math.max(18, Math.round((maxX - minX + 1) * 0.86));
+    var scale = (PORTRAIT_PX - 6) / headH;
+    var destW = srcW * scale;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      atlas, centre - srcW / 2, Math.max(0, minY - 2), srcW, headH + 2,
+      (PORTRAIT_PX - destW) / 2, 4, destW, PORTRAIT_PX - 8
+    );
+  }
+
+  /* Swapping gender (or the sheet finishing its load) has to re-land the
+     walking hero's texture and repaint the head, exactly like the battle. */
+  function refreshHeroArt() {
+    delete castCache[HERO_CHAR.id + '|' + SPRITE_ROWS];
+    delete castCache[HERO_CHAR.id + '|1'];
+    if (player && player.castChar === HERO_CHAR && player.spriteObj) {
+      var art = castAtlas(HERO_CHAR, player.castRows || SPRITE_ROWS);
+      if (art) {
+        player.atlas = { canvas: art, cols: SPRITE_COLS, rows: player.castRows || SPRITE_ROWS };
+        player.spriteObj.sprite.image = art;
+        player.windowIndex = -1;
+        updateActor(player);
+      }
+    }
+    paintPortrait();
   }
 
   /* A single pose row, already keyed and cropped for the chosen hero. Every
@@ -1767,6 +1893,7 @@
     actionSheet.cache = {};
     if (actionSheet.state === 'ready') {
       refreshBattleSheet();
+      refreshHeroArt();
       buildSheetDebug();
     }
     sound('click');
@@ -3997,8 +4124,18 @@
     if (!ctx) return canvas;
     ctx.fillStyle = '#2b1e4a';
     ctx.fillRect(0, 0, PORTRAIT_PX, PORTRAIT_PX);
-    var art = castAtlas(HERO_CHAR, 1);
-    if (art) {
+    /* === NEW: prefer the action-sheet head over the old atlas === */
+    var sheetArt = heroWorldAtlas();
+    var art = sheetArt ? null : castAtlas(HERO_CHAR, 1);
+    if (sheetArt) {
+      drawSheetPortrait(ctx, sheetArt);
+      if (mood === 'hurt' || mood === 'nervous') {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = mood === 'hurt' ? 'rgba(255, 70, 80, 0.42)' : 'rgba(90, 175, 255, 0.26)';
+        ctx.fillRect(0, 0, PORTRAIT_PX, PORTRAIT_PX);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    } else if (art) {
       var cap = castCapBox(art, 0);
       var body = castSpriteBox(art, 0);
       var middle = body.x + body.w / 2;
