@@ -198,8 +198,8 @@ a { color: inherit; }
   background: #3a2564;
   border-bottom: 3px solid var(--ff-border);
 }
-.ff-dialogue-head span:first-child { font: 9px 'Press Start 2P', monospace; color: var(--ff-gold); letter-spacing: .08em; }
-.ff-dialogue-tip { font: 7px 'Press Start 2P', monospace; color: var(--ff-muted); }
+.ff-dialogue-head span:first-child { font: 9px 'Press Start 2P', monospace; color: var(--ff-gold); letter-spacing: .08em; min-width: 0; flex: 0 1 auto; overflow-wrap: anywhere; line-height: 1.5; }
+.ff-dialogue-tip { font: 7px 'Press Start 2P', monospace; color: var(--ff-muted); flex: 0 0 auto; }
 .ff-dialogue p { margin: 0; font: 24px/1.2 'VT323', monospace; color: #fff8e8; min-height: 54px; }
 .ff-dialogue button {
   position: absolute;
@@ -920,7 +920,7 @@ a { color: inherit; }
   box-shadow: inset 0 0 0 4px #fff, 7px 7px 0 rgba(8, 3, 18, .8);
 }
 .ff-dialogue-head { background: linear-gradient(180deg, #ffcf63, #ff9c22); border-bottom: 4px solid var(--ff-outline); }
-.ff-dialogue-head span:first-child { color: #401a08; font-size: 10px; }
+.ff-dialogue-head span:first-child { color: #401a08; font-size: clamp(8px, 2.3vw, 10px); }
 .ff-dialogue-tip { color: #7a4a10; }
 .ff-dialogue p { color: #241033; font-size: 25px; font-weight: 700; }
 .ff-dialogue button { background: #17102a; color: #ffe066; border: 3px solid #17102a; box-shadow: inset 0 0 0 2px #ffd05c; }

@@ -182,6 +182,10 @@
   };
 
   var SWING_TIME = 0.3;
+  /* Block Tales holds key poses instead of blending them: quantise pose time
+     to ~14 fps so limbs snap between readable frames like an action figure. */
+  var STEP_FPS = 14;
+  function stepped(t) { return Math.floor(t * STEP_FPS) / STEP_FPS; }
   var SKILLS = [
     { id: 'icicle', name: 'ICICLE', cost: 3, level: 1, mult: 1.8, desc: 'A spear of ice. Heavy damage.' },
     { id: 'warmth', name: 'WARMTH', cost: 4, level: 2, heal: true, desc: 'Melt the cold. Restore HP.' },
@@ -244,6 +248,7 @@
   function buildHero(palette) {
     var pal = palette || heroPalette();
     var actor = makeActor('player');
+    actor.flip = 0;
     var hat = pal.hat || 'beanie';
     var trim = pal.trim === undefined ? pal.scarf : pal.trim;
     var belt = pal.belt === undefined ? 0x2b2036 : pal.belt;
@@ -494,17 +499,23 @@
       addPart(actor, 0xffe6a3, [0, 0, 0], [0.36, 1.9, 0], [0.16, 0.16, 0.16]);
       addPart(actor, 0xfff6f1, [0, 0, 0], [0, 1.3, 0.18], [0.1, 0.1, 0.1]);
     } else if (index === 2) {
-      /* CHAPTER THREE — FROZEN CROWN, still wearing its Moderator Lock. */
+      /* CHAPTER THREE — FROZEN CROWN. Deep-ice band and five tall points give
+         it a crown silhouette from the overworld camera, which looks down: the
+         old version read as a pile of ice from that angle. */
       relicPlinth(actor, 0xbfe9ff);
-      addPart(actor, 0x3f6f8c, [0, 0, 0], [0, 0.62, 0], [0.88, 0.4, 0.88], { geo: 'cylinder' });
-      addPart(actor, 0xbfe9ff, [0, 0, 0], [0, 0.62, 0], [1.02, 0.16, 1.02], { geo: 'disc', alpha: 0.55 });
+      addPart(actor, 0x1c3f5e, [0, 0, 0], [0, 0.66, 0], [0.94, 0.46, 0.94], { geo: 'cylinder' });
+      addPart(actor, 0x122838, [0, 0, 0], [0, 0.44, 0], [0.96, 0.1, 0.96], { geo: 'disc' });
+      addPart(actor, 0xe8c96a, [0, 0, 0], [0, 0.89, 0], [1.08, 0.14, 1.08], { geo: 'disc' });
       for (i = 0; i < 5; i++) {
         angle = i * Math.PI * 2 / 5;
-        addPart(actor, 0xd9f6ff, [0, 0, 0], [Math.cos(angle) * 0.4, 0.98, Math.sin(angle) * 0.4], [0.2, 0.62, 0.2], { geo: 'cone8' });
+        addPart(actor, 0xd9f6ff, [0, 0, 0], [Math.cos(angle) * 0.38, 1.28, Math.sin(angle) * 0.38], [0.26, 0.9, 0.26], { geo: 'cone8' });
+        addPart(actor, 0xffffff, [0, 0, 0], [Math.cos(angle) * 0.38, 1.77, Math.sin(angle) * 0.38], [0.15, 0.15, 0.15], { geo: 'cone8' });
       }
-      addPart(actor, 0x9ff2ff, [0, 0, 0], [0, 0.95, 0], [0.26, 0.26, 0.26]);
-      addPart(actor, 0x7ce7ff, [0, 0, 0], [0, 0.62, 0.47], [0.34, 0.3, 0.08], { alpha: 0.85 });
-      addPart(actor, 0x1b1630, [0, 0, 0], [0, 0.62, 0.5], [0.2, 0.18, 0.06]);
+      addPart(actor, 0x7ce7ff, [0, 0, 0], [0, 0.98, 0.05], [0.32, 0.32, 0.16], { ry: 0.78 });
+      addPart(actor, 0xffffff, [0, 0, 0], [0, 0.98, 0.14], [0.12, 0.12, 0.08], { ry: 0.78 });
+      addPart(actor, 0x7ce7ff, [0, 0, 0], [0, 0.68, 0.48], [0.34, 0.26, 0.08], { alpha: 0.9 });
+      addPart(actor, 0x1b1630, [0, 0, 0], [0, 0.68, 0.51], [0.2, 0.16, 0.06]);
+      addPart(actor, 0x9fe6ff, [0, 0, 0], [0, 0.95, 0], [2.0, 2.0, 2.0], { geo: 'disc', alpha: 0.1 });
     } else if (index === 3) {
       /* CHAPTER FOUR — MIDNIGHT CLAPPER, hung in a broken bell frame. */
       relicPlinth(actor, 0xffb347);
@@ -1757,6 +1768,8 @@
     actor.yaw = 0;
     actor.phase = Math.random() * 6;
     addActor(actor);
+    world.npc = actor;
+    world.npcName = chapter.npc.name;
     world.interactables.push({
       x: chapter.npc.x, z: chapter.npc.z, r: 2.5, label: 'TALK',
       action: function () {
@@ -1983,6 +1996,13 @@
   }
 
   /* -------------------------------------------------------------- dialogue */
+  /* Listeners in the overworld pop on every new box, so the character you are
+     reading is also the character who is moving. */
+  function speakerHop(name) {
+    if (!world || !world.npc) return;
+    if (world.npcName === name) world.npc.hop = 0.26;
+  }
+
   function talk(speaker, lines, onDone) {
     if (!lines || !lines.length) { if (onDone) onDone(); return; }
     dialogue = { lines: lines.slice(), index: 0, speaker: speaker, onDone: onDone || null };
@@ -1993,6 +2013,7 @@
     ui.touch.hidden = true;
     document.body.classList.add('ff-talking');
     mode = 'dialogue';
+    speakerHop(speaker);
     sound('click');
   }
 
@@ -2010,6 +2031,7 @@
       return;
     }
     ui.dialogueText.textContent = dialogue.lines[dialogue.index];
+    speakerHop(dialogue.speaker);
     sound('click');
   }
 
@@ -2043,7 +2065,13 @@
     player.z = clamp(player.z, -28, 28);
     var targetYaw = Math.atan2(dx, dz);
     var difference = ((targetYaw - player.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-    player.yaw += difference * Math.min(1, dt * 12);
+    /* A hard reversal gets a Paper Mario squash-flip instead of a slow spin. */
+    if (Math.abs(difference) > 2.0 && player.flip <= 0) {
+      player.flip = 0.16;
+      player.yaw = targetYaw;
+    } else {
+      player.yaw += difference * Math.min(1, dt * 12);
+    }
     player.walk += dt * 11;
     player.moving = true;
   }
@@ -2163,15 +2191,23 @@
 
     /* Snappy 4-pose walk: limbs snap between poses instead of sliding, and
        the torso squashes on each footfall like a plastic toy. */
-    var walkSin = Math.sin(player.walk);
+    var walkPhase = stepped(player.walk);
+    var walkSin = Math.sin(walkPhase);
     var step = player.moving ? (walkSin > 0.55 ? 1 : walkSin < -0.55 ? -1 : walkSin * 0.3) : 0;
-    var bounce = player.moving ? Math.abs(Math.cos(player.walk)) : 0;
+    var bounce = player.moving ? Math.abs(Math.cos(walkPhase)) : 0;
     player.legL.rx = step * 0.82;
     player.legR.rx = -step * 0.82;
     player.armL.rx = -step * 0.72;
     player.armR.rx = step * 0.72;
     player.squashY = 1 + bounce * 0.075;
     player.squashX = 1 - bounce * 0.05;
+    if (player.flip > 0) {
+      /* Paper-thin pinch at the midpoint of the turn, then snap back. */
+      player.flip = Math.max(0, player.flip - dt);
+      var flipK = Math.abs(player.flip / 0.16 * 2 - 1);
+      player.squashX *= 0.22 + 0.78 * flipK;
+      player.squashY *= 1 + (1 - flipK) * 0.1;
+    }
     player.lean = -step * 0.055;
     player.tiltX = player.moving ? 0.05 : 0;
     player.y = bounce * 0.09;
@@ -2210,10 +2246,25 @@
       var actor = world.actors[i];
       if (actor === player || actor === pip || actor.hidden) continue;
       if (actor.kind === 'npc') {
-        actor.y = Math.sin(time * 1.4 + actor.phase) * 0.02;
-        actor.yaw = Math.sin(time * 0.5 + actor.phase) * 0.18;
+        actor.y = Math.sin(stepped(time) * 1.4 + actor.phase) * 0.02;
+        actor.yaw = Math.sin(stepped(time) * 0.5 + actor.phase) * 0.18;
+        if (actor.hop > 0) {
+          /* Talking hop: a small squash-and-stretch pop per dialogue box. */
+          actor.hop = Math.max(0, actor.hop - dt);
+          var hopK = actor.hop / 0.26;
+          var hopLift = Math.sin(clamp(hopK, 0, 1) * Math.PI);
+          actor.y += hopLift * 0.34;
+          actor.squashY = 1 + hopLift * 0.11;
+          actor.squashX = 1 - hopLift * 0.08;
+        } else {
+          actor.squashY = 1;
+          actor.squashX = 1;
+        }
       } else if (actor.kind === 'enemy') {
-        actor.y = actor.baseY * actor.scale + Math.sin(time * 1.9 + actor.phase) * 0.12;
+        actor.y = actor.baseY * actor.scale + Math.sin(stepped(time) * 1.9 + actor.phase) * 0.12;
+      } else if (actor.kind === 'relic') {
+        actor.y = Math.sin(stepped(time) * 2.1) * 0.05;
+        actor.yaw += dt * 0.55;
       } else if (actor.kind === 'crystal') {
         actor.y = 0.7 + Math.sin(time * 2.1) * 0.14;
         actor.yaw += dt * 0.9;
@@ -2362,33 +2413,74 @@
        the boss's arms clip off the right edge. The camera looks low so both
        battlers stand in the upper stage, clear of the command plate. */
     var battleFit = window.innerWidth / Math.max(1, window.innerHeight) < 0.9 ? 17 : 14.5;
+    if (battle) battle.fit = battleFit;
     renderer.setCamera([0, 3.3, 12.2], [0, -0.2, 0.9], 52 * Math.PI / 180, battleFit);
   }
 
   function updateBattle(dt, time) {
     if (!battle || !battlePlayer || !battleEnemy) return;
     var anim = battle.anim;
+    var st = stepped(time);
+    var poseTime = Date.now() - (battle.poseAt || 0);
+    if (battle.pose === 'strike' && poseTime > 240) battle.pose = 'idle';
     battlePlayer.x = -1.7 + anim.p * 1.1;
     battleEnemy.x = 1.8 - anim.e * 1.1;
     anim.p = Math.max(0, anim.p - dt * 3.2);
     anim.e = Math.max(0, anim.e - dt * 3.2);
-    battlePlayer.y = Math.abs(Math.sin(time * 2.4)) * 0.04;
-    battlePlayer.yaw = 0.72 + Math.sin(time * 0.8) * 0.03;
-    battleEnemy.y = battleEnemy.baseY * battleEnemy.scale + Math.sin(time * 1.9) * 0.1;
-    battlePlayer.legL.rx = Math.sin(time * 2) * 0.05;
-    battlePlayer.legR.rx = -Math.sin(time * 2) * 0.05;
+    battlePlayer.y = Math.abs(Math.sin(st * 2.4)) * 0.04;
+    battlePlayer.yaw = 0.72 + Math.sin(st * 0.8) * 0.03;
+    battleEnemy.y = battleEnemy.baseY * battleEnemy.scale + Math.sin(st * 1.9) * 0.1;
+    battlePlayer.legL.rx = Math.sin(st * 2) * 0.05;
+    battlePlayer.legR.rx = -Math.sin(st * 2) * 0.05;
     battlePlayer.armL.rx = -anim.p * 0.6;
     battlePlayer.armR.rx = -anim.p * 2.5;
     battlePlayer.tiltX = anim.p * 0.18;
     battlePlayer.squashY = 1 + anim.p * 0.06;
     battlePlayer.squashX = 1 - anim.p * 0.04;
+    battlePlayer.lean = 0;
+    /* Three held poses per swing: cock back, whip forward, rebound. The windup
+       runs while the timing bar is still filling, so the pose itself teaches
+       the player when to press. */
+    if (battle.pose === 'windup') {
+      battlePlayer.x -= 0.34;
+      battlePlayer.lean = -0.3;
+      battlePlayer.tiltX = -0.12;
+      battlePlayer.armR.rx = 1.35;
+      battlePlayer.armL.rx = 0.5;
+      battlePlayer.squashY = 0.9;
+      battlePlayer.squashX = 1.12;
+      battlePlayer.y = 0;
+    } else if (battle.pose === 'strike') {
+      var hitK = clamp(1 - poseTime / 110, 0, 1);
+      var recoilK = clamp((poseTime - 110) / 130, 0, 1);
+      battlePlayer.x += 0.72 * hitK - 0.18 * recoilK;
+      battlePlayer.lean = 0.34 * hitK - 0.12 * recoilK;
+      battlePlayer.tiltX = 0.24 * hitK;
+      battlePlayer.armR.rx = -2.9 * hitK + 0.5 * recoilK;
+      battlePlayer.armL.rx = -1.1 * hitK;
+      battlePlayer.squashY = 1 + 0.14 * hitK;
+      battlePlayer.squashX = 1 - 0.12 * hitK;
+    }
     if (battle.lunge > 0) battle.lunge = Math.max(0, battle.lunge - dt * 4);
     battleEnemy.tiltX = battle.windup ? -0.26 : battle.lunge > 0 ? 0.34 : 0;
     battleEnemy.squashY = battle.windup ? 0.9 : 1;
     battleEnemy.squashX = battle.windup ? 1.1 : 1;
     battleEnemy.lean = battle.lunge > 0 ? 0.28 : 0;
+    /* A two-frame shoulder shake while the telegraph is up. */
+    if (battle.windup) battleEnemy.x += Math.floor(time * 24) % 2 ? 0.05 : -0.05;
     updateActor(battlePlayer);
     updateActor(battleEnemy);
+    /* Battle camera: push in on windups, snap wide on the hit, plus the same
+       punch kick the overworld uses. */
+    camera.punch = Math.max(0, camera.punch - dt * 26);
+    var kick = punchOffset();
+    var push = battle.pose === 'strike' ? 1.6 : battle.windup ? 1 : 0;
+    renderer.setCamera(
+      [kick[0], 3.3 + kick[1] - push * 0.12, 12.2 - push * 0.5],
+      [0, -0.2, 0.9],
+      52 * Math.PI / 180,
+      (battle.fit || 14.5) * (1 - push * 0.022)
+    );
 
     // Rolling HP: save.hp is the real value, battle.displayHp drains toward it.
     var target = save.hp;
@@ -2560,7 +2652,8 @@
       busy: false, ended: false, turn: 1, opts: opts, anim: { p: 0, e: 0 },
       state: 'intro', telegraph: 'standard', extraTurns: opts.advantage === 'player' ? 1 : 0,
       revived: false, mortal: false, mods: cardMods(), window: null, windowTimer: null, raged: false,
-      gimmick: bossGimmick(def), windup: 0, lunge: 0, echo: false, stunned: false
+      gimmick: bossGimmick(def), windup: 0, lunge: 0, echo: false, stunned: false,
+      pose: 'idle', poseAt: 0, fit: 14.5
     };
     if (opts.opening) battle.hp = Math.max(1, battle.hp - opts.opening);
     save.hp = Math.max(1, save.hp);
@@ -2698,6 +2791,8 @@
       type: 'strike', move: move, startAt: now, openAt: now + 220,
       perfectAt: now + (battle.mods.narrow ? 930 : 820), closeAt: now + 1080, quality: null, resolved: false
     };
+    battle.pose = 'windup';
+    battle.poseAt = now;
     showTiming('strike', move.kind === 'skill' ? move.name + '!' : 'STRIKE!');
     if (battle.gimmick && battle.gimmick.obscured) ui.timingLabel.textContent = 'THE DARK IS LISTENING...';
   }
@@ -2738,6 +2833,8 @@
     }
     battle.hp = Math.max(0, battle.hp - damage);
     battle.anim.p = 1;
+    battle.pose = 'strike';
+    battle.poseAt = Date.now();
     sound('hit');
     shake();
     if (quality === 'perfect') {
@@ -3477,6 +3574,16 @@
       win: function () { if (battle && !battle.ended) { battle.hp = 0; winBattle(); } },
       grant: function (amount) { var gained = grantXp(amount || 50); updateHud(); return gained; },
       stats: function () { return { level: save.level, xp: save.xp, maxHp: save.maxHp, sp: save.maxSp, bp: save.bp, shards: save.shards }; },
+      pose: function () {
+        if (!battle) return null;
+        return {
+          pose: battle.pose, windup: battle.windup, hp: battle.hp,
+          x: battlePlayer && Math.round(battlePlayer.x * 100) / 100,
+          lean: battlePlayer && Math.round((battlePlayer.lean || 0) * 100) / 100,
+          squashX: battlePlayer && Math.round((battlePlayer.squashX || 1) * 100) / 100,
+          squashY: battlePlayer && Math.round((battlePlayer.squashY || 1) * 100) / 100
+        };
+      },
       phase: function () { return phaseAt(); },
       state: function () {
         if (!battle) return null;
