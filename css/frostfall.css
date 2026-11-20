@@ -1752,3 +1752,90 @@ a { color: inherit; }
   46% { opacity: .55; }
   100% { opacity: 0; }
 }
+
+/* ============================================================
+   NEW: HUD POLISH, BOY/GIRL SELECTOR, LETTERBOX CUTSCENES
+   ============================================================ */
+/* HP / SP labels were purple-on-purple at small sizes — bright now. */
+.ff-hud-bar span { color: #fff; letter-spacing: .04em; text-shadow: 1px 1px 0 #120a22; }
+.ff-hud-bar.hp span { color: #ffe1e8; border-color: #ff8aa0; }
+.ff-hud-bar.sp span { color: #d8f7ff; border-color: #6fd8ff; }
+/* the sound/MENU buttons and the BP/RELICS badges share one aligned row set */
+.ff-hud-side { align-items: stretch; }
+.ff-hud-side .ff-chip { min-height: 34px; }
+@media (max-width: 560px) { .ff-hud-side .ff-chip { min-height: 30px; } }
+
+/* BOY / GIRL selector on the title card */
+.ff-gender {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  background: rgba(18, 10, 34, .72);
+  border: 3px solid var(--ff-outline);
+  box-shadow: inset 0 0 0 2px #7a57d6, 3px 3px 0 rgba(8, 3, 18, .7);
+}
+.ff-gender-btn {
+  padding: 9px 12px;
+  background: #2d1a4e;
+  border: 2px solid #4f3a7d;
+  color: #cbb9ff;
+  font: 7px 'Press Start 2P', monospace;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.ff-gender-btn:hover { border-color: #9fe6ff; color: #fff; }
+.ff-gender-btn.on {
+  background: linear-gradient(180deg, #fff8d6, #ffcf4a);
+  border-color: var(--ff-outline);
+  color: #5a2a00;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+/* letterbox cutscene: 40px bars slide in, the panel meets them */
+.ff-cutscene.ff-letterbox .ff-cut-bar { height: 40px; }
+.ff-cutscene.ff-letterbox .ff-cut-bar.top { animation: ff-lb-top .45s cubic-bezier(.2, .9, .3, 1) both; }
+.ff-cutscene.ff-letterbox .ff-cut-bar.bottom { animation: ff-lb-bottom .45s cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes ff-lb-top { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+@keyframes ff-lb-bottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.ff-cutscene.ff-letterbox .ff-cut-panel {
+  bottom: 58px;
+  background: linear-gradient(180deg, #2c1849, #150b26);
+}
+.ff-cutscene.ff-letterbox .ff-cut-brand { top: 12px; }
+.ff-kw { color: #ffd257; text-shadow: 1px 1px 0 #402000; }
+.ff-cut-score {
+  margin: 8px 0 0;
+  padding: 5px 9px;
+  background: #3a2050;
+  border: 2px solid #ffcf63;
+  color: #ffe6a8;
+  font: 8px 'Press Start 2P', monospace;
+  letter-spacing: .06em;
+}
+.ff-cut-score[hidden] { display: none; }
+
+/* ?debugSprites=1 sprite-slice fine-tuner */
+.ff-sheet-debug {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 70;
+  width: 340px;
+  padding: 8px;
+  background: rgba(12, 6, 24, .95);
+  border: 3px solid #17102a;
+  box-shadow: inset 0 0 0 2px #7a57d6;
+  color: #cbb9ff;
+  font: 7px 'Press Start 2P', monospace;
+}
+.ff-sheet-debug[hidden] { display: none; }
+.ff-sheet-debug b { display: block; margin-bottom: 6px; color: #ffe08a; }
+.ff-sheet-debug canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; background: #120a22; }
+.ff-sheet-debug p { margin: 6px 0 0; font: 14px 'VT323', monospace; color: #9fe6ff; }
+
+/* one aligned row set: both buttons and both badges share the same height */
+.ff-hud-side > * { min-height: 37px; }
+@media (max-width: 560px) { .ff-hud-side > * { min-height: 32px; } }
+
+/* the slice debug overlay is read-only: never eat a click on the game */
+.ff-sheet-debug { pointer-events: none; }

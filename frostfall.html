@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=27">
+<link rel="stylesheet" href="/css/frostfall.css?v=30">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -76,6 +76,11 @@
       <p class="ff-title-sub">THE STAR THAT WENT OUT</p>
       <p class="ff-title-copy">The Frostfest 2010 portal dropped you into Roadtown: snowed in, lights out, and five Sacred Relics missing. Mayor Bram says you are hero material. The Long Night is coming down the mountain. You have a lantern, a scarf, and a best friend made of snow.</p>
       <div class="ff-title-actions">
+        <!-- === NEW: BOY / GIRL HERO SELECTOR === -->
+        <div class="ff-gender" role="group" aria-label="Choose your hero">
+          <button type="button" class="ff-gender-btn on" data-gender="boy" aria-pressed="true">BOY · NICO</button>
+          <button type="button" class="ff-gender-btn" data-gender="girl" aria-pressed="false">GIRL</button>
+        </div>
         <button id="ff-continue" class="ff-button gold" type="button" hidden>CONTINUE</button>
         <button id="ff-new-game" class="ff-button" type="button">NEW GAME</button>
         <a class="ff-button ghost" href="/events">EVENTS</a>
@@ -96,6 +101,7 @@
           <p id="ff-cut-text" class="ff-cut-text"></p>
         </div>
       </div>
+      <p id="ff-cut-score" class="ff-cut-score" hidden></p>
       <div class="ff-cut-actions">
         <button id="ff-cut-next" class="ff-button gold" type="button">CONTINUE</button>
         <button id="ff-cut-skip" class="ff-cut-skip" type="button">SKIP CUTSCENE</button>
@@ -232,6 +238,13 @@
     </div>
   </div>
 
+  <!-- === NEW: SPRITE-SLICE DEBUG (?debugSprites=1) === -->
+  <div id="ff-sheet-debug" class="ff-sheet-debug" hidden>
+    <b>SPRITE SLICE DEBUG</b>
+    <canvas id="ff-sheet-debug-canvas" width="620" height="440"></canvas>
+    <p id="ff-sheet-debug-note">animations.jpg</p>
+  </div>
+
   <div id="ff-fallback" class="ff-screen" hidden>
     <div class="ff-panel">
       <p class="ff-eyebrow">A CHRISTMAS TALE</p>
@@ -242,6 +255,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=6"></script>
-<script src="/js/frostfall.js?v=81"></script>
+<script src="/js/frostfall.js?v=85"></script>
 </body>
 </html>

@@ -18,6 +18,10 @@
 
   var params = new URLSearchParams(location.search);
   var DEBUG = params.has('debug');
+  /* === NEW: 12-CARD BP SYSTEM · 4 BP MAX ===
+     Passives may never spend more than four BP, whatever a level-up or an old
+     save claims. */
+  var BP_MAX = 4;
   var clock = Date.now;
   var fakeNow = params.get('now');
   if (fakeNow) {
@@ -68,7 +72,9 @@
     ending: $('ff-ending'), endingLines: $('ff-ending-lines'), endingStats: $('ff-ending-stats'), endingAgain: $('ff-ending-again'),
     ended: $('ff-ended'), fallback: $('ff-fallback'),
     cutscene: $('ff-cutscene'), cutSpeaker: $('ff-cut-speaker'), cutText: $('ff-cut-text'),
-    cutFace: $('ff-cut-face'), cutNext: $('ff-cut-next'), cutSkip: $('ff-cut-skip')
+    cutFace: $('ff-cut-face'), cutNext: $('ff-cut-next'), cutSkip: $('ff-cut-skip'),
+    cutScore: $('ff-cut-score'), sheetDebug: $('ff-sheet-debug'),
+    sheetDebugCanvas: $('ff-sheet-debug-canvas'), sheetDebugNote: $('ff-sheet-debug-note')
   };
 
   var FF = window.FFEngine;
@@ -84,7 +90,9 @@
       v: 1, name: 'NICO', started: false, ending: false,
       chapter: 0, level: 1, xp: 0,
       maxHp: 30, hp: 30, maxSp: 10, sp: 10, bp: 4,
-      cocoa: 2, shards: 0, cards: [], seenIntro: false, defeated: {}, talked: {}
+      cocoa: 2, shards: 0, cards: [], seenIntro: false, defeated: {}, talked: {},
+      /* === NEW: CHARACTER SELECT + CUTSCENE MEMORY === */
+      gender: 'boy', cutscenes: {}
     };
   }
 
@@ -102,11 +110,13 @@
     out.maxSp = clamp(Math.floor(Number(value.maxSp) || base.maxSp), 1, 999);
     out.hp = clamp(Math.floor(value.hp === undefined ? out.maxHp : Number(value.hp)), 1, out.maxHp);
     out.sp = clamp(Math.floor(value.sp === undefined ? out.maxSp : Number(value.sp)), 0, out.maxSp);
-    out.bp = clamp(Math.floor(Number(value.bp) || base.bp), 1, 999);
+    out.bp = clamp(Math.floor(Number(value.bp) || base.bp), 1, BP_MAX);
     out.cocoa = clamp(Math.floor(Number(value.cocoa) || 0), 0, 9);
     out.shards = clamp(Math.floor(Number(value.shards) || 0), 0, 5);
     out.seenIntro = Boolean(value.seenIntro);
     out.cards = Array.isArray(value.cards) ? value.cards.filter(function (id) { return typeof id === 'string'; }).slice(0, 8) : [];
+    out.gender = value.gender === 'girl' ? 'girl' : 'boy';
+    out.cutscenes = value.cutscenes && typeof value.cutscenes === 'object' ? value.cutscenes : {};
     ['defeated', 'talked'].forEach(function (key) {
       if (value[key] && typeof value[key] === 'object') {
         Object.keys(value[key]).forEach(function (id) {
@@ -134,6 +144,8 @@
 
   /* ----------------------------------------------------------------- state */
   var save = loadSave();
+  /* === NEW: CHARACTER SELECT === */
+  var selectedGender = save && save.gender === 'girl' ? 'girl' : 'boy';
   var mode = 'loading';
   var view = 'title';
   var phase = 'active';
@@ -178,7 +190,11 @@
   var cutscene = {
     active: false, index: 0, t: 0, lines: [], star: null, shard: null,
     crack: null, shards: [], shardsOn: false, speaker: null, lineT: 0,
-    typing: false, full: '', shown: 0, lastCount: -1, pitch: 1
+    typing: false, full: '', shown: 0, lastCount: -1, pitch: 1,
+    /* === NEW: CUTSCENE MANAGER STATE === */
+    id: null, kind: 'intro', shot: 'archway', focus: null, koBoss: null,
+    aura: null, resolve: null, onEnd: null, score: '', finalLabel: 'CONTINUE',
+    bossName: '', firstTime: false
   };
 
   var SWING_TIME = 0.3;
@@ -1490,6 +1506,321 @@
     return { canvas: heroSheet.canvas || blankHeroAtlas() };
   }
 
+  /* ==================================================================
+     NEW: SINGLE-SHEET SPRITE LOADER + JPEG CHROMA KEY
+     animations.jpg packs both heroes into one flat sheet: seven pose rows
+     for the boy in the left half, the same seven rows for the girl in the
+     right half. A JPG has no alpha, so the blue backing (and the light-blue
+     frame boxes) is keyed out once into an offscreen canvas and every row
+     is cropped to its own atlas. Cell counts live here so ?debugSprites=1
+     can tune them without touching the battle code.
+     ================================================================== */
+  var ACTION_SHEET = {
+    /* The upload is animations.JPG; Linux hosting is case-sensitive, so both
+       spellings are tried before giving up on the hero atlas. */
+    sources: [params.get('sheetSrc'), '/img/frostfall/animations.jpg', '/img/frostfall/animations.JPG'].filter(Boolean),
+    tolerance: 45,
+    fps: 9,
+    /* Measured cell boxes in the committed 896×1200 contact sheet: each pose
+       gets its own labelled band, three boy frames and two girl frames, all
+       standing on the band's baseline. Re-measure here if the art changes. */
+    sheetWidth: 896,
+    sheetHeight: 1200,
+    layout: [
+      { y: 40, h: 135, boy: { x: 20, w: 142, cols: 3 }, girl: { x: 594, w: 141, cols: 2 } },
+      { y: 215, h: 135, boy: { x: 20, w: 142, cols: 3 }, girl: { x: 594, w: 141, cols: 2 } },
+      { y: 390, h: 135, boy: { x: 20, w: 161, cols: 3 }, girl: { x: 542, w: 167, cols: 2 } },
+      { y: 564, h: 135, boy: { x: 20, w: 160, cols: 3 }, girl: { x: 542, w: 167, cols: 2 } },
+      { y: 736, h: 133, boy: { x: 20, w: 161, cols: 3 }, girl: { x: 542, w: 167, cols: 2 } },
+      { y: 904, h: 131, boy: { x: 20, w: 161, cols: 3 }, girl: { x: 542, w: 167, cols: 2 } },
+      { y: 1069, h: 127, boy: { x: 21, w: 160, cols: 3 }, girl: { x: 542, w: 167, cols: 2 } }
+    ],
+    names: [
+      'IDLE / STANCE', 'POWER STAB / SWORD', 'LINE BOUNCE / BALL',
+      'POWER SHOT / SLINGSHOT', 'DYNAMITE / BOMB', 'CURE CARD', 'PASSIVE EQUIP AURA'
+    ]
+  };
+  var actionSheet = { state: 'idle', sheet: null, cache: {}, error: '', layout: ACTION_SHEET.layout, cell: 169, cols: 3, rows: ACTION_SHEET.layout.length };
+  var spritesDebug = params.has('debugSprites');
+
+  /* One pass over the whole sheet: everything within `tolerance` of the
+     sampled top-left pixel becomes transparent, the next 24 units fade out,
+     and leftover blue fringes are pulled back towards their neighbours. */
+  function chromaKeySheet(canvas) {
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = image.data;
+    var keyR = data[0], keyG = data[1], keyB = data[2];
+    var tolerance = ACTION_SHEET.tolerance;
+    /* The light-blue frame boxes are a second flat colour, not the backing.
+       Find the most common light blue that is not the backing so both go:
+       painted blues on a character are far rarer, and never this uniform. */
+    var counts = {}, samples = 0, frame = null, frameCount = 0;
+    for (var s = 0; s < data.length; s += 16) {
+      if (data[s + 3] < 8) continue;
+      samples += 1;
+      var sr = data[s], sg = data[s + 1], sb = data[s + 2];
+      var lum = sr * 0.299 + sg * 0.587 + sb * 0.114;
+      if (lum < 140 || sb < sr + 18 || sb < sg + 4) continue;
+      var sdr = sr - keyR, sdg = sg - keyG, sdb = sb - keyB;
+      if (Math.sqrt(sdr * sdr + sdg * sdg + sdb * sdb) <= tolerance * 1.6) continue;
+      var bucket = (sr >> 3) + ',' + (sg >> 3) + ',' + (sb >> 3);
+      counts[bucket] = (counts[bucket] || 0) + 1;
+      if (counts[bucket] > frameCount) { frameCount = counts[bucket]; frame = [sr, sg, sb]; }
+    }
+    var frameOk = !!frame && samples > 0 && frameCount >= samples * 0.01;
+    actionSheet.frameKey = frameOk ? frame : null;
+    for (var i = 0; i < data.length; i += 4) {
+      var dr = data[i] - keyR, dg = data[i + 1] - keyG, db = data[i + 2] - keyB;
+      var distance = Math.sqrt(dr * dr + dg * dg + db * db);
+      if (distance <= tolerance) {
+        data[i + 3] = 0;
+        continue;
+      }
+      if (frameOk) {
+        var fr = data[i] - frame[0], fg = data[i + 1] - frame[1], fb = data[i + 2] - frame[2];
+        if (Math.sqrt(fr * fr + fg * fg + fb * fb) <= tolerance) {
+          data[i + 3] = 0;
+          continue;
+        }
+      }
+      if (distance < tolerance + 24) {
+        data[i + 3] = Math.round(data[i + 3] * (distance - tolerance) / 24);
+      }
+      /* Spill suppression only near the key colour, so painted blues stay. */
+      if (distance < tolerance * 1.8 && data[i + 2] > Math.max(data[i], data[i + 1]) + 22) {
+        data[i + 2] = Math.max(data[i], data[i + 1]) + 22;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  /* A different-sized upload still works: fall back to an even 7-row grid with
+     ?sheetCols=N deciding the frame count. */
+  function buildSheetLayout(width, height) {
+    var known = Math.abs(width - ACTION_SHEET.sheetWidth) <= 2 && Math.abs(height - ACTION_SHEET.sheetHeight) <= 2;
+    var layout = [];
+    var rows = ACTION_SHEET.layout.length;
+    var i;
+    if (known) {
+      for (i = 0; i < rows; i++) layout.push(ACTION_SHEET.layout[i]);
+    } else {
+      var cols = clamp(parseInt(params.get('sheetCols'), 10) || 4, 1, 24);
+      var halfW = Math.floor(width / 2);
+      var cellH = Math.floor(height / rows);
+      var cellW = Math.floor(halfW / cols);
+      for (i = 0; i < rows; i++) {
+        layout.push({
+          y: i * cellH, h: cellH,
+          boy: { x: 0, w: cellW, cols: cols },
+          girl: { x: width - halfW, w: cellW, cols: cols }
+        });
+      }
+    }
+    var cell = 0;
+    for (i = 0; i < layout.length; i++) {
+      cell = Math.max(cell, layout[i].h, layout[i].boy.w, layout[i].girl.w);
+    }
+    actionSheet.layout = layout;
+    actionSheet.rows = layout.length;
+    actionSheet.cols = Math.max(layout[0].boy.cols, layout[0].girl.cols);
+    actionSheet.cell = Math.ceil(cell) + 2;
+  }
+
+  function loadActionSheet() {
+    if (actionSheet.state !== 'idle') return;
+    actionSheet.state = 'loading';
+    var attempt = 0;
+    function tryNext() {
+      if (attempt >= ACTION_SHEET.sources.length) {
+        actionSheet.state = 'failed';
+        actionSheet.error = 'animations.jpg / animations.JPG not found';
+        buildSheetDebug();
+        return;
+      }
+      var source = ACTION_SHEET.sources[attempt];
+      attempt += 1;
+      var image = new Image();
+      image.onload = function () {
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          var ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('no 2d context');
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(image, 0, 0);
+          chromaKeySheet(canvas);
+          buildSheetLayout(canvas.width, canvas.height);
+          actionSheet.sheet = canvas;
+          actionSheet.cache = {};
+          actionSheet.state = 'ready';
+          if (battlePlayer) refreshBattleSheet();
+          buildSheetDebug();
+        } catch (error) {
+          actionSheet.state = 'failed';
+          actionSheet.error = String(error && error.message || error);
+          buildSheetDebug();
+        }
+      };
+      image.onerror = tryNext;
+      image.src = source;
+    }
+    tryNext();
+  }
+
+  /* A single pose row, already keyed and cropped for the chosen hero. Every
+     cell is drawn into a square of the same size, bottom-aligned, so the feet
+     and the scale match from row to row. */
+  function actionRowCanvas(row) {
+    if (actionSheet.state !== 'ready' || !actionSheet.sheet) return null;
+    row = clamp(row | 0, 0, actionSheet.rows - 1);
+    var key = selectedGender + '|' + row;
+    if (actionSheet.cache[key]) return actionSheet.cache[key];
+    var info = actionSheet.layout[row];
+    if (!info) return null;
+    var cells = info[selectedGender];
+    var size = actionSheet.cell;
+    var canvas = document.createElement('canvas');
+    canvas.width = size * cells.cols;
+    canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = false;
+    for (var col = 0; col < cells.cols; col++) {
+      ctx.drawImage(
+        actionSheet.sheet,
+        cells.x + col * cells.w, info.y, cells.w, info.h,
+        col * size + Math.round((size - cells.w) / 2), size - info.h,
+        cells.w, info.h
+      );
+    }
+    actionSheet.cache[key] = { canvas: canvas, cols: cells.cols, rows: 1 };
+    return actionSheet.cache[key];
+  }
+
+  /* Action Card -> sheet row. Sword Toss, Power Stab and the plain strike all
+     throw the sword, so they share row one. */
+  function actionRowForCmd(cmd) {
+    if (cmd === 'chain' || cmd === 'soften') return 2;
+    if (cmd === 'shot') return 3;
+    if (cmd === 'mash') return 4;
+    if (cmd === 'cure') return 5;
+    return 1;
+  }
+
+  function battleSheetRow() {
+    if (!battle) return 0;
+    if (battle.auraUntil && Date.now() < battle.auraUntil) return 6;
+    if (battle.sheetPreview !== null && battle.sheetPreview !== undefined) return battle.sheetPreview;
+    if (battle.move && (battle.pose === 'windup' || battle.pose === 'strike')) return actionRowForCmd(battle.move.cmd);
+    return 0;
+  }
+
+  function battleSheetFrame(row, poseTime, steppedTime) {
+    var atlas = actionRowCanvas(row);
+    var cols = atlas ? atlas.cols : 1;
+    if (battle && battle.pose === 'strike' && battle.move) {
+      /* A fired card plays through once and holds its last frame. */
+      return Math.min(cols - 1, Math.floor(poseTime / (1000 / ACTION_SHEET.fps)));
+    }
+    return Math.floor(steppedTime * ACTION_SHEET.fps) % cols;
+  }
+
+  function battleSheetApply(row) {
+    var atlas = actionRowCanvas(row);
+    if (!atlas || !battlePlayer || !battlePlayer.spriteObj) return false;
+    if (battlePlayer.atlas !== atlas) {
+      battlePlayer.atlas = atlas;
+      battlePlayer.spriteObj.sprite.image = atlas.canvas;
+      battlePlayer.windowIndex = -1;
+    }
+    return true;
+  }
+
+  function refreshBattleSheet() {
+    if (actionSheet.state !== 'ready' || !battlePlayer) return;
+    actionSheet.cache = {};
+    /* Only swap away from the hero atlas once a real row canvas exists, so a
+       half-loaded or malformed sheet can never blank the battler. */
+    if (!battleSheetApply(battleSheetRow())) return;
+    battlePlayer.windowIndex = -1;
+    updateActor(battlePlayer);
+  }
+
+  /* === NEW: CHARACTER SELECT === */
+  function updateGenderButtons() {
+    var buttons = document.querySelectorAll('[data-gender]');
+    for (var i = 0; i < buttons.length; i++) {
+      var on = buttons[i].dataset.gender === selectedGender;
+      buttons[i].classList.toggle('on', on);
+      buttons[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
+  function setGender(gender) {
+    selectedGender = gender === 'girl' ? 'girl' : 'boy';
+    if (save) { save.gender = selectedGender; persist(); }
+    updateGenderButtons();
+    actionSheet.cache = {};
+    if (actionSheet.state === 'ready') {
+      refreshBattleSheet();
+      buildSheetDebug();
+    }
+    sound('click');
+  }
+
+  /* ?debugSprites=1 — the whole keyed sheet with its row/column grid drawn
+     on top, so the cell counts in ACTION_SHEET can be tuned by eye. */
+  function buildSheetDebug() {
+    if (!spritesDebug || !ui.sheetDebug || !ui.sheetDebugCanvas) return;
+    ui.sheetDebug.hidden = false;
+    var canvas = ui.sheetDebugCanvas;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#120a22';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '11px monospace';
+    if (actionSheet.state !== 'ready') {
+      ctx.fillStyle = '#ff8f9c';
+      ctx.fillText('SHEET ' + actionSheet.state.toUpperCase() + (actionSheet.error ? ' · ' + actionSheet.error : ''), 12, 26);
+      ctx.fillStyle = '#cbb9ff';
+      ctx.fillText('expected at ' + ACTION_SHEET.sources.join(' or '), 12, 46);
+      ctx.fillText('?sheetSrc= overrides · ?sheetCols= for a differently sized sheet', 12, 64);
+      return;
+    }
+    var sheet = actionSheet.sheet;
+    var scale = Math.min((canvas.width - 24) / sheet.width, (canvas.height - 24) / sheet.height);
+    var w = sheet.width * scale, h = sheet.height * scale;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sheet, 12, 12, w, h);
+    ctx.lineWidth = 1;
+    /* Split sheet: the boy half and the girl half, each band boxed exactly as
+       the slicer crops it, with the frame count for the chosen hero. */
+    ctx.strokeStyle = 'rgba(120, 240, 255, .9)';
+    ctx.beginPath();
+    ctx.moveTo(12 + w / 2, 12);
+    ctx.lineTo(12 + w / 2, 12 + h);
+    ctx.stroke();
+    for (var row = 0; row < actionSheet.layout.length; row++) {
+      var band = actionSheet.layout[row];
+      var cells = band[selectedGender];
+      ctx.strokeStyle = 'rgba(255, 90, 120, .95)';
+      for (var col = 0; col < cells.cols; col++) {
+        ctx.strokeRect(
+          12 + (cells.x + col * cells.w) * scale,
+          12 + band.y * scale,
+          cells.w * scale,
+          band.h * scale
+        );
+      }
+      ctx.fillStyle = '#ffe08a';
+      ctx.fillText((ACTION_SHEET.names[row] || ('ROW ' + row)) + ' · ' + cells.cols + 'F', 14, 12 + (band.y + 8) * scale);
+    }
+    if (ui.sheetDebugNote) ui.sheetDebugNote.textContent = actionSheet.rows + ' rows · ' + selectedGender + ' · cell ' + actionSheet.cell + 'px · ' + sheet.width + '×' + sheet.height;
+  }
+
   function buildHero(palette) {
     var pal = palette || heroPalette();
     if (pal.hero) return buildCastActor(HERO_CHAR, SPRITE_ROWS);
@@ -2673,6 +3004,7 @@
     buildTitleScene();
     var hasSave = Boolean(save && save.started && !save.ending);
     ui.continueButton.hidden = !hasSave;
+    updateGenderButtons();
     if (hasSave) ui.continueButton.textContent = 'CONTINUE · CHAPTER ' + CHAPTERS[clamp(save.chapter, 0, 4)].num;
     ui.newGame.disabled = phase !== 'active';
     ui.newGame.textContent = phase === 'upcoming' ? 'OPENS SOON' : (save && save.ending ? 'PLAY AGAIN' : 'NEW GAME');
@@ -2709,6 +3041,8 @@
     var name = String(ui.nameInput.value || '').toUpperCase().replace(/[^A-Z0-9 _-]/g, '').trim().slice(0, 12) || 'NICO';
     save = freshSave();
     save.name = name;
+    /* === NEW: keep the hero chosen on the title card === */
+    save.gender = selectedGender;
     save.started = true;
     save.chapter = 0;
     persist();
@@ -2758,6 +3092,7 @@
     var name = save ? save.name : 'NICO';
     save = freshSave();
     save.name = name;
+    save.gender = selectedGender;
     save.started = true;
     persist();
     showChapterScreen(0);
@@ -2792,6 +3127,203 @@
   /* Voice pitch per speaker: narration floats, Bram rumbles, Pip squeaks. */
   var CUT_VOICE = { 'NARRATOR': 1.3, 'MAYOR BRAM': 0.78, 'PIP': 1.55, 'PLAYER': 1.05 };
   var CUT_FACE = { 'NARRATOR': 'narrator', 'MAYOR BRAM': 'bram', 'PIP': 'pip', 'PLAYER': 'player' };
+
+  /* ==================================================================
+     NEW: CUTSCENE MANAGER (non-destructive, promise-based)
+     Sits on top of the cutscene stage that already exists: same #ff-cutscene
+     panel, same typewriter state, same Web Audio voice blips. A scene owns
+     the screen only while it plays and resolves to its caller, so battle
+     flow is never touched — the caller decides what happens next.
+     ================================================================== */
+  function seenCutscene(id) {
+    return !!(save && save.cutscenes && save.cutscenes[id]);
+  }
+
+  function markCutsceneSeen(id) {
+    if (!save || !id) return;
+    save.cutscenes = save.cutscenes || {};
+    if (save.cutscenes[id]) return;
+    save.cutscenes[id] = true;
+    persist();
+  }
+
+  /* **keyword** in a line becomes a coloured highlight while it types. */
+  function typedCutMarkup(text, count) {
+    var raw = String(text || '').slice(0, Math.max(0, count));
+    var out = '';
+    var open = false;
+    for (var i = 0; i < raw.length; i++) {
+      if (raw.charAt(i) === '*' && raw.charAt(i + 1) === '*') {
+        out += open ? '</span>' : '<span class="ff-kw">';
+        open = !open;
+        i += 1;
+        continue;
+      }
+      var ch = raw.charAt(i);
+      out += ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch === '&' ? '&amp;' : ch;
+    }
+    if (open) out += '</span>';
+    return out;
+  }
+
+  var CutsceneManager = {
+    play: function (id, opts) {
+      opts = opts || {};
+      if (!opts.force && seenCutscene(id)) return Promise.resolve('seen');
+      return new Promise(function (resolve) {
+        beginScriptedCutscene(id, opts, resolve);
+      });
+    },
+    skip: function () { skipCutscene(); },
+    hasSeen: seenCutscene
+  };
+
+  function beginScriptedCutscene(id, opts, resolve) {
+    if (!world) {
+      /* No stage to play on: resolve and still run the chain (startBattle,
+         onWin) so a missing scene can never soft-lock the story. */
+      if (resolve) resolve('unavailable');
+      if (opts.onEnd) opts.onEnd();
+      return;
+    }
+    hideScreens();
+    ui.hud.hidden = true;
+    ui.objective.hidden = true;
+    ui.touch.hidden = true;
+    ui.prompt.hidden = true;
+    ui.toast.hidden = true;
+    ui.dialogue.hidden = true;
+    ui.battle.hidden = true;
+    ui.cutscene.hidden = false;
+    ui.cutscene.classList.add('ff-letterbox');
+    document.body.classList.remove('ff-talking');
+    mode = 'cutscene';
+    view = 'cutscene';
+    cutscene.active = true;
+    cutscene.id = id;
+    cutscene.kind = opts.kind || 'story';
+    cutscene.shot = opts.shot || 'archway';
+    cutscene.focus = opts.focus || null;
+    cutscene.koBoss = opts.koBoss || null;
+    cutscene.bossName = opts.bossName || '';
+    cutscene.finalLabel = opts.finalLabel || 'CONTINUE';
+    cutscene.score = opts.score || '';
+    cutscene.firstTime = !seenCutscene(id);
+    cutscene.resolve = resolve || null;
+    cutscene.onEnd = opts.onEnd || null;
+    cutscene.lines = (opts.lines || []).slice();
+    cutscene.index = 0;
+    cutscene.t = 0;
+    cutscene.lineT = 0;
+    cutscene.typing = false;
+    cutscene.speaker = null;
+    cutscene.shardsOn = false;
+    cutscene.star = null;
+    cutscene.shard = null;
+    cutscene.crack = null;
+    if (ui.cutScore) {
+      ui.cutScore.hidden = !cutscene.score;
+      ui.cutScore.textContent = cutscene.score;
+    }
+    if (ui.cutSkip) ui.cutSkip.textContent = cutscene.firstTime ? 'SKIP CUTSCENE' : '[ESC] SKIP CUTSCENE';
+    if (cutscene.kind === 'victory') buildVictoryAura();
+    markCutsceneSeen(id);
+    faceCutsceneCast();
+    showCutsceneLine();
+  }
+
+  function skipCutscene() {
+    if (!cutscene.active) return;
+    sound('click');
+    /* Skipping ends the scene early but still resolves its chain, so a retried
+       boss fight drops straight back into startBattle. */
+    endCutscene(true);
+  }
+
+  /* Hand the world back exactly as finishBattle leaves it. */
+  function restoreWorldAfterCutscene() {
+    if (!world) return;
+    var chapter = CHAPTERS[clamp(save ? save.chapter : 0, 0, 4)];
+    view = 'world';
+    mode = 'world';
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70 });
+    app.dataset.theme = chapter.theme;
+    ui.hud.hidden = false;
+    ui.objective.hidden = false;
+    ui.touch.hidden = false;
+    updateHud();
+    updateObjective();
+    snapCamera();
+  }
+
+  /* Golden victory aura: three flat rings that pulse around the hero. */
+  function buildVictoryAura() {
+    if (!world || !player) return;
+    var aura = makeActor('victory-aura');
+    addPart(aura, 0xffe08a, [0, 0, 0], [0, 0.05, 0], [2.8, 0.04, 2.8], { geo: 'disc', alpha: 0.45 });
+    addPart(aura, 0xfff6cf, [0, 0, 0], [0, 0.55, 0], [2.1, 0.04, 2.1], { geo: 'disc', alpha: 0.3 });
+    addPart(aura, 0xffcf4a, [0, 0, 0], [0, 1.15, 0], [3.4, 0.1, 3.4], { geo: 'disc', alpha: 0.14 });
+    aura.x = player.x;
+    aura.y = 0.02;
+    aura.z = player.z;
+    pushActor(world.objects, aura);
+    updateActor(aura);
+    cutscene.aura = aura;
+  }
+
+  /* Trigger (a) — the guide hands over the starter cards after the intro. */
+  function grantStarterCards() {
+    if (!save) return false;
+    if (Array.isArray(save.cards) && save.cards.length) return false;
+    save.cards = ['ante-up', 'defender'];
+    save.bp = Math.min(BP_MAX, Math.max(save.bp, 4));
+    persist();
+    updateHud();
+    return true;
+  }
+
+  function startGuideCutscene() {
+    var scene = CutsceneManager.play('guide-cards', {
+      force: true,
+      kind: 'guide',
+      shot: 'archway',
+      finalLabel: 'BEGIN CHAPTER ONE',
+      lines: [
+        { who: 'PIP', text: 'Wait wait wait. Before you go out there: **cards**. Bram found a shoebox of them in the lost-and-found and called it "loadout management".' },
+        { who: 'PIP', text: '**ANTE UP** tightens every action window but adds +1 damage. **DEFENDER** trades a point of your damage for a point of armour.' },
+        { who: 'PIP', text: 'I equipped both. That is the whole **4 BP** budget, so choose carefully in the pause menu.' }
+      ],
+      onEnd: function () {
+        showChapterScreen(0);
+      }
+    });
+    grantStarterCards();
+    return scene;
+  }
+
+  /* Trigger (c) — boss down: KO reaction, hero aura, score banner. */
+  function playBossVictory(options) {
+    var chapter = CHAPTERS[clamp(save ? save.chapter : 0, 0, 4)];
+    var score = 1000 * (save ? save.shards : 0) + 250 * (save ? save.level : 1) + (save ? save.xp : 0);
+    var bossName = (options && options.bossName) || 'THE BOSS';
+    CutsceneManager.play('boss-victory-' + (save ? save.chapter + 1 : 1), {
+      force: true,
+      kind: 'victory',
+      shot: 'victory',
+      focus: player,
+      koBoss: options ? options.bossActor : null,
+      finalLabel: 'CLAIM THE RELIC',
+      score: 'CONTEST SCORE ' + score.toLocaleString('en-US') + ' · CHAPTER ' + chapter.num + ' CLEARED',
+      lines: [
+        { who: 'NARRATOR', text: bossName + ' folds up like a dropped present.' },
+        { who: 'PLAYER', text: 'That is one relic down. **Four** to go.' },
+        { who: 'PIP', text: 'You are glowing. Is that the relic, or did you eat the glowing snow again?' }
+      ],
+      onEnd: function () {
+        if (options && options.onWin) options.onWin();
+      }
+    });
+  }
 
   function cutsceneNpc() {
     if (!world) return null;
@@ -2856,6 +3388,21 @@
   function startIntroCutscene(resume) {
     if (!world) return;
     cutscene.resume = Boolean(resume);
+    /* === NEW: the intro is the archway shot of the same manager === */
+    cutscene.id = 'intro';
+    cutscene.kind = 'intro';
+    cutscene.shot = 'archway';
+    cutscene.focus = null;
+    cutscene.koBoss = null;
+    cutscene.bossName = '';
+    cutscene.finalLabel = 'BEGIN CHAPTER ONE';
+    cutscene.score = '';
+    cutscene.resolve = null;
+    cutscene.onEnd = null;
+    cutscene.firstTime = !seenCutscene('intro');
+    ui.cutscene.classList.remove('ff-letterbox');
+    if (ui.cutScore) ui.cutScore.hidden = true;
+    if (ui.cutSkip) ui.cutSkip.textContent = cutscene.firstTime ? 'SKIP CUTSCENE' : '[ESC] SKIP CUTSCENE';
     hideScreens();
     ui.hud.hidden = true;
     ui.objective.hidden = true;
@@ -2906,6 +3453,8 @@
 
   /* Who is on screen for a given speaker name. */
   function cutsceneSpeaker(who) {
+    /* === NEW: a scripted scene can hand the stage to its own boss actor === */
+    if (cutscene.focus && cutscene.bossName && who === cutscene.bossName) return cutscene.focus;
     if (who === 'MAYOR BRAM') return cutsceneNpc();
     if (who === 'PIP') return pip;
     if (who === 'PLAYER') return player;
@@ -2933,7 +3482,7 @@
     cutscene.typing = false;
     cutscene.shown = cutscene.full.length;
     cutscene.lastCount = cutscene.full.length;
-    ui.cutText.textContent = cutscene.full;
+    ui.cutText.innerHTML = typedCutMarkup(cutscene.full, cutscene.full.length);
     ui.cutNext.classList.remove('typing');
   }
 
@@ -2942,7 +3491,7 @@
     if (!line) return;
     ui.cutSpeaker.textContent = line.who;
     ui.cutFace.className = 'ff-cut-face ' + (line.face || CUT_FACE[line.who] || 'narrator');
-    ui.cutNext.textContent = cutscene.index === cutscene.lines.length - 1 ? 'BEGIN CHAPTER ONE' : 'CONTINUE';
+    ui.cutNext.textContent = cutscene.index === cutscene.lines.length - 1 ? cutscene.finalLabel : 'CONTINUE';
     ui.cutNext.classList.add('typing');
     ui.cutText.textContent = '';
     cutscene.full = line.text;
@@ -2992,14 +3541,23 @@
     showCutsceneLine();
   }
 
-  function endCutscene() {
+  function endCutscene(skipped) {
     var resume = cutscene.resume;
+    var resolve = cutscene.resolve;
+    var onEnd = cutscene.onEnd;
+    var shot = cutscene.shot;
     cutscene.active = false;
     cutscene.resume = false;
     cutscene.typing = false;
     cutscene.shardsOn = false;
     cutscene.speaker = null;
+    cutscene.resolve = null;
+    cutscene.onEnd = null;
+    cutscene.id = null;
+    cutscene.shot = 'archway';
     ui.cutscene.hidden = true;
+    ui.cutscene.classList.remove('ff-letterbox');
+    if (ui.cutScore) ui.cutScore.hidden = true;
     ui.flash.hidden = true;
     clearTimeout(cutscene.secondFlash);
     clearTimeout(ui.flashTimer);
@@ -3007,6 +3565,12 @@
     cutscene.shard = null;
     cutscene.crack = null;
     cutscene.shards = [];
+    cutscene.focus = null;
+    cutscene.koBoss = null;
+    if (cutscene.aura) {
+      cutscene.aura.hidden = true;
+      cutscene.aura = null;
+    }
     [player, pip].forEach(function (actor) {
       if (!actor) return;
       actor.y = 0;
@@ -3014,10 +3578,17 @@
       actor.squashY = 1;
       actor.lean = 0;
     });
+    /* === NEW: resolve the promise and run whatever the scene was chained to
+       (startBattle, onWin, the chapter card) before anything else. === */
+    if (resolve) {
+      if (shot === 'boss' || shot === 'victory') restoreWorldAfterCutscene();
+      resolve(skipped ? 'skipped' : 'done');
+    }
+    if (onEnd) { onEnd(); return; }
     /* Continuing a chapter-one save returns straight to the world; a new
-       story still gets the chapter card. */
+       story still gets the guide's card scene, then the chapter card. */
     if (resume && save) { buildWorld(save.chapter); return; }
-    showChapterScreen(0);
+    startGuideCutscene();
   }
 
   function updateCutscene(dt, time) {
@@ -3029,7 +3600,7 @@
       cutscene.shown = Math.min(cutscene.full.length, cutscene.shown + dt * 40);
       var visible = Math.floor(cutscene.shown);
       if (visible !== cutscene.lastCount) {
-        ui.cutText.textContent = cutscene.full.slice(0, visible);
+        ui.cutText.innerHTML = typedCutMarkup(cutscene.full, visible);
         var letter = cutscene.full.charAt(visible - 1);
         if (visible % 2 === 0 && letter && letter !== ' ') {
           sound('blip', cutscene.pitch + (visible % 5) * 0.03);
@@ -3042,6 +3613,9 @@
     /* Per-line hop and squash on whoever is talking, plus the turn-in. */
     cutscene.lineT += dt;
     var cast = [player, pip, cutsceneNpc()];
+    /* === NEW: scripted scenes animate their own focus actor too === */
+    if (cutscene.focus && cast.indexOf(cutscene.focus) < 0) cast.push(cutscene.focus);
+    if (cutscene.koBoss && cast.indexOf(cutscene.koBoss) < 0) cast.push(cutscene.koBoss);
     for (var c = 0; c < cast.length; c++) {
       var actor = cast[c];
       if (!actor) continue;
@@ -3095,15 +3669,59 @@
       }
     }
 
-    /* Camera stands in front of the archway, aimed a touch low so the sign
-       and the star sit high in frame and the cast lands above the panel. */
-    var dolly = Math.min(1, cutscene.t / 34);
-    renderer.setCamera(
-      [0.1 - dolly * 0.1, 2.0 + dolly * 0.1, 16.6 - dolly * 1.1],
-      [0, -0.8, 9.1],
-      50 * Math.PI / 180,
-      CUTSCENE_ORTHO
-    );
+    /* === NEW: boss KO reaction + victory aura === */
+    if (cutscene.koBoss) {
+      var ko = Math.min(1, cutscene.t / 0.9);
+      cutscene.koBoss.lean = 0.55 * ko;
+      cutscene.koBoss.squashY = 1 - 0.32 * ko;
+      cutscene.koBoss.y = (cutscene.koBoss.baseY || 0) - 0.1 * ko;
+      updateActor(cutscene.koBoss);
+    }
+    if (cutscene.aura) {
+      cutscene.aura.scale = 1 + Math.sin(time * 5) * 0.08;
+      cutscene.aura.yaw += dt * 0.8;
+      for (var ap = 0; ap < cutscene.aura.parts.length; ap++) {
+        cutscene.aura.parts[ap].obj.alpha = 0.2 + Math.abs(Math.sin(time * 3 + ap)) * 0.32;
+      }
+      updateActor(cutscene.aura);
+    }
+
+    /* === NEW: three camera shots — archway intro, boss pan, victory ===
+       The intro keeps its slow dolly; scripted scenes ease out of the player
+       and settle on their own focus instead of cutting. */
+    if (cutscene.shot === 'boss' && cutscene.focus) {
+      var bossFocus = cutscene.focus;
+      var bossT = Math.min(1, cutscene.t / 1.1);
+      var bossEase = bossT * bossT * (3 - 2 * bossT);
+      renderer.setCamera(
+        [lerp(player.x + 2.4, bossFocus.x + 1.6, bossEase), lerp(3.4, 2.6, bossEase), lerp(player.z + 8.4, bossFocus.z + 7.2, bossEase)],
+        [lerp(player.x, bossFocus.x, bossEase), lerp(1.2, 1.5, bossEase), lerp(player.z - 1, bossFocus.z, bossEase)],
+        50 * Math.PI / 180,
+        16
+      );
+    } else if (cutscene.shot === 'victory' && player) {
+      var down = cutscene.koBoss;
+      var midX = down ? (player.x + down.x) / 2 : player.x;
+      var midZ = down ? (player.z + down.z) / 2 : player.z;
+      var winT = Math.min(1, cutscene.t / 1.1);
+      var winEase = winT * winT * (3 - 2 * winT);
+      renderer.setCamera(
+        [lerp(player.x + 1.4, midX, winEase), lerp(3.0, 4.2, winEase), lerp(player.z + 7.6, midZ + 9.6, winEase)],
+        [lerp(player.x, midX, winEase), lerp(1.2, 0.9, winEase), lerp(player.z, midZ - 0.6, winEase)],
+        50 * Math.PI / 180,
+        17
+      );
+    } else {
+      /* Camera stands in front of the archway, aimed a touch low so the sign
+         and the star sit high in frame and the cast lands above the panel. */
+      var dolly = Math.min(1, cutscene.t / 34);
+      renderer.setCamera(
+        [0.1 - dolly * 0.1, 2.0 + dolly * 0.1, 16.6 - dolly * 1.1],
+        [0, -0.8, 9.1],
+        50 * Math.PI / 180,
+        CUTSCENE_ORTHO
+      );
+    }
   }
 
   function scaleEnemyForParty(def) {
@@ -3207,20 +3825,37 @@
           talk(boss.name, ['CLEAR THE SHADES FIRST. THEY ARE STILL WATCHING (' + remaining + ' LEFT).'], null);
           return;
         }
-        talk(boss.name, boss.intro, function () {
-          startBattle(
-            { name: boss.name, hp: boss.hp, atk: boss.atk, xp: boss.xp, model: boss.model, boss: true, agility: 4 },
-            {
-              onWin: function () {
-                save.defeated[boss.key] = true;
-                bossActor.hidden = true;
-                bossItem.disabled = true;
-                updateObjective();
-                persist();
-                spawnShard(chapter);
+        /* === NEW: trigger (b) — pre-boss confrontation cutscene ===
+           The manager pans to the boss and calls the existing startBattle
+           when it finishes or is skipped. Nothing about the fight changed. */
+        CutsceneManager.play('boss-' + boss.key, {
+          force: true,
+          kind: 'boss',
+          shot: 'boss',
+          focus: bossActor,
+          bossName: boss.name,
+          finalLabel: 'FIGHT ' + boss.name,
+          lines: boss.intro.map(function (text) {
+            return { who: boss.name, text: text };
+          }),
+          onEnd: function () {
+            startBattle(
+              { name: boss.name, hp: boss.hp, atk: boss.atk, xp: boss.xp, model: boss.model, boss: true, agility: 4 },
+              {
+                bossVictory: true,
+                bossActor: bossActor,
+                bossName: boss.name,
+                onWin: function () {
+                  save.defeated[boss.key] = true;
+                  bossActor.hidden = true;
+                  bossItem.disabled = true;
+                  updateObjective();
+                  persist();
+                  spawnShard(chapter);
+                }
               }
-            }
-          );
+            );
+          }
         });
       }
     };
@@ -3974,6 +4609,15 @@
       battlePlayer.squashX = 1 - lift * 0.1;
       bframe = SPRITE_FRAMES.victory[Math.floor((Date.now() - battle.poseAt) / 170) % 2];
     }
+    /* === NEW: SINGLE-SHEET POSE ROWS ===
+       The JPG sheet replaces the atlas only while a battle is running, and
+       only for the frame currently being shown: hover a card to preview its
+       row, fire it to play the row at 9 fps. If animations.jpg is missing the
+       old hero atlas keeps drawing exactly as before. */
+    if (actionSheet.state === 'ready' && battlePlayer && battlePlayer.spriteObj) {
+      var sheetRow = battleSheetRow();
+      if (battleSheetApply(sheetRow)) bframe = battleSheetFrame(sheetRow, poseTime, st);
+    }
     battlePlayer.frame = bframe;
     if (battle.lunge > 0) battle.lunge = Math.max(0, battle.lunge - dt * 4);
     battleEnemy.tiltX = battle.windup ? -0.26 : battle.lunge > 0 ? 0.34 : 0;
@@ -4038,10 +4682,12 @@
   function hideSkills() {
     ui.skills.hidden = true;
     ui.actions.hidden = false;
+    if (battle) battle.sheetPreview = null;
     ui.battleHint.textContent = 'CHOOSE AN ACTION';
   }
 
   function hideBattle() {
+    if (battle) battle.sheetPreview = null;
     ui.battle.hidden = true;
     ui.battle.classList.remove('ff-mortal');
     ui.levelup.hidden = true;
@@ -4170,7 +4816,9 @@
       revived: false, mortal: false, mods: cardMods(), window: null, windowTimer: null, raged: false,
       gimmick: bossGimmick(def), windup: 0, lunge: 0, echo: false, stunned: false,
       soften: 0, burn: null,
-      pose: 'idle', poseAt: 0, fit: 14.5
+      pose: 'idle', poseAt: 0, fit: 14.5,
+      /* === NEW: ACTION-SHEET POSE ROWS === */
+      sheetPreview: null, auraUntil: equippedCards().length ? Date.now() + 900 : 0
     };
     if (opts.opening) battle.hp = Math.max(1, battle.hp - opts.opening);
     save.hp = Math.max(1, save.hp);
@@ -4235,6 +4883,7 @@
     battle.state = 'menu';
     battle.busy = false;
     battle.window = null;
+    battle.sheetPreview = null;
     ui.timing.hidden = true;
     ui.telegraph.hidden = true;
     ui.actions.hidden = false;
@@ -4338,6 +4987,8 @@
     battle.state = 'strike';
     battle.busy = true;
     battle.move = move;
+    /* === NEW: the fired card switches to its own sheet row === */
+    battle.sheetPreview = actionRowForCmd(move.cmd);
     setBattleButtons(false);
     ui.skills.hidden = true;
     if (move.cmd === 'chain') { beginChainWindow(move, 0); return; }
@@ -4625,6 +5276,10 @@
       button.dataset.skill = skill.id;
       button.disabled = !unlocked || save.sp < cost;
       button.innerHTML = '<b>' + skill.name + '</b><small>' + (unlocked ? skill.cat + ' · ' + cost + ' SP' : 'UNLOCKS AT LV ' + skill.level) + '</small><em>' + (unlocked ? skill.desc : '') + '</em>';
+      /* === NEW: hovering or focusing a card previews its sprite row === */
+      button._sheetRow = actionRowForCmd(skill.cmd);
+      button.addEventListener('pointerenter', function () { if (battle) battle.sheetPreview = this._sheetRow; });
+      button.addEventListener('focus', function () { if (battle) battle.sheetPreview = this._sheetRow; });
       ui.skills.appendChild(button);
     });
     var back = document.createElement('button');
@@ -4643,6 +5298,8 @@
     var cost = Math.max(1, skill.cost - battle.mods.skillDiscount);
     if (save.level < skill.level || save.sp < cost) return;
     save.sp -= cost;
+    /* === NEW: keep the card's row on screen through the strike === */
+    battle.sheetPreview = actionRowForCmd(skill.cmd);
     hideSkills();
     beginPlayerMove({ kind: 'skill', name: skill.name, mult: skill.mult, cmd: skill.cmd, hits: skill.hits });
   }
@@ -4934,6 +5591,8 @@
 
   function finishBattle(won) {
     var options = battle ? battle.opts : null;
+    /* === NEW: remember a boss win so the victory scene can play first === */
+    var bossVictoryOpts = won && options && options.bossVictory ? options : null;
     battle = null;
     clearBattleFeedback();
     hideBattle();
@@ -4949,6 +5608,7 @@
     updateObjective();
     snapCamera();
     persist();
+    if (bossVictoryOpts) { playBossVictory(bossVictoryOpts); return; }
     if (won && options && options.onWin) setTimeout(options.onWin, 160);
   }
 
@@ -4964,7 +5624,7 @@
   function updateLevelCards() {
     ui.lvHp.textContent = save.maxHp + ' → ' + (save.maxHp + 5);
     ui.lvSp.textContent = save.maxSp + ' → ' + (save.maxSp + 5);
-    ui.lvBp.textContent = save.bp + ' → ' + (save.bp + 5);
+    ui.lvBp.textContent = save.bp >= BP_MAX ? save.bp + ' · MAX' : save.bp + ' → ' + Math.min(BP_MAX, save.bp + 1);
   }
 
   function chooseStat(stat) {
@@ -4976,7 +5636,8 @@
       save.maxSp += 5;
       save.sp = Math.min(save.maxSp, save.sp + 5);
     } else if (stat === 'bp') {
-      save.bp += 5;
+      /* === NEW: BP stays inside the 4 BP card budget === */
+      save.bp = Math.min(BP_MAX, save.bp + 1);
     }
     levelQueue -= 1;
     persist();
@@ -5075,6 +5736,12 @@
       if (mode === 'world' || mode === 'dialogue') { event.preventDefault(); interact(); }
       return;
     }
+    /* === NEW: [ESC] jumps a seen cutscene straight back to battle === */
+    if (event.code === 'Escape' && mode === 'cutscene') {
+      event.preventDefault();
+      skipCutscene();
+      return;
+    }
     if (event.code === 'KeyM' || event.code === 'Escape') {
       if (mode === 'world') openMenu();
       else if (mode === 'menu') closeMenu();
@@ -5159,7 +5826,17 @@
     ui.continueButton.addEventListener('click', continueGame);
     ui.nameStart.addEventListener('click', beginNewStory);
     ui.cutNext.addEventListener('click', advanceCutscene);
-    ui.cutSkip.addEventListener('click', endCutscene);
+    ui.cutSkip.addEventListener('click', skipCutscene);
+    /* === NEW: hero selector before the game starts === */
+    var genderButtons = document.querySelectorAll('[data-gender]');
+    for (var gi = 0; gi < genderButtons.length; gi++) {
+      genderButtons[gi].addEventListener('click', function (event) {
+        setGender(event.currentTarget.dataset.gender);
+      });
+    }
+    ui.skills.addEventListener('pointerleave', function () {
+      if (battle) battle.sheetPreview = null;
+    });
     ui.cutscene.addEventListener('click', function (event) {
       if (event.target.closest('button')) return;
       advanceCutscene();
@@ -5248,6 +5925,11 @@
     try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (error) { muted = false; }
     updateSoundButton();
     bindEvents();
+    /* === NEW: load the combined hero sheet + paint the selector state === */
+    selectedGender = save && save.gender === 'girl' ? 'girl' : 'boy';
+    updateGenderButtons();
+    loadActionSheet();
+    buildSheetDebug();
     resizeSnow();
     buildTitleScene();
     app.dataset.theme = 'day';
