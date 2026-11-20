@@ -459,11 +459,77 @@
     return actor;
   }
 
-  function buildShardActor() {
-    var actor = makeActor('crystal');
-    addPart(actor, 0x9ff2ff, [0, 0.7, 0], [0, 0.55, 0], [0.5, 1.5, 0.5], { geo: 'cone8' });
-    addPart(actor, 0xffffff, [0, 0.7, 0], [0, 0.4, 0], [0.7, 0.7, 0.7], { alpha: 0.2 });
-    addPart(actor, 0xbfe9ff, [0, 0.2, 0], [0, 0, 0], [1.1, 0.12, 1.1], { geo: 'disc', alpha: 0.35 });
+  /* The old pickup was one cyan crystal for all five chapters, which made the
+     dialogue lie about what you just picked up. Each chapter now leaves the
+     relic it names: a candy cane, a slingshot, a crown, a clapper, the star. */
+  function relicPlinth(actor, glow) {
+    addPart(actor, 0x2b2440, [0, 0, 0], [0, 0.09, 0], [1.1, 0.18, 1.1]);
+    addPart(actor, 0xffe3a8, [0, 0, 0], [0, 0.02, 0], [1.7, 0.06, 1.7], { geo: 'disc', alpha: 0.16 });
+    addPart(actor, 0x4a4066, [0, 0, 0], [0, 0.19, 0], [0.86, 0.06, 0.86]);
+    addPart(actor, glow, [0, 0, 0], [0, 0.86, 0], [1.5, 1.5, 1.5], { alpha: 0.1 });
+  }
+
+  function buildRelicActor(index) {
+    var actor = makeActor('relic');
+    var i, angle, seg;
+    if (index === 0) {
+      /* CHAPTER ONE — CANDY CANE CLAYMORE, planted point-down in the snow. */
+      relicPlinth(actor, 0xffd6d6);
+      for (seg = 0; seg < 6; seg++) {
+        addPart(actor, seg % 2 ? 0xd8333f : 0xfff6f1, [0, 0, 0], [0, 0.34 + seg * 0.3, 0], [0.26, 0.3, 0.26]);
+      }
+      addPart(actor, 0xfff6f1, [0, 2.0, 0], [0.17, 0, 0], [0.52, 0.28, 0.28]);
+      addPart(actor, 0xd8333f, [0, 2.0, 0], [0.36, -0.15, 0], [0.3, 0.34, 0.3]);
+      addPart(actor, 0xd8333f, [0, 0, 0], [0, 0.64, 0], [0.3, 0.1, 0.3]);
+      addPart(actor, 0x3a2a30, [0, 0, 0], [0, 0.24, 0], [0.36, 0.06, 0.36], { geo: 'disc', alpha: 0.5 });
+    } else if (index === 1) {
+      /* CHAPTER TWO — TINSEL SLINGSHOT on the stump. */
+      relicPlinth(actor, 0xd8e8f5);
+      addPart(actor, 0x6b472e, [0, 0, 0], [0, 0.78, 0], [0.24, 1.1, 0.24]);
+      addPart(actor, 0xd8333f, [0, 0, 0], [0, 0.62, 0], [0.3, 0.16, 0.3]);
+      addPart(actor, 0x6b472e, [0, 1.28, 0], [-0.12, 0.34, 0], [0.2, 0.78, 0.2], { rz: 0.5 });
+      addPart(actor, 0x6b472e, [0, 1.28, 0], [0.12, 0.34, 0], [0.2, 0.78, 0.2], { rz: -0.5 });
+      addPart(actor, 0xeaf4ff, [0, 0, 0], [0, 1.9, 0], [0.76, 0.1, 0.1], { alpha: 0.9 });
+      addPart(actor, 0xffe6a3, [0, 0, 0], [-0.36, 1.9, 0], [0.16, 0.16, 0.16]);
+      addPart(actor, 0xffe6a3, [0, 0, 0], [0.36, 1.9, 0], [0.16, 0.16, 0.16]);
+      addPart(actor, 0xfff6f1, [0, 0, 0], [0, 1.3, 0.18], [0.1, 0.1, 0.1]);
+    } else if (index === 2) {
+      /* CHAPTER THREE — FROZEN CROWN, still wearing its Moderator Lock. */
+      relicPlinth(actor, 0xbfe9ff);
+      addPart(actor, 0x3f6f8c, [0, 0, 0], [0, 0.62, 0], [0.88, 0.4, 0.88], { geo: 'cylinder' });
+      addPart(actor, 0xbfe9ff, [0, 0, 0], [0, 0.62, 0], [1.02, 0.16, 1.02], { geo: 'disc', alpha: 0.55 });
+      for (i = 0; i < 5; i++) {
+        angle = i * Math.PI * 2 / 5;
+        addPart(actor, 0xd9f6ff, [0, 0, 0], [Math.cos(angle) * 0.4, 0.98, Math.sin(angle) * 0.4], [0.2, 0.62, 0.2], { geo: 'cone8' });
+      }
+      addPart(actor, 0x9ff2ff, [0, 0, 0], [0, 0.95, 0], [0.26, 0.26, 0.26]);
+      addPart(actor, 0x7ce7ff, [0, 0, 0], [0, 0.62, 0.47], [0.34, 0.3, 0.08], { alpha: 0.85 });
+      addPart(actor, 0x1b1630, [0, 0, 0], [0, 0.62, 0.5], [0.2, 0.18, 0.06]);
+    } else if (index === 3) {
+      /* CHAPTER FOUR — MIDNIGHT CLAPPER, hung in a broken bell frame. */
+      relicPlinth(actor, 0xffb347);
+      addPart(actor, 0x3a3254, [0, 0, 0], [-0.34, 1.02, 0], [0.14, 1.6, 0.14]);
+      addPart(actor, 0x3a3254, [0, 0, 0], [0.34, 1.02, 0], [0.14, 1.6, 0.14]);
+      addPart(actor, 0x4a4066, [0, 0, 0], [0, 1.82, 0], [0.82, 0.16, 0.22]);
+      addPart(actor, 0x7d6a45, [0, 0, 0], [0, 1.24, 0], [0.11, 1.02, 0.11]);
+      addPart(actor, 0x9a8550, [0, 0, 0], [0, 0.72, 0], [0.46, 0.5, 0.46], { geo: 'cone8' });
+      addPart(actor, 0x9a8550, [0, 0, 0], [0, 0.5, 0], [0.46, 0.4, 0.46], { geo: 'cone8', rx: Math.PI });
+      addPart(actor, 0xffb347, [0, 0, 0], [0, 0.5, 0], [0.9, 0.12, 0.9], { geo: 'disc', alpha: 0.3 });
+      addPart(actor, 0x5a4a70, [0, 0, 0], [0.44, 0.21, -0.3], [0.5, 0.08, 0.5], { geo: 'disc', alpha: 0.6 });
+    } else if (index === 4) {
+      /* CHAPTER FIVE — TOWN TREE STAR, six points of 2010 gold. */
+      relicPlinth(actor, 0xffd77a);
+      for (i = 0; i < 3; i++) {
+        addPart(actor, 0xffd77a, [0, 0, 0], [0, 1.32, 0], [1.7, 0.22, 0.22], { ry: i * Math.PI / 3 });
+      }
+      addPart(actor, 0xfff8d8, [0, 0, 0], [0, 1.32, 0], [0.52, 0.52, 0.34]);
+      addPart(actor, 0xfff8d8, [0, 0, 0], [0, 1.32, 0.18], [0.26, 0.26, 0.16], { alpha: 0.9 });
+      addPart(actor, 0xffe3a8, [0, 0, 0], [0, 1.32, 0], [2.1, 2.1, 2.1], { geo: 'disc', alpha: 0.12 });
+      addPart(actor, 0xd8e8f5, [0, 0, 0], [0, 1.32, 0], [2.6, 0.05, 0.05], { alpha: 0.35 });
+    } else {
+      addPart(actor, 0x9ff2ff, [0, 0.7, 0], [0, 0.55, 0], [0.5, 1.5, 0.5], { geo: 'cone8' });
+      addPart(actor, 0xffffff, [0, 0.7, 0], [0, 0.4, 0], [0.7, 0.7, 0.7], { alpha: 0.2 });
+    }
     return actor;
   }
 
@@ -941,6 +1007,7 @@
   var CHAPTERS = [
     {
       num: 'ONE', title: 'ROADTOWN IN THE SNOW', sub: 'Frostfest 2010, population: you',
+      relic: 'CANDY CANE CLAYMORE',
       theme: 'day', fog: [0.78, 0.87, 0.96], spawn: [0.9, 12],
       intro: [
         'Frostfest 2010 was supposed to be a party. You got the server instead.',
@@ -976,6 +1043,7 @@
     },
     {
       num: 'TWO', title: 'THE WHISPERING PINES', sub: 'The trees remember every step',
+      relic: 'TINSEL SLINGSHOT',
       theme: 'night', fog: [0.16, 0.18, 0.32], spawn: [0, 13],
       intro: [
         'The Whispering Pines used to be a quiet place to get lost in.',
@@ -1011,6 +1079,7 @@
     },
     {
       num: 'THREE', title: 'THE GLASS LAKE', sub: 'Something long under the ice',
+      relic: 'FROZEN CROWN',
       theme: 'lake', fog: [0.66, 0.8, 0.9], spawn: [0, 11],
       intro: [
         'Glass Lake froze solid overnight. Old Finn says that happens. Old Finn says a lot of things.',
@@ -1046,6 +1115,7 @@
     },
     {
       num: 'FOUR', title: 'THE THIRTEENTH BELL', sub: 'The clocktower keeps bad time',
+      relic: 'MIDNIGHT CLAPPER',
       theme: 'dusk', fog: [0.42, 0.32, 0.44], spawn: [0, 11],
       intro: [
         'The Roadtown clock has struck thirteen three times today. The town has stopped pretending not to notice.',
@@ -1082,6 +1152,7 @@
     },
     {
       num: 'FIVE', title: 'THE LONG NIGHT', sub: 'The last relic, the last light',
+      relic: 'TOWN TREE STAR',
       theme: 'night', fog: [0.08, 0.07, 0.16], spawn: [0, 10],
       intro: [
         'Above Roadtown, the sky is a hole, and the hole is looking back.',
@@ -1089,6 +1160,8 @@
         'Aurora has been holding the ice together alone this whole time. She is not doing great.'
       ],
       outro: [
+        'Bram hauled all five relics up the mountain himself, including the candy cane he swore was locked in Town Hall.',
+        'He thought they were party favours. Aurora empties his pockets one relic at a time, like a parent at the door.',
         'Aurora sets the five relics into the altar. Not to break the seals this time. To reboot the server.',
         'The sky clears into a warm 2010 Roblox winter morning. The lights of Roadtown flicker back on, one window at a time.',
         'Mayor Bram wakes up dazed in a snowbank, grounded to shovel snow for the next 100 years by Juniper and Old Finn.',
@@ -1780,16 +1853,16 @@
   }
 
   function spawnShard(chapter) {
-    var shard = buildShardActor();
-    shard.x = chapter.boss.x;
-    shard.z = chapter.boss.z;
-    shard.y = 0.7;
-    addActor(shard);
+    var relic = buildRelicActor(CHAPTERS.indexOf(chapter));
+    relic.x = chapter.boss.x;
+    relic.z = chapter.boss.z;
+    relic.y = 0;
+    addActor(relic);
     var item = {
       x: chapter.boss.x, z: chapter.boss.z, r: 2.8, label: 'TAKE THE RELIC',
       action: function () {
         item.disabled = true;
-        talk('THE RELIC', chapter.outro, grantShard);
+        talk(chapter.relic, chapter.outro, grantShard);
       }
     };
     world.interactables.push(item);
