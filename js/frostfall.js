@@ -89,7 +89,8 @@
     return {
       v: 1, name: 'NICO', started: false, ending: false,
       chapter: 0, level: 1, xp: 0,
-      maxHp: 30, hp: 30, maxSp: 10, sp: 10, bp: 4,
+      /* === BP STARTS SMALL: two points, +1 per level-up up to BP_MAX === */
+      maxHp: 30, hp: 30, maxSp: 10, sp: 10, bp: 2,
       cocoa: 2, shards: 0, cards: [], seenIntro: false, defeated: {}, talked: {},
       /* === NEW: CHARACTER SELECT + CUTSCENE MEMORY === */
       gender: 'boy', cutscenes: {}
@@ -210,8 +211,8 @@
     { id: 'line-bounce', name: 'LINE BOUNCE', cat: 'BALL', cost: 3, level: 1, cmd: 'chain', mult: 0.4, desc: 'Press on each bounce. Four hits.' },
     { id: 'soften', name: 'SOFTEN', cat: 'BALL', cost: 2, level: 1, cmd: 'soften', mult: 0.9, desc: 'Timed hit. -1 DEF for 3 turns.' },
     { id: 'power-shot', name: 'POWER SHOT', cat: 'SLINGSHOT', cost: 2, level: 1, cmd: 'shot', mult: 0.55, hits: 3, desc: 'Timed burst. Three pellets break shields.' },
-    { id: 'dynamite', name: 'DYNAMITE', cat: 'EXPLOSIVE', cost: 4, level: 1, cmd: 'mash', mult: 1.9, desc: 'Mash for power. Splash and Burn 2.' },
-    { id: 'cure', name: 'CURE', cat: 'SUPPORT', cost: 3, level: 1, cmd: 'cure', mult: 0, desc: 'Timed press. 5 HP, 7 HP on PERFECT.' }
+    { id: 'dynamite', name: 'DYNAMITE', cat: 'EXPLOSIVE', cost: 4, level: 4, cmd: 'mash', mult: 1.9, desc: 'Mash for power. Splash and Burn 2.' },
+    { id: 'cure', name: 'CURE', cat: 'SUPPORT', cost: 3, level: 2, cmd: 'cure', mult: 0, desc: 'Timed press. 5 HP, 7 HP on PERFECT.' }
   ];
 
   /* ---------------------------------------------------------------- actors */
@@ -3275,8 +3276,9 @@
   function grantStarterCards() {
     if (!save) return false;
     if (Array.isArray(save.cards) && save.cards.length) return false;
-    save.cards = ['ante-up', 'defender'];
-    save.bp = Math.min(BP_MAX, Math.max(save.bp, 4));
+    /* Two BP only buys one of the two starters; the other waits for a
+       level-up point. */
+    save.cards = ['ante-up'];
     persist();
     updateHud();
     return true;
@@ -3291,7 +3293,7 @@
       lines: [
         { who: 'PIP', text: 'Wait wait wait. Before you go out there: **cards**. Bram found a shoebox of them in the lost-and-found and called it "loadout management".' },
         { who: 'PIP', text: '**ANTE UP** tightens every action window but adds +1 damage. **DEFENDER** trades a point of your damage for a point of armour.' },
-        { who: 'PIP', text: 'I equipped both. That is the whole **4 BP** budget, so choose carefully in the pause menu.' }
+        { who: 'PIP', text: 'You start with **2 BP**, so I equipped Ante Up. Take **BP** on a level-up and Defender fits too. Four is the ceiling.' }
       ],
       onEnd: function () {
         showChapterScreen(0);
@@ -4982,6 +4984,327 @@
     sound('click');
   }
 
+  /* ==================================================================
+     NEW: DISTINCT MOVE EFFECTS
+     The battlers are single sprite billboards and the cast has no weapon
+     models, so each card's look is a 2D prop drawn over the stage at the
+     fighter's projected position: a thrown sword, a bouncing ball, three
+     pellets, a fused bomb, a healing bloom. Same camera maths the renderer
+     uses, so the props land on the right fighters at every aspect ratio.
+     ================================================================== */
+  /* ==================================================================
+     NEW: MOVE EFFECTS
+     Every card gets its own prop: a thrown sword, a bouncing ball, three
+     pellets, a fused bomb and a healing bloom. The battlers are billboard
+     sprites with no weapon models, so each prop is drawn on a 2D canvas
+     laid over the stage and anchored to the fighters' projected positions
+     with the same camera maths the renderer uses.
+     ================================================================== */
+  var FX_EYE = [0, 3.3, 12.2];
+  var FX_TARGET = [0, -0.2, 0.9];
+  var FX_INK = '#17102a';
+  var fxHost = null, fxCanvas = null, fxCtx = null;
+  var fxParts = [], fxCssW = 0, fxCssH = 0, fxLast = 0, fxLoop = false;
+
+  function fxEnsure() {
+    fxHost = fxHost || document.getElementById('ff-battle');
+    if (!fxHost) return null;
+    if (!fxCanvas || !fxCanvas.parentNode) {
+      fxCanvas = document.createElement('canvas');
+      fxCanvas.className = 'ff-mfx-canvas';
+      fxCanvas.setAttribute('aria-hidden', 'true');
+      fxHost.appendChild(fxCanvas);
+      fxCtx = fxCanvas.getContext('2d');
+    }
+    var rect = fxCanvas.getBoundingClientRect();
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var width = Math.max(1, Math.round(rect.width * dpr));
+    var height = Math.max(1, Math.round(rect.height * dpr));
+    if (fxCanvas.width !== width || fxCanvas.height !== height) {
+      fxCanvas.width = width;
+      fxCanvas.height = height;
+    }
+    if (fxCtx) fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fxCssW = rect.width;
+    fxCssH = rect.height;
+    return fxCanvas;
+  }
+
+  function fxProject(x, y, z) {
+    if (!fxEnsure() || !mat || !fxCssW || !fxCssH) return { x: 0, y: 0 };
+    var halfH = ((battle && battle.fit) || 14.5) / 2;
+    var halfW = halfH * (fxCssW / fxCssH);
+    var view = mat.lookAt(FX_EYE, FX_TARGET, [0, 1, 0]);
+    var vx = view[0] * x + view[4] * y + view[8] * z + view[12];
+    var vy = view[1] * x + view[5] * y + view[9] * z + view[13];
+    return {
+      x: (vx / halfW * 0.5 + 0.5) * fxCssW,
+      y: (0.5 - vy / halfH * 0.5) * fxCssH
+    };
+  }
+
+  function fxHeroPoint() {
+    if (!battlePlayer) return fxProject(-1.7, 1.2, 1.7);
+    return fxProject(battlePlayer.x, battlePlayer.scale * 1.3, battlePlayer.z);
+  }
+
+  function fxEnemyPoint() {
+    if (!battleEnemy) return fxProject(1.9, 1.0, 1.0);
+    return fxProject(battleEnemy.x, (battleEnemy.baseY || 0) * battleEnemy.scale + battleEnemy.scale, battleEnemy.z);
+  }
+
+  function fxPush(part) {
+    part.t = 0;
+    fxParts.push(part);
+    if (!fxLoop) {
+      fxLoop = true;
+      fxLast = 0;
+      requestAnimationFrame(fxRender);
+    }
+  }
+
+  function fxEase(k) { return k * k * (3 - 2 * k); }
+
+  function fxRender(ts) {
+    if (!fxCtx) { fxLoop = false; return; }
+    if (!battle || !fxHost || fxHost.hidden) {
+      fxParts.length = 0;
+      fxCtx.clearRect(0, 0, fxCssW, fxCssH);
+      fxLoop = false;
+      return;
+    }
+    var dt = fxLast ? Math.min(0.05, (ts - fxLast) / 1000) : 0.016;
+    fxLast = ts;
+    fxCtx.clearRect(0, 0, fxCssW, fxCssH);
+    for (var i = fxParts.length - 1; i >= 0; i--) {
+      var p = fxParts[i];
+      var start = p.start || 0;
+      p.t += dt;
+      if (p.t < start) continue;
+      if (p.t >= start + p.life) {
+        if (p.type === 'bomb') fxBlast(p.x1, p.y1);
+        fxParts.splice(i, 1);
+        continue;
+      }
+      fxDrawPart(p, clamp((p.t - start) / p.life, 0, 1));
+    }
+    if (fxParts.length) requestAnimationFrame(fxRender);
+    else { fxLoop = false; fxLast = 0; }
+  }
+
+  function fxBox(x, y, w, h, fill) {
+    fxCtx.fillStyle = fill;
+    fxCtx.strokeStyle = FX_INK;
+    fxCtx.lineWidth = 2;
+    fxCtx.beginPath();
+    fxCtx.rect(x, y, w, h);
+    fxCtx.fill();
+    fxCtx.stroke();
+  }
+
+  function fxBlade(x, y, angle, len, alpha, tint) {
+    var c = fxCtx;
+    c.save();
+    c.translate(x, y);
+    c.rotate(angle);
+    c.globalAlpha = alpha;
+    fxBox(-5, -len, 10, len, tint || '#eaf8ff');
+    fxBox(-12, 0, 24, 7, '#ffcf4a');
+    fxBox(-4, 7, 8, 15, '#7a4a22');
+    c.restore();
+  }
+
+  function fxRing(x, y, radius, k, color, width) {
+    var c = fxCtx;
+    c.save();
+    c.globalAlpha = 1 - k;
+    c.strokeStyle = color;
+    c.lineWidth = width || 4;
+    c.beginPath();
+    c.arc(x, y, radius * (0.3 + fxEase(k) * 1.3), 0, Math.PI * 2);
+    c.stroke();
+    c.restore();
+  }
+
+  function fxDrawPart(p, k) {
+    var c = fxCtx;
+    var i, t, kk, ee;
+    if (p.type === 'sword') {
+      ee = fxEase(k);
+      var sx = p.x0 + (p.x1 - p.x0) * ee;
+      var sy = p.y0 + (p.y1 - p.y0) * ee - Math.sin(Math.PI * ee) * 26;
+      for (i = 3; i >= 1; i--) {
+        t = clamp(k - i * 0.07, 0, 1);
+        kk = fxEase(t);
+        fxBlade(p.x0 + (p.x1 - p.x0) * kk, p.y0 + (p.y1 - p.y0) * kk - Math.sin(Math.PI * kk) * 26, -0.4 + t * 7, 46, 0.12 * (4 - i), '#cfeaff');
+      }
+      fxBlade(sx, sy, -0.4 + k * 7, 46, 1);
+      if (k > 0.84) fxRing(p.x1, p.y1, 30, (k - 0.84) / 0.16, '#bfefff', 4);
+    } else if (p.type === 'ball') {
+      ee = fxEase(k);
+      var bx = p.x0 + (p.x1 - p.x0) * ee;
+      var by = p.y0 + (p.y1 - p.y0) * ee - Math.sin(Math.PI * ee) * 62;
+      for (i = 3; i >= 1; i--) {
+        t = clamp(k - i * 0.09, 0, 1);
+        kk = fxEase(t);
+        c.save();
+        c.globalAlpha = 0.2 * (4 - i);
+        c.fillStyle = '#8ff2ff';
+        c.beginPath();
+        c.arc(p.x0 + (p.x1 - p.x0) * kk, p.y0 + (p.y1 - p.y0) * kk - Math.sin(Math.PI * kk) * 62, 7 - i, 0, Math.PI * 2);
+        c.fill();
+        c.restore();
+      }
+      c.save();
+      c.fillStyle = '#7cf0ff';
+      c.strokeStyle = FX_INK;
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(bx, by, 9, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.arc(bx - 3, by - 3, 3, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    } else if (p.type === 'pellet') {
+      ee = fxEase(k);
+      var px = p.x0 + (p.x1 - p.x0) * ee;
+      var py = p.y0 + (p.y1 - p.y0) * ee;
+      c.save();
+      c.globalAlpha = 0.55;
+      c.strokeStyle = '#ffe066';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(px - (p.x1 - p.x0) * 0.14, py - (p.y1 - p.y0) * 0.14);
+      c.lineTo(px, py);
+      c.stroke();
+      c.globalAlpha = 1;
+      c.fillStyle = '#ffd84a';
+      c.strokeStyle = FX_INK;
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(px, py, 5, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      c.restore();
+    } else if (p.type === 'bomb') {
+      ee = fxEase(k);
+      var bombX = p.x0 + (p.x1 - p.x0) * ee;
+      var bombY = p.y0 + (p.y1 - p.y0) * ee - Math.sin(Math.PI * ee) * 78;
+      c.save();
+      c.translate(bombX, bombY);
+      c.rotate(k * 9);
+      fxBox(-6, -14, 12, 28, '#c8323c');
+      c.fillStyle = '#ff7a5a';
+      c.fillRect(-6, -10, 12, 5);
+      c.fillRect(-6, 2, 12, 5);
+      c.strokeStyle = '#ffd84a';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(0, -14);
+      c.lineTo(0, -20);
+      c.stroke();
+      c.fillStyle = Math.floor(p.t * 20) % 2 ? '#fff3a8' : '#ff8a2e';
+      c.beginPath();
+      c.arc(0, -21, 3, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    } else if (p.type === 'boom') {
+      var radius = 12 + fxEase(k) * 56;
+      c.save();
+      var grad = c.createRadialGradient(p.x0, p.y0, 2, p.x0, p.y0, radius);
+      grad.addColorStop(0, 'rgba(255,255,255,' + (1 - k) + ')');
+      grad.addColorStop(0.35, 'rgba(255,224,102,' + (0.95 - k * 0.9) + ')');
+      grad.addColorStop(0.7, 'rgba(255,138,46,' + (0.8 - k * 0.78) + ')');
+      grad.addColorStop(1, 'rgba(255,80,40,0)');
+      c.fillStyle = grad;
+      c.beginPath();
+      c.arc(p.x0, p.y0, radius, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+      fxRing(p.x0, p.y0, radius, k, '#ffd08a', 5);
+    } else if (p.type === 'spark') {
+      var sparkX = p.x0 + Math.cos(p.a) * p.dist * fxEase(k);
+      var sparkY = p.y0 + Math.sin(p.a) * p.dist * fxEase(k) + 46 * k * k;
+      c.save();
+      c.globalAlpha = 1 - k;
+      fxBox(sparkX - 3, sparkY - 3, 6, 6, '#ffd84a');
+      c.restore();
+    } else if (p.type === 'heal') {
+      var moteY = p.y0 + p.rise * fxEase(k);
+      var moteX = p.x0 + Math.sin(k * 7 + p.seed) * 9;
+      c.save();
+      c.globalAlpha = 1 - k * k;
+      fxBox(moteX - 4, moteY - 6, 8, 12, '#9dffbf');
+      c.restore();
+    } else if (p.type === 'ring') {
+      fxRing(p.x0, p.y0, 34, k, p.color || '#ffe066', 4);
+    }
+  }
+
+  /* SWORD TOSS — a spinning blade arcs the gap and rings off the target. */
+  function fxSwordToss() {
+    if (!battle) return;
+    var from = fxHeroPoint(), to = fxEnemyPoint();
+    fxPush({ type: 'sword', x0: from.x, y0: from.y, x1: to.x, y1: to.y, life: 0.3 });
+  }
+
+  /* LINE BOUNCE — one arc per press, ricocheting back off the target. */
+  function fxLineBounce(index) {
+    if (!battle) return;
+    var from = fxHeroPoint(), to = fxEnemyPoint();
+    if (index > 0) from = { x: to.x + (index % 2 ? -70 : 70), y: to.y - 90 };
+    fxPush({ type: 'ball', x0: from.x, y0: from.y, x1: to.x, y1: to.y, life: 0.3 });
+    fxPush({ type: 'ring', x0: to.x, y0: to.y, life: 0.3, start: 0.24, color: '#ffe066' });
+  }
+
+  /* POWER SHOT — three staggered pellets, each with its own spark. */
+  function fxPowerShot() {
+    if (!battle) return;
+    var from = fxHeroPoint(), to = fxEnemyPoint();
+    var spread = [-18, 0, 16];
+    for (var i = 0; i < 3; i++) {
+      fxPush({ type: 'pellet', x0: from.x, y0: from.y + spread[i], x1: to.x, y1: to.y + spread[i], life: 0.2, start: i * 0.07 });
+      fxPush({ type: 'ring', x0: to.x, y0: to.y + spread[i], life: 0.28, start: 0.15 + i * 0.07, color: '#ffe066' });
+    }
+  }
+
+  /* DYNAMITE — lobbed stick, burning fuse, then a blast with debris. */
+  function fxDynamite() {
+    if (!battle) return;
+    var from = fxHeroPoint(), to = fxEnemyPoint();
+    fxPush({ type: 'bomb', x0: from.x, y0: from.y, x1: to.x, y1: to.y + 6, life: 0.42 });
+  }
+
+  function fxBlast(x, y) {
+    if (!battle) return;
+    fxPush({ type: 'boom', x0: x, y0: y, life: 0.55 });
+    for (var i = 0; i < 8; i++) {
+      fxPush({
+        type: 'spark', x0: x, y0: y, life: 0.5, dist: rand(46, 104),
+        a: (Math.PI * 2 / 8) * i + rand(-0.25, 0.25), start: rand(0, 0.05)
+      });
+    }
+    flashStage('orange');
+    cameraPunch(0.3);
+  }
+
+  /* CURE — a green bloom at the hero's feet and rising motes. */
+  function fxCure() {
+    if (!battle) return;
+    var at = fxHeroPoint();
+    fxPush({ type: 'ring', x0: at.x, y0: at.y + 24, life: 0.4, color: '#9dffbf' });
+    for (var i = 0; i < 7; i++) {
+      fxPush({
+        type: 'heal', x0: at.x + rand(-26, 26), y0: at.y + rand(0, 34),
+        rise: rand(-92, -54), seed: rand(0, 6), life: 0.75, start: i * 0.05
+      });
+    }
+    flashStage('heal');
+  }
+
   function beginPlayerMove(move) {
     if (!battle || battle.ended || battle.state !== 'menu') return;
     battle.state = 'strike';
@@ -5117,6 +5440,11 @@
     }
     if (move.cmd === 'toss') opts.reach = true;
 
+    /* === NEW: each card gets its own prop instead of the shared swing === */
+    if (move.cmd === 'toss') fxSwordToss();
+    else if (move.cmd === 'shot') fxPowerShot();
+    else if (move.cmd === 'mash') fxDynamite();
+
     var total = 0;
     var note = '';
     var hits = move.cmd === 'shot' ? 3 : 1;
@@ -5168,6 +5496,7 @@
 
   function resolveChain(move, quality, win) {
     var index = win && win.chain ? win.chain : 0;
+    fxLineBounce(index);
     var bounce = { kind: 'skill', name: move.name, mult: 0.4 + index * 0.2 };
     var result = hitEnemy(bounce, quality, {});
     battle.anim.p = 1;
@@ -5189,6 +5518,7 @@
   }
 
   function resolveCure(move, quality) {
+    fxCure();
     var healed = Math.min(save.maxHp - save.hp, quality === 'perfect' ? 7 : 5);
     save.hp += healed;
     battle.pose = 'strike';
@@ -5624,7 +5954,15 @@
   function updateLevelCards() {
     ui.lvHp.textContent = save.maxHp + ' → ' + (save.maxHp + 5);
     ui.lvSp.textContent = save.maxSp + ' → ' + (save.maxSp + 5);
-    ui.lvBp.textContent = save.bp >= BP_MAX ? save.bp + ' · MAX' : save.bp + ' → ' + Math.min(BP_MAX, save.bp + 1);
+    /* === BP CHOICE IS REAL UNTIL THE CAP, THEN DISABLED === */
+    var bpMaxed = save.bp >= BP_MAX;
+    ui.lvBp.textContent = bpMaxed ? 'MAXED AT ' + BP_MAX : save.bp + ' → ' + Math.min(BP_MAX, save.bp + 1);
+    var bpOption = document.querySelector('.ff-level-option.bp');
+    if (bpOption) {
+      bpOption.disabled = bpMaxed;
+      bpOption.classList.toggle('maxed', bpMaxed);
+      bpOption.setAttribute('aria-disabled', bpMaxed ? 'true' : 'false');
+    }
   }
 
   function chooseStat(stat) {
@@ -5636,7 +5974,8 @@
       save.maxSp += 5;
       save.sp = Math.min(save.maxSp, save.sp + 5);
     } else if (stat === 'bp') {
-      /* === NEW: BP stays inside the 4 BP card budget === */
+      /* === BP stays inside the 4 BP card budget === */
+      if (save.bp >= BP_MAX) return;
       save.bp = Math.min(BP_MAX, save.bp + 1);
     }
     levelQueue -= 1;

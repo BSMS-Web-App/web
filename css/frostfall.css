@@ -1839,3 +1839,20 @@ a { color: inherit; }
 
 /* the slice debug overlay is read-only: never eat a click on the game */
 .ff-sheet-debug { pointer-events: none; }
+
+/* ============================================================
+   NEW: MOVE EFFECTS — canvas overlay drawn over the battle stage
+   ============================================================ */
+.ff-mfx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 26;
+  pointer-events: none;
+}
+.ff-flash.heal { background: radial-gradient(circle at 32% 58%, rgba(160, 255, 190, .5), rgba(160, 255, 190, 0) 62%); }
+
+/* level-up: a maxed BP option reads as spent, not choosable */
+.ff-level-option:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.ff-level-option.bp.maxed em { color: #ffb0c8; }
