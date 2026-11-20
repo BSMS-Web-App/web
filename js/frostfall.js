@@ -242,77 +242,129 @@
     return actor;
   }
 
-  /* Classic R6 proportions: one big square head, a blocky torso and four
-     limbs swinging from shoulder and hip pivots. Squash, tilt and lean live
-     on the root (see updateActor) so a walk reads as a bouncy toy. */
+  /* Proportions lifted from the 16-bit sprite sheet: the head is almost half
+     the character, the arms and legs are short and thick, the gloves and boots
+     are oversized, and the cap brim juts forward so the silhouette still reads
+     from the overworld camera. Every limb hangs off a shoulder or hip pivot, so
+     the stepped poses snap between frames like hand-drawn sprites. */
   function buildHero(palette) {
     var pal = palette || heroPalette();
     var actor = makeActor('player');
     actor.flip = 0;
     var hat = pal.hat || 'beanie';
     var trim = pal.trim === undefined ? pal.scarf : pal.trim;
-    var belt = pal.belt === undefined ? 0x2b2036 : pal.belt;
+    var glove = pal.glove === undefined ? 0xfff4e6 : pal.glove;
+    var button = pal.button === undefined ? 0xffd257 : pal.button;
+    var skin = pal.skin;
+    /* hat parts hang off the neck pivot too, so a head tilt carries them */
+    var neck = 1.66;
 
-    actor.legL = addPart(actor, pal.pants, [-0.24, 0.88, 0], [0, -0.44, 0], [0.40, 0.88, 0.44]);
-    actor.legR = addPart(actor, pal.pants, [0.24, 0.88, 0], [0, -0.44, 0], [0.40, 0.88, 0.44]);
-    actor.shoeL = addPart(actor, pal.shoe, [-0.24, 0.88, 0], [0, -0.84, 0.08], [0.44, 0.20, 0.56]);
-    actor.shoeR = addPart(actor, pal.shoe, [0.24, 0.88, 0], [0, -0.84, 0.08], [0.44, 0.20, 0.56]);
+    /* stubby legs and big boots, both swinging from the same hip */
+    actor.legL = addPart(actor, pal.pants, [-0.29, 0.92, 0], [0, -0.30, 0], [0.44, 0.62, 0.46]);
+    actor.legR = addPart(actor, pal.pants, [0.29, 0.92, 0], [0, -0.30, 0], [0.44, 0.62, 0.46]);
+    actor.shoeL = addPart(actor, pal.shoe, [-0.29, 0.92, 0], [0, -0.78, 0.12], [0.54, 0.30, 0.74]);
+    actor.shoeR = addPart(actor, pal.shoe, [0.29, 0.92, 0], [0, -0.78, 0.12], [0.54, 0.30, 0.74]);
 
-    addPart(actor, pal.coat, [0, 1.34, 0], [0, 0, 0], [0.96, 1.02, 0.56]);
-    addPart(actor, trim, [0, 1.34, 0.29], [0, 0, 0], [0.26, 0.94, 0.06]);
-    addPart(actor, belt, [0, 0.88, 0], [0, 0, 0], [1.02, 0.16, 0.60]);
-    addPart(actor, pal.scarf, [0, 1.80, 0], [0, 0, 0], [0.86, 0.22, 0.70]);
-    addPart(actor, pal.scarf, [0, 1.66, 0.30], [-0.34, 0, 0], [0.22, 0.50, 0.12], { rz: 0.18 });
-    addPart(actor, pal.scarf, [0, 1.66, 0.30], [0.34, 0, 0], [0.22, 0.40, 0.12], { rz: -0.24 });
+    /* red shirt, blue overalls over it, gold buttons on the bib */
+    addPart(actor, pal.coat, [0, 1.30, 0], [0, 0, 0], [1.00, 0.86, 0.62]);
+    addPart(actor, pal.pants, [0, 1.04, 0], [0, 0, 0], [1.04, 0.48, 0.66]);
+    addPart(actor, pal.pants, [0, 1.32, 0.28], [0, 0, 0], [0.80, 0.52, 0.12]);
+    addPart(actor, pal.pants, [0, 1.52, 0.27], [-0.28, 0, 0], [0.15, 0.42, 0.12], { rz: 0.14 });
+    addPart(actor, pal.pants, [0, 1.52, 0.27], [0.28, 0, 0], [0.15, 0.42, 0.12], { rz: -0.14 });
+    addPart(actor, button, [0, 1.44, 0.34], [-0.27, 0, 0], [0.15, 0.15, 0.08]);
+    addPart(actor, button, [0, 1.44, 0.34], [0.27, 0, 0], [0.15, 0.15, 0.08]);
 
-    actor.armL = addPart(actor, pal.coat, [-0.62, 1.74, 0], [0, -0.34, 0], [0.32, 0.86, 0.36]);
-    actor.armR = addPart(actor, pal.coat, [0.62, 1.74, 0], [0, -0.34, 0], [0.32, 0.86, 0.36]);
-    addPart(actor, pal.skin, [-0.62, 1.74, 0], [0, -0.66, 0.02], [0.32, 0.24, 0.38]);
-    addPart(actor, pal.skin, [0.62, 1.74, 0], [0, -0.66, 0.02], [0.32, 0.24, 0.38]);
+    /* fluffy collar with two short tails, so he still reads as the Frostfest kid */
+    addPart(actor, trim, [0, 0, 0], [0, 1.64, 0], [0.80, 0.22, 0.70]);
+    addPart(actor, trim, [0, 1.64, -0.30], [-0.24, 0, 0], [0.20, 0.44, 0.12], { rz: 0.16 });
+    addPart(actor, trim, [0, 1.64, -0.30], [0.24, 0, 0], [0.20, 0.34, 0.12], { rz: -0.20 });
 
-    /* head, then the classic two eyes and smile */
-    addPart(actor, pal.skin, [0, 1.94, 0], [0, 0.40, 0], [0.88, 0.88, 0.84]);
-    addPart(actor, 0xffffff, [0, 1.94, 0], [-0.20, 0.46, 0.43], [0.20, 0.22, 0.05]);
-    addPart(actor, 0xffffff, [0, 1.94, 0], [0.20, 0.46, 0.43], [0.20, 0.22, 0.05]);
-    addPart(actor, 0x1a1224, [0, 1.94, 0], [-0.18, 0.44, 0.46], [0.11, 0.14, 0.04]);
-    addPart(actor, 0x1a1224, [0, 1.94, 0], [0.18, 0.44, 0.46], [0.11, 0.14, 0.04]);
-    addPart(actor, 0x1a1224, [0, 1.94, 0], [-0.14, 0.26, 0.44], [0.14, 0.06, 0.03], { rz: -0.38 });
-    addPart(actor, 0x1a1224, [0, 1.94, 0], [0.14, 0.26, 0.44], [0.14, 0.06, 0.03], { rz: 0.38 });
-    addPart(actor, pal.hair, [0, 1.94, 0], [0, 0.62, 0.16], [0.58, 0.26, 0.50]);
+    /* short arms with oversized mitten gloves at the end */
+    actor.armL = addPart(actor, pal.coat, [-0.60, 1.64, 0], [0, -0.26, 0.02], [0.34, 0.56, 0.38]);
+    actor.armR = addPart(actor, pal.coat, [0.60, 1.64, 0], [0, -0.26, 0.02], [0.34, 0.56, 0.38]);
+    actor.gloveL = addPart(actor, glove, [-0.60, 1.64, 0], [0, -0.60, 0.04], [0.40, 0.36, 0.44]);
+    actor.gloveR = addPart(actor, glove, [0.60, 1.64, 0], [0, -0.60, 0.04], [0.40, 0.36, 0.44]);
+
+    /* one big round head: ears, a fat nose, wide eyes and a smile. Everything
+       from here on shares the neck pivot, so a head tilt carries the whole
+       face and hat instead of leaving the eyes behind. */
+    /* a shaded skin tone keeps the nose and ears from vanishing into the face */
+    function shaded(k) {
+      var r = Math.min(255, Math.round(((skin >> 16) & 255) * k));
+      var g = Math.min(255, Math.round(((skin >> 8) & 255) * k));
+      var b = Math.min(255, Math.round((skin & 255) * k));
+      return (r << 16) | (g << 8) | b;
+    }
+    actor.eyeH = 0.34;
+    var headStart = actor.parts.length;
+    actor.head = addPart(actor, skin, [0, neck, 0], [0, 0.52, 0], [1.06, 1.00, 0.98]);
+    addPart(actor, skin, [0, neck, 0], [-0.56, 0.46, 0], [0.18, 0.34, 0.34]);
+    addPart(actor, skin, [0, neck, 0], [0.56, 0.46, 0], [0.18, 0.34, 0.34]);
+    addPart(actor, shaded(0.84), [0, neck, 0], [0, 0.28, 0.54], [0.42, 0.34, 0.34]);
+    addPart(actor, shaded(0.97), [0, neck, 0], [-0.10, 0.37, 0.66], [0.15, 0.15, 0.06]);
+    addPart(actor, 0xf08a76, [0, neck, 0], [-0.40, 0.18, 0.44], [0.18, 0.14, 0.06]);
+    addPart(actor, 0xf08a76, [0, neck, 0], [0.40, 0.18, 0.44], [0.18, 0.14, 0.06]);
+    actor.eyeL = addPart(actor, 0xfffdf6, [0, neck, 0], [-0.24, 0.58, 0.46], [0.32, actor.eyeH, 0.06]);
+    actor.eyeR = addPart(actor, 0xfffdf6, [0, neck, 0], [0.24, 0.58, 0.46], [0.32, actor.eyeH, 0.06]);
+    addPart(actor, 0x24203a, [0, neck, 0], [-0.22, 0.56, 0.50], [0.15, 0.22, 0.05]);
+    addPart(actor, 0x24203a, [0, neck, 0], [0.22, 0.56, 0.50], [0.15, 0.22, 0.05]);
+    addPart(actor, 0xffffff, [0, neck, 0], [-0.26, 0.64, 0.52], [0.07, 0.08, 0.03]);
+    addPart(actor, 0xffffff, [0, neck, 0], [0.18, 0.64, 0.52], [0.07, 0.08, 0.03]);
+    addPart(actor, pal.hair, [0, neck, 0], [-0.26, 0.78, 0.47], [0.28, 0.09, 0.06], { rz: -0.08 });
+    addPart(actor, pal.hair, [0, neck, 0], [0.26, 0.78, 0.47], [0.28, 0.09, 0.06], { rz: 0.08 });
+    addPart(actor, 0x3a1f22, [0, neck, 0], [-0.14, 0.09, 0.52], [0.21, 0.09, 0.04], { rz: -0.30 });
+    addPart(actor, 0x3a1f22, [0, neck, 0], [0.14, 0.09, 0.52], [0.21, 0.09, 0.04], { rz: 0.30 });
+    addPart(actor, pal.hair, [0, neck, 0], [-0.50, 0.40, 0.22], [0.10, 0.30, 0.20]);
+    addPart(actor, pal.hair, [0, neck, 0], [0.50, 0.40, 0.22], [0.10, 0.30, 0.20]);
+    addPart(actor, pal.hair, [0, neck, 0], [0, 0.46, -0.48], [0.94, 0.42, 0.16]);
 
     if (hat === 'pom') {
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.74, 0], [0.94, 0.28, 0.90]);
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.60, 0], [0.98, 0.14, 0.94]);
-      addPart(actor, 0xfff3d5, [0, 1.94, 0], [0, 0.96, 0], [0.26, 0.26, 0.26]);
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.01, -0.02], [1.14, 0.34, 1.08], { geo: 'cylinder' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 0.85, -0.02], [1.18, 0.18, 1.12]);
+      addPart(actor, 0xfff3d5, [0, neck, 0], [0, 1.34, -0.06], [0.30, 0.30, 0.30]);
     } else if (hat === 'tophat') {
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.86, 0], [0.64, 0.52, 0.62]);
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.66, 0], [1.02, 0.12, 0.98]);
-      addPart(actor, pal.scarf, [0, 1.94, 0], [0, 0.70, 0], [0.68, 0.10, 0.66]);
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.16, -0.02], [0.80, 0.62, 0.76], { geo: 'cylinder' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 0.92, -0.02], [1.20, 0.14, 1.14]);
+      addPart(actor, pal.scarf, [0, neck, 0], [0, 0.99, -0.02], [0.82, 0.12, 0.78], { geo: 'cylinder' });
     } else if (hat === 'cap') {
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.76, 0], [0.92, 0.26, 0.90]);
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.66, 0.46], [0.84, 0.10, 0.30]);
+      /* dome hugging the skull, a banded rim, a short brim, and an emblem on
+         top where the overhead camera can actually see it */
+      addPart(actor, pal.cap, [0, neck, 0], [0, 0.92, -0.04], [1.06, 0.14, 1.02]);
+      /* back panel: the cap wraps the skull instead of perching on top of it */
+      addPart(actor, pal.cap, [0, neck, 0], [0, 0.82, -0.44], [0.98, 0.38, 0.24]);
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.00, -0.04], [0.98, 0.20, 0.94], { geo: 'cylinder' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.13, -0.04], [0.82, 0.16, 0.78], { geo: 'cylinder' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 0.94, 0.52], [0.72, 0.12, 0.38]);
+      addPart(actor, trim, [0, neck, 0], [0, 1.22, -0.04], [0.24, 0.24, 0.24], { geo: 'disc' });
     } else if (hat === 'bun') {
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.80, -0.10], [0.94, 0.22, 0.86]);
-      addPart(actor, pal.hair, [0, 1.94, 0], [0, 0.66, -0.50], [0.42, 0.42, 0.34]);
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.02, -0.06], [1.12, 0.28, 1.04], { geo: 'cylinder' });
+      addPart(actor, pal.hair, [0, neck, 0], [0, 0.84, -0.54], [0.48, 0.48, 0.40]);
     } else if (hat === 'crown') {
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.82, 0], [0.90, 0.16, 0.86]);
-      addPart(actor, pal.cap, [0, 1.94, 0], [-0.28, 1.00, 0], [0.14, 0.40, 0.14], { geo: 'cone4' });
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 1.06, 0], [0.16, 0.52, 0.16], { geo: 'cone4' });
-      addPart(actor, pal.cap, [0, 1.94, 0], [0.28, 1.00, 0], [0.14, 0.40, 0.14], { geo: 'cone4' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.02, 0], [1.04, 0.18, 0.98], { geo: 'cylinder' });
+      addPart(actor, pal.cap, [0, neck, 0], [-0.30, 1.24, 0], [0.16, 0.44, 0.16], { geo: 'cone4' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.32, 0], [0.18, 0.56, 0.18], { geo: 'cone4' });
+      addPart(actor, pal.cap, [0, neck, 0], [0.30, 1.24, 0], [0.16, 0.44, 0.16], { geo: 'cone4' });
     } else {
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.76, 0], [0.92, 0.28, 0.88]);
-      addPart(actor, pal.cap, [0, 1.94, 0], [0, 0.62, 0], [0.96, 0.14, 0.92]);
+      addPart(actor, pal.cap, [0, neck, 0], [0, 1.00, -0.02], [1.14, 0.32, 1.08], { geo: 'cylinder' });
+      addPart(actor, pal.cap, [0, neck, 0], [0, 0.84, -0.02], [1.18, 0.20, 1.12]);
     }
     if (pal.goggles) {
-      addPart(actor, pal.goggles, [0, 1.94, 0], [0, 0.62, 0.40], [0.90, 0.16, 0.14]);
-      addPart(actor, pal.goggles, [0, 1.94, 0], [-0.22, 0.62, 0.46], [0.26, 0.26, 0.10]);
-      addPart(actor, pal.goggles, [0, 1.94, 0], [0.22, 0.62, 0.46], [0.26, 0.26, 0.10]);
+      addPart(actor, pal.goggles, [0, neck, 0], [0, 0.94, 0.46], [0.94, 0.16, 0.14]);
+      addPart(actor, pal.goggles, [0, neck, 0], [-0.23, 0.94, 0.52], [0.28, 0.28, 0.10]);
+      addPart(actor, pal.goggles, [0, neck, 0], [0.23, 0.94, 0.52], [0.28, 0.28, 0.10]);
     }
+    actor.headParts = actor.parts.slice(headStart);
     return actor;
   }
 
+  /* Nod every face part around the shared neck pivot. */
+  function tiltHead(actor, rx) {
+    if (!actor || !actor.headParts) return;
+    for (var i = 0; i < actor.headParts.length; i++) actor.headParts[i].rx = rx;
+  }
+
   function heroPalette() {
-    return { coat: 0x3a63b8, pants: 0x243a6e, scarf: 0xe03f36, cap: 0xe03f36, skin: 0xf6c9a0, hair: 0x6b432c, shoe: 0x3a2418, hat: 'pom', belt: 0x2b2036 };
+    return { coat: 0xd8333f, pants: 0x2f5fb0, scarf: 0xfff4e6, cap: 0xd8333f, skin: 0xf6c9a0, hair: 0x6b432c, shoe: 0x5a3a22, hat: 'cap', glove: 0xfff4e6, button: 0xffd257, trim: 0xfff4e6 };
   }
 
   var PALETTES = {
@@ -1268,6 +1320,9 @@
       titleHero.yaw = Math.PI + Math.sin(time * 0.4) * 0.18;
       titleHero.armL.rx = Math.sin(time * 1.7) * 0.14;
       titleHero.armR.rx = -Math.sin(time * 1.7) * 0.14;
+      titleHero.gloveL.rx = titleHero.armL.rx;
+      titleHero.gloveR.rx = titleHero.armR.rx;
+      tiltHead(titleHero, Math.sin(time * 1.7) * 0.03);
       updateActor(titleHero);
     }
     if (titlePip) {
@@ -2048,7 +2103,7 @@
   function handleMovement(dt) {
     var forward = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - touchMove.y;
     var strafe = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + touchMove.x;
-    if (Math.abs(forward) < 0.06 && Math.abs(strafe) < 0.06) { player.moving = false; return; }
+    if (Math.abs(forward) < 0.06 && Math.abs(strafe) < 0.06) { player.moving = false; player.running = false; return; }
     var length = Math.hypot(forward, strafe) || 1;
     forward /= length;
     strafe /= length;
@@ -2056,7 +2111,8 @@
     var cos = Math.cos(camera.yaw);
     var dx = -sin * forward + cos * strafe;
     var dz = -cos * forward - sin * strafe;
-    var speed = (keys.ShiftLeft || keys.ShiftRight) ? 6.4 : 4.6;
+    player.running = !!(keys.ShiftLeft || keys.ShiftRight);
+    var speed = player.running ? 6.4 : 4.6;
     var nextX = player.x + dx * speed * dt;
     var nextZ = player.z + dz * speed * dt;
     if (!blocked(nextX, player.z)) player.x = nextX;
@@ -2189,18 +2245,39 @@
     if (mode === 'world') handleMovement(dt);
     else player.moving = false;
 
-    /* Snappy 4-pose walk: limbs snap between poses instead of sliding, and
-       the torso squashes on each footfall like a plastic toy. */
+    /* Snappy 4-pose walk straight off the sprite sheet: limbs snap between
+       held poses instead of sliding, the torso squashes on each footfall, and
+       a run opens the stride and tips the body forward. */
     var walkPhase = stepped(player.walk);
     var walkSin = Math.sin(walkPhase);
     var step = player.moving ? (walkSin > 0.55 ? 1 : walkSin < -0.55 ? -1 : walkSin * 0.3) : 0;
     var bounce = player.moving ? Math.abs(Math.cos(walkPhase)) : 0;
-    player.legL.rx = step * 0.82;
-    player.legR.rx = -step * 0.82;
-    player.armL.rx = -step * 0.72;
-    player.armR.rx = step * 0.72;
-    player.squashY = 1 + bounce * 0.075;
-    player.squashX = 1 - bounce * 0.05;
+    var run = player.running ? 1 : 0;
+    var stride = 0.74 + run * 0.34;
+    player.legL.rx = step * stride;
+    player.legR.rx = -step * stride;
+    player.armL.rx = -step * (0.66 + run * 0.34);
+    player.armR.rx = step * (0.66 + run * 0.34);
+    player.armL.rz = 0.16;
+    player.armR.rz = -0.16;
+    tiltHead(player, 0);
+    player.squashY = 1 + bounce * (0.075 + run * 0.05);
+    player.squashX = 1 - bounce * (0.05 + run * 0.04);
+    if (!player.moving) {
+      /* Idle frames: a two-beat breath, arms swaying, and the sheet's blink */
+      var breath = Math.sin(stepped(time) * 1.7);
+      player.armL.rx = breath * 0.07;
+      player.armR.rx = -breath * 0.07;
+      player.armL.rz = 0.16 + breath * 0.05;
+      player.armR.rz = -0.16 - breath * 0.05;
+      tiltHead(player, breath * 0.035);
+      var blink = (time % 4.8) > 4.62 ? 0.12 : 1;
+      player.eyeL.size[1] = player.eyeH * blink;
+      player.eyeR.size[1] = player.eyeH * blink;
+    } else {
+      player.eyeL.size[1] = player.eyeH;
+      player.eyeR.size[1] = player.eyeH;
+    }
     if (player.flip > 0) {
       /* Paper-thin pinch at the midpoint of the turn, then snap back. */
       player.flip = Math.max(0, player.flip - dt);
@@ -2209,8 +2286,8 @@
       player.squashY *= 1 + (1 - flipK) * 0.1;
     }
     player.lean = -step * 0.055;
-    player.tiltX = player.moving ? 0.05 : 0;
-    player.y = bounce * 0.09;
+    player.tiltX = player.moving ? 0.05 + run * 0.09 : 0;
+    player.y = bounce * (0.09 + run * 0.05);
     if (player.swing > 0) {
       player.swing = Math.max(0, player.swing - dt);
       var swingK = 1 - player.swing / SWING_TIME;
@@ -2220,6 +2297,12 @@
       player.squashY = 1.04;
       player.squashX = 0.96;
     }
+    /* Boots and gloves have their own hip/shoulder pivots, so mirror the limb
+       pose onto them or they detach and hang in the air. */
+    player.gloveL.rx = player.armL.rx;
+    player.gloveR.rx = player.armR.rx;
+    player.shoeL.rx = player.legL.rx;
+    player.shoeR.rx = player.legR.rx;
 
     pipTimer += dt;
     if (pipTimer >= 0.12) {
@@ -2423,6 +2506,7 @@
     var st = stepped(time);
     var poseTime = Date.now() - (battle.poseAt || 0);
     if (battle.pose === 'strike' && poseTime > 240) battle.pose = 'idle';
+    if (battle.pose === 'hurt' && poseTime > 320) battle.pose = 'idle';
     battlePlayer.x = -1.7 + anim.p * 1.1;
     battleEnemy.x = 1.8 - anim.e * 1.1;
     anim.p = Math.max(0, anim.p - dt * 3.2);
@@ -2438,6 +2522,9 @@
     battlePlayer.squashY = 1 + anim.p * 0.06;
     battlePlayer.squashX = 1 - anim.p * 0.04;
     battlePlayer.lean = 0;
+    battlePlayer.armL.rz = 0.16;
+    battlePlayer.armR.rz = -0.16;
+    tiltHead(battlePlayer, Math.sin(st * 1.6) * 0.03);
     /* Three held poses per swing: cock back, whip forward, rebound. The windup
        runs while the timing bar is still filling, so the pose itself teaches
        the player when to press. */
@@ -2460,7 +2547,34 @@
       battlePlayer.armL.rx = -1.1 * hitK;
       battlePlayer.squashY = 1 + 0.14 * hitK;
       battlePlayer.squashX = 1 - 0.12 * hitK;
+    } else if (battle.pose === 'hurt') {
+      /* Knocked back, head snapped away, the sheet's "Hurt" frame. */
+      var hurtK = clamp(1 - poseTime / 300, 0, 1);
+      battlePlayer.x -= 0.24 * hurtK;
+      battlePlayer.lean = -0.30 * hurtK;
+      battlePlayer.tiltX = -0.26 * hurtK;
+      battlePlayer.squashY = 1 - 0.08 * hurtK;
+      battlePlayer.squashX = 1 + 0.08 * hurtK;
+      battlePlayer.armL.rx = -1.3 * hurtK;
+      battlePlayer.armR.rx = -1.3 * hurtK;
+      tiltHead(battlePlayer, -0.22 * hurtK);
+    } else if (battle.pose === 'victory') {
+      /* "Praises the sun": arms up, hopping in place, stretched at the top. */
+      var victoryT = (Date.now() - battle.poseAt) % 640 / 640;
+      var lift = Math.sin(stepped(victoryT * 0.64) * Math.PI);
+      battlePlayer.y += lift * 0.4;
+      battlePlayer.armL.rx = -2.4;
+      battlePlayer.armR.rx = -2.4;
+      battlePlayer.armL.rz = 0.4;
+      battlePlayer.armR.rz = -0.4;
+      battlePlayer.squashY = 1 + lift * 0.13;
+      battlePlayer.squashX = 1 - lift * 0.1;
+      tiltHead(battlePlayer, -0.12 * lift);
     }
+    battlePlayer.gloveL.rx = battlePlayer.armL.rx;
+    battlePlayer.gloveR.rx = battlePlayer.armR.rx;
+    battlePlayer.shoeL.rx = battlePlayer.legL.rx;
+    battlePlayer.shoeR.rx = battlePlayer.legR.rx;
     if (battle.lunge > 0) battle.lunge = Math.max(0, battle.lunge - dt * 4);
     battleEnemy.tiltX = battle.windup ? -0.26 : battle.lunge > 0 ? 0.34 : 0;
     battleEnemy.squashY = battle.windup ? 0.9 : 1;
@@ -3131,6 +3245,10 @@
     else if (quality === 'guard') damage = Math.ceil(damage * 0.5);
     battle.anim.e = 1;
     battle.lunge = 1;
+    if (quality !== 'superguard') {
+      battle.pose = 'hurt';
+      battle.poseAt = Date.now();
+    }
     shake();
     if (quality === 'superguard') {
       sound('superguard');
@@ -3196,6 +3314,7 @@
     hideTiming();
     hideTelegraph();
     ui.battle.classList.remove('ff-mortal');
+    if (battlePlayer) { battle.pose = 'victory'; battle.poseAt = Date.now(); }
     log('VICTORY!');
     sound('win');
     grantXp(battle.def.xp);
@@ -3619,6 +3738,7 @@
       },
       attack: function () { if (battle && battle.state === 'menu') beginPlayerMove({ kind: 'attack', name: 'ATTACK', mult: 1 }); },
       enemyTurn: function () { if (battle && !battle.ended) enemyTurn(); },
+      hit: function () { if (battle && !battle.ended) resolveEnemyHit('standard', null); },
       setHp: function (hp) { if (save) { save.hp = clamp(hp, 1, save.maxHp); updateHud(); } },
       camera: function () {
         return { eye: camera.eye.slice(), target: camera.target.slice(), ortho: camera.ortho, yaw: camera.yaw, pitch: camera.pitch, dist: camera.dist };
