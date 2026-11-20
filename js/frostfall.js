@@ -804,15 +804,19 @@
     house(11, -10, 7, 6, 4, 0x6f8a78, 0x47604f);
     sign('ROADTOWN', 0, 7.6);
     inspect(0, 7.6, 'ROADTOWN', [
-      'ROADTOWN · POP. 214 · SHARDS 1 · SNOW 6 FT.',
+      'ROADTOWN · POP. 214 · RELICS 0 · SNOW 6 FT.',
       'Someone crossed out WELCOME and wrote PLEASE CLOSE THE SKY.',
-      'Under that, in pencil: "we mean it."'
+      'Under that, in pencil: "also the portal is still on. we can hear it."'
     ], 3);
     fountain(0, -4);
     inspect(0, -4, 'FOUNTAIN', [
       'The fountain is frozen mid-splash. It looks personally offended.',
-      'A little plaque reads NO SKATING. It is covered in skate marks.'
+      'A little plaque reads NO SKATING. It is covered in skate marks and one set of claw marks.'
     ], 2.6);
+    inspect(10.5, 2, 'GENERAL STORE', [
+      'A hand-painted sign: GENERAL STORE · OPEN · PROBABLY.',
+      'The door is locked. A note says GONE TO FROSTFEST 2010. BACK IN 16 YEARS.'
+    ], 2.8);
     lamp(-3.6, 2.5); lamp(3.6, -1.5); lamp(-3.6, -10); lamp(3.6, 8);
     tree(-16, 8, 1.1); tree(16, 6, 1.0); tree(-17, -16, 1.2); tree(17, -18, 1.1);
     tree(-6.5, -19, 0.9); tree(7, -20, 1.0);
@@ -834,8 +838,12 @@
     campfire(-4.5, -1.5);
     inspect(-4.5, -1.5, 'CAMPFIRE', [
       'The fire is warm. The fire is also the only thing here not whispering.',
-      'Someone left a marshmallow on a stick. It is now a small rock.'
+      'Someone left a marshmallow on a stick. It is now a small, haunted rock.'
     ], 2.4);
+    inspect(-15.5, 2, 'RANGER HUT', [
+      'A hand-lettered sign: WHISPERING PINES · QUIET HOURS 24/7.',
+      'Inside: eleven coffee cups and a note that says IF I AM QUIET, I AM NOT OKAY.'
+    ], 2.8);
     lamp(3.2, 5);
     lamp(-3.2, -10);
     snowPile(-6, 9, 0.9); snowPile(5, -6, 1.1); snowPile(10, 11, 0.8);
@@ -852,8 +860,12 @@
     dock(4, 2);
     inspect(4, 2, 'DOCK', [
       'A boathouse sign: BOATS FOR RENT · ASK FINN · FINN IS UNDER THE ICE.',
-      'The lake taps back when you knock. Politely. Twice.'
+      'The lake taps back when you knock. Politely. Twice. The third time is not polite.'
     ], 2.6);
+    inspect(-9, 4, 'FISH HUT', [
+      'A cabin that smells like bait and regret.',
+      'The calendar is still on December 2010. Every day since has been circled.'
+    ], 2.8);
     house(-9, 4, 5.5, 5, 3.2, 0x6a5a4a, 0x3f3028);
     box(-9, 0.4, 7.2, 1.4, 0.8, 1.0, 0x4a3322);
     lamp(-3, 7); lamp(3, -3);
@@ -883,7 +895,11 @@
     inspect(0, -9, 'CLOCKTOWER', [
       'The clock face shows THIRTEEN. The little hand is pointing at YOU.',
       'A brass plate: BELLKEEPER ODETTE · DO NOT COUNT THE BELLS.',
-      'Someone has scratched "it counts back" underneath.'
+      'Someone has scratched "it counts back" underneath. Someone else has added "she is right".'
+    ], 2.8);
+    inspect(13, 3, 'TOWNHOUSE', [
+      'Every window is dark except one, where a candle is burning in the shape of a lowercase help.',
+      'The doormat says WELCOME. It is upside down.'
     ], 2.8);
     tree(-18, 11, 1); tree(18, 12, 1); tree(-18, -17, 0.9); tree(18, -18, 1);
     snowPile(-7, 8, 0.8); snowPile(8, -8, 0.9);
@@ -910,32 +926,38 @@
     world.colliders.push({ x: 0, z: -12, hw: 1.8, hd: 1.8 });
     lamp(-3, 7); lamp(3, 7);
     inspect(0, -9.4, 'ALTAR', [
-      'Five grooves wait in the stone. One of them is already warm.',
-      'Carved underneath: THE STAR IS NOT LOST. IT IS WAITING TO BE LIT.'
+      'Five grooves wait in the stone. All five are warm now.',
+      'Carved underneath: THE STAR IS NOT LOST. IT IS WAITING TO BE LIT. Under that: "OR PUT OUT. WE NEVER FINISHED THE SENTENCE."',
+      'Someone has left a mug up here. It is still steaming. Nobody has been up here in years.'
     ], 2.8);
+    inspect(4, 2, 'SUMMIT', [
+      'From up here, Roadtown looks like a handful of lights someone dropped.',
+      'The wind is saying your name. It is getting the pronunciation wrong on purpose.'
+    ], 2.4);
     snowPile(-5, 3, 0.8); snowPile(6, -2, 0.9);
   }
 
   /* -------------------------------------------------------------- chapters */
   var CHAPTERS = [
     {
-      num: 'ONE', title: 'ROADTOWN IN THE SNOW', sub: 'Where the star fell first',
+      num: 'ONE', title: 'ROADTOWN IN THE SNOW', sub: 'Frostfest 2010, population: you',
       theme: 'day', fog: [0.78, 0.87, 0.96], spawn: [0.9, 12],
       intro: [
-        'The Aurora Star cracked at midnight. Five pieces fell out of the sky.',
-        'By morning, Roadtown was buried, and the cold had teeth.',
-        'Mayor Bram is waiting by the square. Pip has already packed the cocoa.'
+        'Frostfest 2010 was supposed to be a party. You got the server instead.',
+        'Roadtown is snowed in, the tree is dark, and something under the ice has started knocking.',
+        'Mayor Bram is waiting by the square with a plan. Pip is waiting with cocoa and doubts.'
       ],
       outro: [
-        'The shard hums in your hand. It sounds like a spring bird.',
-        'One down. Four to go. The pines are whispering your name.'
+        'The Frost Mite pops like a snow globe. A candy cane the size of a door swings free of the ice.',
+        'CANDY CANE CLAYMORE. Bram takes it "for safekeeping" and definitely does not hum while pocketing it.',
+        'He says the next relic is in the Whispering Pines. Nobody was supposed to go in the Whispering Pines.'
       ],
       npc: {
         name: 'MAYOR BRAM', x: 2.2, z: 9, palette: 'bram',
         lines: [
-          'You saw it fall, didn\'t you? The whole town felt the sky crack.',
-          'A shard landed in the fountain. But the cold brought shades with it. They\'re lurking in the drifts.',
-          'Clear them out and the ice should break. Pip can patch you up between fights.'
+          'You saw it, right? Five Sacred Relics, gone straight off the Town Tree. Classic Holiday Griefer work.',
+          'The Frost Shades brought the cold with them. Clear them out of the square and the fountain ice should crack.',
+          'Bring me the relic and I will keep it somewhere extremely safe. Trust me. I am the Mayor.'
         ]
       },
       shades: [
@@ -946,8 +968,8 @@
       boss: {
         key: 'c1-boss', name: 'FROST MITE', x: 0, z: -6.5, hp: 34, atk: 4, xp: 30, model: 'mite',
         intro: [
-          'The fountain ice splits. Something with too many legs climbs out.',
-          'FROST MITE: "COLD... COLD... MINE..."'
+          'The fountain ice splits. Something with too many legs climbs out, chewing the backup generator cable.',
+          'FROST MITE: "COLD... CRUNCHY... BOOTS..."'
         ]
       },
       build: buildRoadtown
@@ -956,20 +978,21 @@
       num: 'TWO', title: 'THE WHISPERING PINES', sub: 'The trees remember every step',
       theme: 'night', fog: [0.16, 0.18, 0.32], spawn: [0, 13],
       intro: [
-        'The Whispering Pines used to be a quiet place.',
-        'Now the trees lean in when you walk past, and the snow repeats what you say.',
-        'Juniper went ahead to check on the old grove. She has not come back.'
+        'The Whispering Pines used to be a quiet place to get lost in.',
+        'Now the trees lean in when you pass, and the snow repeats your name back in your own voice.',
+        'Juniper went to check the old grove three days ago. Juniper is still out there.'
       ],
       outro: [
-        'The wraith collapses into a heap of dry needles. A green shard rolls free.',
-        'Two down. The lake is next, and the lake is never quiet.'
+        'The wraith folds into a heap of dry needles. A tinsel slingshot sits bolted to the stump underneath it.',
+        'Juniper works the bolts loose and goes very quiet. "Trees do not grow around locks unless they are keeping something IN."',
+        'TINSEL SLINGSHOT. She says to keep this one away from the Mayor. You do not ask why. She does not offer.'
       ],
       npc: {
         name: 'JUNIPER', x: -4.8, z: 3.2, palette: 'juniper',
         lines: [
-          'I came out here to count the pines. Now the pines are counting me.',
-          'The wraith wears the oldest tree like a coat. Clear the shades and it will have to come out.',
-          'Watch the branches. They move when the wind does not.'
+          'I came out here to count the pines. Now the pines are counting me. This is my fourth coffee.',
+          'The wraith wears the oldest tree like a winter coat. Clear the wisps and it has to come out and fight like a tree.',
+          'Watch the branches. They move when the wind does not. Out here, the wind never moves.'
         ]
       },
       shades: [
@@ -980,8 +1003,8 @@
       boss: {
         key: 'c2-boss', name: 'PINE WRAITH', x: 0, z: -12, hp: 46, atk: 5, xp: 40, model: 'wraith',
         intro: [
-          'A tree that should not be standing turns around.',
-          'PINE WRAITH: "YOU SMELL LIKE WARMTH."'
+          'A tree that should not be standing turns around. Every ornament on it is broken except one.',
+          'PINE WRAITH: "YOU SMELL LIKE WARMTH. GIVE IT BACK."'
         ]
       },
       build: buildPines
@@ -990,20 +1013,21 @@
       num: 'THREE', title: 'THE GLASS LAKE', sub: 'Something long under the ice',
       theme: 'lake', fog: [0.66, 0.8, 0.9], spawn: [0, 11],
       intro: [
-        'Glass Lake froze solid overnight. Old Finn says that is normal.',
-        'The thing under the ice is not.',
-        'The dock is still out there. So is Finn, and so is whatever has been swimming laps.'
+        'Glass Lake froze solid overnight. Old Finn says that happens. Old Finn says a lot of things.',
+        'What does not normally happen: the ice singing at 3 a.m., and a shape the length of the dock doing laps under it.',
+        'Finn is out on the dock with a thermos and no apparent survival instincts.'
       ],
       outro: [
-        'The serpent sinks, and the lake goes quiet for the first time in years.',
-        'Three shards. Above the rooftops, the clocktower is ringing thirteen.'
+        'The serpent sinks mid-monologue. A frozen crown is bolted to the dock post, stamped with an old Roblox Moderator Lock.',
+        'Old Finn reads the lock, pours his coffee into the lake, and says: "Whoever sent you to collect these is switching off Roadtown security."',
+        'FROZEN CROWN. He tells you to keep it where the Mayor cannot reach. You have stopped asking why.'
       ],
       npc: {
         name: 'OLD FINN', x: -4, z: 4.5, palette: 'finn',
         lines: [
-          'Lake\'s frozen solid. Boat\'s stuck. Line\'s frozen. Something long has been swimming laps under the ice.',
-          'Crack the glass crabs first. Then we will see what is making the lake knock.',
-          'If the ice starts singing, stand still. It hates being listened to.'
+          'Lake is frozen. Boat is frozen. Line is frozen. Something long has been doing laps under my ice and I want a word with it.',
+          'Crack the glass crabs first. They are the lake alarm system, and they are extremely easy to alarm.',
+          'If the ice starts singing, stand still. It hates an audience that claps.'
         ]
       },
       shades: [
@@ -1014,8 +1038,8 @@
       boss: {
         key: 'c3-boss', name: 'ICE SERPENT', x: 0, z: -9, hp: 60, atk: 6, xp: 55, model: 'serpent',
         intro: [
-          'The ice bulges, cracks, and something long comes up for air.',
-          'ICE SERPENT: "SSSTAY... WARM... HERE..."'
+          'The ice bulges, cracks, and a frost wyrm comes up for air wearing a sunken 2010 sleigh like a crown.',
+          'ICE SERPENT: "SSSTAY... FOR... THE... MONOLOGUE..."'
         ]
       },
       build: buildLake
@@ -1024,20 +1048,22 @@
       num: 'FOUR', title: 'THE THIRTEENTH BELL', sub: 'The clocktower keeps bad time',
       theme: 'dusk', fog: [0.42, 0.32, 0.44], spawn: [0, 11],
       intro: [
-        'Roadtown\'s clock has struck thirteen three times today.',
-        'Nobody wants to go near the tower. Odette is the only one who will.',
+        'The Roadtown clock has struck thirteen three times today. The town has stopped pretending not to notice.',
+        'Odette is the only one who will go near the tower, and Odette has not slept since Tuesday.',
         'She says the bell is hollow. She says something is living in the sound.'
       ],
       outro: [
-        'The bell\'s echo dies. A silver shard rings against the cobbles.',
-        'Four shards. One left. The mountain is waiting.'
+        'The echo dies. A midnight clapper rolls across the cobbles, still warm, still bolted to a broken seal.',
+        'Odette holds it up to the clock light. "Four relics. Four Moderator Seals. You did not recover anything, kid. You disarmed it."',
+        'Up the mountain, the sky goes out like a light switch. Bram is already at the summit.',
+        'MIDNIGHT CLAPPER. Odette gives you her lantern and tells you to run.'
       ],
       npc: {
         name: 'BELLKEEPER ODETTE', x: 4, z: 4, palette: 'odette',
         lines: [
-          'The clock struck thirteen at noon. Clocks do not do that.',
-          'The bell is hollow, but something is living in the sound. Ring it true and the shard will answer.',
-          'Do not count the bells. It will count you back.'
+          'The clock struck thirteen at noon. Clocks do not do that. I am a bellkeeper. I have a certificate.',
+          'The bell is hollow, but something is living in the sound. Ring it true and the relic will answer. Ring it false and we all will.',
+          'Do not count the bells. It counts back, and it is much better at counting than you.'
         ]
       },
       shades: [
@@ -1048,33 +1074,33 @@
       boss: {
         key: 'c4-boss', name: 'HOLLOW BELL', x: 0, z: -6, hp: 76, atk: 7, xp: 70, model: 'bell',
         intro: [
-          'The bell swings by itself. There is nothing inside it but a voice.',
-          'HOLLOW BELL: "DONG. DONG. DONG. DONG."'
+          'The bell swings by itself. There is nothing inside it but a voice, and the voice has been waiting for you.',
+          'HOLLOW BELL: "DONG. DONG. DONG. DONG. ...FIVE."'
         ]
       },
       build: buildClocktower
     },
     {
-      num: 'FIVE', title: 'THE LONG NIGHT', sub: 'The last shard, the last light',
+      num: 'FIVE', title: 'THE LONG NIGHT', sub: 'The last relic, the last light',
       theme: 'night', fog: [0.08, 0.07, 0.16], spawn: [0, 10],
       intro: [
-        'Above Roadtown, the sky is a hole.',
-        'The Long Night is not a storm. It is a decision.',
-        'Climb. Light the star. Come home.'
+        'Above Roadtown, the sky is a hole, and the hole is looking back.',
+        'Bram is at the summit with the relics and a speech he has clearly rehearsed.',
+        'Aurora has been holding the ice together alone this whole time. She is not doing great.'
       ],
       outro: [
-        'You set the last shard into the dark.',
-        'Five pieces become one. The Aurora Star catches like a struck match.',
-        'Below, Roadtown lights up window by window. Pip cheers so hard he falls over.',
-        'The Long Night retreats down the mountain, grumbling.',
+        'Aurora sets the five relics into the altar. Not to break the seals this time. To reboot the server.',
+        'The sky clears into a warm 2010 Roblox winter morning. The lights of Roadtown flicker back on, one window at a time.',
+        'Mayor Bram wakes up dazed in a snowbank, grounded to shovel snow for the next 100 years by Juniper and Old Finn.',
+        'Pip has made a very small SORRY card and a very large cocoa. The Long Night is gone. The tree is lit.',
         'THE END — thank you for playing A Christmas Tale.'
       ],
       npc: {
         name: 'AURORA', x: 0, z: 6.5, palette: 'aurora',
         lines: [
-          'You came all the way up here. Most people would have stayed by the fire.',
-          'The Long Night is not a monster. It is what is left when hope runs out.',
-          'Take the last shard. I will hold the dark as long as I can.'
+          'You came all the way up here. Most people would have stayed by the fire. I would have.',
+          'The Long Night is not a monster. It is what is left when a server is forgotten with the lights still on.',
+          'Take the last relic. I will hold the dark as long as I can.'
         ]
       },
       shades: [
@@ -1085,8 +1111,8 @@
       boss: {
         key: 'c5-boss', name: 'THE LONG NIGHT', x: 0, z: -6, hp: 96, atk: 8, xp: 100, model: 'night',
         intro: [
-          'The dark gathers into a shape with your outline.',
-          'THE LONG NIGHT: "YOU COULD HAVE STAYED BY THE FIRE."'
+          'The dark gathers into a shape with a Mayor-shaped smile and your outline.',
+          'THE LONG NIGHT: "WELCOME, HERO! YOU ARE JUST IN TIME FOR THE LAST EVENT."'
         ]
       },
       build: buildSummit
@@ -1316,7 +1342,7 @@
       paragraph.textContent = line;
       ui.endingLines.appendChild(paragraph);
     });
-    ui.endingStats.textContent = 'LV ' + save.level + ' · ' + save.name + ' · FIVE SHARDS FOUND';
+    ui.endingStats.textContent = 'LV ' + save.level + ' · ' + save.name + ' · FIVE RELICS RECOVERED';
     mode = 'ending';
     view = 'title';
     app.dataset.theme = 'night';
@@ -1405,11 +1431,14 @@
     cutscene.index = 0;
     cutscene.t = 0;
     cutscene.lines = [
-      { who: 'NARRATOR', text: 'Every winter, Roadtown hangs one golden star above the square.' },
-      { who: 'NARRATOR', face: 'shard', text: 'This year, the star cracked before midnight.', cue: 'soft' },
-      { who: 'MAYOR BRAM', text: 'The sky just broke. Get inside, kid. The cold is coming down the mountain.', cue: 'hard' },
-      { who: 'PIP', text: 'Look! A piece landed in the fountain!' },
-      { who: 'NARRATOR', text: 'Five shards. One star. One very long night.' }
+      { who: 'NARRATOR', text: 'Frostfest 2010. You clicked the glowing event portal. It clicked back.' },
+      { who: 'NARRATOR', face: 'shard', text: 'Then it sneezed, and dropped you out of a chimney into a snowed-in server called Roadtown.', cue: 'soft' },
+      { who: 'PIP', text: 'Uh, Mayor? Another player just fell out of the skybox. Should I ban them, or give them cocoa?' },
+      { who: 'MAYOR BRAM', text: 'Neither! Look up, kid. The sky just broke, and the town star went out with it.', cue: 'hard' },
+      { who: 'MAYOR BRAM', text: 'The five Sacred Holiday Relics were jacked straight off the Town Tree. Without them, Christmas gets permanently deleted!' },
+      { who: 'PIP', text: 'Wait. Did you lock those relics in the—' },
+      { who: 'MAYOR BRAM', text: 'Ahem! Go talk to Bram. That is me. Mind the Frost Shades. They respect neither personal space nor turn-based etiquette.' },
+      { who: 'NARRATOR', text: 'Five relics. One broken sky. One very long night.' }
     ];
     cutscene.typing = false;
     cutscene.speaker = null;
@@ -1727,7 +1756,7 @@
       action: function () {
         var remaining = chapter.shades.filter(function (shade) { return !save.defeated[shade.key]; }).length;
         if (remaining > 0) {
-          talk(boss.name, ['THE COLD IS TOO THICK. CLEAR THE SHADES FIRST (' + remaining + ' LEFT).'], null);
+          talk(boss.name, ['CLEAR THE SHADES FIRST. THEY ARE STILL WATCHING (' + remaining + ' LEFT).'], null);
           return;
         }
         talk(boss.name, boss.intro, function () {
@@ -1757,10 +1786,10 @@
     shard.y = 0.7;
     addActor(shard);
     var item = {
-      x: chapter.boss.x, z: chapter.boss.z, r: 2.8, label: 'TAKE THE SHARD',
+      x: chapter.boss.x, z: chapter.boss.z, r: 2.8, label: 'TAKE THE RELIC',
       action: function () {
         item.disabled = true;
-        talk('AURORA SHARD', chapter.outro, grantShard);
+        talk('THE RELIC', chapter.outro, grantShard);
       }
     };
     world.interactables.push(item);
@@ -1871,8 +1900,8 @@
     var total = chapter.shades.length;
     var done = chapter.shades.filter(function (shade) { return save.defeated[shade.key]; }).length;
     var text;
-    if (save.defeated[chapter.boss.key + '-shard']) text = 'The shard is yours';
-    else if (save.defeated[chapter.boss.key]) text = 'Take the shard';
+    if (save.defeated[chapter.boss.key + '-shard']) text = 'The relic is yours';
+    else if (save.defeated[chapter.boss.key]) text = 'Take the relic';
     else if (done >= total) text = 'Face ' + chapter.boss.name;
     else if (!save.talked['c' + (save.chapter + 1)]) text = 'Talk to ' + chapter.npc.name;
     else text = 'Clear the shades (' + done + ' / ' + total + ')';
@@ -2481,7 +2510,7 @@
     buildBattleScene(def);
     updateBattleUI();
     setBattleButtons(false);
-    log('A ' + def.name + ' BLOCKS THE PATH!');
+    log((/^THE /.test(def.name) ? '' : 'A ') + def.name + ' BLOCKS THE PATH!');
     sound('battle');
     battle.queue = queueFor(opts.advantage, def);
     ui.battleHint.textContent = '...';
@@ -2824,7 +2853,7 @@
     if (battle.def.model === 'night' && battle.hp < battle.max * 0.5 && !battle.raged) {
       battle.raged = true;
       battle.def.atk += 2;
-      log('THE LONG NIGHT PULLS THE DARK CLOSER.');
+      log('THE LONG NIGHT TEARS OFF THE MAYOR SUIT.');
       rate('ENRAGED!', 'boss');
     }
     if (battle.def.model === 'night') {
