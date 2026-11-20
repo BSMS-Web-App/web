@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=32">
+<link rel="stylesheet" href="/css/frostfall.css?v=34">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -70,23 +70,23 @@
   </div>
 
   <div id="ff-title" class="ff-screen ff-title" hidden>
-    <div class="ff-title-in">
-      <p class="ff-eyebrow" id="ff-title-eyebrow">A BSMS WEB HOLIDAY EVENT · 5 CHAPTERS</p>
-      <h1 class="ff-title-logo"><small>A CHRISTMAS</small><span>TALE</span></h1>
-      <p class="ff-title-sub">THE STAR THAT WENT OUT</p>
-      <p class="ff-title-copy">The Frostfest 2010 portal dropped you into Roadtown: snowed in, lights out, and five Sacred Relics missing. Mayor Bram says you are hero material. The Long Night is coming down the mountain. You have a lantern, a scarf, and a best friend made of snow.</p>
-      <div class="ff-title-actions">
-        <!-- === NEW: BOY / GIRL HERO SELECTOR === -->
-        <div class="ff-gender" role="group" aria-label="Choose your hero">
-          <button type="button" class="ff-gender-btn on" data-gender="boy" aria-pressed="true">BOY · NICO</button>
-          <button type="button" class="ff-gender-btn" data-gender="girl" aria-pressed="false">GIRL</button>
-        </div>
-        <button id="ff-continue" class="ff-button gold" type="button" hidden>CONTINUE</button>
-        <button id="ff-new-game" class="ff-button" type="button">NEW GAME</button>
-        <a class="ff-button ghost" href="/events">EVENTS</a>
+    <div class="ff-title-stage">
+      <div class="ff-title-emblem" aria-hidden="true">
+        <svg class="ff-emblem-svg" viewBox="0 0 120 116" shape-rendering="crispEdges">
+          <polygon points="60,2 73,40 113,40 81,63 93,104 60,80 27,104 39,63 7,40 47,40"
+                   fill="#8fdcff" stroke="#0d0718" stroke-width="9" stroke-linejoin="miter"/>
+          <polygon points="60,20 68,46 98,46 74,63 82,90 60,74 38,90 46,63 22,46 52,46"
+                   fill="#e9fbff"/>
+        </svg>
       </div>
-      <p class="ff-title-note" id="ff-title-note">November 19, 2026 – January 4, 2027 · Eastern time</p>
-      <p class="ff-title-hint">WASD / ARROWS MOVE · E TALK &amp; FIGHT</p>
+      <h1 class="ff-title-word" aria-label="Frostfall"><span class="ff-word-a">FROST</span><span class="ff-word-b">FALL</span></h1>
+      <p class="ff-title-tag">THE STAR THAT WENT OUT</p>
+    </div>
+    <button id="ff-start-prompt" class="ff-start-prompt" type="button">PRESS START</button>
+    <div id="ff-file-select" class="ff-file-select" hidden>
+      <p class="ff-file-title">SELECT FILE</p>
+      <div id="ff-file-grid" class="ff-file-grid"></div>
+      <button id="ff-file-back" class="ff-file-back" type="button">BACK</button>
     </div>
   </div>
 
@@ -255,6 +255,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=6"></script>
-<script src="/js/frostfall.js?v=90"></script>
+<script src="/js/frostfall.js?v=91"></script>
 </body>
 </html>

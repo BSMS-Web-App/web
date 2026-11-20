@@ -14,6 +14,11 @@
   var START = Date.parse('2026-11-19T05:00:00.000Z'); // Nov 19, 2026, 12:00 AM EST
   var END = Date.parse('2027-01-05T04:59:00.000Z');   // Jan 4, 2027, 11:59 PM EST (exclusive)
   var SAVE_KEY = 'frostfall_save_v1';
+  /* === NEW: two files. File 1 keeps the original key so old saves (and
+     anything else reading frostfall_save_v1) still resolve. === */
+  var SLOT_KEYS = [SAVE_KEY, SAVE_KEY + '_slot2'];
+  var activeSlot = 0;
+  var slotPick = {};
   var MUTE_KEY = 'frostfall_muted_v1';
 
   var params = new URLSearchParams(location.search);
@@ -52,7 +57,8 @@
     dialogue: $('ff-dialogue'), speaker: $('ff-speaker'), dialogueText: $('ff-dialogue-text'), dialogueNext: $('ff-dialogue-next'),
     touch: $('ff-touch'), joystick: $('ff-joystick'), stick: $('ff-stick'), action: $('ff-action'),
     loading: $('ff-loading'), loadFill: $('ff-load-fill'), loadingNote: $('ff-loading-note'),
-    title: $('ff-title'), continueButton: $('ff-continue'), newGame: $('ff-new-game'), titleNote: $('ff-title-note'),
+    title: $('ff-title'), startPrompt: $('ff-start-prompt'), fileSelect: $('ff-file-select'),
+    fileGrid: $('ff-file-grid'), fileBack: $('ff-file-back'),
     nameScreen: $('ff-name-screen'), nameInput: $('ff-name-input'), nameStart: $('ff-name-start'),
     chapterScreen: $('ff-chapter-screen'), chapterEyebrow: $('ff-chapter-eyebrow'), chapterTitle: $('ff-chapter-title'),
     chapterSub: $('ff-chapter-sub'), chapterLines: $('ff-chapter-lines'), chapterBegin: $('ff-chapter-begin'),
@@ -140,7 +146,7 @@
 
   function persist() {
     if (!save) return;
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (error) { /* storage may be blocked */ }
+    try { localStorage.setItem(SLOT_KEYS[activeSlot] || SAVE_KEY, JSON.stringify(save)); } catch (error) { /* storage may be blocked */ }
   }
 
   /* ----------------------------------------------------------------- state */
@@ -1691,11 +1697,12 @@
      ================================================================== */
   var worldAtlasCache = {};
 
-  function sheetCellBox(rowIndex, colIndex) {
+  function sheetCellBox(rowIndex, colIndex, gender) {
     if (actionSheet.state !== 'ready') return null;
     var band = actionSheet.layout[rowIndex];
     if (!band) return null;
-    var side = selectedGender === 'girl' ? band.girl : band.boy;
+    var who = gender === 'girl' ? 'girl' : gender === 'boy' ? 'boy' : selectedGender;
+    var side = who === 'girl' ? band.girl : band.boy;
     if (!side || !side.w || !side.cols) return null;
     var cols = Math.max(1, side.cols);
     /* side.w is one cell, not the whole band (actionRowCanvas relies on that
@@ -1706,9 +1713,10 @@
     };
   }
 
-  function heroWorldAtlas() {
+  function heroWorldAtlas(gender) {
     if (actionSheet.state !== 'ready' || !actionSheet.sheet) return null;
-    var key = selectedGender + '|' + actionSheet.cell;
+    var who = gender === 'girl' ? 'girl' : gender === 'boy' ? 'boy' : selectedGender;
+    var key = who + '|' + actionSheet.cell;
     if (worldAtlasCache[key]) return worldAtlasCache[key];
     var canvas = document.createElement('canvas');
     canvas.width = SPRITE_CELL * SPRITE_COLS;
@@ -1729,7 +1737,7 @@
       [0, 0], [0, 0], [0, 0], [0, 0]
     ];
     for (var i = 0; i < plan.length; i++) {
-      var box = sheetCellBox(plan[i][0], plan[i][1]);
+      var box = sheetCellBox(plan[i][0], plan[i][1], who);
       if (!box) continue;
       var scale = Math.min(SPRITE_CELL / box.w, SPRITE_CELL / box.h);
       var w = box.w * scale;
@@ -1795,6 +1803,7 @@
       }
     }
     paintPortrait();
+    if (ui.fileSelect && !ui.fileSelect.hidden) renderFileCards();
   }
 
   /* A single pose row, already keyed and cropped for the chosen hero. Every
@@ -3130,15 +3139,160 @@
     view = 'title';
     mode = 'title';
     buildTitleScene();
-    var hasSave = Boolean(save && save.started && !save.ending);
-    ui.continueButton.hidden = !hasSave;
-    updateGenderButtons();
-    if (hasSave) ui.continueButton.textContent = 'CONTINUE · CHAPTER ' + CHAPTERS[clamp(save.chapter, 0, 4)].num;
-    ui.newGame.disabled = phase !== 'active';
-    ui.newGame.textContent = phase === 'upcoming' ? 'OPENS SOON' : (save && save.ending ? 'PLAY AGAIN' : 'NEW GAME');
-    ui.titleNote.textContent = phase === 'upcoming'
-      ? 'OPENS ' + formatDate(START).toUpperCase() + ' · EASTERN TIME'
-      : formatDate(START).toUpperCase() + ' – ' + formatDate(END).toUpperCase() + ' · EASTERN TIME';
+    /* === NEW: title is just the logo and PRESS START; files live on step two === */
+    if (ui.startPrompt) ui.startPrompt.hidden = false;
+    if (ui.fileSelect) ui.fileSelect.hidden = true;
+    renderFileCards();
+  }
+
+  /* ------------------------------------------------------- file select */
+  function slotRaw(index) {
+    try {
+      var raw = localStorage.getItem(SLOT_KEYS[index] || SAVE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || parsed.v !== 1) return null;
+      return parsed;
+    } catch (error) { return null; }
+  }
+
+  function slotInfo(index) {
+    var raw = slotRaw(index);
+    if (!raw || !raw.started) return { empty: true, gender: slotPick[index] || selectedGender };
+    return {
+      empty: Boolean(raw.ending),
+      ending: Boolean(raw.ending),
+      raw: raw,
+      name: String(raw.name || 'NICO').slice(0, 12),
+      level: Math.max(1, Number(raw.level) || 1),
+      chapter: clamp(Number(raw.chapter) || 0, 0, 4),
+      gender: raw.gender === 'girl' ? 'girl' : 'boy'
+    };
+  }
+
+  function paintFileArt(host, gender) {
+    if (!host) return;
+    host.innerHTML = '';
+    var atlas = heroWorldAtlas(gender);
+    if (!atlas) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = SPRITE_CELL;
+    canvas.height = SPRITE_CELL;
+    canvas.setAttribute('aria-hidden', 'true');
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(atlas, 0, 0, SPRITE_CELL, SPRITE_CELL, 0, 0, SPRITE_CELL, SPRITE_CELL);
+    host.appendChild(canvas);
+  }
+
+  function renderFileCards() {
+    if (!ui.fileGrid) return;
+    ui.fileGrid.innerHTML = '';
+    for (var i = 0; i < SLOT_KEYS.length; i++) {
+      var info = slotInfo(i);
+      var gender = info.empty ? (slotPick[i] || selectedGender) : info.gender;
+      var card = document.createElement('div');
+      card.className = 'ff-file-card' + (info.empty ? ' empty' : '');
+      card.dataset.slot = String(i);
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      card.innerHTML =
+        '<div class="ff-file-top"><b>FILE ' + (i + 1) + '</b><em>' +
+          (info.empty ? 'NO DATA' : 'LV ' + info.level + ' · CHAPTER ' + (info.chapter + 1)) +
+        '</em></div>' +
+        '<div class="ff-file-art" aria-hidden="true"></div>' +
+        '<div class="ff-file-name"></div>' +
+        '<div class="ff-file-gender">' +
+          '<button type="button" data-gender="boy"' + (gender === 'boy' ? ' class="on"' : '') + '>BOY</button>' +
+          '<button type="button" data-gender="girl"' + (gender === 'girl' ? ' class="on"' : '') + '>GIRL</button>' +
+        '</div>' +
+        '<div class="ff-file-start">' + (info.empty ? 'START' : 'CONTINUE') + '</div>';
+      card.querySelector('.ff-file-name').textContent = info.empty ? 'NEW FILE' : info.name;
+      ui.fileGrid.appendChild(card);
+      paintFileArt(card.querySelector('.ff-file-art'), gender);
+    }
+  }
+
+  function openFileSelect() {
+    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    if (ui.startPrompt) ui.startPrompt.hidden = true;
+    if (ui.fileSelect) ui.fileSelect.hidden = false;
+    renderFileCards();
+    sound('click');
+  }
+
+  function closeFileSelect() {
+    if (ui.fileSelect) ui.fileSelect.hidden = true;
+    if (ui.startPrompt) ui.startPrompt.hidden = false;
+    sound('click');
+  }
+
+  function pickSlotGender(index, gender) {
+    var picked = gender === 'girl' ? 'girl' : 'boy';
+    slotPick[index] = picked;
+    var info = slotInfo(index);
+    if (!info.empty && info.raw) {
+      info.raw.gender = picked;
+      try { localStorage.setItem(SLOT_KEYS[index] || SAVE_KEY, JSON.stringify(info.raw)); } catch (error) { /* ignore */ }
+    }
+    if (index === activeSlot && save) {
+      save.gender = picked;
+      selectedGender = picked;
+    }
+    renderFileCards();
+    sound('click');
+  }
+
+  function startSlot(index) {
+    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    var info = slotInfo(index);
+    if (info.ending && !window.confirm('Start a new story on FILE ' + (index + 1) + '? That finished save will be erased.')) return;
+    activeSlot = index;
+    if (!info.empty && info.raw) {
+      save = normalizeSave(info.raw);
+      selectedGender = save.gender === 'girl' ? 'girl' : 'boy';
+      save.gender = selectedGender;
+      persist();
+      if (ui.fileSelect) ui.fileSelect.hidden = true;
+      hideScreens();
+      continueGame();
+      return;
+    }
+    selectedGender = slotPick[index] || selectedGender;
+    save = freshSave();
+    save.name = 'NICO';
+    save.gender = selectedGender;
+    save.started = true;
+    save.chapter = 0;
+    persist();
+    if (ui.fileSelect) ui.fileSelect.hidden = true;
+    hideScreens();
+    buildWorld(0);
+    startIntroCutscene();
+  }
+
+  function bindFileGrid() {
+    if (!ui.fileGrid) return;
+    ui.fileGrid.addEventListener('click', function (event) {
+      var pick = event.target.closest ? event.target.closest('[data-gender]') : null;
+      if (pick) {
+        event.stopPropagation();
+        var owner = pick.closest('.ff-file-card');
+        if (owner) pickSlotGender(Number(owner.dataset.slot), pick.dataset.gender);
+        return;
+      }
+      var card = event.target.closest ? event.target.closest('.ff-file-card') : null;
+      if (card) startSlot(Number(card.dataset.slot));
+    });
+    ui.fileGrid.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.target.closest && event.target.closest('[data-gender]')) return;
+      var card = event.target.closest ? event.target.closest('.ff-file-card') : null;
+      if (!card) return;
+      event.preventDefault();
+      startSlot(Number(card.dataset.slot));
+    });
   }
 
   function showEnded() {
@@ -3548,6 +3702,8 @@
     cutscene.lines = [
       { who: 'NARRATOR', text: 'Frostfest 2010. You clicked the glowing event portal. It clicked back.' },
       { who: 'NARRATOR', face: 'shard', text: 'Then it sneezed, and dropped you out of a chimney into a snowed-in server called Roadtown.', cue: 'soft' },
+      { who: 'NARRATOR', text: 'Snowed in. Lights out. Five Sacred Relics missing straight off the Town Tree.' },
+      { who: 'NARRATOR', text: 'All you have is a lantern, a scarf, and a best friend made of snow.' },
       { who: 'PIP', text: 'Uh, Mayor? Another player just fell out of the skybox. Should I ban them, or give them cocoa?' },
       { who: 'MAYOR BRAM', text: 'Neither! Look up, kid. The sky just broke, and the town star went out with it.', cue: 'hard' },
       { who: 'MAYOR BRAM', text: 'The five Sacred Holiday Relics were jacked straight off the Town Tree. Without them, Christmas gets permanently deleted!' },
@@ -6172,7 +6328,7 @@
 
   function resetSave() {
     if (!window.confirm('Erase your A Christmas Tale save and start from Chapter One?')) return;
-    try { localStorage.removeItem(SAVE_KEY); } catch (error) { /* ignore */ }
+    try { localStorage.removeItem(SLOT_KEYS[activeSlot] || SAVE_KEY); } catch (error) { /* ignore */ }
     save = null;
     location.reload();
   }
@@ -6307,9 +6463,10 @@
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
-    ui.newGame.addEventListener('click', requestNewGame);
-    ui.continueButton.addEventListener('click', continueGame);
-    ui.nameStart.addEventListener('click', beginNewStory);
+    if (ui.startPrompt) ui.startPrompt.addEventListener('click', openFileSelect);
+    if (ui.fileBack) ui.fileBack.addEventListener('click', closeFileSelect);
+    bindFileGrid();
+    if (ui.nameStart) ui.nameStart.addEventListener('click', beginNewStory);
     ui.cutNext.addEventListener('click', advanceCutscene);
     ui.cutSkip.addEventListener('click', skipCutscene);
     /* === NEW: hero selector before the game starts === */
