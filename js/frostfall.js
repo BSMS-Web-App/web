@@ -1490,7 +1490,7 @@
         var canvas = document.createElement('canvas');
         canvas.width = image.naturalWidth || image.width;
         canvas.height = image.naturalHeight || image.height;
-        var ctx = canvas.getContext('2d');
+        var ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (ctx) ctx.drawImage(image, 0, 0);
         state.canvas = canvas;
         state.state = 'ready';
@@ -1918,7 +1918,7 @@
     var canvas = document.createElement('canvas');
     canvas.width = source.width;
     canvas.height = source.height;
-    var ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(source, 0, 0);
@@ -2083,7 +2083,7 @@
     }
     for (var af = 0; af < recolored.length; af++) {
       var canvas = recolored[af];
-      var ctx = canvas.getContext('2d');
+      var ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) continue;
       var art = ctx.getImageData(0, 0, frame, frame).data;
       var minX = frame, minY = frame, maxX = -1, maxY = -1;
