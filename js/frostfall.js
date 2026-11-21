@@ -1596,7 +1596,7 @@
     var canvas = document.createElement('canvas');
     canvas.width = sheet.width;
     canvas.height = sheet.height;
-    var ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(sheet, 0, 0);
@@ -1626,30 +1626,148 @@
           return out;
         }
         var expect = [0, 0, 0];
-        var x, y, i, d, tone;
-        for (var pass = 0; pass < 2; pass++) {
-          var tol = pass ? 92 : 58;
-          var left = 0, total = 0;
+        var x, y, i, d;
+        var cw = card.x1 - card.x0 + 1;
+        var chh = card.y1 - card.y0 + 1;
+        /* The panel is one connected gradient running under the card, while a
+           pale character is fenced in by its own outline. So the background
+           is flooded in from the card border instead of being tested pixel by
+           pixel: the fill stops dead at the silhouette, and no amount of pale
+           ice plate gets punched out of the middle of a character (which is
+           what turned the frost knight into confetti and the guards into a
+           crowned ball). */
+        var reached = new Uint8Array(cw * chh);
+        var queue = new Int32Array(cw * chh);
+        var head = 0, tail = 0;
+        var panelDistance = function (px, py) {
+          var pi = (py * w + px) * 4;
+          model(px, py, expect);
+          return Math.abs(data[pi] - expect[0]) + Math.abs(data[pi + 1] - expect[1]) + Math.abs(data[pi + 2] - expect[2]);
+        };
+        var flood = function (px, py, tol) {
+          var lfx = px - card.x0, lfy = py - card.y0;
+          var li = lfy * cw + lfx;
+          if (reached[li]) return;
+          if (panelDistance(px, py) >= tol) return;
+          reached[li] = 1;
+          queue[tail++] = li;
+        };
+        /* Where a card's highlight drifts the model can be far off right at the
+           edge, which leaves a full-height strip of panel unseeded (the Long
+           Night's card had one). So a border pixel also counts as background
+           when it matches the typical colour of the edge it sits on. */
+        var edgeMedian = function (horizontal, fixed) {
+          var rs = [], gs = [], bs = [];
+          var n = horizontal ? cw : chh;
+          for (var em = 0; em < n; em += 2) {
+            var emx = horizontal ? card.x0 + em : fixed;
+            var emy = horizontal ? fixed : card.y0 + em;
+            var emi = (emy * w + emx) * 4;
+            rs.push(data[emi]); gs.push(data[emi + 1]); bs.push(data[emi + 2]);
+          }
+          var pick = function (list) { list.sort(function (u, v) { return u - v; }); return list[list.length >> 1]; };
+          return [pick(rs), pick(gs), pick(bs)];
+        };
+        var topMed = edgeMedian(true, card.y0 + 1), bottomMed = edgeMedian(true, card.y1 - 1);
+        var leftMed = edgeMedian(false, card.x0 + 1), rightMed = edgeMedian(false, card.x1 - 1);
+        var nearEdgeTone = function (px, py, med) {
+          var pi = (py * w + px) * 4;
+          return Math.abs(data[pi] - med[0]) + Math.abs(data[pi + 1] - med[1]) + Math.abs(data[pi + 2] - med[2]) < 45;
+        };
+        var nearestMed = function (px, py) {
+          var dl = px - card.x0, dr = card.x1 - px, dt = py - card.y0, db = card.y1 - py;
+          var bestD = dl, med = leftMed;
+          if (dr < bestD) { bestD = dr; med = rightMed; }
+          if (dt < bestD) { bestD = dt; med = topMed; }
+          if (db < bestD) { med = bottomMed; }
+          return med;
+        };
+        var seedPixel = function (px, py, med) {
+          if (panelDistance(px, py) < 78 || nearEdgeTone(px, py, med)) {
+            var slx = px - card.x0, sly = py - card.y0;
+            var sli = sly * cw + slx;
+            if (!reached[sli]) { reached[sli] = 1; queue[tail++] = sli; }
+          }
+        };
+        var runFlood = function (seedTol, growTol) {
+          head = 0; tail = 0;
+          for (x = card.x0; x <= card.x1; x++) {
+            seedPixel(x, card.y0, topMed);
+            seedPixel(x, card.y1, bottomMed);
+          }
           for (y = card.y0; y <= card.y1; y++) {
-            for (x = card.x0; x <= card.x1; x++) {
-              i = (y * w + x) * 4;
-              total++;
-              if (data[i + 3] > 40) left++;
-              model(x, y, expect);
-              d = Math.abs(data[i] - expect[0]) + Math.abs(data[i + 1] - expect[1]) + Math.abs(data[i + 2] - expect[2]);
-              var best = d * 1.15;
-              var tones = [tl, tr, bl, br];
-              for (var t = 0; t < tones.length; t++) {
-                tone = tones[t];
-                var td = Math.abs(data[i] - tone[0]) + Math.abs(data[i + 1] - tone[1]) + Math.abs(data[i + 2] - tone[2]);
-                if (td < best) best = td;
+            seedPixel(card.x0, y, leftMed);
+            seedPixel(card.x1, y, rightMed);
+          }
+          while (head < tail) {
+            var ql = queue[head++];
+            var qlx = ql % cw, qly = (ql - qlx) / cw;
+            for (var gdy = -1; gdy <= 1; gdy++) {
+              for (var gdx = -1; gdx <= 1; gdx++) {
+                var gnx = qlx + gdx, gny = qly + gdy;
+                if (gnx < 0 || gny < 0 || gnx >= cw || gny >= chh) continue;
+                var gpx = card.x0 + gnx, gpy = card.y0 + gny;
+                flood(gpx, gpy, growTol);
+                /* panel that only the edge tone recognises keeps spreading */
+                if (!reached[gny * cw + gnx] && nearEdgeTone(gpx, gpy, nearestMed(gpx, gpy))) {
+                  reached[gny * cw + gnx] = 1;
+                  queue[tail++] = gny * cw + gnx;
+                }
               }
-              if (best < tol) data[i + 3] = 0;
             }
           }
-          /* only reach for the wider tolerance when the panel model missed */
-          if (!pass && left / Math.max(1, total) < 0.55) break;
+        };
+        runFlood(78, 96);
+        /* only open the tolerance up when the panel model clearly missed */
+        var cleared = 0;
+        for (y = 0; y < chh; y++) for (x = 0; x < cw; x++) if (!reached[y * cw + x]) cleared++;
+        if (cleared / (cw * chh) > 0.55) runFlood(130, 152);
+        for (y = 0; y < chh; y++) for (x = 0; x < cw; x++) {
+          if (reached[y * cw + x]) data[((card.y0 + y) * w + card.x0 + x) * 4 + 3] = 0;
         }
+        /* Panel the figure fences off (the gap between a pair of legs, or the
+           notch under a raised arm) cannot be reached from the border. Clear
+           such a hole only when it is small and holds no ink at all: the panel
+           is a pale wash and every drawn pixel has a dark outline somewhere,
+           so a piece of art can never be mistaken for background here. */
+        var seen = new Uint8Array(cw * chh);
+        for (var s0 = 0; s0 < cw * chh; s0++) {
+          if (seen[s0] || reached[s0]) continue;
+          var comp = [];
+          var sum = 0, worst = 0, darkest = 255;
+          head = 0; tail = 0; queue[tail++] = s0; seen[s0] = 1;
+          while (head < tail) {
+            var hq = queue[head++];
+            var hqx = hq % cw, hqy = (hq - hqx) / cw;
+            comp.push(hq);
+            var hpx = card.x0 + hqx, hpy = card.y0 + hqy;
+            var hd = panelDistance(hpx, hpy);
+            sum += hd;
+            if (hd > worst) worst = hd;
+            var hpi = (hpy * w + hpx) * 4;
+            var hlum = (data[hpi] * 0.299 + data[hpi + 1] * 0.587 + data[hpi + 2] * 0.114);
+            if (hlum < darkest) darkest = hlum;
+            for (var hdy = -1; hdy <= 1; hdy++) {
+              for (var hdx = -1; hdx <= 1; hdx++) {
+                var hnx = hqx + hdx, hny = hqy + hdy;
+                if (hnx < 0 || hny < 0 || hnx >= cw || hny >= chh) continue;
+                var hni = hny * cw + hnx;
+                if (seen[hni]) continue;
+                seen[hni] = 1;
+                queue[tail++] = hni;
+              }
+            }
+          }
+          if (comp.length > cw * chh * 0.12) continue;
+          if (darkest < 108) continue;
+          if (worst > 130 || sum / comp.length > 58) continue;
+          for (var ci = 0; ci < comp.length; ci++) {
+            var cp = comp[ci];
+            var cpy = (cp - (cp % cw)) / cw, cpx = cp % cw;
+            data[((card.y0 + cpy) * w + card.x0 + cpx) * 4 + 3] = 0;
+          }
+        }
+        /* one pixel of jpeg fringe hugging every silhouette */
         for (y = card.y0; y <= card.y1; y++) {
           for (x = card.x0; x <= card.x1; x++) {
             i = (y * w + x) * 4;
@@ -1660,8 +1778,7 @@
             else if (y > card.y0 && data[i - w * 4 + 3] === 0) touch = true;
             else if (y < card.y1 && data[i + w * 4 + 3] === 0) touch = true;
             if (!touch) continue;
-            model(x, y, expect);
-            d = Math.abs(data[i] - expect[0]) + Math.abs(data[i + 1] - expect[1]) + Math.abs(data[i + 2] - expect[2]);
+            d = panelDistance(x, y);
             if (d < 120) data[i + 3] = 0;
           }
         }
@@ -1760,6 +1877,29 @@
     while (box.w > 10 && columnDensity(box.x) < 0.16) { box.x++; box.w--; }
     while (box.w > 10 && columnDensity(box.x + box.w - 1) < 0.16) box.w--;
     while (box.h > 10 && rowDensity(box.y) < 0.16) { box.y++; box.h--; }
+    /* A wash of panel can survive the key when a card's highlight drifts far
+       from the corner model - the Long Night's card kept a strip of it down one
+       side. It hides from a colour test but not from a shape test: a strip of
+       panel is a column with no ink in it and no vertical detail, while every
+       drawn edge either turns dark or steps sideways. Trim such columns, never
+       more than half the frame. */
+    var washColumn = function (cx) {
+      var prevR = -1, prevG = -1, prevB = -1, rough = 0, minLum = 255, seen = 0;
+      for (var wy = box.y; wy < box.y + box.h; wy++) {
+        if (!mask[wy * cw + cx]) { prevR = -1; continue; }
+        var base = ((card.y0 + wy) * state.w + wx0 + cx) * 4;
+        var pr = data[base], pg = data[base + 1], pb = data[base + 2];
+        var lum = pr * 0.299 + pg * 0.587 + pb * 0.114;
+        if (lum < minLum) minLum = lum;
+        if (prevR >= 0) { rough += Math.abs(pr - prevR) + Math.abs(pg - prevG) + Math.abs(pb - prevB); seen++; }
+        prevR = pr; prevG = pg; prevB = pb;
+      }
+      if (seen < 8 || minLum < 112) return false;
+      return rough / seen < 12;
+    };
+    var keepW = Math.round(card.w * 0.5);
+    while (box.w > keepW && washColumn(box.x)) { box.x++; box.w--; }
+    while (box.w > keepW && washColumn(box.x + box.w - 1)) box.w--;
     var out = { x: wx0 + box.x, y: card.y0 + box.y, w: box.w, h: box.h, card: card };
     frostfallArtBoxes[boxKey] = out;
     return out;
@@ -2032,7 +2172,7 @@
       dialogue: ['THE STAR WENT OUT. I ONLY MADE IT COMFORTABLE.']
     },
     crimsonGuard: {
-      name: 'CRIMSON GUARD', role: 'npc', spriteSource: 'extras', row: 3,
+      name: 'CRIMSON GUARD', role: 'npc', spriteSource: 'cast', row: 2,
       palette: { primary: 0xa3232f, secondary: 0x5c1219, accent: 0xffd257 },
       accessory: 'crown', hp: 30, atk: 5, dialogue: [
         'THE MAYOR POSTED A GUARD. I AM THE GUARD. I AM ALSO THE PARADE.',
@@ -2040,7 +2180,7 @@
       ], blipPitch: 0.74
     },
     lanternScout: {
-      name: 'LANTERN SCOUT', role: 'npc', spriteSource: 'extras', row: 3,
+      name: 'LANTERN SCOUT', role: 'npc', spriteSource: 'cast', row: 2,
       palette: { primary: 0x2f6b4a, secondary: 0x1b3325, accent: 0xffb347 },
       accessory: 'lantern', hp: 24, atk: 3, dialogue: [
         'I LIGHT THE PATH OUT OF TOWN. SOMEBODY HAS TO.',
