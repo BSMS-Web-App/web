@@ -1467,6 +1467,8 @@
   var FROSTFALL_FRAME = 160;
   var FROSTFALL_ATLAS_COLS = 8;      /* idle x3, walk, talk, cheer, ready, hurt */
   var frostfallSheetState = {};
+  var frostfallGrids = {};
+  var frostfallKeyed = {};
   var frostfallArtBoxes = {};
   var frostfallPaletteCache = {};
   var frostfallCharacters = {};
@@ -1503,68 +1505,264 @@
     return state;
   }
 
-  /* === NEW: CHARACTER FACTORY === the biggest solid blob in a card is the
-     character; the rounded card border and the lettering are either hollow
-     or tiny, so they fall out of the pick. */
-  function frostfallArtBox(sheet, row, sheetName) {
-    var boxKey = (sheetName || 'sheet') + '|' + row;
-    if (frostfallArtBoxes[boxKey]) return frostfallArtBoxes[boxKey];
-    var cw = sheet.width / FROSTFALL_SHEET_COLS;
-    var ch = sheet.height / FROSTFALL_SHEET_ROWS;
-    var ctx = sheet.getContext('2d');
-    if (!ctx) return null;
-    var box = null;
-    for (var col = 1; col < FROSTFALL_SHEET_COLS && !box; col++) {
-      var ox = Math.round(col * cw), oy = Math.round(row * ch);
-      var iw = Math.ceil(cw), ih = Math.ceil(ch);
-      var data = ctx.getImageData(ox, oy, iw, ih).data;
-      var bg = [data[(6 * iw + 6) * 4], data[(6 * iw + 6) * 4 + 1], data[(6 * iw + 6) * 4 + 2]];
-      var mask = new Uint8Array(iw * ih);
-      for (var y = 0; y < ih; y++) {
-        for (var x = 0; x < iw; x++) {
-          var i = (y * iw + x) * 4;
-          var d = Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) + Math.abs(data[i + 2] - bg[2]);
-          mask[y * iw + x] = d > 96 ? 1 : 0;
-        }
+  /* === NEW: CHARACTER FACTORY ===
+     The contact sheets are four rows of five cards, each card outlined by a pale
+     stroke. A uniform lattice drifts into the neighbouring card by column four
+     (and the caption strip above each card lands in the crop), which is what
+     sliced the golem, the knight and the template row. So the outlines are
+     measured instead: the strokes are the rows and columns of the sheet whose
+     pale-pixel count spikes, and those lines are paired up into card rectangles.
+     The panel inside a card is a soft blue gradient rather than a flat fill, so
+     it is keyed against a model fitted to the card's four corners. */
+  function frostfallEdgeLines(data, w, h, axis) {
+    var len = axis === 'x' ? w : h;
+    var cross = axis === 'x' ? h : w;
+    var counts = new Int32Array(len);
+    for (var i = 0; i < len; i++) {
+      var n = 0;
+      for (var k = 0; k < cross; k++) {
+        var idx = (axis === 'x' ? k * w + i : i * w + k) * 4;
+        if (data[idx + 1] > 170 && data[idx + 2] > 205 && data[idx] < 160) n++;
       }
-      var seen = new Uint8Array(iw * ih);
-      var stack = [];
-      var best = null;
-      for (var s = 0; s < mask.length; s++) {
-        if (!mask[s] || seen[s]) continue;
-        var count = 0, minX = iw, minY = ih, maxX = -1, maxY = -1;
-        stack.length = 0;
-        stack.push(s);
-        seen[s] = 1;
-        while (stack.length) {
-          var p = stack.pop();
-          var px = p % iw, py = (p - px) / iw;
-          count++;
-          if (px < minX) minX = px;
-          if (px > maxX) maxX = px;
-          if (py < minY) minY = py;
-          if (py > maxY) maxY = py;
-          for (var dy = -1; dy <= 1; dy++) {
-            for (var dx = -1; dx <= 1; dx++) {
-              var nx = px + dx, ny = py + dy;
-              if (nx < 0 || ny < 0 || nx >= iw || ny >= ih) continue;
-              var np = ny * iw + nx;
-              if (!mask[np] || seen[np]) continue;
-              seen[np] = 1;
-              stack.push(np);
-            }
-          }
-        }
-        var edges = (minX <= 1 ? 1 : 0) + (minY <= 1 ? 1 : 0) + (maxX >= iw - 2 ? 1 : 0) + (maxY >= ih - 2 ? 1 : 0);
-        if (edges >= 3) continue;          /* the card border */
-        if (!best || count > best.count) best = { count: count, x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
-      }
-      if (best && best.count > 400) {
-        box = { x: best.x, y: best.y, w: best.w, h: best.h, cellW: iw, cellH: ih };
+      counts[i] = n;
+    }
+    var min = cross * 0.3;
+    var lines = [];
+    var run = -1;
+    for (var j = 0; j <= len; j++) {
+      var on = j < len && counts[j] > min;
+      if (on && run < 0) run = j;
+      if (!on && run >= 0) {
+        lines.push(Math.round((run + j - 1) / 2));
+        run = -1;
       }
     }
-    frostfallArtBoxes[boxKey] = box;
-    return box;
+    var merged = [];
+    for (var m = 0; m < lines.length; m++) {
+      if (merged.length && lines[m] - merged[merged.length - 1] < 6) continue;
+      merged.push(lines[m]);
+    }
+    return merged;
+  }
+
+  function frostfallSheetGrid(sheet, sheetName) {
+    var key = sheetName || 'sheet';
+    if (frostfallGrids[key] !== undefined) return frostfallGrids[key];
+    var ctx = sheet.getContext('2d');
+    if (!ctx) return null;
+    var w = sheet.width, h = sheet.height;
+    var data = ctx.getImageData(0, 0, w, h).data;
+    var xs = frostfallEdgeLines(data, w, h, 'x');
+    var ys = frostfallEdgeLines(data, w, h, 'y');
+    var grid = [];
+    var r, c;
+    if (xs.length === FROSTFALL_SHEET_COLS * 2 && ys.length === FROSTFALL_SHEET_ROWS * 2) {
+      for (r = 0; r < FROSTFALL_SHEET_ROWS; r++) {
+        var cards = [];
+        for (c = 0; c < FROSTFALL_SHEET_COLS; c++) {
+          /* stay ten pixels inside the outline so the stroke and its corner
+             arcs can never end up inside a crop */
+          var x0 = xs[c * 2] + 10, x1 = xs[c * 2 + 1] - 10;
+          var y0 = ys[r * 2] + 10, y1 = ys[r * 2 + 1] - 10;
+          cards.push({ x0: x0, y0: y0, x1: x1, y1: y1, w: x1 - x0 + 1, h: y1 - y0 + 1 });
+        }
+        grid.push(cards);
+      }
+    } else {
+      /* no clean lattice: fall back to an even split inside the sheet */
+      for (r = 0; r < FROSTFALL_SHEET_ROWS; r++) {
+        var fb = [];
+        for (c = 0; c < FROSTFALL_SHEET_COLS; c++) {
+          var fx0 = Math.round(c * w / FROSTFALL_SHEET_COLS) + 8;
+          var fx1 = Math.round((c + 1) * w / FROSTFALL_SHEET_COLS) - 8;
+          var fy0 = Math.round(r * h / FROSTFALL_SHEET_ROWS) + 78;
+          var fy1 = Math.round((r + 1) * h / FROSTFALL_SHEET_ROWS) - 18;
+          fb.push({ x0: fx0, y0: fy0, x1: fx1, y1: fy1, w: fx1 - fx0 + 1, h: fy1 - fy0 + 1 });
+        }
+        grid.push(fb);
+      }
+    }
+    frostfallGrids[key] = grid;
+    return grid;
+  }
+
+  /* A keyed copy of the sheet: each card's gradient panel removed, plus a pass
+     that eats the one pixel of jpeg fringe hugging every silhouette. */
+  function frostfallKeyedSheet(sheet, sheetName) {
+    var key = sheetName || 'sheet';
+    if (frostfallKeyed[key]) return frostfallKeyed[key];
+    var grid = frostfallSheetGrid(sheet, sheetName);
+    if (!grid) return null;
+    var canvas = document.createElement('canvas');
+    canvas.width = sheet.width;
+    canvas.height = sheet.height;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sheet, 0, 0);
+    var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = image.data;
+    var w = canvas.width;
+    function colour(x, y) {
+      var i = (y * w + x) * 4;
+      return [data[i], data[i + 1], data[i + 2]];
+    }
+    function mix(a, b, t) { return a + (b - a) * t; }
+    for (var r = 0; r < grid.length; r++) {
+      for (var c = 0; c < grid[r].length; c++) {
+        var card = grid[r][c];
+        var inset = 4;
+        var tl = colour(card.x0 + inset, card.y0 + inset);
+        var tr = colour(card.x1 - inset, card.y0 + inset);
+        var bl = colour(card.x0 + inset, card.y1 - inset);
+        var br = colour(card.x1 - inset, card.y1 - inset);
+        var spanX = Math.max(1, card.x1 - card.x0);
+        var spanY = Math.max(1, card.y1 - card.y0);
+        function model(x, y, out) {
+          var tx = (x - card.x0) / spanX, ty = (y - card.y0) / spanY;
+          out[0] = mix(mix(tl[0], tr[0], tx), mix(bl[0], br[0], tx), ty);
+          out[1] = mix(mix(tl[1], tr[1], tx), mix(bl[1], br[1], tx), ty);
+          out[2] = mix(mix(tl[2], tr[2], tx), mix(bl[2], br[2], tx), ty);
+          return out;
+        }
+        var expect = [0, 0, 0];
+        var x, y, i, d, tone;
+        for (var pass = 0; pass < 2; pass++) {
+          var tol = pass ? 92 : 58;
+          var left = 0, total = 0;
+          for (y = card.y0; y <= card.y1; y++) {
+            for (x = card.x0; x <= card.x1; x++) {
+              i = (y * w + x) * 4;
+              total++;
+              if (data[i + 3] > 40) left++;
+              model(x, y, expect);
+              d = Math.abs(data[i] - expect[0]) + Math.abs(data[i + 1] - expect[1]) + Math.abs(data[i + 2] - expect[2]);
+              var best = d * 1.15;
+              var tones = [tl, tr, bl, br];
+              for (var t = 0; t < tones.length; t++) {
+                tone = tones[t];
+                var td = Math.abs(data[i] - tone[0]) + Math.abs(data[i + 1] - tone[1]) + Math.abs(data[i + 2] - tone[2]);
+                if (td < best) best = td;
+              }
+              if (best < tol) data[i + 3] = 0;
+            }
+          }
+          /* only reach for the wider tolerance when the panel model missed */
+          if (!pass && left / Math.max(1, total) < 0.55) break;
+        }
+        for (y = card.y0; y <= card.y1; y++) {
+          for (x = card.x0; x <= card.x1; x++) {
+            i = (y * w + x) * 4;
+            if (data[i + 3] === 0) continue;
+            var touch = false;
+            if (x > card.x0 && data[i - 1] === 0) touch = true;
+            else if (x < card.x1 && data[i + 7] === 0) touch = true;
+            else if (y > card.y0 && data[i - w * 4 + 3] === 0) touch = true;
+            else if (y < card.y1 && data[i + w * 4 + 3] === 0) touch = true;
+            if (!touch) continue;
+            model(x, y, expect);
+            d = Math.abs(data[i] - expect[0]) + Math.abs(data[i + 1] - expect[1]) + Math.abs(data[i + 2] - expect[2]);
+            if (d < 120) data[i + 3] = 0;
+          }
+        }
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    frostfallKeyed[key] = { canvas: canvas, grid: grid, ctx: ctx, w: canvas.width, h: canvas.height, key: key };
+    return frostfallKeyed[key];
+  }
+
+  /* The character inside one card: the biggest solid silhouette, with pieces
+     whose centre sits inside it (a staff held away from the body) folded in,
+     the card outline rejected, and sparse edge rows trimmed. */
+  function frostfallArtBox(state, row, col) {
+    var boxKey = state.key + '|' + row + '|' + col;
+    if (frostfallArtBoxes[boxKey] !== undefined) return frostfallArtBoxes[boxKey];
+    var card = state.grid[row] && state.grid[row][col];
+    if (!card) return (frostfallArtBoxes[boxKey] = null);
+    var data = state.ctx.getImageData(0, 0, state.w, state.h).data;
+    var ch = card.h;
+    /* a few poses hold a staff or shield out past the card edge, so the search
+       window reaches into the gap on both sides; the silhouette that belongs to
+       this card is the one whose centre sits over it */
+    var pad = 0;
+    var wx0 = Math.max(0, card.x0 - pad);
+    var cw = Math.min(state.w - 1, card.x1 + pad) - wx0 + 1;
+    var mask = new Uint8Array(cw * ch);
+    for (var y = 0; y < ch; y++) {
+      for (var x = 0; x < cw; x++) {
+        mask[y * cw + x] = data[((card.y0 + y) * state.w + wx0 + x) * 4 + 3] > 40 ? 1 : 0;
+      }
+    }
+    var seen = new Uint8Array(cw * ch);
+    var stack = [];
+    var pieces = [];
+    var best = null;
+    for (var s = 0; s < mask.length; s++) {
+      if (!mask[s] || seen[s]) continue;
+      var count = 0, minX = cw, minY = ch, maxX = -1, maxY = -1;
+      stack.length = 0;
+      stack.push(s);
+      seen[s] = 1;
+      while (stack.length) {
+        var p = stack.pop();
+        var px = p % cw, py = (p - px) / cw;
+        count++;
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            var nx = px + dx, ny = py + dy;
+            if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
+            var np = ny * cw + nx;
+            if (!mask[np] || seen[np]) continue;
+            seen[np] = 1;
+            stack.push(np);
+          }
+        }
+      }
+      var piece = { count: count, x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+      pieces.push(piece);
+      /* a card outline is a hollow, card-sized frame: never the character */
+      var hollow = piece.count < piece.w * piece.h * 0.25;
+      var ring = piece.w > cw * 0.9 && piece.h > ch * 0.9;
+      if (hollow || ring || piece.count < 400 || piece.w < 20 || piece.h < ch * 0.15) continue;
+      var centre = wx0 + piece.x + piece.w / 2;
+      if (centre < card.x0 - 8 || centre > card.x1 + 8) continue;
+      if (!best || piece.count > best.count) best = piece;
+    }
+    if (!best) return (frostfallArtBoxes[boxKey] = null);
+    var box = { x: best.x, y: best.y, w: best.w, h: best.h };
+    for (var pi = 0; pi < pieces.length; pi++) {
+      var frag = pieces[pi];
+      if (frag === best || frag.count < 60) continue;
+      if (frag.w > cw * 0.9 && frag.h > ch * 0.9) continue;
+      var cx2 = frag.x + frag.w / 2, cy2 = frag.y + frag.h / 2;
+      if (cx2 < box.x - 4 || cx2 > box.x + box.w + 4) continue;
+      if (cy2 < box.y - 4 || cy2 > box.y + box.h + 4) continue;
+      var mx1 = Math.min(box.x, frag.x), my1 = Math.min(box.y, frag.y);
+      var mx2 = Math.max(box.x + box.w, frag.x + frag.w), my2 = Math.max(box.y + box.h, frag.y + frag.h);
+      box = { x: mx1, y: my1, w: mx2 - mx1, h: my2 - my1 };
+    }
+    /* trim edge rows and columns that hold almost no art */
+    function columnDensity(cx) {
+      var on = 0;
+      for (var yy = box.y; yy < box.y + box.h; yy++) if (mask[yy * cw + cx]) on++;
+      return box.h ? on / box.h : 0;
+    }
+    function rowDensity(ry) {
+      var on = 0;
+      for (var xx = box.x; xx < box.x + box.w; xx++) if (mask[ry * cw + xx]) on++;
+      return box.w ? on / box.w : 0;
+    }
+    while (box.w > 10 && columnDensity(box.x) < 0.16) { box.x++; box.w--; }
+    while (box.w > 10 && columnDensity(box.x + box.w - 1) < 0.16) box.w--;
+    while (box.h > 10 && rowDensity(box.y) < 0.16) { box.y++; box.h--; }
+    var out = { x: wx0 + box.x, y: card.y0 + box.y, w: box.w, h: box.h, card: card };
+    frostfallArtBoxes[boxKey] = out;
+    return out;
   }
 
   /* === NEW: CHARACTER FACTORY ===
@@ -1650,7 +1848,7 @@
       box(cx - u * 0.6, top - u * 7.4, u * 1.2, u * 1.2, cssHex(accent));
     } else if (kind === 'scarf') {
       var sx = cx - head.w * 0.38;
-      var sy = top + head.h * 0.9;
+      var sy = top + head.h * 1.05;
       box(sx, sy, head.w * 0.76, u * 1.5, ink);
       box(sx + u * 0.3, sy + u * 0.3, head.w * 0.7, u * 1.0, cssHex(primary));
       box(sx + head.w * 0.42, sy + u * 1.2, head.w * 0.3, u * 1.6, ink);
@@ -1695,45 +1893,47 @@
     var sheet = sheetState.canvas;
     var sctx = sheet.getContext('2d');
     if (!sctx) return null;
-    var box = frostfallArtBox(sheet, def.row, def.spriteSource);
-    if (!box) return null;
-    var cw = sheet.width / FROSTFALL_SHEET_COLS;
-    var ch = sheet.height / FROSTFALL_SHEET_ROWS;
-    var pad = 8;
-    var cropX = Math.max(1, box.x - pad);
-    var cropY = Math.max(1, box.y - pad);
-    var cropW = Math.min(box.cellW - cropX - 1, box.w + pad * 2);
-    var cropH = Math.min(box.cellH - cropY - 1, box.h + pad * 2);
+    var state = frostfallKeyedSheet(sheet, def.spriteSource);
+    if (!state) return null;
     var frame = FROSTFALL_FRAME;
+    /* one measured box per pose column, drawn on a scale shared by the whole
+       row so the frames do not pop between poses */
+    var boxes = [];
+    for (var f = 1; f < FROSTFALL_SHEET_COLS; f++) boxes.push(frostfallArtBox(state, def.row, f));
+    var found = [];
+    for (var fi0 = 0; fi0 < boxes.length; fi0++) if (boxes[fi0]) found.push(boxes[fi0]);
+    if (!found.length) return null;
+    /* one card in a row can crop short (a pose that tucks the body behind a
+       prop). Judge the character by the middle of the row and let any odd card
+       reuse a good frame instead of pulling the whole atlas down in size. */
+    var hs = found.map(function (b) { return b.h; }).sort(function (a, b) { return a - b; });
+    var ws = found.map(function (b) { return b.w; }).sort(function (a, b) { return a - b; });
+    var medH = hs[Math.floor(hs.length / 2)];
+    var medW = ws[Math.floor(ws.length / 2)];
+    var fallback = found[0];
+    for (var fi1 = 0; fi1 < boxes.length; fi1++) {
+      var cand = boxes[fi1];
+      if (!cand || cand.w < medW * 0.45 || cand.h < medH * 0.45) boxes[fi1] = fallback;
+    }
+    var maxW = 1, maxH = 1;
+    for (var bi = 0; bi < boxes.length; bi++) {
+      var probe = boxes[bi] || fallback;
+      if (probe.w > maxW) maxW = probe.w;
+      if (probe.h > maxH) maxH = probe.h;
+    }
+    var scale = Math.min((frame - 12) / maxW, (frame - 22) / maxH);
     var frames = [];
-    for (var f = 0; f < 4; f++) {
+    for (var fi = 0; fi < 4; fi++) {
+      var box = boxes[fi] || boxes[0];
       var cell = document.createElement('canvas');
       cell.width = frame;
       cell.height = frame;
       var cctx = cell.getContext('2d');
       if (!cctx) continue;
       cctx.imageSmoothingEnabled = false;
-      var ox = Math.round((f + 1) * cw) + cropX;
-      var oy = Math.round(def.row * ch) + cropY;
-      /* leave headroom above the art so hats and crowns are not clipped */
-      var scale = Math.min((frame - 10) / cropW, (frame - 40) / cropH);
-      var dw = cropW * scale, dh = cropH * scale;
-      cctx.drawImage(sheet, ox, oy, cropW, cropH, (frame - dw) / 2, frame - 4 - dh, dw, dh);
-      /* key the card blue AND its lighter border to transparency; both are
-         sampled from the untouched cell, not from the art */
-      var cellX = Math.round((f + 1) * cw);
-      var cellY = Math.round(def.row * ch);
-      var bgPixel = sctx.getImageData(cellX + 6, cellY + 6, 1, 1).data;
-      var borderPixel = sctx.getImageData(cellX + 3, Math.round(cellY + ch / 2), 1, 1).data;
-      var img = cctx.getImageData(0, 0, frame, frame);
-      var data = img.data;
-      for (var i = 0; i < data.length; i += 4) {
-        if (data[i + 3] < 8) continue;
-        var db = Math.abs(data[i] - bgPixel[0]) + Math.abs(data[i + 1] - bgPixel[1]) + Math.abs(data[i + 2] - bgPixel[2]);
-        var dr = Math.abs(data[i] - borderPixel[0]) + Math.abs(data[i + 1] - borderPixel[1]) + Math.abs(data[i + 2] - borderPixel[2]);
-        if (db < 96 || dr < 70) data[i + 3] = 0;
-      }
-      cctx.putImageData(img, 0, 0);
+      var dw = Math.max(1, Math.round(box.w * scale));
+      var dh = Math.max(1, Math.round(box.h * scale));
+      cctx.drawImage(state.canvas, box.x, box.y, box.w, box.h, Math.round((frame - dw) / 2), frame - 4 - dh, dw, dh);
       frames.push(cell);
     }
     if (!frames.length) return null;
@@ -1759,7 +1959,9 @@
       if (maxX < 0) continue;
       var artW = maxX - minX + 1;
       var headW = artW * 0.52;
-      var head = { x: minX + (artW - headW) / 2, y: minY, w: headW, h: (maxY - minY + 1) * 0.34 };
+      /* the head band is deliberately shallow: hats sit on top of it and the
+         scarf hangs just under it, at the neck rather than across the face */
+      var head = { x: minX + (artW - headW) / 2, y: minY, w: headW, h: (maxY - minY + 1) * 0.26 };
       var hand = { x: minX + (maxX - minX) * 0.72, y: minY + (maxY - minY) * 0.52 };
       drawCharacterAccessory(ctx, head, hand, def.accessory, def.palette);
     }
@@ -1812,7 +2014,7 @@
       dialogue: ['THE PACK IS THIN THIS YEAR. IT IS NOT YOUR FAULT. IT IS ALSO NOT NOT YOUR FAULT.']
     },
     snowSlime: {
-      name: 'SNOW SLIME', role: 'enemy', spriteSource: 'extras', row: 3,
+      name: 'SNOW SLIME', role: 'enemy', spriteSource: 'cast', row: 1,
       palette: { primary: 0xbfe9ff, secondary: 0x7fb8e0, accent: 0xffffff },
       accessory: 'none', hp: 16, atk: 3, xp: 9, agility: 3, blipPitch: 1.75,
       dialogue: ['IT IS MOSTLY WATER AND MOSTLY ANGRY.']
@@ -1846,7 +2048,7 @@
       ], blipPitch: 1.12
     },
     villagerPip: {
-      name: 'VILLAGER PIP', role: 'npc', spriteSource: 'extras', row: 3,
+      name: 'VILLAGER PIP', role: 'npc', spriteSource: 'cast', row: 1,
       palette: { primary: 0xf2f8ff, secondary: 0x9fd7e6, accent: 0xff8a2b },
       accessory: 'scarf', hp: 18, atk: 1, dialogue: [
         'YOU LOOK JUST LIKE THE OTHER ONE. ARE YOU THE OTHER ONE?',
@@ -3731,7 +3933,7 @@
     updateActor(titleHero);
     updateActor(titlePip);
     app.dataset.theme = 'day';
-    renderer.setScene({ objects: titleObjects, fogColor: [0.8, 0.88, 0.96], fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
+    renderer.setScene({ objects: titleObjects, fogColor: [0.8, 0.88, 0.96], fogNear: 22, fogFar: 70, skyColor: chapterTint(CHAPTERS[0]).sky });
   }
 
   function updateTitle(time) {
@@ -4182,7 +4384,7 @@
     view = 'world';
     mode = 'world';
     /* === NEW: HORIZON FILL === the sky behind the geometry matches the winter fog */
-    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: chapterTint(chapter).sky });
     app.dataset.theme = chapter.theme;
     ui.hud.hidden = false;
     ui.objective.hidden = false;
@@ -4839,6 +5041,19 @@
     showChapterScreen(save.chapter);
   }
 
+  /* === NEW: HORIZON FILL === the cleared sky and the shelf under the terrain
+     follow the chapter lighting; a daylight sky behind the pines at midnight
+     read as a rendering bug, and a snow-white shelf glowed in the dark. */
+  var CHAPTER_TINTS = {
+    day: { sky: [0.7216, 0.8314, 0.9098], shelf: 0xdfeefb },
+    lake: { sky: [0.6078, 0.7529, 0.8627], shelf: 0xcfe4f2 },
+    dusk: { sky: [0.4353, 0.3294, 0.4392], shelf: 0x8a7280 },
+    night: { sky: [0.1098, 0.1216, 0.2275], shelf: 0x33405e }
+  };
+  function chapterTint(chapter) {
+    return CHAPTER_TINTS[(chapter && chapter.theme) || 'day'] || CHAPTER_TINTS.day;
+  }
+
   function buildWorld(index) {
     if (!save) return;
     index = clamp(index, 0, CHAPTERS.length - 1);
@@ -4850,7 +5065,7 @@
     world = { objects: [], colliders: [], interactables: [], actors: [], geometries: [], chapter: index, theme: chapter.theme, spawn: chapter.spawn.slice() };
     /* === NEW: HORIZON FILL === one huge snow shelf under the chapter so the
        bottom of the viewport is never empty sky/void when the terrain stops. */
-    var horizon = makeStatic('cube', 0, -0.58, 0, 260, 0.5, 260, 0xdfeefb, { pattern: false });
+    var horizon = makeStatic('cube', 0, -0.58, 0, 260, 0.5, 260, chapterTint(chapter).shelf, { pattern: false });
     horizon.keepInBattle = true;
     world.objects.push(horizon);
     loadModels();
@@ -4878,7 +5093,7 @@
     camera.ortho = baseOrtho();
     camera.punch = 0;
     snapCamera();
-    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: chapterTint(chapter).sky });
     app.dataset.theme = chapter.theme;
     hideScreens();
     view = 'world';
@@ -5712,7 +5927,7 @@
     /* Keep the chapter's own fog and lighting so the fight sits inside the
        living town instead of a separate room. */
     var stageChapter = CHAPTERS[clamp(save.chapter, 0, 4)];
-    renderer.setScene({ objects: battleObjects, fogColor: stageChapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
+    renderer.setScene({ objects: battleObjects, fogColor: stageChapter.fog, fogNear: 22, fogFar: 70, skyColor: chapterTint(stageChapter).sky });
     if (battle) battle.fit = stage.fit;
     /* Smash cut: the white flash and the punch land here, then updateBattle()
        walks the camera from the exploration shot to the battle shot in 350ms. */
@@ -7166,7 +7381,7 @@
       });
       battleObjects = [];
     }
-    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: [0.7216, 0.8314, 0.9098] });
+    renderer.setScene({ objects: world.objects, fogColor: chapter.fog, fogNear: 22, fogFar: 70, skyColor: chapterTint(chapter).sky });
     app.dataset.theme = chapter.theme;
     ui.hud.hidden = false;
     ui.objective.hidden = false;
