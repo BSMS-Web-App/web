@@ -96,7 +96,8 @@ function go(page) {
 }
 function currentPerson() { return state.people.find(p => p.handle === state.profileHandle) || state.people[0]; }
 function updateUsage() {
-  const values = [["hourly",state.limits.hourly],["daily",state.limits.daily],["weekly",state.limits.weekly]];
+  const activeLimits=currentPerson().limits||state.limits;
+  const values = [["hourly",activeLimits.hourly],["daily",activeLimits.daily],["weekly",activeLimits.weekly]];
   values.forEach(([key,max]) => {
     const used = state.usage[key], pct = Math.min(100, used / max * 100);
     $$(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);}});
@@ -172,25 +173,34 @@ function openBranch(name) {
 }
 function canDeploy(branch) {
   const me=currentPerson();
-  if (!me.enabled) {toast("Developer access disabled","An administrator has disabled this sample developer account.");return false;}
-  if (!state.branches.some(x=>x.name===branch&&x.enabled!==false&&x.assignees.includes(state.profileHandle))) {toast("Branch access unavailable","You are not assigned to this branch or deployment access is disabled.");return false;}
-  if (state.plan === "Basic") {
-    const limits=me.limits||state.limits;
-    const key = [["hourly",limits.hourly],["daily",limits.daily],["weekly",limits.weekly]].find(([k,max]) => state.usage[k] >= max);
-    if (key) { modal("Deployment limit reached","Your Basic plan has reached a rolling deployment limit.",limitBody(key[0]),"Understood",closeModal,{icon:"alert"}); return false; }
-  } else {
-    if (state.usage.suspended) { toast("Deployment access suspended","An administrator has suspended this Pro account in the demo."); return false; }
-    if (me.balance > 0 && state.usage.graceEnd < "2026-11-21") { toast("Payment required","The sample grace period has expired. Existing sites and history remain available."); return false; }
-    if (state.usage.totalCycle >= state.limits.max) { toast("Cycle maximum reached","The Pro plan is capped at " + state.limits.max + " deployments per cycle."); return false; }
+  const b=state.branches.find(x=>x.name===branch);
+  if (!me.enabled) { toast("Developer access disabled","An administrator has disabled this sample developer account."); return false; }
+  if (!b || !b.assignees.includes(state.profileHandle)) { toast("Branch access unavailable","You are not assigned to this branch."); return false; }
+  if (b.enabled===false) { toast("Branch deployment disabled","An administrator has temporarily disabled deployments for this branch. The website and history remain available."); return false; }
+  const limits=me.limits||state.limits;
+  const reached=[["hourly",limits.hourly],["daily",limits.daily],["weekly",limits.weekly]].find(([key,max])=>state.usage[key]>=max);
+  if (reached) {
+    modal("Deployment limit reached","Your "+reached[0]+" rolling limit has been reached. Pro does not bypass these limits.",limitBody(reached[0]),"Understood",closeModal,{icon:"alert"});
+    return false;
   }
-  const b = state.branches.find(x => x.name === branch);
-  if (b && state.deployments.some(d => d.branch === branch && d.sha === b.sha && d.env === "Preview" && d.status === "ready")) {
-    modal("Commit already deployed","This exact commit was already deployed successfully to this branch and environment.",'<div class="modal-data"><div><span>Branch</span><b>' + esc(branch) + '</b></div><div><span>Commit SHA</span><b>' + esc(b.sha) + '</b></div><div><span>Target</span><b>Preview</b></div></div><div class="modal-callout">Duplicate successful deployments are blocked. A failed attempt can be retried.</div>',"Close",closeModal,{icon:"alert"}); return false;
+  if (state.plan==="Pro") {
+    if (state.usage.suspended) { toast("Deployment access suspended","An administrator has suspended this Pro account in the demo."); return false; }
+    if (me.balance>0 && state.usage.graceEnd<"2026-11-21") { toast("Payment required","The sample grace period has expired. Existing sites, profiles, and history remain available."); return false; }
+    if (state.usage.totalCycle>=state.limits.max) {
+      modal("Billing-period limit reached","You have used all "+state.limits.max+" deployments available during this billing period.",'<div class="modal-callout">Contact the owner for assistance. No additional charges are created beyond the cycle maximum.</div>',"Close",closeModal,{icon:"alert"});
+      return false;
+    }
+  }
+  const previous=state.deployments.find(d=>d.branch===branch&&d.sha===b.sha&&d.env==="Preview"&&d.status==="ready");
+  if (previous) {
+    modal("Commit already deployed","This exact commit was already deployed successfully to this branch and environment.",'<div class="modal-data"><div><span>Branch</span><b>'+esc(branch)+'</b></div><div><span>Commit SHA</span><b>'+esc(b.sha)+'</b></div><div><span>Previous deployment</span><b>'+esc(previous.created)+'</b></div><div><span>Destination</span><b>'+esc(b.url)+'</b></div></div><div class="modal-callout">Duplicate successful deployments are blocked. A failed deployment of this commit can be retried.</div>',"Close",closeModal,{icon:"alert"});
+    return false;
   }
   return true;
 }
 function limitBody(which) {
-  return ["hourly","daily","weekly"].map(k => '<div class="limit-row"><div><b>' + ({hourly:"Hourly",daily:"Daily",weekly:"Weekly"}[k]) + ' limit</b><span>' + state.usage[k] + ' / ' + state.limits[k] + '</span></div><div class="progress ' + (state.usage[k] >= state.limits[k] ? "blocked" : "") + '"><i style="width:' + Math.min(100,state.usage[k]/state.limits[k]*100) + '%"></i></div></div>').join("") + '<div class="modal-callout">A new deployment becomes available when an older deployment leaves the rolling window.</div>';
+  const limits=currentPerson().limits||state.limits;
+  return ["hourly","daily","weekly"].map(k => '<div class="limit-row"><div><b>' + ({hourly:"Hourly",daily:"Daily",weekly:"Weekly"}[k]) + ' limit</b><span>' + state.usage[k] + ' / ' + limits[k] + '</span></div><div class="progress ' + (state.usage[k] >= limits[k] ? "blocked" : "") + '"><i style="width:' + Math.min(100,state.usage[k]/state.limits[k]*100) + '%"></i></div></div>').join("") + '<div class="modal-callout">A new deployment becomes available when an older deployment leaves the rolling window.</div>';
 }
 function deploy(name) {
   const b = state.branches.find(x => x.name === name); if (!b || !canDeploy(name)) return;
