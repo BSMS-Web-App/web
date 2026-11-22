@@ -36,3 +36,47 @@ html{scroll-padding-top:82px}body{font-family:var(--font);font-size:14px;line-he
 .developer-card{cursor:pointer;transition:border-color .18s,transform .18s}.developer-card:hover{border-color:rgba(187,0,30,.45);transform:translateY(-2px)}.developer-card:focus-visible{outline:2px solid var(--red-hi);outline-offset:3px}.developer-card-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);margin-top:12px;padding-top:10px;color:#c87a86;font-size:10px}.developer-card-footer iconify-icon{font-size:13px}.developer-profile-modal{display:flex;align-items:center;gap:11px;margin-bottom:13px}.developer-profile-modal .developer-avatar{flex-shrink:0}.developer-profile-modal b,.developer-profile-modal small{display:block}.developer-profile-modal small{color:#888;font-size:10px}
 
 @media(max-width:780px){.nav-item:not(.active){display:flex}.nav-item{min-height:40px}.nav-item .nav-icon iconify-icon{font-size:18px}.sidebar .nav-item:focus-visible{outline:2px solid var(--red-hi);outline-offset:1px}}
+
+
+/* Functional preview controls */
+[hidden] { display: none !important; }
+.demo-form { display:grid; gap:14px; margin:14px 0 4px; }
+.demo-form > label { display:grid; gap:7px; color:var(--muted,#a1a1aa); font-size:12px; font-weight:600; }
+.demo-form input,.demo-form select,.demo-form textarea,
+.demo-password-label input {
+  width:100%; min-height:42px; border:1px solid rgba(255,255,255,.12);
+  border-radius:11px; background:rgba(255,255,255,.045); color:inherit;
+  padding:10px 12px; font:inherit; outline:none;
+}
+.demo-form input:focus,.demo-form select:focus,.demo-form textarea:focus,
+.demo-password-label input:focus { border-color:rgba(187,0,30,.8); box-shadow:0 0 0 3px rgba(187,0,30,.15); }
+.demo-form select option { background:#171717; color:#fff; }
+.demo-form fieldset { border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:12px; display:grid; gap:10px; }
+.demo-form legend { color:var(--muted,#a1a1aa); font-size:11px; padding:0 6px; }
+.demo-form .check-row,.check-row { display:flex; align-items:center; gap:9px; color:inherit; font-size:13px; }
+.demo-form input[type="checkbox"],.check-row input[type="checkbox"] { width:16px; height:16px; accent-color:#bb001e; }
+.permission-grid { display:grid; gap:0; margin:14px 0; font-size:12px; }
+.permission-grid > div { display:grid; grid-template-columns:minmax(130px,1.5fr) repeat(3,minmax(48px,.55fr)); align-items:center; gap:10px; padding:11px 8px; border-bottom:1px solid rgba(255,255,255,.08); }
+.permission-grid > div:first-child { color:var(--muted,#a1a1aa); }
+.permission-grid label { display:flex; justify-content:center; }
+.permission-grid input { accent-color:#bb001e; width:15px; height:15px; }
+.demo-links { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:12px; }
+.demo-links a,.demo-links button { color:#e7a1aa; text-decoration:none; }
+.demo-links a:hover,.demo-links button:hover { color:#fff; }
+.admin-box .panel-heading { align-items:center; }
+.admin-box .panel-heading h3 { margin:0; }
+.admin-box .panel-heading p { margin:5px 0 0; }
+.admin-box > .button { margin:10px 8px 0 0; }
+.admin-line .text-button { margin-left:8px; }
+.profile-actions { display:flex; flex-wrap:wrap; gap:8px; }
+button:focus-visible,a:focus-visible,[tabindex="0"]:focus-visible { outline:2px solid #bb001e; outline-offset:3px; }
+body.compact-tables .table-panel td,body.compact-tables .table-panel th { padding-top:8px; padding-bottom:8px; }
+body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after {
+  scroll-behavior:auto !important; animation-duration:.01ms !important;
+  animation-iteration-count:1 !important; transition-duration:.01ms !important;
+}
+@media(max-width:640px) {
+  .permission-grid > div { grid-template-columns:minmax(100px,1.4fr) repeat(3,minmax(34px,.4fr)); gap:6px; font-size:11px; }
+  .demo-form { gap:11px; }
+  .profile-actions { width:100%; }
+}
