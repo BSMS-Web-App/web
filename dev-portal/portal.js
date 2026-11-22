@@ -109,9 +109,9 @@ function updateUsage() {
 }
 function renderBranches(query = $("#branchSearch")?.value || "") {
   const el = $("#branchList"); if (!el) return;
-  const assigned = state.branches.filter(b => b.assignees.includes(state.profileHandle) && b.enabled !== false);
+  const assigned = state.branches.filter(b => b.assignees.includes(state.profileHandle));
   const list = assigned.filter(b => (b.name + " " + b.purpose).toLowerCase().includes(query.toLowerCase()) && (state.branchFilter === "all" || b.status.toLowerCase() === state.branchFilter));
-  el.innerHTML = list.map(b => '<article class="branch-row"><span class="branch-glyph">' + icon("git-branch") + '</span><div class="branch-row-main"><b>' + esc(b.name) + '</b><p>' + esc(b.purpose) + '</p></div><div class="branch-row-meta"><span>COMMIT <code>' + esc(b.sha) + '</code></span><span>LAST DEPLOY <span>' + esc(b.last) + '</span></span></div><span class="status-pill ready">● ' + esc(b.status) + '</span><button class="button primary" data-deploy="' + esc(b.name) + '">Deploy ↗</button><button class="square-button" data-branch-details="' + esc(b.name) + '" aria-label="Branch details">' + icon("kebab-horizontal") + '</button></article>').join("") || '<div class="empty-state">No branches match this filter.</div>';
+  el.innerHTML = list.map(b => '<article class="branch-row"><span class="branch-glyph">' + icon("git-branch") + '</span><div class="branch-row-main"><b>' + esc(b.name) + '</b><p>' + esc(b.purpose) + '</p></div><div class="branch-row-meta"><span>COMMIT <code>' + esc(b.sha) + '</code></span><span>LAST DEPLOY <span>' + esc(b.last) + '</span></span></div><span class="status-pill ' + (b.enabled===false?"blocked":"ready") + '">● ' + (b.enabled===false?"Disabled":esc(b.status)) + '</span><button class="button primary" data-deploy="' + esc(b.name) + '" ' + (b.enabled===false?"disabled":"") + '>Deploy ↗</button><button class="square-button" data-branch-details="' + esc(b.name) + '" aria-label="Branch details">' + icon("kebab-horizontal") + '</button></article>').join("") || '<div class="empty-state">No branches match this filter.</div>';
 }
 function renderDeployments() {
   const q = ($("#deploymentSearch")?.value || "").toLowerCase();
