@@ -56,7 +56,7 @@ function modal(title,desc,body,primary,icon,fn){
  $("#modalBody").innerHTML=body;$("#modalPrimary").textContent=primary||"Continue";
  const iconMap={"✓":"check-circle","⇧":"rocket","⑂":"git-branch","♙":"person","◇":"shield-check","!":"alert"};$("#modalIcon").innerHTML='<iconify-icon icon="octicon:'+(iconMap[icon]||icon||"info")+'-16"></iconify-icon>';
  $("#modalPrimary").onclick=fn||closeModal;
- $("#modalBackdrop").classList.add("open");$("#modalBackdrop").setAttribute("aria-hidden","false");document.body.style.overflow="hidden";
+ $("#modalBackdrop").classList.add("open");$("#modalBackdrop").setAttribute("aria-hidden","false");document.body.style.overflow="hidden";$("#modalBackdrop .modal-x").style.display="";
  const sc=$("#modalScroll"),hint=$("#scrollHint");
  if(sc&&hint){const update=()=>hint.classList.toggle("visible",sc.scrollHeight>sc.clientHeight+24&&sc.scrollTop+sc.clientHeight<sc.scrollHeight-16);sc.scrollTop=0;sc.onscroll=update;requestAnimationFrame(update);setTimeout(update,80)}
 }
