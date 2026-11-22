@@ -49,7 +49,7 @@ $("#editProfile")?.addEventListener("click",()=>modal("Edit developer profile","
 $("#notificationsBtn").onclick=()=>$("#notificationPopover").classList.toggle("open");$("#markRead").onclick=()=>{$$(".notice-dot").forEach(x=>x.classList.add("muted-dot"));$("#notificationPopover").classList.remove("open");toast("Notifications marked read","Preview only.")};document.addEventListener("click",e=>{if(!e.target.closest("#notificationPopover")&&!e.target.closest("#notificationsBtn"))$("#notificationPopover").classList.remove("open")});
 $$("[data-dismiss]").forEach(b=>b.onclick=()=>$("#"+b.dataset.dismiss)?.remove());
 $("#heatmap").innerHTML=Array.from({length:182},()=>" <i></i>").join("");
-renderDeployments();renderPeople();renderAdmin();
+renderDeployments();renderPeople();
 
 
 /* Expanded UI-only experience: every action below is a local demonstration. */
@@ -102,3 +102,4 @@ const oldRenderAdmin=renderAdminBase;
 function renderAdmin(){oldRenderAdmin();if(adminExtra[adminTab]){$("#adminContent").innerHTML=adminExtra[adminTab];$$("[data-admin-action]",$("#adminContent")).forEach(b=>b.onclick=()=>toast("Admin preview","This control is a nonfunctional UI demonstration."))}}
 $("#adminContent")?.addEventListener("click",e=>{if(e.target.closest("[data-admin-action]"))toast("Admin preview","This control is a nonfunctional UI demonstration.")});
 $("#githubHeatmap").innerHTML=Array.from({length:182},()=>" <i></i>").join("");
+renderAdmin();
