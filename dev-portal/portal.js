@@ -32,6 +32,13 @@ const state = {
   settings: {deploymentNotifications:true,reducedMotion:false,compactTables:false,success:true,failure:true,branch:true,billing:true,loginAlerts:true},
   notices: [{title:"Deployment ready",detail:"dev1 · Today at 4:18 PM",read:false},{title:"Branch access updated",detail:"dev8 assigned · Yesterday",read:true}],
   ledger: [
+    {date:"Nov 21, 2026",developer:"@leo",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 20, 2026",developer:"@leo",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 19, 2026",developer:"@leo",type:"Additional deployment",branch:"dev8",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 18, 2026",developer:"@leo",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 17, 2026",developer:"@leo",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 16, 2026",developer:"@leo",type:"Additional deployment",branch:"dev8",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 15, 2026",developer:"@leo",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"}
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev8",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
@@ -277,8 +284,10 @@ function exportCSV() {
 }
 function exportBilling() {
   if (state.plan === "Basic" && state.planView !== "pro") {toast("No Basic billing ledger","Basic is free and has no payment history.");return;}
-  const csv="date,description,amount,status\nNov 21,Additional deployment,0.10,Recorded\nNov 20,Manual payment,-0.30,Paid\n";
-  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"})),a=document.createElement("a");a.href=url;a.download="bsms-demo-billing-history.csv";a.click();URL.revokeObjectURL(url);toast("Billing export ready","Downloaded sample billing data.");
+  const headers=["date","developer","description","branch","amount","status"];
+  const rows=state.ledger.filter(x=>x.developer===currentPerson().handle).map(x=>[x.date,x.developer,x.type,x.branch,x.amount,x.status].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(","));
+  const csv=[headers.join(","),...rows].join("\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download="bsms-demo-billing-history.csv";a.click();URL.revokeObjectURL(url);toast("Billing export ready","Downloaded the current sample billing ledger.");
 }
 function refreshBillingPreview() {
   const p=currentPerson(),root=$("#proBillingPreview");if(!root)return;
@@ -306,7 +315,7 @@ function showPlanView(view) {
 function showUpgrade() {
   modal("Upgrade to Pro","Use a demo-only verification value. Never enter your real BSMS Web password here.",'<div class="upgrade-summary"><div class="pro-price">$0.10 <small>per additional deployment</small></div><ul><li>20 included deployments per billing cycle</li><li>$0.10 per additional deployment</li><li>200 total deployments maximum per cycle</li><li>Basic rolling limits still apply</li><li>Billing cycle renews on the 21st</li></ul></div><label class="demo-password-label">Demo verification value<input id="demoVerify" type="text" placeholder="Enter any sample value" autocomplete="off"></label><div class="modal-callout neutral-callout">This is not connected to authentication. Enter any non-empty sample value to preview the confirmation state.</div>',"Continue",() => {
     const val=$("#demoVerify").value.trim();if(!val){toast("Enter a demo value","This field is required only to preview the flow.");return;}
-    modal("Pro request ready","The sample verification step passed. Activate Pro in this preview to explore the Pro experience.",'<div class="modal-callout neutral-callout">This changes only the local sample account in this browser session. No billing or account service is contacted.</div>',"Activate Pro preview",() => {state.plan="Pro";currentPerson().plan="Pro";state.usage.proCycle=18;state.usage.totalCycle=25;state.usage.extra=7;state.usage.balance=0.70;$("#page-profile .status-pill").textContent="PRO PLAN";$(".profile-copy small").textContent="Pro developer";audit("Pro plan activated in demo");closeModal();showPlanView("pro");toast("Pro preview activated","The sample account now uses Pro rules.");},{icon:"check-circle"});
+    modal("Pro request ready","The sample verification step passed. Activate Pro in this preview to explore the Pro experience.",'<div class="modal-callout neutral-callout">This changes only the local sample account in this browser session. No billing or account service is contacted.</div>',"Activate Pro preview",() => {state.plan="Pro";currentPerson().plan="Pro";state.usage.proCycle=18;state.usage.totalCycle=25;state.usage.extra=7;state.usage.balance=0.70;currentPerson().balance=0.70;$("#page-profile .status-pill").textContent="PRO PLAN";$(".profile-copy small").textContent="Pro developer";audit("Pro plan activated in demo");closeModal();showPlanView("pro");toast("Pro preview activated","The sample account now uses Pro rules.");},{icon:"check-circle"});
   },{icon:"shield-check"});
 }
 function editProfile() {
