@@ -118,7 +118,7 @@ function startSimulatedDeployment(b){
  if(actions){
   const fail=document.createElement("button");fail.className="button secondary";fail.textContent="Preview failure";
   actions.insertBefore(fail,actions.firstChild);
-  fail.onclick=()=>{clearInterval(demoTimer);finishSimulatedFailure(b,Math.floor((Date.now()-Date.now())/1000))};
+  fail.onclick=()=>{clearInterval(demoTimer);finishSimulatedFailure(b,Math.floor((Date.now()-demoStartedAt)/1000))};
  }
 }
 function finishSimulatedFailure(b,seconds){
