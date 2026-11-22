@@ -258,7 +258,9 @@ function showPlanView(view) {
   $$("[data-plan-view]").forEach(b=>b.classList.toggle("active",b.dataset.planView===view));
   const pro=view==="pro";
   $("#proBillingPreview").hidden=!pro;$(".billing-overview").hidden=pro;
-  ["#planComparisonHeading","#planGrid","#billingHistoryHeading","#basicBillingHistory"].forEach(sel=>{const el=$(sel);if(el)el.hidden=pro;});
+  ["#planGrid","#billingHistoryHeading","#basicBillingHistory"].forEach(sel=>{const el=$(sel);if(el)el.hidden=pro;});
+  $("#planComparisonHeading h2").textContent = pro ? "Pro billing preview" : "Plan comparison";
+  $("#planComparisonHeading p").textContent = pro ? "Sample Pro cycle, charges, and payment state." : "Illustrative plan details for the proposed Dev Portal.";
 }
 function showUpgrade() {
   modal("Upgrade to Pro","Use a demo-only verification value. Never enter your real BSMS Web password here.",'<div class="upgrade-summary"><div class="pro-price">$0.10 <small>per additional deployment</small></div><ul><li>20 included deployments per billing cycle</li><li>$0.10 per additional deployment</li><li>200 total deployments maximum per cycle</li><li>Basic rolling limits still apply</li><li>Billing cycle renews on the 21st</li></ul></div><label class="demo-password-label">Demo verification value<input id="demoVerify" type="text" placeholder="Enter any sample value" autocomplete="off"></label><div class="modal-callout neutral-callout">This is not connected to authentication. Enter any non-empty sample value to preview the confirmation state.</div>',"Continue",() => {
