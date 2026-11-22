@@ -65,7 +65,7 @@ function toast(title, detail = "Preview only. No live service was changed.") {
   region.append(node); window.setTimeout(() => node.remove(), 3600);
 }
 function closeModal() {
-  if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
+  if (demoTimer) { toast("Deployment still running","Use Cancel preview to stop the sample deployment."); return; }
   if (state.modalTimer) { clearTimeout(state.modalTimer); state.modalTimer = null; }
   if (!$modal) return;
   $modal.classList.remove("open"); $modal.setAttribute("aria-hidden","true");
@@ -124,7 +124,7 @@ function renderBranches(query = $("#branchSearch")?.value || "") {
 function renderDeployments() {
   const q = ($("#deploymentSearch")?.value || "").toLowerCase();
   const rows = state.deployments.filter(d => (state.deploymentFilter === "all" || d.status === state.deploymentFilter) && Object.values(d).join(" ").toLowerCase().includes(q));
-  $("#deploymentRows").innerHTML = rows.map(d => '<tr><td><span class="table-status ' + (d.status === "error" ? "error" : "") + '">● ' + (d.status === "ready" ? "READY" : "FAILED") + '</span></td><td><span class="table-branch">' + icon("git-branch") + '<b>' + esc(d.branch) + '</b></span></td><td><code>' + esc(d.sha) + '</code><div class="table-muted">' + esc(d.message) + '</div></td><td>' + esc(d.env) + '</td><td>' + esc(d.created) + '</td><td>' + esc(d.duration) + '</td><td><button class="row-action" data-deployment-detail="' + d.id + '">Details →</button></td></tr>').join("") || '<tr><td colspan="7">No deployments match this filter.</td></tr>';
+  $("#deploymentRows").innerHTML = rows.map(d => '<tr><td><span class="table-status ' + (d.status === "ready" ? "" : "error") + '">● ' + (d.status === "ready" ? "READY" : d.status === "error" ? "FAILED" : "CANCELED") + '</span></td><td><span class="table-branch">' + icon("git-branch") + '<b>' + esc(d.branch) + '</b></span></td><td><code>' + esc(d.sha) + '</code><div class="table-muted">' + esc(d.message) + '</div></td><td>' + esc(d.env) + '</td><td>' + esc(d.created) + '</td><td>' + esc(d.duration) + '</td><td><button class="row-action" data-deployment-detail="' + d.id + '">Details →</button></td></tr>').join("") || '<tr><td colspan="7">No deployments match this filter.</td></tr>';
   $$(".tab").forEach(b => b.classList.toggle("active", b.dataset.filter === state.deploymentFilter));
 }
 function deploymentDetail(id) {
@@ -252,7 +252,9 @@ function addDemoLog() {
 function cancelDeployment() {
   if (demoTimer) {clearInterval(demoTimer);demoTimer=null;}
   if (state.modalTimer) {clearTimeout(state.modalTimer);state.modalTimer=null;}
-  modal("Preview canceled","The simulated deployment was canceled. No deployment record was created.",'<div class="modal-callout neutral-callout">Canceled previews do not consume the sample deployment allowance.</div>',"Close",closeModal,{icon:"x"});
+  const b=state.activeDeployment;
+  if(b){state.deployments.unshift({status:"canceled",branch:b.name,sha:b.sha,message:b.message,env:"Preview",created:"Just now",duration:Math.max(1,Math.floor((Date.now()-demoStartedAt)/1000))+"s",author:"Leo Placencia",id:Math.max(0,...state.deployments.map(d=>d.id))+1});currentPerson().total++;audit("Demo deployment canceled · "+b.name);renderDeployments();renderAdmin();}
+  modal("Preview canceled","The simulated deployment was canceled before completion.",'<div class="modal-callout neutral-callout">The attempt is recorded as canceled in sample history. No live deployment was created.</div>',"Close",closeModal,{icon:"x"});
 }
 function finishSuccess() {
   const b = state.activeDeployment; if (!b) return;
@@ -271,7 +273,7 @@ function finishFailure() {
   if (demoTimer) {clearInterval(demoTimer);demoTimer=null;}
   const b = state.activeDeployment, seconds = Math.max(1,Math.floor((Date.now()-demoStartedAt)/1000));
   const record = {status:"error",branch:b.name,sha:b.sha,message:b.message,env:"Preview",created:"Just now",duration:"Failed",author:"Leo Placencia",id:Math.max(0,...state.deployments.map(d=>d.id))+1};
-  state.deployments.unshift(record);audit("Demo deployment failed · " + b.name);renderDeployments();renderAdmin();
+  state.deployments.unshift(record);currentPerson().total++;audit("Demo deployment failed · " + b.name);renderDeployments();renderAdmin();
   modal("Deployment failed","Inspect the sample build output or retry the failed deployment.",'<div class="failure-state"><div class="failure-mark">' + icon("alert") + '</div><span class="eyebrow">SIMULATED FAILURE</span><h2>Deployment failed</h2><p>No real deployment was attempted.</p><div class="modal-data"><div><span>Branch</span><b>' + esc(b.name) + '</b></div><div><span>Commit</span><b>' + esc(b.sha) + '</b></div><div><span>Elapsed time</span><b>' + seconds + ' seconds</b></div><div><span>Error</span><b>Sample build command returned a non-zero status</b></div></div><details class="build-logs" open><summary>Sample error output</summary><pre>[build] Compiling application...\n[build] Error: sample compilation failure\n[portal] Deployment marked as failed</pre></details></div>',"Retry demo",() => startDeployment(b),{icon:"alert"});
   $(".modal-actions").innerHTML = '<button class="button secondary" id="failureClose">Close</button><button class="button primary" id="failureRetry">Retry demo</button>';
   $("#failureClose").onclick=closeModal;$("#failureRetry").onclick=()=>startDeployment(b);
@@ -396,6 +398,7 @@ function signOutPreview() {
 }
 function bindEvents() {
   document.addEventListener("click", e => {
+    const heat=e.target.closest("[data-heat-day]");if(heat){const day=Number(heat.dataset.heatDay),kind=heat.dataset.heatKind,count=(day*7)%9;modal(kind==="deployment"?"Deployment activity":"GitHub contribution activity","Sample calendar activity · day "+day,'<div class="modal-data"><div><span>Activity type</span><b>'+(kind==="deployment"?"Deployments":"Commits and pull requests")+'</b></div><div><span>Activity count</span><b>'+count+'</b></div><div><span>Period</span><b>Sample 182-day calendar</b></div><div><span>Branches</span><b>'+(count?"dev1, dev2":"No branch activity") +'</b></div></div><div class="modal-callout neutral-callout">Illustrative data only. Live GitHub contribution metrics require the repository integration.</div>',"Close",closeModal,{icon:"calendar"});return;}
     const page=e.target.closest("[data-page]");if(page){e.preventDefault();go(page.dataset.page);return;}
     const close=e.target.closest("[data-close]");if(close){closeModal();return;}
     const dismiss=e.target.closest("[data-dismiss]");if(dismiss){$("#"+dismiss.dataset.dismiss)?.remove();return;}
@@ -450,8 +453,8 @@ function initialize() {
   });
   const planFilter=$("#page-directory .select");if(planFilter)planFilter.classList.add("directory-plan-filter");
   const branchFilter=$("#page-branches .select");if(branchFilter)branchFilter.setAttribute("aria-label","Filter branches by status");
-  $("#heatmap").innerHTML=Array.from({length:182},(_,i)=>'<i title="Sample deployment activity · day '+(i+1)+'"></i>').join("");
-  $("#githubHeatmap").innerHTML=Array.from({length:182},(_,i)=>'<i title="Sample GitHub activity · day '+(i+1)+'"></i>').join("");
+  $("#heatmap").innerHTML=Array.from({length:182},(_,i)=>'<i data-heat-day="'+(i+1)+'" data-heat-kind="deployment" title="Sample deployment activity · day '+(i+1)+'"></i>').join("");
+  $("#githubHeatmap").innerHTML=Array.from({length:182},(_,i)=>'<i data-heat-day="'+(i+1)+'" data-heat-kind="github" title="Sample GitHub activity · day '+(i+1)+'"></i>').join("");
   renderBranches();renderDeployments();renderPeople();renderAdmin();updateUsage();showSettings("general");bindEvents();
   document.body.classList.toggle("reduce-motion",state.settings.reducedMotion);
 }
