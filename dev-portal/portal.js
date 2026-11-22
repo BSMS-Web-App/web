@@ -94,8 +94,7 @@ function updateUsage() {
   const values = [["hourly",state.limits.hourly],["daily",state.limits.daily],["weekly",state.limits.weekly]];
   values.forEach(([key,max]) => {
     const used = state.usage[key], pct = Math.min(100, used / max * 100);
-    const target = $("#usage-" + key);
-    if (target) { target.textContent = used + " / " + max; const bar = target.closest(".limit-row")?.querySelector(".progress i"); if (bar) bar.style.width = pct + "%"; }
+    $(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);}});
   });
   const week = $("#page-overview .metric-card:nth-child(2) strong");
   if (week) week.innerHTML = state.usage.weekly + '<span class="metric-unit">/ ' + state.limits.weekly + '</span>';
@@ -104,7 +103,8 @@ function updateUsage() {
 }
 function renderBranches(query = $("#branchSearch")?.value || "") {
   const el = $("#branchList"); if (!el) return;
-  const list = state.branches.filter(b => (b.name + " " + b.purpose).toLowerCase().includes(query.toLowerCase()) && (state.branchFilter === "all" || b.status.toLowerCase() === state.branchFilter));
+  const assigned = state.branches.filter(b => b.assignees.includes(state.profileHandle));
+  const list = assigned.filter(b => (b.name + " " + b.purpose).toLowerCase().includes(query.toLowerCase()) && (state.branchFilter === "all" || b.status.toLowerCase() === state.branchFilter));
   el.innerHTML = list.map(b => '<article class="branch-row"><span class="branch-glyph">' + icon("git-branch") + '</span><div class="branch-row-main"><b>' + esc(b.name) + '</b><p>' + esc(b.purpose) + '</p></div><div class="branch-row-meta"><span>COMMIT <code>' + esc(b.sha) + '</code></span><span>LAST DEPLOY <span>' + esc(b.last) + '</span></span></div><span class="status-pill ready">● ' + esc(b.status) + '</span><button class="button primary" data-deploy="' + esc(b.name) + '">Deploy ↗</button><button class="square-button" data-branch-details="' + esc(b.name) + '" aria-label="Branch details">' + icon("kebab-horizontal") + '</button></article>').join("") || '<div class="empty-state">No branches match this filter.</div>';
 }
 function renderDeployments() {
@@ -259,7 +259,7 @@ function showPlanView(view) {
 function showUpgrade() {
   modal("Upgrade to Pro","Use a demo-only verification value. Never enter your real BSMS Web password here.",'<div class="upgrade-summary"><div class="pro-price">$0.10 <small>per additional deployment</small></div><ul><li>20 included deployments per billing cycle</li><li>$0.10 per additional deployment</li><li>200 total deployments maximum per cycle</li><li>Basic rolling limits still apply</li><li>Billing cycle renews on the 21st</li></ul></div><label class="demo-password-label">Demo verification value<input id="demoVerify" type="text" placeholder="Enter any sample value" autocomplete="off"></label><div class="modal-callout neutral-callout">This is not connected to authentication. Enter any non-empty sample value to preview the confirmation state.</div>',"Continue",() => {
     const val=$("#demoVerify").value.trim();if(!val){toast("Enter a demo value","This field is required only to preview the flow.");return;}
-    modal("Pro request ready","The sample verification step passed. No plan was changed.",'<div class="modal-callout neutral-callout">In production, server-side password verification and administrator approval would happen before the account changes.</div>',"Done",closeModal,{icon:"check-circle"});
+    modal("Pro request ready","The sample verification step passed. Activate Pro in this preview to explore the Pro experience.",'<div class="modal-callout neutral-callout">This changes only the local sample account in this browser session. No billing or account service is contacted.</div>',"Activate Pro preview",() => {state.plan="Pro";currentPerson().plan="Pro";state.usage.proCycle=18;state.usage.totalCycle=25;state.usage.extra=7;state.usage.balance=0.70;$("#page-profile .status-pill").textContent="PRO PLAN";$(".profile-copy small").textContent="Pro developer";audit("Pro plan activated in demo");closeModal();showPlanView("pro");toast("Pro preview activated","The sample account now uses Pro rules.");},{icon:"check-circle"});
   },{icon:"shield-check"});
 }
 function editProfile() {
@@ -353,7 +353,7 @@ function bindEvents() {
     if(e.target.closest("#proRequest")){showUpgrade();return;}
     if(e.target.closest("#editProfile")){editProfile();return;}
     if(e.target.closest("#showLogin")){signOutPreview();return;}
-    if(e.target.closest("#previewSignIn")){$("#loginPreview").classList.remove("open");$("#loginPreview").setAttribute("aria-hidden","true");toast("Preview session","No credentials were checked.");return;}
+    if(e.target.closest("#previewSignIn")){const fields=$("#loginPreview input");if(fields.some(x=>!x.value.trim())){toast("Complete both fields","The preview sign-in requires a sample username and password.");return;}$("#loginPreview").classList.remove("open");$("#loginPreview").setAttribute("aria-hidden","true");toast("Preview session","Sample sign-in completed. No credentials were checked.");return;}
     if(e.target.closest("#closeFailure")){closeModal();return;}
   });
   document.addEventListener("input",e=>{
@@ -370,7 +370,6 @@ function bindEvents() {
     if((e.key==="Enter"||e.key===" ")&&e.target.matches("[data-person]")){e.preventDefault();showPerson(e.target.dataset.person);}
   });
   $("#modalBackdrop").addEventListener("click",e=>{if(e.target.id==="modalBackdrop")closeModal();});
-  $("#notificationsBtn").addEventListener("click",e=>e.stopPropagation());
   document.addEventListener("click",e=>{if(!e.target.closest("#notificationPopover")&&!e.target.closest("#notificationsBtn"))$("#notificationPopover").classList.remove("open");});
 }
 function initialize() {
