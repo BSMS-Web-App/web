@@ -7,9 +7,9 @@ const state = {
   usage: { hourly: 2, daily: 8, weekly: 31, proCycle: 18, totalCycle: 25, extra: 7, balance: 0.70, graceEnd: "2026-12-28", suspended: false },
   limits: { hourly: 5, daily: 20, weekly: 50, included: 20, max: 200, price: 0.10, warning: 80 },
   branches: [
-    {name:"dev1",purpose:"Feature development",sha:"a91b2c3",message:"Refine account dashboard interactions",last:"Today, 4:18 PM",status:"Ready",assignees:["@leo","@maya"],url:"dev1.bsms-web.com"},
-    {name:"dev2",purpose:"Experimental interface work",sha:"b72d91e",message:"Improve experimental interface components",last:"Yesterday, 8:42 PM",status:"Ready",assignees:["@leo","@aiden"],url:"dev2.bsms-web.com"},
-    {name:"dev8",purpose:"Developer Portal development",sha:"c84a8bc",message:"Build interactive Dev Portal experience",last:"Yesterday, 3:05 PM",status:"Ready",assignees:["@leo"],url:"dev8.bsms-web.com"}
+    {name:"dev1",purpose:"Feature development",sha:"a91b2c3",message:"Refine account dashboard interactions",last:"Today, 4:18 PM",status:"Ready",enabled:true,assignees:["@leo","@maya"],url:"dev1.bsms-web.com"},
+    {name:"dev2",purpose:"Experimental interface work",sha:"b72d91e",message:"Improve experimental interface components",last:"Yesterday, 8:42 PM",status:"Ready",enabled:true,assignees:["@leo","@aiden"],url:"dev2.bsms-web.com"},
+    {name:"dev8",purpose:"Developer Portal development",sha:"c84a8bc",message:"Build interactive Dev Portal experience",last:"Yesterday, 3:05 PM",status:"Ready",enabled:true,assignees:["@leo"],url:"dev8.bsms-web.com"}
   ],
   deployments: [
     {status:"ready",branch:"dev1",sha:"8f31c2a",message:"Add account dashboard refinements",env:"Preview",created:"Today, 4:18 PM",duration:"42s",author:"Leo Placencia",id:1},
@@ -31,6 +31,11 @@ const state = {
   ],
   settings: {deploymentNotifications:true,reducedMotion:false,compactTables:false,success:true,failure:true,branch:true,billing:true,loginAlerts:true},
   notices: [{title:"Deployment ready",detail:"dev1 · Today at 4:18 PM",read:false},{title:"Branch access updated",detail:"dev8 assigned · Yesterday",read:true}],
+  ledger: [
+    {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 20, 2026",developer:"@maya",type:"Manual payment",branch:"—",amount:-0.30,status:"Paid",note:"Sample partial payment"}
+  ],
   audit: [
     {title:"Branch dev8 assigned to Leo Placencia",detail:"Today · Administrator"},
     {title:"Deployment created",detail:"Today · Leo Placencia"},
@@ -103,7 +108,7 @@ function updateUsage() {
 }
 function renderBranches(query = $("#branchSearch")?.value || "") {
   const el = $("#branchList"); if (!el) return;
-  const assigned = state.branches.filter(b => b.assignees.includes(state.profileHandle));
+  const assigned = state.branches.filter(b => b.assignees.includes(state.profileHandle) && b.enabled !== false);
   const list = assigned.filter(b => (b.name + " " + b.purpose).toLowerCase().includes(query.toLowerCase()) && (state.branchFilter === "all" || b.status.toLowerCase() === state.branchFilter));
   el.innerHTML = list.map(b => '<article class="branch-row"><span class="branch-glyph">' + icon("git-branch") + '</span><div class="branch-row-main"><b>' + esc(b.name) + '</b><p>' + esc(b.purpose) + '</p></div><div class="branch-row-meta"><span>COMMIT <code>' + esc(b.sha) + '</code></span><span>LAST DEPLOY <span>' + esc(b.last) + '</span></span></div><span class="status-pill ready">● ' + esc(b.status) + '</span><button class="button primary" data-deploy="' + esc(b.name) + '">Deploy ↗</button><button class="square-button" data-branch-details="' + esc(b.name) + '" aria-label="Branch details">' + icon("kebab-horizontal") + '</button></article>').join("") || '<div class="empty-state">No branches match this filter.</div>';
 }
@@ -159,12 +164,16 @@ function openBranch(name) {
   modal(name + " branch details","Source control and deployment target information.",'<div class="modal-data"><div><span>Branch</span><b>' + esc(b.name) + '</b></div><div><span>Purpose</span><b>' + esc(b.purpose) + '</b></div><div><span>Latest commit</span><b>' + esc(b.sha) + '</b></div><div><span>Commit message</span><b>' + esc(b.message) + '</b></div><div><span>Latest deployment</span><b>' + esc(b.last) + '</b></div><div><span>Destination</span><b>' + esc(b.url) + '</b></div><div><span>Assigned developers</span><b>' + esc(b.assignees.join(", ")) + '</b></div></div><div class="demo-links"><a href="https://github.com/BSMS-Web-App/web/tree/' + encodeURIComponent(b.name) + '" target="_blank" rel="noopener">Open GitHub branch ↗</a> · <a href="https://' + esc(b.url) + '" target="_blank" rel="noopener">Open preview site ↗</a></div>',"View deployments",() => {closeModal();state.deploymentFilter="all";go("deployments");}, {icon:"git-branch"});
 }
 function canDeploy(branch) {
+  const me=currentPerson();
+  if (!me.enabled) {toast("Developer access disabled","An administrator has disabled this sample developer account.");return false;}
+  if (!state.branches.some(x=>x.name===branch&&x.enabled!==false&&x.assignees.includes(state.profileHandle))) {toast("Branch access unavailable","You are not assigned to this branch or deployment access is disabled.");return false;}
   if (state.plan === "Basic") {
-    const key = [["hourly",state.limits.hourly],["daily",state.limits.daily],["weekly",state.limits.weekly]].find(([k,max]) => state.usage[k] >= max);
+    const limits=me.limits||state.limits;
+    const key = [["hourly",limits.hourly],["daily",limits.daily],["weekly",limits.weekly]].find(([k,max]) => state.usage[k] >= max);
     if (key) { modal("Deployment limit reached","Your Basic plan has reached a rolling deployment limit.",limitBody(key[0]),"Understood",closeModal,{icon:"alert"}); return false; }
   } else {
     if (state.usage.suspended) { toast("Deployment access suspended","An administrator has suspended this Pro account in the demo."); return false; }
-    if (state.usage.balance > 0 && state.usage.graceEnd < "2026-11-21") { toast("Payment required","The sample grace period has expired."); return false; }
+    if (me.balance > 0 && state.usage.graceEnd < "2026-11-21") { toast("Payment required","The sample grace period has expired. Existing sites and history remain available."); return false; }
     if (state.usage.totalCycle >= state.limits.max) { toast("Cycle maximum reached","The Pro plan is capped at " + state.limits.max + " deployments per cycle."); return false; }
   }
   const b = state.branches.find(x => x.name === branch);
@@ -190,7 +199,7 @@ function startDeployment(b) {
   closeModal(); state.activeDeployment = b; demoStartedAt = Date.now(); demoStage = 0; demoLogIndex = 0;
   // A deployment attempt consumes allowance, including a build that later fails.
   state.usage.hourly++; state.usage.daily++; state.usage.weekly++;
-  if (state.plan === "Pro") { state.usage.totalCycle++; if (state.usage.proCycle < state.limits.included) state.usage.proCycle++; else { state.usage.extra++; state.usage.balance += state.limits.price; } }
+  if (state.plan === "Pro") { state.usage.totalCycle++; if (state.usage.proCycle < state.limits.included) state.usage.proCycle++; else { state.usage.extra++; state.usage.balance += state.limits.price; currentPerson().balance += state.limits.price; state.ledger.unshift({date:new Date().toLocaleDateString("en-US"),developer:currentPerson().handle,type:"Additional deployment",branch:b.name,amount:state.limits.price,status:"Recorded",note:"Simulated deployment charge"}); } }
   updateUsage();
   const body = '<div class="deployment-live"><div class="live-orbit"><span></span><span></span><span></span><div>' + icon("rocket") + '</div></div><span class="eyebrow">SIMULATED DEPLOYMENT</span><h2 id="demoStageTitle">' + stages[0] + '</h2><p>Working through a local sample deployment. No request is sent to Vercel.</p><div class="deployment-meta"><div><small>BRANCH</small><b>' + esc(b.name) + '</b></div><div><small>COMMIT</small><b>' + esc(b.sha) + '</b></div><div><small>ELAPSED</small><b id="demoElapsed">0s</b></div></div><div class="stage-track">' + stages.map((s,i) => '<div class="stage-step ' + (i === 0 ? "current" : "") + '"><i></i><span>' + s + '</span></div>').join("") + '</div><details class="build-logs" open><summary><span>' + icon("terminal") + ' Build output</span><span>DEMO LOGS</span></summary><pre id="demoLogs"></pre></details></div>';
   modal("Deployment in progress","The sequence continues only while this preview is open.",body,"Cancel preview",cancelDeployment,{icon:"rocket",hideX:true});
