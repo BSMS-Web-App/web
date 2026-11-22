@@ -94,7 +94,7 @@ function updateUsage() {
   const values = [["hourly",state.limits.hourly],["daily",state.limits.daily],["weekly",state.limits.weekly]];
   values.forEach(([key,max]) => {
     const used = state.usage[key], pct = Math.min(100, used / max * 100);
-    $(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);}});
+    $$(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);}});
   });
   const week = $("#page-overview .metric-card:nth-child(2) strong");
   if (week) week.innerHTML = state.usage.weekly + '<span class="metric-unit">/ ' + state.limits.weekly + '</span>';
