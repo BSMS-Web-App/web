@@ -187,6 +187,10 @@ const stages = ["Validating request","Initializing","Queued","Preparing","Buildi
 const logLines = b => ["[portal] Demo deployment request accepted","[checks] Branch assignment verified (sample)","[checks] Rolling limits available (sample)","[git] Resolving commit " + b.sha,"[build] Installing dependencies","[build] Running production build","[output] Preparing preview deployment","[complete] Sample deployment ready"];
 function startDeployment(b) {
   closeModal(); state.activeDeployment = b; demoStartedAt = Date.now(); demoStage = 0; demoLogIndex = 0;
+  // A deployment attempt consumes allowance, including a build that later fails.
+  state.usage.hourly++; state.usage.daily++; state.usage.weekly++;
+  if (state.plan === "Pro") { state.usage.totalCycle++; if (state.usage.proCycle < state.limits.included) state.usage.proCycle++; else { state.usage.extra++; state.usage.balance += state.limits.price; } }
+  updateUsage();
   const body = '<div class="deployment-live"><div class="live-orbit"><span></span><span></span><span></span><div>' + icon("rocket") + '</div></div><span class="eyebrow">SIMULATED DEPLOYMENT</span><h2 id="demoStageTitle">' + stages[0] + '</h2><p>Working through a local sample deployment. No request is sent to Vercel.</p><div class="deployment-meta"><div><small>BRANCH</small><b>' + esc(b.name) + '</b></div><div><small>COMMIT</small><b>' + esc(b.sha) + '</b></div><div><small>ELAPSED</small><b id="demoElapsed">0s</b></div></div><div class="stage-track">' + stages.map((s,i) => '<div class="stage-step ' + (i === 0 ? "current" : "") + '"><i></i><span>' + s + '</span></div>').join("") + '</div><details class="build-logs" open><summary><span>' + icon("terminal") + ' Build output</span><span>DEMO LOGS</span></summary><pre id="demoLogs"></pre></details></div>';
   modal("Deployment in progress","The sequence continues only while this preview is open.",body,"Cancel preview",cancelDeployment,{icon:"rocket",hideX:true});
   $(".modal-actions").innerHTML = '<button class="button secondary" id="cancelDeployment">Cancel preview</button><button class="button secondary" id="previewFailure">Preview failure</button>';
@@ -220,8 +224,7 @@ function finishSuccess() {
   const seconds = Math.max(1,Math.floor((Date.now()-demoStartedAt)/1000));
   const now = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
   const record = {status:"ready",branch:b.name,sha:b.sha,message:b.message,env:"Preview",created:"Just now · " + now,duration:seconds+"s",author:"Leo Placencia",id:Math.max(0,...state.deployments.map(d=>d.id))+1};
-  state.deployments.unshift(record); b.last = "Just now"; state.usage.hourly++;state.usage.daily++;state.usage.weekly++;
-  if (state.plan === "Pro") {state.usage.totalCycle++;if(state.usage.proCycle<state.limits.included)state.usage.proCycle++;else {state.usage.extra++;state.usage.balance+=state.limits.price;}}
+  state.deployments.unshift(record); b.last = "Just now";
   currentPerson().total++;currentPerson().success++;audit("Demo deployment completed · " + b.name);
   updateUsage();renderDeployments();renderAdmin();
   modal("Deployment completed","The local simulation finished successfully.",'<div class="completion-state"><div class="completion-mark">' + icon("check-circle-fill") + '</div><span class="eyebrow">SIMULATION COMPLETE</span><h2>Deployment ready</h2><p>This is a sample success screen. No website was deployed.</p><div class="modal-data"><div><span>Branch</span><b>' + esc(b.name) + '</b></div><div><span>Commit</span><b>' + esc(b.sha) + '</b></div><div><span>Destination</span><b>' + esc(b.url) + '</b></div><div><span>Duration</span><b>' + seconds + ' seconds</b></div></div></div>',"Continue",() => {closeModal();toast("Demo deployment saved","Sample history and usage counters were updated locally.");},{icon:"check-circle"});
