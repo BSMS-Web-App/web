@@ -293,6 +293,14 @@ function editProfile() {
   },{icon:"person"});
 }
 function adminAction(action) {
+  if (action.startsWith("branch-toggle:")) {
+    const name=action.slice(14),b=state.branches.find(x=>x.name===name);if(!b)return;
+    b.enabled=b.enabled===false;b.status=b.enabled?"Ready":"Blocked";audit((b.enabled?"Branch enabled · ":"Branch disabled · ")+b.name);renderAdmin();renderBranches();toast(b.enabled?"Branch enabled":"Branch disabled","Sample branch deployment access updated.");return;
+  }
+  if (action.startsWith("branch-remove:")) {
+    const name=action.slice(14),b=state.branches.find(x=>x.name===name);if(!b)return;
+    modal("Remove "+name+"?","Remove this branch from the Dev Portal's sample assignments. Deployment history remains.",'<div class="modal-callout neutral-callout">This does not delete the GitHub branch or website.</div>',"Remove branch",()=>{state.branches=state.branches.filter(x=>x.name!==name);state.people.forEach(p=>p.branches=p.branches.filter(x=>x!==name));audit("Branch removed from portal · "+name);closeModal();renderAdmin();renderBranches();toast("Branch removed","Portal mapping removed; history retained.");},{icon:"trash"});return;
+  }
   if (action === "add-developer") {
     modal("Add developer","Create a sample developer record. No BSMS Web account is created.",'<form id="addDeveloperForm" class="demo-form"><label>Full name<input name="name" required></label><label>Username<input name="handle" placeholder="@username" required></label><label>Plan<select name="plan"><option>Basic</option><option>Pro</option></select></label></form>',"Add developer",() => {
       const f=$("#addDeveloperForm");if(!f.reportValidity())return;const name=f.elements.name.value.trim(),handle=f.elements.handle.value.trim().startsWith("@")?f.elements.handle.value.trim():"@"+f.elements.handle.value.trim();
@@ -302,7 +310,7 @@ function adminAction(action) {
   } else if (action === "add-branch") {
     modal("Add branch","Add a sample branch and its preview destination.",'<form id="addBranchForm" class="demo-form"><label>Branch name<input name="name" placeholder="dev4" required></label><label>Purpose<input name="purpose" required></label><label>Preview hostname<input name="url" placeholder="dev4.bsms-web.com" required></label></form>',"Add branch",() => {
       const f=$("#addBranchForm");if(!f.reportValidity())return;const name=f.elements.name.value.trim();if(state.branches.some(b=>b.name===name)){toast("Branch exists","Choose another branch name.");return;}
-      state.branches.push({name,purpose:f.elements.purpose.value.trim(),sha:"d9e5a12",message:"Initial demo commit",last:"Not deployed",status:"Ready",assignees:[],url:f.elements.url.value.trim()});audit("Branch created · "+name);closeModal();renderAdmin();renderBranches();toast("Branch added","Sample branch created locally.");
+      state.branches.push({name,purpose:f.elements.purpose.value.trim(),sha:"d9e5a12",message:"Initial demo commit",last:"Not deployed",status:"Ready",enabled:true,assignees:[],url:f.elements.url.value.trim()});audit("Branch created · "+name);closeModal();renderAdmin();renderBranches();toast("Branch added","Sample branch created locally.");
     },{icon:"git-branch"});
   } else if (action.startsWith("developer:")) {
     const p=state.people.find(x=>x.handle===action.slice(10));if(!p)return;
@@ -325,7 +333,7 @@ function adminAction(action) {
     if(action==="grace-period"){
       modal("Manage grace period","Set a sample grace-period date or suspend Pro deployment access.",'<form id="graceForm" class="demo-form"><label>Grace-period end<input type="date" name="end" value="'+state.usage.graceEnd+'"></label><label class="check-row"><input type="checkbox" name="suspended" '+(state.usage.suspended?"checked":"")+'> Suspend Pro deployments</label></form>',"Save grace period",() => {const f=$("#graceForm");state.usage.graceEnd=f.elements.end.value;state.usage.suspended=f.elements.suspended.checked;audit("Pro grace period updated");closeModal();renderAdmin();toast("Grace period saved","Sample billing restrictions updated.");},{icon:"clock"});
     } else {
-      modal("Record payment · "+p.name,"Record a full or partial manual payment in the sample ledger.",'<div class="modal-data"><div><span>Current balance</span><b>'+money(p.balance)+'</b></div></div><form id="paymentForm" class="demo-form"><label>Payment amount ($)<input name="amount" type="number" min="0.01" step="0.01" max="'+Math.max(0.01,p.balance||10)+'" value="'+(p.balance||0.70).toFixed(2)+'" required></label><label>Reference / note<input name="note" placeholder="Manual payment reference"></label></form>',"Record payment",() => {const f=$("#paymentForm");if(!f.reportValidity())return;const amount=Number(f.elements.amount.value);if(amount<=0)return;p.balance=Math.max(0,p.balance-amount);if(p.handle===state.profileHandle)state.usage.balance=p.balance;audit("Manual payment recorded · "+p.handle+" · "+money(amount));closeModal();renderAdmin();toast("Payment recorded","Sample balance is now "+money(p.balance)+".");},{icon:"credit-card"});
+      modal("Record payment · "+p.name,"Record a full or partial manual payment in the sample ledger.",'<div class="modal-data"><div><span>Current balance</span><b>'+money(p.balance)+'</b></div></div><form id="paymentForm" class="demo-form"><label>Payment amount ($)<input name="amount" type="number" min="0.01" step="0.01" max="'+Math.max(0.01,p.balance||10)+'" value="'+(p.balance||0.70).toFixed(2)+'" required></label><label>Reference / note<input name="note" placeholder="Manual payment reference"></label></form>',"Record payment",() => {const f=$("#paymentForm");if(!f.reportValidity())return;const amount=Number(f.elements.amount.value);if(amount<=0)return;p.balance=Math.max(0,p.balance-amount);state.ledger.unshift({date:new Date().toLocaleDateString("en-US"),developer:p.handle,type:"Manual payment",branch:"—",amount:-amount,status:p.balance===0?"Paid":"Partial",note:f.elements.note.value.trim()});if(p.handle===state.profileHandle)state.usage.balance=p.balance;audit("Manual payment recorded · "+p.handle+" · "+money(amount));closeModal();renderAdmin();toast("Payment recorded","Sample balance is now "+money(p.balance)+".");},{icon:"credit-card"});
     }
   } else if (action === "permissions") {
     modal("Permission matrix","Review and adjust simulated role capabilities.",'<div class="permission-grid"><div><b>Capability</b><b>Developer</b><b>Moderator</b><b>Admin</b></div>'+["Deploy assigned branches","View developer profiles","Manage branch assignments","Manage billing","Change global limits","View audit log"].map((x,i)=>'<div><span>'+x+'</span>'+[0,1,2].map(j=>'<label><input type="checkbox" '+((j===0&&i<2)||(j===1&&i<2)||(j===2)?"checked":"")+'></label>').join("")+'</div>').join("")+'</div><div class="modal-callout neutral-callout">Permission edits are preview-only and do not change real account roles.</div>',"Save matrix",() => {audit("Permission matrix preview saved");closeModal();toast("Permission matrix saved","Demo-only permission state.");},{icon:"shield-lock"});
@@ -384,6 +392,7 @@ function bindEvents() {
     if(e.target.id==="developerSearch")renderPeople(e.target.value);
   });
   document.addEventListener("change",e=>{
+    if(e.target.id==="adminDeploymentFilter"){state.adminDeploymentFilter=e.target.value;renderAdmin();}
     if(e.target.matches("#page-branches .select")){state.branchFilter=e.target.value==="Ready"?"ready":e.target.value==="Deployment blocked"?"blocked":"all";renderBranches();}
     if(e.target.matches("#page-directory .select"))renderPeople();
   });
