@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101014"><title>Dev Portal · BSMS Web</title>
+<link rel="stylesheet" href="./portal.css">
+</head>
+<body>
+<div class="ambient"></div>
+<div class="app">
+<aside class="sidebar">
+ <a class="brand" href="#"><span class="brand-mark">B</span><span><b>BSMS Web</b><small>Developer Portal</small></span></a>
+ <div class="workspace"><span class="dot"></span> Internal workspace <span class="chevron">⌄</span></div>
+ <nav>
+ <label>WORKSPACE</label>
+ <a class="active" href="#overview"><i>◫</i> Overview</a>
+ <a href="#branches"><i>⌘</i> My branches <span class="nav-count">3</span></a>
+ <a href="#activity"><i>◷</i> Deployments</a>
+ <a href="#directory"><i>♙</i> Developer directory</a>
+ <label>ACCOUNT</label>
+ <a href="#plan"><i>◈</i> Plan & usage</a>
+ <a href="#settings"><i>⚙</i> Settings</a>
+ </nav>
+ <div class="sidebar-bottom"><div class="status"><span class="green"></span> Systems operational</div><div class="user"><div class="avatar">LP</div><div><b>Leo Placencia</b><small>Developer preview</small></div><span class="more">···</span></div></div>
+</aside>
+<main>
+<header class="topbar"><div class="crumb">Developer workspace <span>/</span> Overview</div><div class="top-actions"><button class="icon-btn" title="Notifications">♧</button><button class="avatar small">LP</button></div></header>
+<section class="welcome" id="overview"><div><div class="eyebrow">DEVELOPER WORKSPACE</div><h1>Build. Ship. <span>Repeat.</span></h1><p>Everything you need to manage your branches and deployment activity.</p></div><div class="hero-orb"><div class="orb-ring"></div><div class="orb-core">B</div></div></section>
+<div class="notice"><span class="notice-icon">ⓘ</span><div><b>UI prototype</b><p>This preview demonstrates the Dev Portal experience. Authentication, branch permissions, rate limits and deployments are not connected yet.</p></div><button class="dismiss" aria-label="Dismiss">×</button></div>
+<section class="section" id="branches"><div class="section-head"><div><h2>Your branches</h2><p>Branches assigned to your developer account.</p></div><button class="ghost" id="refresh">↻ Refresh</button></div>
+<div class="branch-grid">
+<article class="branch-card"><div class="card-top"><div class="branch-icon">⑂</div><span class="pill ready">Ready</span></div><h3>dev1</h3><p class="muted">Main feature development</p><div class="commit"><span class="commit-dot"></span><span>Preview commit <code>8f31c2a</code></span></div><div class="card-links"><a href="#" class="link">GitHub ↗</a><a href="#" class="link">Preview ↗</a></div><button class="deploy" data-branch="dev1">Deploy branch <span>→</span></button></article>
+<article class="branch-card"><div class="card-top"><div class="branch-icon">⑂</div><span class="pill ready">Ready</span></div><h3>dev2</h3><p class="muted">Experimental interface work</p><div class="commit"><span class="commit-dot"></span><span>Preview commit <code>3bd921e</code></span></div><div class="card-links"><a href="#" class="link">GitHub ↗</a><a href="#" class="link">Preview ↗</a></div><button class="deploy" data-branch="dev2">Deploy branch <span>→</span></button></article>
+<article class="branch-card"><div class="card-top"><div class="branch-icon">⑂</div><span class="pill ready">Ready</span></div><h3>dev8</h3><p class="muted">Portal development</p><div class="commit"><span class="commit-dot"></span><span>Preview commit <code>f04a8bc</code></span></div><div class="card-links"><a href="#" class="link">GitHub ↗</a><a href="#" class="link">Preview ↗</a></div><button class="deploy" data-branch="dev8">Deploy branch <span>→</span></button></article>
+</div></section>
+<section class="section" id="plan"><div class="section-head"><div><h2>Plan & usage</h2><p>Illustrative usage panels for the proposed plan system.</p></div><span class="pill basic">Basic · Free</span></div><div class="usage-grid">
+<div class="usage-card"><div class="usage-head"><span>Hourly deployments</span><span class="usage-num">2 <small>/ 5</small></span></div><div class="bar"><span style="width:40%"></span></div><small>Rolling 60-minute window</small></div>
+<div class="usage-card"><div class="usage-head"><span>Daily deployments</span><span class="usage-num">8 <small>/ 20</small></span></div><div class="bar"><span style="width:40%"></span></div><small>Rolling 24-hour window</small></div>
+<div class="usage-card"><div class="usage-head"><span>Weekly deployments</span><span class="usage-num">31 <small>/ 50</small></span></div><div class="bar"><span style="width:62%"></span></div><small>Rolling 7-day window</small></div>
+</div><div class="upgrade"><div><span class="upgrade-mark">✦</span><div><h3>Unlock Pro deployment tracking</h3><p>20 included deployments per cycle, followed by $0.10 per deployment, with a 200-deployment cap.</p></div></div><button class="ghost" id="proInfo">Explore Pro <span>→</span></button></div></section>
+<section class="section" id="activity"><div class="section-head"><div><h2>Recent activity</h2><p>Latest activity across your assigned branches.</p></div><a class="link" href="#">View history →</a></div><div class="activity-list"><div class="activity-row"><div class="activity-symbol success">✓</div><div class="activity-main"><b>dev1 · Deployment ready</b><small>Commit 8f31c2a · Preview</small></div><span class="activity-time">Today · 4:18 PM</span></div><div class="activity-row"><div class="activity-symbol success">✓</div><div class="activity-main"><b>dev2 · Deployment ready</b><small>Commit 3bd921e · Preview</small></div><span class="activity-time">Yesterday · 8:42 PM</span></div><div class="activity-row"><div class="activity-symbol neutral">↗</div><div class="activity-main"><b>dev8 · Branch assigned</b><small>Portal development</small></div><span class="activity-time">Yesterday · 3:05 PM</span></div></div></section>
+<section class="section" id="directory"><div class="section-head"><div><h2>Developer directory</h2><p>Discover team activity and assigned work.</p></div><button class="ghost" id="directoryBtn">Open directory →</button></div><div class="directory-preview"><div class="avatar">LP</div><div><b>Leo Placencia</b><small>3 branches · 28 deployments</small></div><span class="pill basic">Basic</span><a class="link" href="#">Profile →</a></div></section>
+<footer>BSMS Web Developer Portal <span>·</span> Prototype</footer>
+</main>
+</div>
+<div class="modal-wrap" id="modal" aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" id="closeModal">×</button><div class="modal-icon">⑂</div><h2 id="modalTitle">Deployment confirmation</h2><p id="modalText">This is a UI preview only. A real deployment requires server-side authorization, commit validation and rate-limit checks.</p><div class="modal-info"><span>Selected branch</span><b id="selectedBranch">dev1</b><span>Target</span><b>Preview environment</b><span>Action</span><b>Not connected</b></div><button class="deploy disabled" id="confirmDemo">Deployment unavailable in prototype</button></div></div>
+<script src="./portal.js"></script>
+</body></html>
