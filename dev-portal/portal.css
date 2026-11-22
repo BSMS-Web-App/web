@@ -30,3 +30,5 @@ html{scroll-padding-top:82px}body{font-family:var(--font);font-size:14px;line-he
 .modal-scroll{flex:1;min-height:0;max-height:60vh;overflow:auto;overscroll-behavior:contain}.scroll-hint{z-index:2}.modal{isolation:isolate}
 
 .failure-state{text-align:center;padding:8px 0}.failure-mark{width:58px;height:58px;margin:0 auto 12px;border:1px solid rgba(232,91,109,.45);border-radius:50%;display:grid;place-items:center;background:rgba(187,0,30,.13);color:#f07183;animation:successPop .35s ease}.failure-mark iconify-icon{font-size:28px}.failure-state h2{font-size:22px;margin:8px 0 4px}.failure-state>p{font-size:11px;color:#999;margin:0 0 14px}.demo-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.progress.blocked i{background:#e5484d;box-shadow:0 0 10px rgba(229,72,77,.4)}
+
+.branch-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}.branch-links a{display:inline-flex;align-items:center;gap:5px;color:#aaa;text-decoration:none;font-size:10px;transition:color .18s}.branch-links a:hover{color:#fff}.branch-links iconify-icon{font-size:13px;color:#d46b7a}
