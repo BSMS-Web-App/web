@@ -38,7 +38,7 @@ const state = {
     {date:"Nov 18, 2026",developer:"@leo",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 17, 2026",developer:"@leo",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 16, 2026",developer:"@leo",type:"Additional deployment",branch:"dev8",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
-    {date:"Nov 15, 2026",developer:"@leo",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"}
+    {date:"Nov 15, 2026",developer:"@leo",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev8",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
