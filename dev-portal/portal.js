@@ -2,6 +2,7 @@
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+function seedUsageEvents(h,d,w){const n=Date.now(),a=[];for(let i=0;i<h;i++)a.push(n-(i+1)*300000);for(let i=0;i<Math.max(0,d-h);i++)a.push(n-7200000-i*3600000);for(let i=0;i<Math.max(0,w-d);i++)a.push(n-90000000-i*18000000);return a;}
 const state = {
   plan: "Basic",
   usage: { hourly: 2, daily: 8, weekly: 31, proCycle: 18, totalCycle: 25, extra: 7, balance: 0.70, graceEnd: "2026-12-28", suspended: false },
@@ -22,12 +23,12 @@ const state = {
     {status:"ready",branch:"dev2",sha:"7a13cc8",message:"Add responsive game grid",env:"Preview",created:"Nov 16, 11:19 AM",duration:"39s",author:"Aiden Patel",id:8}
   ],
   people: [
-    {initials:"LP",name:"Leo Placencia",handle:"@leo",role:"Developer",plan:"Basic",branches:["dev1","dev2","dev8"],total:128,success:124,prs:18,enabled:true,balance:0},
-    {initials:"MR",name:"Maya Rivera",handle:"@maya",role:"Developer",plan:"Pro",branches:["dev1","dev2"],total:94,success:91,prs:14,enabled:true,balance:1.20},
-    {initials:"AP",name:"Aiden Patel",handle:"@aiden",role:"Developer",plan:"Basic",branches:["dev2","dev8"],total:67,success:64,prs:9,enabled:true,balance:0},
-    {initials:"JW",name:"Jordan Wells",handle:"@jordan",role:"Developer",plan:"Basic",branches:["dev1"],total:22,success:21,prs:3,enabled:true,balance:0},
-    {initials:"SK",name:"Sam Kim",handle:"@sam",role:"Developer",plan:"Pro",branches:["dev1","dev2","dev8","dev4"],total:156,success:151,prs:26,enabled:true,balance:0},
-    {initials:"TC",name:"Taylor Chen",handle:"@taylor",role:"Developer",plan:"Basic",branches:["dev4"],total:18,success:17,prs:2,enabled:false,balance:0}
+    {initials:"LP",name:"Leo Placencia",handle:"@leo",role:"Developer",branches:["dev1","dev2","dev8"],total:128,success:124,prs:18,enabled:true,usageEvents:seedUsageEvents(2,8,31)},
+    {initials:"MR",name:"Maya Rivera",handle:"@maya",role:"Developer",branches:["dev1","dev2"],total:94,success:91,prs:14,enabled:true,usageEvents:seedUsageEvents(1,4,12)},
+    {initials:"AP",name:"Aiden Patel",handle:"@aiden",role:"Developer",branches:["dev2","dev8"],total:67,success:64,prs:9,enabled:true,usageEvents:seedUsageEvents(0,3,16)},
+    {initials:"JW",name:"Jordan Wells",handle:"@jordan",role:"Developer",branches:["dev1"],total:22,success:21,prs:3,enabled:true,usageEvents:seedUsageEvents(0,1,5)},
+    {initials:"SK",name:"Sam Kim",handle:"@sam",role:"Developer",branches:["dev1","dev2","dev8","dev4"],total:156,success:151,prs:26,enabled:true,usageEvents:seedUsageEvents(3,12,38)},
+    {initials:"TC",name:"Taylor Chen",handle:"@taylor",role:"Developer",branches:["dev4"],total:18,success:17,prs:2,enabled:false,usageEvents:seedUsageEvents(0,0,2)}
   ],
   settings: {deploymentNotifications:true,reducedMotion:false,compactTables:false,success:true,failure:true,branch:true,billing:true,loginAlerts:true},
   notices: [{title:"Deployment ready",detail:"dev1 · Today at 4:18 PM",read:false},{title:"Branch access updated",detail:"dev8 assigned · Yesterday",read:true}],
@@ -57,6 +58,7 @@ let demoTimer = null, demoStartedAt = 0, demoStage = 0, demoLogIndex = 0;
 const $modal = $("#modalBackdrop");
 const icon = name => '<iconify-icon icon="octicon:' + name + '-16"></iconify-icon>';
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function usageCounts(person=currentPerson()){const n=Date.now(),e=person.usageEvents||[];return {hourly:e.filter(t=>n-t<3600000).length,daily:e.filter(t=>n-t<86400000).length,weekly:e.filter(t=>n-t<604800000).length};}
 const money = n => "$" + Number(n || 0).toFixed(2);
 function toast(title, detail = "Preview only. No live service was changed.") {
   const region = $("#toastRegion"); if (!region) return;
@@ -103,18 +105,7 @@ function go(page) {
   if (page === "admin") renderAdmin();
 }
 function currentPerson() { return state.people.find(p => p.handle === state.profileHandle) || state.people[0]; }
-function updateUsage() {
-  const activeLimits=currentPerson().limits||state.limits;
-  const values = [["hourly",activeLimits.hourly],["daily",activeLimits.daily],["weekly",activeLimits.weekly]];
-  values.forEach(([key,max]) => {
-    const used = state.usage[key], pct = Math.min(100, used / max * 100);
-    $$(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);row.querySelector(".progress")?.classList.toggle("warning",used<max&&pct>=state.limits.warning);}});
-  });
-  const week = $("#page-overview .metric-card:nth-child(2) strong");
-  if (week) week.innerHTML = state.usage.weekly + '<span class="metric-unit">/ ' + state.limits.weekly + '</span>';
-  const billing = $(".billing-stat strong");
-  if (billing) billing.innerHTML = state.usage.weekly + ' <small>/ ' + state.limits.weekly + '</small>';
-}
+function updateUsage(){const u=usageCounts(currentPerson());["hourly","daily","weekly"].forEach(k=>{const max=state.limits[k],used=u[k],pct=Math.min(100,used/max*100);$$(".limit-row").forEach(row=>{const label=row.querySelector("b");if(label&&label.textContent.toLowerCase().startsWith(k.slice(0,-2))){const v=row.querySelector("span");if(v)v.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);row.querySelector(".progress")?.classList.toggle("warning",used<max&&pct>=state.limits.warning);}});});const week=$("#page-overview .metric-card:nth-child(2) strong");if(week)week.innerHTML=u.weekly+'<span class="metric-unit">/ '+state.limits.weekly+'</span>';}
 function renderBranches(query = $("#branchSearch")?.value || "") {
   const el = $("#branchList"); if (!el) return;
   const assigned = state.branches.filter(b => b.assignees.includes(state.profileHandle));
@@ -180,37 +171,8 @@ function openBranch(name) {
   const b = state.branches.find(x => x.name === name); if (!b) return;
   modal(name + " branch details","Source control and deployment target information.",'<div class="modal-data"><div><span>Branch</span><b>' + esc(b.name) + '</b></div><div><span>Purpose</span><b>' + esc(b.purpose) + '</b></div><div><span>Latest commit</span><b>' + esc(b.sha) + '</b></div><div><span>Commit message</span><b>' + esc(b.message) + '</b></div><div><span>Latest deployment</span><b>' + esc(b.last) + '</b></div><div><span>Destination</span><b>' + esc(b.url) + '</b></div><div><span>Assigned developers</span><b>' + esc(b.assignees.join(", ")) + '</b></div></div><div class="demo-links"><a href="https://github.com/BSMS-Web-App/web/tree/' + encodeURIComponent(b.name) + '" target="_blank" rel="noopener">Open GitHub branch ↗</a> · <a href="https://' + esc(b.url) + '" target="_blank" rel="noopener">Open preview site ↗</a></div>',"View deployments",() => {closeModal();state.deploymentFilter="all";go("deployments");}, {icon:"git-branch"});
 }
-function canDeploy(branch) {
-  const me=currentPerson();
-  const b=state.branches.find(x=>x.name===branch);
-  if (!me.enabled) { toast("Developer access disabled","An administrator has disabled this sample developer account."); return false; }
-  if (!b || !b.assignees.includes(state.profileHandle)) { toast("Branch access unavailable","You are not assigned to this branch."); return false; }
-  if (b.enabled===false) { toast("Branch deployment disabled","An administrator has temporarily disabled deployments for this branch. The website and history remain available."); return false; }
-  const limits=me.limits||state.limits;
-  const reached=[["hourly",limits.hourly],["daily",limits.daily],["weekly",limits.weekly]].find(([key,max])=>state.usage[key]>=max);
-  if (reached) {
-    modal("Deployment limit reached","Your "+reached[0]+" rolling limit has been reached. Pro does not bypass these limits.",limitBody(reached[0]),"Understood",closeModal,{icon:"alert"});
-    return false;
-  }
-  if (state.plan==="Pro") {
-    if (state.usage.suspended) { toast("Deployment access suspended","An administrator has suspended this Pro account in the demo."); return false; }
-    if (me.balance>0 && state.usage.graceEnd<"2026-11-21") { toast("Payment required","The sample grace period has expired. Existing sites, profiles, and history remain available."); return false; }
-    if (state.usage.totalCycle>=state.limits.max) {
-      modal("Billing-period limit reached","You have used all "+state.limits.max+" deployments available during this billing period.",'<div class="modal-callout">Contact the owner for assistance. No additional charges are created beyond the cycle maximum.</div>',"Close",closeModal,{icon:"alert"});
-      return false;
-    }
-  }
-  const previous=state.deployments.find(d=>d.branch===branch&&d.sha===b.sha&&d.env==="Preview"&&d.status==="ready");
-  if (previous) {
-    modal("Commit already deployed","This exact commit was already deployed successfully to this branch and environment.",'<div class="modal-data"><div><span>Branch</span><b>'+esc(branch)+'</b></div><div><span>Commit SHA</span><b>'+esc(b.sha)+'</b></div><div><span>Previous deployment</span><b>'+esc(previous.created)+'</b></div><div><span>Destination</span><b>'+esc(b.url)+'</b></div></div><div class="modal-callout">Duplicate successful deployments are blocked. A failed deployment of this commit can be retried.</div>',"Close",closeModal,{icon:"alert"});
-    return false;
-  }
-  return true;
-}
-function limitBody(which) {
-  const limits=currentPerson().limits||state.limits;
-  return ["hourly","daily","weekly"].map(k => '<div class="limit-row"><div><b>' + ({hourly:"Hourly",daily:"Daily",weekly:"Weekly"}[k]) + ' limit</b><span>' + state.usage[k] + ' / ' + limits[k] + '</span></div><div class="progress ' + (state.usage[k] >= limits[k] ? "blocked" : "") + '"><i style="width:' + Math.min(100,state.usage[k]/state.limits[k]*100) + '%"></i></div></div>').join("") + '<div class="modal-callout">A new deployment becomes available when an older deployment leaves the rolling window.</div>';
-}
+function canDeploy(branch){const me=currentPerson(),b=state.branches.find(x=>x.name===branch),u=usageCounts(me);if(!me.enabled){toast("Developer access disabled","An administrator has disabled this sample developer account.");return false;}if(!b||!b.assignees.includes(state.profileHandle)){toast("Branch access unavailable","You are not assigned to this branch.");return false;}if(b.enabled===false){toast("Branch deployment disabled","An administrator has temporarily disabled deployments for this branch. The website and history remain available.");return false;}const reached=[["hourly",state.limits.hourly],["daily",state.limits.daily],["weekly",state.limits.weekly]].find(([k,max])=>u[k]>=max);if(reached){modal("Deployment limit reached","Your "+reached[0]+" rolling limit has been reached. Other developers are not affected.",limitBody(reached[0]),"Understood",closeModal,{icon:"alert"});return false;}const prev=state.deployments.find(d=>d.branch===branch&&d.sha===b.sha&&d.env==="Preview"&&d.status==="ready");if(prev){modal("Commit already deployed","This exact commit was already deployed successfully to this branch and environment.",'<div class="modal-data"><div><span>Branch</span><b>'+esc(branch)+'</b></div><div><span>Commit SHA</span><b>'+esc(b.sha)+'</b></div><div><span>Previous deployment</span><b>'+esc(prev.created)+'</b></div><div><span>Destination</span><b>'+esc(b.url)+'</b></div></div><div class="modal-callout">Duplicate successful deployments are blocked. A failed deployment of this commit can be retried.</div>',"Close",closeModal,{icon:"alert"});return false;}return true;}
+function limitBody(which){const u=usageCounts(currentPerson());return ["hourly","daily","weekly"].map(k=>'<div class="limit-row"><div><b>'+({hourly:"Hourly",daily:"Daily",weekly:"Weekly"}[k])+' limit</b><span>'+u[k]+' / '+state.limits[k]+'</span></div><div class="progress '+(u[k]>=state.limits[k]?"blocked":"")+'"><i style="width:'+Math.min(100,u[k]/state.limits[k]*100)+'%"></i></div></div>').join("")+'<div class="modal-callout">A new deployment becomes available when an older deployment leaves the rolling window. Other developers are unaffected.</div>';}
 function deploy(name) {
   const b = state.branches.find(x => x.name === name); if (!b || !canDeploy(name)) return;
   const duplicate = state.deployments.some(d => d.branch === name && d.sha === b.sha && d.env === "Preview" && d.status === "ready");
@@ -224,7 +186,7 @@ const logLines = b => ["[portal] Demo deployment request accepted","[checks] Bra
 function startDeployment(b) {
   closeModal(); state.activeDeployment = b; demoStartedAt = Date.now(); demoStage = 0; demoLogIndex = 0;
   // A deployment attempt consumes allowance, including a build that later fails.
-  state.usage.hourly++; state.usage.daily++; state.usage.weekly++;
+  currentPerson().usageEvents.push(Date.now());
   if (state.plan === "Pro") { state.usage.totalCycle++; if (state.usage.proCycle < state.limits.included) state.usage.proCycle++; else { state.usage.extra++; state.usage.balance += state.limits.price; currentPerson().balance += state.limits.price; state.ledger.unshift({date:new Date().toLocaleDateString("en-US"),developer:currentPerson().handle,type:"Additional deployment",branch:b.name,amount:state.limits.price,status:"Recorded",note:"Simulated deployment charge"}); } }
   updateUsage();
   const body = '<div class="deployment-live"><div class="live-orbit"><span></span><span></span><span></span><div>' + icon("rocket") + '</div></div><span class="eyebrow">SIMULATED DEPLOYMENT</span><h2 id="demoStageTitle">' + stages[0] + '</h2><p>Working through a local sample deployment. No request is sent to Vercel.</p><div class="deployment-meta"><div><small>BRANCH</small><b>' + esc(b.name) + '</b></div><div><small>COMMIT</small><b>' + esc(b.sha) + '</b></div><div><small>ELAPSED</small><b id="demoElapsed">0s</b></div></div><div class="stage-track">' + stages.map((s,i) => '<div class="stage-step ' + (i === 0 ? "current" : "") + '"><i></i><span>' + s + '</span></div>').join("") + '</div><details class="build-logs" open><summary><span>' + icon("terminal") + ' Build output</span><span>DEMO LOGS</span></summary><pre id="demoLogs"></pre></details></div>';
