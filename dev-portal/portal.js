@@ -19,7 +19,7 @@ $$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)))
 function closeModal(){$("#modalBackdrop").classList.remove("open");$("#modalBackdrop").setAttribute("aria-hidden","true");document.body.style.overflow=""}
 function modal(title,desc,body,primary,icon,fn){$("#modalTitle").textContent=title;$("#modalDescription").textContent=desc;$("#modalBody").innerHTML=body;$("#modalPrimary").textContent=primary||"Got it";$("#modalIcon").textContent=icon||"⇧";$("#modalPrimary").onclick=fn||closeModal;$("#modalBackdrop").classList.add("open");$("#modalBackdrop").setAttribute("aria-hidden","false");document.body.style.overflow="hidden"}
 $$("[data-close]").forEach(b=>b.addEventListener("click",closeModal));$("#modalBackdrop").addEventListener("click",e=>{if(e.target.id==="modalBackdrop")closeModal()});document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();$("#notificationPopover").classList.remove("open")}});
-function deploy(name){const b=branches.find(x=>x[0]===name)||branches[0];modal("Review deployment","Check the source commit and target environment before starting this deployment.",'<div class="modal-data"><div><span>Repository</span><b>BSMS-Web-App / web</b></div><div><span>Branch</span><b>'+b[0]+'</b></div><div><span>Commit</span><b>'+b[2]+'</b></div><div><span>Commit message</span><b>'+b[3]+'</b></div><div><span>Target</span><b>Preview</b></div><div><span>Plan</span><b>Basic · 2 / 5 hourly</b></div></div><div class="modal-callout">The production portal would recheck branch permissions, duplicate commits, and rolling deployment limits on the server.</div>','Simulate deployment','⇧',()=>{closeModal();toast("Deployment preview","A real deployment was not started.")})}
+function deployBase(name){const b=branches.find(x=>x[0]===name)||branches[0];modal("Review deployment","Check the source commit and target environment before starting this deployment.",'<div class="modal-data"><div><span>Repository</span><b>BSMS-Web-App / web</b></div><div><span>Branch</span><b>'+b[0]+'</b></div><div><span>Commit</span><b>'+b[2]+'</b></div><div><span>Commit message</span><b>'+b[3]+'</b></div><div><span>Target</span><b>Preview</b></div><div><span>Plan</span><b>Basic · 2 / 5 hourly</b></div></div><div class="modal-callout">The production portal would recheck branch permissions, duplicate commits, and rolling deployment limits on the server.</div>','Simulate deployment','⇧',()=>{closeModal();toast("Deployment preview","A real deployment was not started.")})}
 $$(".deploy-open").forEach(b=>b.addEventListener("click",()=>deploy(b.dataset.branch)));
 $$(".branch-details").forEach(b=>b.addEventListener("click",()=>{const d=branches.find(x=>x[0]===b.dataset.branch);modal(d[0]+" branch details","Source control and preview information for this assigned branch.",'<div class="modal-data"><div><span>Branch</span><b>'+d[0]+'</b></div><div><span>Latest commit</span><b>'+d[2]+'</b></div><div><span>Commit message</span><b>'+d[3]+'</b></div><div><span>Latest deployment</span><b>'+d[4]+'</b></div><div><span>Preview URL</span><b>https://'+d[0]+'.bsms-web.com</b></div></div>','Deployment history','⑂',()=>{closeModal();go("deployments")})}));
 function renderBranches(q=""){const el=$("#branchList");if(!el)return;el.innerHTML=branches.filter(b=>(b[0]+" "+b[1]).toLowerCase().includes(q.toLowerCase())).map(b=>'<article class="branch-row"><span class="branch-glyph">'+git+'</span><div class="branch-row-main"><b>'+b[0]+'</b><p>'+b[1]+'</p></div><div class="branch-row-meta"><span>COMMIT <code>'+b[2]+'</code></span><span>LAST DEPLOY <span>'+b[4]+'</span></span></div><span class="status-pill ready">● Ready</span><button class="button primary" data-deploy="'+b[0]+'">Deploy ↗</button></article>').join("")||'<div class="empty-state">No matching branches.</div>';$$("[data-deploy]",el).forEach(b=>b.onclick=()=>deploy(b.dataset.deploy))}
@@ -67,7 +67,7 @@ function deploy(name){
  modal("Review deployment","Review the branch, commit, destination, and usage before confirming.",body,"Confirm demo deployment","rocket",()=>{startSimulatedDeployment(b)});
 }
 let demoTimer=null;
-function startSimulatedDeployment(b){
+function startSimulatedDeploymentBase(b){
  const start=Date.now(),stages=["Validating request","Initializing","Queued","Preparing","Building","Processing","Deploying","Finalizing"];
  let stage=0;
  const logLines=["[portal] Demo deployment request accepted","[checks] Branch assignment verified (sample)","[checks] Rolling limits available (sample)","[git] Resolving commit "+b[2],"[build] Installing dependencies","[build] Running production build","[output] Preparing preview deployment"];
@@ -101,3 +101,29 @@ function renderAdmin(){oldRenderAdmin();if(adminExtra[adminTab]){$("#adminConten
 $("#adminContent")?.addEventListener("click",e=>{if(e.target.closest("[data-admin-action]"))toast("Admin preview","This control is a nonfunctional UI demonstration.")});
 $("#githubHeatmap").innerHTML=Array.from({length:182},()=>" <i></i>").join("");
 renderAdmin();
+
+
+function deploy(name){
+ deployBase(name);
+ const host=$("#modalBody .duplicate-demo");
+ if(host){
+  host.insertAdjacentHTML("beforeend",'<div class="demo-links"><button class="text-button" id="previewDuplicate">Preview duplicate warning</button><button class="text-button" id="previewLimit">Preview blocked limit state</button></div>');
+  $("#previewDuplicate").onclick=()=>modal("Commit already deployed","This commit was successfully deployed to the same branch and environment.",'<div class="modal-data"><div><span>Branch</span><b>'+name+'</b></div><div><span>Commit SHA</span><b>8f31c2a</b></div><div><span>Previous deployment</span><b>Today · 4:18 PM</b></div><div><span>Destination</span><b>'+name+'.bsms-web.com</b></div></div><div class="modal-callout">No new deployment can be created for this successful commit and target. Failed attempts remain retryable.</div>',"Close","alert");
+  $("#previewLimit").onclick=()=>modal("Deployment limit reached","The hourly rolling limit has been exhausted.",'<div class="limit-row"><div><b>Hourly limit</b><span>5 / 5 · reached</span></div><div class="progress blocked"><i style="width:100%"></i></div></div><div class="limit-row"><div><b>Daily limit</b><span>8 / 20</span></div><div class="progress"><i style="width:40%"></i></div></div><div class="limit-row"><div><b>Weekly limit</b><span>31 / 50</span></div><div class="progress"><i style="width:62%"></i></div></div><div class="modal-callout">Next available deployment: approximately 24 minutes. Production would display the server-provided reset time.</div>',"Got it","alert");
+ }
+}
+function startSimulatedDeployment(b){
+ startSimulatedDeploymentBase(b);
+ const actions=$("#modalBackdrop .modal-actions");
+ if(actions){
+  const fail=document.createElement("button");fail.className="button secondary";fail.textContent="Preview failure";
+  actions.insertBefore(fail,actions.firstChild);
+  fail.onclick=()=>{clearInterval(demoTimer);finishSimulatedFailure(b,Math.floor((Date.now()-Date.now())/1000))};
+ }
+}
+function finishSimulatedFailure(b,seconds){
+ const body='<div class="failure-state"><div class="failure-mark"><iconify-icon icon="octicon:alert-16"></iconify-icon></div><span class="eyebrow">SIMULATED FAILURE</span><h2>Deployment failed</h2><p>The preview is showing a sample build failure. No real deployment was attempted.</p><div class="modal-data"><div><span>Branch</span><b>'+b[0]+'</b></div><div><span>Commit</span><b>'+b[2]+'</b></div><div><span>Elapsed time</span><b>'+seconds+' seconds</b></div><div><span>Error</span><b>Build command returned a non-zero status</b></div></div><details class="build-logs" open><summary><span><iconify-icon icon="octicon:terminal-16"></iconify-icon> Error output</span><span>DEMO LOGS</span></summary><pre>[build] Compiling application...\n[build] Error: sample compilation failure\n[portal] Deployment marked as failed</pre></details></div>';
+ modal("Deployment failed","Inspect the error details or retry the sample sequence.",body,"Retry demo","alert",()=>startSimulatedDeployment(b));
+ $("#modalBackdrop .modal-actions").innerHTML='<button class="button secondary" id="closeFailure">Close</button><button class="button primary" id="retryFailure">Retry demo</button>';
+ $("#closeFailure").onclick=closeModal;$("#retryFailure").onclick=()=>startSimulatedDeployment(b);
+}
