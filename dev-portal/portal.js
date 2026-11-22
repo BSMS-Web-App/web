@@ -96,7 +96,7 @@ function go(page) {
   if (!$("#page-" + page)) return;
   $$(".page").forEach(p => p.classList.toggle("active", p.id === "page-" + page));
   $$(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.page === page));
-  const names = {overview:"Overview",branches:"Branches",deployments:"Deployments",analytics:"Analytics",billing:"Billing & usage",directory:"Developer directory",settings:"Settings",admin:"Admin console",profile:"Developer profile"};
+  const names = {overview:"Overview",branches:"Branches",deployments:"Deployments",analytics:"Analytics",directory:"Developer directory",settings:"Settings",admin:"Admin console",profile:"Developer profile"};
   $("#crumb").textContent = names[page] || page;
   window.scrollTo({top:0,behavior:state.settings.reducedMotion ? "auto" : "smooth"});
   if (page === "branches") renderBranches();
@@ -125,9 +125,7 @@ function deploymentDetail(id) {
 }
 function renderPeople(query = $("#developerSearch")?.value || "") {
   const el = $("#developerGrid"); if (!el) return;
-  const rawPlan = $(".directory-plan-filter")?.value || "all";
-  const plan = rawPlan.toLowerCase().startsWith("all") ? "all" : rawPlan.toLowerCase();
-  const visible = state.people.filter(p => (p.name + " " + p.handle).toLowerCase().includes(query.toLowerCase()) && (plan === "all" || p.plan.toLowerCase() === plan));
+  const visible = state.people.filter(p => (p.name + " " + p.handle).toLowerCase().includes(query.toLowerCase()));
   el.innerHTML = visible.map(p => '<article class="developer-card" data-person="' + esc(p.handle) + '" tabindex="0" role="button"><div class="developer-head"><span class="developer-avatar">' + esc(p.initials) + '</span><div><b>' + esc(p.name) + '</b><small>' + esc(p.handle) + ' · ' + esc(p.role) + '</small></div></div><p>Contributing to the BSMS Web ecosystem.</p><div class="developer-stats"><span>' + p.branches.length + ' branches</span><b>' + p.total + ' deployments</b></div><div class="developer-card-footer">View developer profile ' + icon("arrow-right") + '</div></article>').join("") || '<div class="empty-state">No developers match your search.</div>';
 }
 function showPerson(handle) {
@@ -141,9 +139,9 @@ function renderAdmin() {
   const row = (a,b,action,label) => '<div class="admin-line"><b>' + a + '</b><span>' + b + (action ? ' <button class="text-button" data-admin-action="' + action + '">' + (label || "Manage →") + '</button>' : '') + '</span></div>';
   let html = "";
   if (state.adminTab === "dashboard") {
-    html = '<div class="admin-kpis"><div class="admin-kpi"><span>Developer accounts</span><b>' + state.people.length + '</b></div><div class="admin-kpi"><span>Deployments today</span><b>' + state.deployments.filter(d => d.created.startsWith("Today")).length + '</b></div><div class="admin-kpi"><span>Active Pro plans</span><b>' + state.people.filter(p => p.plan === "Pro" && p.enabled).length + '</b></div><div class="admin-kpi"><span>Queued deployments</span><b>02</b></div></div><div class="admin-box"><h3>System overview</h3>' + row("Vercel deployment API","Operational · Simulated") + row("GitHub integration","Connected · Simulated") + row("Usage accounting","Local preview data") + row("Developer authentication","Not connected · Demo") + '</div><div class="admin-box"><h3>Recent administrative activity</h3>' + state.audit.slice(0,4).map(a => row(esc(a.title),esc(a.detail))).join("") + '</div>';
+    html = '<div class="admin-kpis"><div class="admin-kpi"><span>Developer accounts</span><b>' + state.people.length + '</b></div><div class="admin-kpi"><span>Deployments today</span><b>' + state.deployments.filter(d => d.created.startsWith("Today")).length + '</b></div><div class="admin-kpi"><span>Active developers</span><b>' + state.people.filter(p => p.enabled).length + '</b></div><div class="admin-kpi"><span>Queued deployments</span><b>02</b></div></div><div class="admin-box"><h3>System overview</h3>' + row("Vercel deployment API","Operational · Simulated") + row("GitHub integration","Connected · Simulated") + row("Usage accounting","Local preview data") + row("Developer authentication","Not connected · Demo") + '</div><div class="admin-box"><h3>Recent administrative activity</h3>' + state.audit.slice(0,4).map(a => row(esc(a.title),esc(a.detail))).join("") + '</div>';
   } else if (state.adminTab === "developers") {
-    html = '<div class="admin-box"><div class="panel-heading"><div><h3>Developer accounts</h3><p>Manage sample access, plan assignments, and branch visibility.</p></div><button class="button primary" data-admin-action="add-developer">Add developer</button></div>' + state.people.map(p => row(esc(p.name) + ' <small>' + esc(p.handle) + '</small>', esc(p.plan) + ' · ' + (p.enabled ? "Enabled" : "Disabled") + ' · ' + p.branches.length + ' branches', "developer:" + p.handle, "Manage →")).join("") + '</div>';
+    html = '<div class="admin-box"><div class="panel-heading"><div><h3>Developer accounts</h3><p>Manage sample access and branch visibility.</p></div><button class="button primary" data-admin-action="add-developer">Add developer</button></div>' + state.people.map(p => row(esc(p.name) + ' <small>' + esc(p.handle) + '</small>', (p.enabled ? "Enabled" : "Disabled") + ' · ' + p.branches.length + ' branches', "developer:" + p.handle, "Manage →")).join("") + '</div>';
   } else if (state.adminTab === "branches") {
     html = '<div class="admin-box"><h3>Branch assignments & destinations</h3>' + state.branches.map(b => row(esc(b.name) + ' · ' + esc(b.purpose), esc(b.url) + ' · ' + b.assignees.length + ' developers · ' + (b.enabled===false?"Disabled":"Enabled"), "branch:" + b.name, "Edit →") + '<button class="text-button" data-admin-action="branch-toggle:' + esc(b.name) + '">' + (b.enabled===false?"Enable":"Disable") + '</button><button class="text-button" data-admin-action="branch-remove:' + esc(b.name) + '">Remove</button>').join("") + '<button class="button primary" data-admin-action="add-branch">Add branch</button></div>';
   } else if (state.adminTab === "deployments") {
@@ -160,7 +158,7 @@ function renderAdmin() {
   } else if (state.adminTab === "permissions") {
     html = '<div class="admin-box"><h3>Role permissions</h3>' + row("Developer","Deploy assigned branches · View own usage") + row("Moderator","View developers · No billing access") + row("Administrator","Manage branches, plans, and access") + row("Owner","Full administrative access") + '<button class="button secondary" data-admin-action="permissions">Edit permission matrix</button></div>';
   } else if (state.adminTab === "settings") {
-    html = '<div class="admin-box"><h3>Global portal settings</h3>' + row("Deployment warning threshold",state.limits.warning + "%") + row("Basic limits",state.limits.hourly + " / " + state.limits.daily + " / " + state.limits.weekly) + row("Pro included / maximum",state.limits.included + " / " + state.limits.max) + row("Extra deployment price",money(state.limits.price)) + '<button class="button primary" data-admin-action="edit-plans">Edit global settings</button></div>';
+    html = '<div class="admin-box"><h3>Global portal settings</h3>' + row("Deployment warning threshold",state.limits.warning + "%") + row("Individual developer limits",state.limits.hourly + " / " + state.limits.daily + " / " + state.limits.weekly) + '</div>';
   } else {
     html = '<div class="admin-box"><h3>Audit log</h3>' + state.audit.map(a => row(esc(a.title),esc(a.detail))).join("") + '</div>';
   }
@@ -176,8 +174,8 @@ function limitBody(which){const u=usageCounts(currentPerson());return ["hourly",
 function deploy(name) {
   const b = state.branches.find(x => x.name === name); if (!b || !canDeploy(name)) return;
   const duplicate = state.deployments.some(d => d.branch === name && d.sha === b.sha && d.env === "Preview" && d.status === "ready");
-  const used = state.plan === "Basic" ? "Basic · Free" : "Pro · " + state.usage.proCycle + " / " + state.limits.included + " included";
-  const body = '<div class="deploy-review"><div class="deploy-target"><span class="deploy-target-icon">' + icon("git-branch") + '</span><div><small>DEPLOYMENT TARGET</small><b>' + esc(b.name) + '</b><a href="https://' + esc(b.url) + '" target="_blank" rel="noopener">' + esc(b.url) + '</a></div><span class="status-pill ready">PREVIEW</span></div><div class="modal-data"><div><span>Repository</span><b>BSMS-Web-App / web</b></div><div><span>GitHub branch</span><b>web/tree/' + esc(b.name) + '</b></div><div><span>Latest commit</span><b>' + esc(b.sha) + '</b></div><div><span>Commit message</span><b>' + esc(b.message) + '</b></div><div><span>Environment</span><b>Preview</b></div><div><span>Requested by</span><b>Leo Placencia</b></div></div><section class="deploy-usage"><div class="deploy-usage-heading"><b>Deployment allowance</b><span>' + used + '</span></div>' + limitBody("hourly") + '</section><div class="modal-callout neutral-callout">Demo simulation only. No Vercel request will be made. The real service must revalidate permissions, rate limits, duplicate commits, and plan restrictions on the server.</div><div class="duplicate-demo"><b>Duplicate protection</b><p>Successful commits cannot be deployed twice to the same branch and environment. Failed attempts can be retried.</p><div class="demo-links"><button class="text-button" id="previewLimit">Preview blocked limit state</button></div></div></div>';
+  const used = "Your individual rolling allowance";
+  const body = '<div class="deploy-review"><div class="deploy-target"><span class="deploy-target-icon">' + icon("git-branch") + '</span><div><small>DEPLOYMENT TARGET</small><b>' + esc(b.name) + '</b><a href="https://' + esc(b.url) + '" target="_blank" rel="noopener">' + esc(b.url) + '</a></div><span class="status-pill ready">PREVIEW</span></div><div class="modal-data"><div><span>Repository</span><b>BSMS-Web-App / web</b></div><div><span>GitHub branch</span><b>web/tree/' + esc(b.name) + '</b></div><div><span>Latest commit</span><b>' + esc(b.sha) + '</b></div><div><span>Commit message</span><b>' + esc(b.message) + '</b></div><div><span>Environment</span><b>Preview</b></div><div><span>Requested by</span><b>Leo Placencia</b></div></div><section class="deploy-usage"><div class="deploy-usage-heading"><b>Deployment allowance</b><span>' + used + '</span></div>' + limitBody("hourly") + '</section><div class="modal-callout neutral-callout">Demo simulation only. No Vercel request will be made. The real service must revalidate permissions, individual rate limits, and duplicate commits on the server.</div><div class="duplicate-demo"><b>Duplicate protection</b><p>Successful commits cannot be deployed twice to the same branch and environment. Failed attempts can be retried.</p><div class="demo-links"><button class="text-button" id="previewLimit">Preview blocked limit state</button></div></div></div>';
   modal("Review deployment","Review the branch, commit, destination, and usage before confirming.",body,"Confirm demo deployment",() => startDeployment(b),{icon:"rocket"});
   $("#previewLimit").onclick = () => modal("Deployment limit reached","The hourly rolling limit has been exhausted.",limitBody("hourly"),"Got it",closeModal,{icon:"alert"});
 }
@@ -187,7 +185,6 @@ function startDeployment(b) {
   closeModal(); state.activeDeployment = b; demoStartedAt = Date.now(); demoStage = 0; demoLogIndex = 0;
   // A deployment attempt consumes allowance, including a build that later fails.
   currentPerson().usageEvents.push(Date.now());
-  if (state.plan === "Pro") { state.usage.totalCycle++; if (state.usage.proCycle < state.limits.included) state.usage.proCycle++; else { state.usage.extra++; state.usage.balance += state.limits.price; currentPerson().balance += state.limits.price; state.ledger.unshift({date:new Date().toLocaleDateString("en-US"),developer:currentPerson().handle,type:"Additional deployment",branch:b.name,amount:state.limits.price,status:"Recorded",note:"Simulated deployment charge"}); } }
   updateUsage();
   const body = '<div class="deployment-live"><div class="live-orbit"><span></span><span></span><span></span><div>' + icon("rocket") + '</div></div><span class="eyebrow">SIMULATED DEPLOYMENT</span><h2 id="demoStageTitle">' + stages[0] + '</h2><p>Working through a local sample deployment. No request is sent to Vercel.</p><div class="deployment-meta"><div><small>BRANCH</small><b>' + esc(b.name) + '</b></div><div><small>COMMIT</small><b>' + esc(b.sha) + '</b></div><div><small>ELAPSED</small><b id="demoElapsed">0s</b></div></div><div class="stage-track">' + stages.map((s,i) => '<div class="stage-step ' + (i === 0 ? "current" : "") + '"><i></i><span>' + s + '</span></div>').join("") + '</div><details class="build-logs" open><summary><span>' + icon("terminal") + ' Build output</span><span>DEMO LOGS</span></summary><pre id="demoLogs"></pre></details></div>';
   modal("Deployment in progress","The sequence continues only while this preview is open.",body,"Cancel preview",cancelDeployment,{icon:"rocket",hideX:true});
@@ -288,7 +285,7 @@ function editProfile() {
   modal("Edit developer profile","Update the sample profile fields. Changes remain local to this preview.",'<form id="profileForm" class="demo-form"><label>Display name<input name="name" value="' + esc(p.name) + '" required></label><label>Username<input name="handle" value="' + esc(p.handle) + '" required></label><label>Display role<select name="role"><option ' + (p.role==="Developer"?"selected":"") + '>Developer</option><option ' + (p.role==="Moderator"?"selected":"") + '>Moderator</option><option ' + (p.role==="Administrator"?"selected":"") + '>Administrator</option></select></label></form>',"Save changes",() => {
     const f=$("#profileForm");if(!f.reportValidity())return;
     p.name=f.elements.name.value.trim();p.handle=f.elements.handle.value.trim().startsWith("@")?f.elements.handle.value.trim():"@"+f.elements.handle.value.trim();p.role=f.elements.role.value;p.initials=p.name.split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();state.profileHandle=p.handle;
-    $("#page-profile h2").textContent=p.name;$("#page-profile .profile-card p").textContent=p.handle+" · "+p.role;$(".profile-copy b").textContent=p.name;$(".profile-copy small").textContent=p.plan+" developer";audit("Developer profile updated");closeModal();toast("Profile updated","The sample profile was updated locally.");
+    $("#page-profile h2").textContent=p.name;$("#page-profile .profile-card p").textContent=p.handle+" · "+p.role;$(".profile-copy b").textContent=p.name;$(".profile-copy small").textContent=p.role;audit("Developer profile updated");closeModal();toast("Profile updated","The sample profile was updated locally.");
   },{icon:"person"});
 }
 function adminAction(action) {
@@ -341,7 +338,7 @@ function adminAction(action) {
 }
 function showSettings(key="general") {
   const sets = {
-    general:["General preferences","Customize how the Developer Portal behaves.",[["deploymentNotifications","Deployment notifications","Show a notification when a deployment changes status."],["reducedMotion","Reduced motion","Reduce interface movement and animated transitions."],["compactTables","Compact tables","Use denser rows in deployment and billing tables."]]],
+    general:["General preferences","Customize how the Developer Portal behaves.",[["deploymentNotifications","Deployment notifications","Show a notification when a deployment changes status."],["reducedMotion","Reduced motion","Reduce interface movement and animated transitions."],["compactTables","Compact tables","Use denser rows in deployment tables."]]],
     notifications:["Notification preferences","Choose which events appear in your portal.",[["success","Deployment succeeded","Notify when a deployment becomes ready."],["failure","Deployment failed","Notify when a deployment fails."],["branch","Branch assignment changes","Notify when an administrator changes branch access."],["billing","Billing reminders","Notify about plan and billing events."]]],
     security:["Security & sessions","Review account security preferences.",[["loginAlerts","Login alerts","Show an alert when a new session is detected."]]]
   };
@@ -374,14 +371,10 @@ function bindEvents() {
     const admin=e.target.closest("[data-admin]");if(admin){state.adminTab=admin.dataset.admin;renderAdmin();return;}
     const adminAct=e.target.closest("[data-admin-action]");if(adminAct){adminAction(adminAct.dataset.adminAction);return;}
     const settings=e.target.closest("[data-settings]");if(settings){$$("[data-settings]").forEach(x=>x.classList.toggle("active",x===settings));showSettings(settings.dataset.settings);return;}
-    const plan=e.target.closest("[data-plan-view]");if(plan){showPlanView(plan.dataset.planView);return;}
     if(e.target.closest("#notificationsBtn")){notifications();return;}
     if(e.target.closest("#markRead")){state.notices.forEach(n=>n.read=true);$("#notificationPopover").classList.remove("open");toast("Notifications marked read","All sample notifications are marked as read.");return;}
     if(e.target.closest("#branchRefresh")){renderBranches();toast("Branches refreshed","Sample branch data is up to date.");return;}
     if(e.target.closest("#exportDeployments")){exportCSV();return;}
-    if(e.target.closest("#invoiceExport")){exportBilling();return;}
-    if(e.target.closest("#comparePlans")){$("#planGrid").scrollIntoView({behavior:state.settings.reducedMotion?"auto":"smooth"});toast("Plan comparison","Basic and Pro details are shown below.");return;}
-    if(e.target.closest("#proRequest")){showUpgrade();return;}
     if(e.target.closest("#editProfile")){editProfile();return;}
     if(e.target.closest("#showLogin")){signOutPreview();return;}
     if(e.target.closest("#previewSignIn")){const fields=$("#loginPreview input");if(fields.some(x=>!x.value.trim())){toast("Complete both fields","The preview sign-in requires a sample username and password.");return;}$("#loginPreview").classList.remove("open");$("#loginPreview").setAttribute("aria-hidden","true");toast("Preview session","Sample sign-in completed. No credentials were checked.");return;}
@@ -408,13 +401,12 @@ function initialize() {
   // Keep the preview's sample identity and all interactive state isolated from live services.
   const me=currentPerson();
   $("#page-profile h2").textContent=me.name;$("#page-profile .profile-card p").textContent=me.handle+" · "+me.role;
-  $(".profile-copy b").textContent=me.name;$(".profile-copy small").textContent=me.plan+" developer";
+  $(".profile-copy b").textContent=me.name;$(".profile-copy small").textContent=me.role;
   $$(".branch-card").forEach(card=>{
     const name=card.querySelector("h3")?.textContent.trim(),b=state.branches.find(x=>x.name===name);if(!b)return;
     card.querySelector(".branch-meta code").textContent=b.sha;card.querySelector(".branch-meta b").textContent=b.last;
     const links=card.querySelectorAll(".branch-links a");if(links[0])links[0].href="https://github.com/BSMS-Web-App/web/tree/"+encodeURIComponent(name);if(links[1])links[1].href="https://"+b.url;
   });
-  const planFilter=$("#page-directory .select");if(planFilter)planFilter.classList.add("directory-plan-filter");
   const branchFilter=$("#page-branches .select");if(branchFilter)branchFilter.setAttribute("aria-label","Filter branches by status");
   $("#heatmap").innerHTML=Array.from({length:182},(_,i)=>'<i data-heat-day="'+(i+1)+'" data-heat-kind="deployment" title="Sample deployment activity · day '+(i+1)+'"></i>').join("");
   $("#githubHeatmap").innerHTML=Array.from({length:182},(_,i)=>'<i data-heat-day="'+(i+1)+'" data-heat-kind="github" title="Sample GitHub activity · day '+(i+1)+'"></i>').join("");
