@@ -119,7 +119,8 @@ function deploymentDetail(id) {
 }
 function renderPeople(query = $("#developerSearch")?.value || "") {
   const el = $("#developerGrid"); if (!el) return;
-  const plan = $(".directory-plan-filter")?.value || "all";
+  const rawPlan = $(".directory-plan-filter")?.value || "all";
+  const plan = rawPlan.toLowerCase().startsWith("all") ? "all" : rawPlan.toLowerCase();
   const visible = state.people.filter(p => (p.name + " " + p.handle).toLowerCase().includes(query.toLowerCase()) && (plan === "all" || p.plan.toLowerCase() === plan));
   el.innerHTML = visible.map(p => '<article class="developer-card" data-person="' + esc(p.handle) + '" tabindex="0" role="button"><div class="developer-head"><span class="developer-avatar">' + esc(p.initials) + '</span><div><b>' + esc(p.name) + '</b><small>' + esc(p.handle) + ' · ' + esc(p.role) + '</small></div></div><p>Contributing to the BSMS Web ecosystem.</p><div class="developer-stats"><span>' + p.branches.length + ' branches</span><b>' + p.total + ' deployments</b></div><div class="developer-card-footer">View developer profile ' + icon("arrow-right") + '</div></article>').join("") || '<div class="empty-state">No developers match your search.</div>';
 }
