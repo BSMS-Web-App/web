@@ -34,6 +34,7 @@ const state = {
   ledger: [
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev1",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev2",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
+    {date:"Nov 21, 2026",developer:"@maya",type:"Additional deployment",branch:"dev8",amount:0.10,status:"Recorded",note:"Sample deployment charge"},
     {date:"Nov 20, 2026",developer:"@maya",type:"Manual payment",branch:"—",amount:-0.30,status:"Paid",note:"Sample partial payment"}
   ],
   audit: [
@@ -100,7 +101,7 @@ function updateUsage() {
   const values = [["hourly",activeLimits.hourly],["daily",activeLimits.daily],["weekly",activeLimits.weekly]];
   values.forEach(([key,max]) => {
     const used = state.usage[key], pct = Math.min(100, used / max * 100);
-    $$(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);}});
+    $$(".limit-row").forEach(row => { const label=row.querySelector("b"); if(label && label.textContent.toLowerCase().startsWith(key.slice(0,-2))){const value=row.querySelector("span");if(value)value.textContent=used+" / "+max;const bar=row.querySelector(".progress i");if(bar)bar.style.width=pct+"%";row.querySelector(".progress")?.classList.toggle("blocked",used>=max);row.querySelector(".progress")?.classList.toggle("warning",used<max&&pct>=state.limits.warning);}});
   });
   const week = $("#page-overview .metric-card:nth-child(2) strong");
   if (week) week.innerHTML = state.usage.weekly + '<span class="metric-unit">/ ' + state.limits.weekly + '</span>';
@@ -279,11 +280,25 @@ function exportBilling() {
   const csv="date,description,amount,status\nNov 21,Additional deployment,0.10,Recorded\nNov 20,Manual payment,-0.30,Paid\n";
   const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"})),a=document.createElement("a");a.href=url;a.download="bsms-demo-billing-history.csv";a.click();URL.revokeObjectURL(url);toast("Billing export ready","Downloaded sample billing data.");
 }
+function refreshBillingPreview() {
+  const p=currentPerson(),root=$("#proBillingPreview");if(!root)return;
+  const metrics=root.querySelectorAll(".pro-billing-metrics > div b");
+  if(metrics[0])metrics[0].innerHTML=state.usage.proCycle+' <small>/ '+state.limits.included+'</small>';
+  if(metrics[1])metrics[1].textContent=state.usage.extra;
+  if(metrics[2])metrics[2].textContent=money(p.balance);
+  if(metrics[3])metrics[3].textContent=money(state.limits.price);
+  const rows=root.querySelectorAll(".limit-row");
+  if(rows[0]){rows[0].querySelector("span").textContent=state.usage.proCycle+" / "+state.limits.included;rows[0].querySelector(".progress i").style.width=Math.min(100,state.usage.proCycle/state.limits.included*100)+"%";}
+  if(rows[1]){rows[1].querySelector("span").textContent=state.usage.totalCycle+" / "+state.limits.max;rows[1].querySelector(".progress i").style.width=Math.min(100,state.usage.totalCycle/state.limits.max*100)+"%";}
+  const body=root.querySelector("table tbody");if(body){const items=state.ledger.filter(x=>x.developer===p.handle);body.innerHTML=items.map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.branch)+'</td><td>'+(x.amount<0?"−":"")+money(Math.abs(x.amount))+'</td><td><span class="table-status">'+esc(x.status.toUpperCase())+'</span></td></tr>').join("")||'<tr><td colspan="5">No Pro billing activity yet.</td></tr>';}
+  const grace=root.querySelector(".admin-warning span");if(grace)grace.textContent="Demo state: "+(p.balance>0?"payment due. ":"paid. ")+"Grace period ends "+state.usage.graceEnd+". Existing websites and history remain available.";
+}
 function showPlanView(view) {
   state.planView=view;
   $$("[data-plan-view]").forEach(b=>b.classList.toggle("active",b.dataset.planView===view));
   const pro=view==="pro";
-  $("#proBillingPreview").hidden=!pro;$(".billing-overview").hidden=pro;
+  $("#proBillingPreview").hidden=!pro;
+  if(pro)refreshBillingPreview();$(".billing-overview").hidden=pro;
   ["#planGrid","#billingHistoryHeading","#basicBillingHistory"].forEach(sel=>{const el=$(sel);if(el)el.hidden=pro;});
   $("#planComparisonHeading h2").textContent = pro ? "Pro billing preview" : "Plan comparison";
   $("#planComparisonHeading p").textContent = pro ? "Sample Pro cycle, charges, and payment state." : "Illustrative plan details for the proposed Dev Portal.";
