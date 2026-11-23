@@ -212,7 +212,7 @@
 
     const legend = document.createElement("div");
     legend.className = "stats-calendar-legend";
-    legend.innerHTML = '<span>More</span><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>Less</span>';
+    legend.innerHTML = '<span>Less</span><i data-level="4"></i><i data-level="3"></i><i data-level="2"></i><i data-level="1"></i><span>More</span>';
     el.calendar.append(legend);
   }
 
