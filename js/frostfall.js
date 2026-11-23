@@ -76,7 +76,8 @@
     menuHp: $('ff-menu-hp'), menuSp: $('ff-menu-sp'), menuBp: $('ff-menu-bp'), menuShards: $('ff-menu-shards'),
     menuObjective: $('ff-menu-objective'), menuResume: $('ff-menu-resume'), menuRestart: $('ff-menu-restart'), menuReset: $('ff-menu-reset'),
     ending: $('ff-ending'), endingLines: $('ff-ending-lines'), endingStats: $('ff-ending-stats'), endingAgain: $('ff-ending-again'),
-    ended: $('ff-ended'), fallback: $('ff-fallback'),
+    ended: $('ff-ended'), endedTitle: $('ff-ended-title'), endedCopy: $('ff-ended-copy'),
+    endedRecord: $('ff-ended-record'), endedResume: $('ff-ended-resume'), fallback: $('ff-fallback'),
     cutscene: $('ff-cutscene'), cutSpeaker: $('ff-cut-speaker'), cutText: $('ff-cut-text'),
     cutFace: $('ff-cut-face'), cutNext: $('ff-cut-next'), cutSkip: $('ff-cut-skip'),
     cutScore: $('ff-cut-score'), sheetDebug: $('ff-sheet-debug'),
@@ -4093,8 +4094,35 @@
     return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }).format(new Date(ms));
   }
 
+  /* === NEW: THE WINDOW CLOSES, THE RUN DOESN'T ===
+     END stops new runs. A file that was already under way may still be
+     finished, and a finished file is read as a record of the run instead
+     of becoming a dead wall. */
+  function windowOpen() {
+    var now = clock();
+    return now >= START && now < END;
+  }
+
+  function slotStillPlayable(info) {
+    return !!(info && info.raw && info.raw.started && !info.raw.ending);
+  }
+
+  function openRunExists() {
+    for (var i = 0; i < SLOT_KEYS.length; i++) {
+      if (slotStillPlayable(slotInfo(i))) return true;
+    }
+    return false;
+  }
+
+  function canEnterFiles() {
+    if (clock() < START) return false;
+    return windowOpen() || openRunExists();
+  }
+
   function openTitleOrEnded() {
     phase = phaseAt();
+    /* === NEW: past END the wall is a record, and an unfinished run can
+       still be picked up from it === */
     if (phase === 'ended') { showEnded(); return; }
     showTitle();
   }
@@ -4187,7 +4215,7 @@
   }
 
   function openFileSelect() {
-    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    if (!canEnterFiles()) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     if (ui.startPrompt) ui.startPrompt.hidden = true;
     if (ui.fileSelect) ui.fileSelect.hidden = false;
     renderFileCards();
@@ -4217,8 +4245,9 @@
   }
 
   function startSlot(index) {
-    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     var info = slotInfo(index);
+    /* === NEW: past END only a run that was already under way may open === */
+    if (clock() < START || (!windowOpen() && !slotStillPlayable(info))) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     if (info.ending && !window.confirm('Start a new story on FILE ' + (index + 1) + '? That finished save will be erased.')) return;
     activeSlot = index;
     if (!info.empty && info.raw) {
@@ -4278,10 +4307,83 @@
     view = 'title';
     mode = 'ended';
     buildTitleScene();
+    paintEndedRecord();
+  }
+
+  /* === NEW: THE ENDED SCREEN BECOMES A RECORD OF THE RUN ===
+     An unfinished run wins over a finished one: it is the file that can
+     still be played. With no save at all the wall keeps its old copy. */
+  function runRecord() {
+    var finished = null;
+    for (var i = 0; i < SLOT_KEYS.length; i++) {
+      var info = slotInfo(i);
+      if (!info.raw || !info.raw.started) continue;
+      var row = {
+        slot: i,
+        name: info.name,
+        level: info.level,
+        chapter: info.chapter,
+        relics: clamp(Number(info.raw.shards) || 0, 0, 5),
+        ending: Boolean(info.raw.ending)
+      };
+      if (!row.ending) return row;
+      if (!finished) finished = row;
+    }
+    return finished;
+  }
+
+  function paintEndedRecord() {
+    var record = runRecord();
+    var unfinished = !!(record && !record.ending);
+    if (ui.endedTitle) ui.endedTitle.textContent = unfinished ? 'THE WINDOW CLOSED. YOUR RUN DID NOT.' : 'A CHRISTMAS TALE HAS ENDED';
+    if (ui.endedCopy) {
+      if (unfinished) {
+        ui.endedCopy.textContent = 'A Christmas Tale closed on ' + formatDate(END) + ', but FILE ' + (record.slot + 1) + ' was already under way. Nothing you started is lost — this run can still be finished.';
+      } else if (record) {
+        ui.endedCopy.textContent = record.name + ' reached Chapter ' + (record.chapter + 1) + ' at Level ' + record.level + ' with ' + record.relics + ' of 5 relics recovered before the window closed. The finished story is kept below.';
+      } else {
+        ui.endedCopy.textContent = 'The Long Night has been pushed back, and the star is still burning. A Christmas Tale ran from November 19, 2026 to January 4, 2027.';
+      }
+    }
+    if (ui.endedRecord) {
+      ui.endedRecord.innerHTML = '';
+      if (record) {
+        var rows = [
+          ['FILE', String(record.slot + 1)],
+          ['NAME', record.name],
+          ['LEVEL', String(record.level)],
+          ['CHAPTER', (record.chapter + 1) + ' / 5'],
+          ['RELICS', record.relics + ' / 5'],
+          ['STATUS', record.ending ? 'THE END' : 'UNFINISHED']
+        ];
+        rows.forEach(function (row) {
+          var cell = document.createElement('div');
+          var key = document.createElement('span');
+          var value = document.createElement('b');
+          key.textContent = row[0];
+          value.textContent = row[1];
+          cell.appendChild(key);
+          cell.appendChild(value);
+          ui.endedRecord.appendChild(cell);
+        });
+      }
+      ui.endedRecord.hidden = !record;
+    }
+    if (ui.endedResume) {
+      ui.endedResume.hidden = !unfinished;
+      ui.endedResume.dataset.slot = record ? String(record.slot) : '';
+    }
+  }
+
+  function resumeEndedRun() {
+    if (!ui.endedResume) return;
+    var slot = Number(ui.endedResume.dataset.slot);
+    if (!isFinite(slot)) return;
+    startSlot(slot);
   }
 
   function requestNewGame() {
-    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    if (!windowOpen()) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     if (save && save.started && !save.ending && !window.confirm('Start a new story? Your current A Christmas Tale save will be erased.')) return;
     hideScreens();
     ui.nameScreen.hidden = false;
@@ -4291,7 +4393,7 @@
   }
 
   function beginNewStory() {
-    if (phaseAt() !== 'active') { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    if (!windowOpen()) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     var name = String(ui.nameInput.value || '').toUpperCase().replace(/[^A-Z0-9 _-]/g, '').trim().slice(0, 12) || 'NICO';
     save = freshSave();
     save.name = name;
@@ -4307,7 +4409,8 @@
 
   function continueGame() {
     if (!save || !save.started || save.ending) return;
-    if (phaseAt() === 'ended') { showEnded(); return; }
+    /* === NEW: a started, unfinished save is allowed past END === */
+    if (clock() < START) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     var showIntro = save.chapter === 0 && !save.seenIntro;
     buildWorld(save.chapter);
     if (showIntro) startIntroCutscene(true);
@@ -4343,6 +4446,8 @@
   }
 
   function playAgain() {
+    /* === NEW: the door is shut to new runs; show the finished one instead === */
+    if (!windowOpen()) { showEnded(); return; }
     var name = save ? save.name : 'NICO';
     save = freshSave();
     save.name = name;
@@ -7775,6 +7880,7 @@
     ui.menuReset.addEventListener('click', resetSave);
     ui.sound.addEventListener('click', toggleSound);
     ui.endingAgain.addEventListener('click', playAgain);
+    if (ui.endedResume) ui.endedResume.addEventListener('click', resumeEndedRun);
     ui.action.addEventListener('click', interact);
     ui.timing.addEventListener('click', timingPress);
     ui.timingButton.addEventListener('click', function (event) { event.stopPropagation(); timingPress(); });

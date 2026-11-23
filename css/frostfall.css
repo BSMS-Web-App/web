@@ -858,6 +858,28 @@ a { color: inherit; }
 .ff-ending-lines p { margin: 0; font: 22px/1.3 'VT323', monospace; color: #efe6ff; }
 .ff-ending-stats { margin: 8px 0 0; font: 8px/2.1 'Press Start 2P', monospace; color: var(--ff-cyan); }
 
+/* === NEW: the ended screen is a record of the run === */
+.ff-ended-record {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+  margin: 0 0 20px;
+  text-align: left;
+}
+.ff-ended-record[hidden] { display: none; }
+.ff-ended-record div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #120a22;
+  border: 2px solid var(--ff-border);
+  box-shadow: inset 0 0 0 2px #4a376b;
+  min-width: 0;
+}
+.ff-ended-record span { font: 8px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--ff-cyan); }
+.ff-ended-record b { font: 8px/1.6 'Press Start 2P', monospace; color: var(--ff-gold); overflow-wrap: anywhere; }
+
 /* --------------------------------------------------------------- mobile */
 .ff-touch {
   display: none;

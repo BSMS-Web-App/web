@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=35">
+<link rel="stylesheet" href="/css/frostfall.css?v=36">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -229,12 +229,17 @@
     </div>
   </div>
 
+  <!-- === NEW: the ended screen doubles as a record of the run === -->
   <div id="ff-ended" class="ff-screen" hidden>
     <div class="ff-panel">
       <p class="ff-eyebrow">BSMS WEB · WINTER EVENT</p>
-      <h2 class="ff-panel-title">A CHRISTMAS TALE HAS ENDED</h2>
-      <p class="ff-panel-copy">The Long Night has been pushed back, and the star is still burning. A Christmas Tale ran from November 19, 2026 to January 4, 2027.</p>
-      <a class="ff-button gold" href="/events">SEE WHAT'S NEXT</a>
+      <h2 class="ff-panel-title" id="ff-ended-title">A CHRISTMAS TALE HAS ENDED</h2>
+      <p class="ff-panel-copy" id="ff-ended-copy">The Long Night has been pushed back, and the star is still burning. A Christmas Tale ran from November 19, 2026 to January 4, 2027.</p>
+      <div id="ff-ended-record" class="ff-ended-record" hidden></div>
+      <div class="ff-title-actions">
+        <button id="ff-ended-resume" class="ff-button gold" type="button" hidden>CONTINUE YOUR RUN</button>
+        <a class="ff-button ghost" href="/events">SEE WHAT'S NEXT</a>
+      </div>
     </div>
   </div>
 
@@ -255,6 +260,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=7"></script>
-<script src="/js/frostfall.js?v=123"></script>
+<script src="/js/frostfall.js?v=124"></script>
 </body>
 </html>
