@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// Tracks how long each game is played. Time is only counted while the game tab
-// is visible. Guest stats stay on this device; signed-in stats are also synced
-// to the account so they follow the user across devices.
+// Tracks game playtime for signed-in accounts only. Account snapshots from every
+// device are combined by the BSMS Web API.
 (() => {
   "use strict";
 
@@ -16,9 +15,7 @@
   const TICK_MS = 5000;
   const FLUSH_MS = 15000;
   const MAX_GAP_MS = 5 * 60 * 1000;
-  const MAX_DAYS = 400;
   const SYNC_DELAY_MS = 5000;
-  const SYNC_DAYS = 180;
 
   let active = null;
   let pending = 0;
@@ -108,11 +105,6 @@
       String(d.getDate()).padStart(2, "0");
   }
 
-  function pruneDays(store) {
-    const keys = Object.keys(store.days).sort();
-    for (let i = 0; i < keys.length - MAX_DAYS; i++) delete store.days[keys[i]];
-  }
-
   function addTime(store, game, ms, when) {
     if (!(ms > 0)) return;
 
@@ -129,19 +121,13 @@
     store.days[key] = day;
   }
 
-  // Absolute per-device snapshot used for account sync. Only recent days are
-  // sent because older days have already been stored by previous syncs.
+  // Absolute per-device snapshot. The account API combines every device's
+  // complete history; no arbitrary day-window truncation is applied.
   function snapshot() {
     const store = load(identity());
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - SYNC_DAYS);
-    const cutoffKey = dayKey(cutoff);
-
     const days = {};
     for (const [key, day] of Object.entries(store.days)) {
-      if (key >= cutoffKey && day && typeof day === "object") {
-        days[key] = { games: day.games || {} };
-      }
+      if (day && typeof day === "object") days[key] = { games: day.games || {} };
     }
     return { games: store.games, days };
   }
@@ -203,6 +189,7 @@
   function start(game) {
     if (!game || !game.id) return;
     stop();
+    if (!authSession()) return;
 
     const who = identity();
     const id = safeId(game.id);
@@ -256,7 +243,6 @@
 
     const store = load(active.who);
     addTime(store, { id: active.id, name: active.name }, pending, now);
-    pruneDays(store);
     save(store, active.who);
     pending = 0;
     scheduleSync();
@@ -299,7 +285,8 @@
 
   function getStats() {
     const auth = authSession();
-    if (auth && accountUid === auth.uid && accountStats) {
+    if (!auth) return toStatsObject({}, {});
+    if (accountUid === auth.uid && accountStats) {
       return toStatsObject(accountStats.games, accountStats.days);
     }
     const store = load(identity());

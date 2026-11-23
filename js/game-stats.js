@@ -16,6 +16,8 @@
 
   const el = {
     close: document.getElementById("gameStatsClose"),
+    title: document.getElementById("gameStatsTitle"),
+    login: document.getElementById("statsLoginRequired"),
     sub: document.getElementById("statsSub"),
     total: document.getElementById("statsTotalTime"),
     week: document.getElementById("statsWeekTime"),
@@ -25,7 +27,11 @@
     gameSelect: document.getElementById("statsGameSelect"),
     peak: document.getElementById("statsChartPeak"),
     chart: document.getElementById("statsChart"),
-    list: document.getElementById("statsList")
+    list: document.getElementById("statsList"),
+    cards: document.querySelector(".stats-cards"),
+    controls: document.querySelector(".stats-controls"),
+    chartBlock: document.querySelector(".stats-chart-block"),
+    sectionTitle: document.querySelector(".stats-section-title")
   };
 
   const RANGES = [
@@ -222,6 +228,17 @@
   }
 
   function render() {
+    const signedIn = playtime.isSignedIn();
+    if (el.login) el.login.hidden = signedIn;
+    [el.cards, el.controls, el.chartBlock, el.sectionTitle, el.list].forEach(node => {
+      if (node) node.hidden = !signedIn;
+    });
+    if (el.title) el.title.textContent = signedIn ? "Your playtime" : "Sign in to track playtime";
+    if (el.sub) el.sub.textContent = signedIn
+      ? "Time spent playing games in the Game Vault."
+      : "Playtime statistics are available to signed-in BSMS Web accounts.";
+    if (!signedIn) return;
+
     playtime.flush();
 
     const stats = playtime.getStats();
@@ -238,12 +255,6 @@
     el.today.textContent = fmt(today);
     el.games.textContent = String(games.filter(game => game.total > 0).length);
 
-    if (el.sub) {
-      el.sub.textContent = playtime.isSignedIn()
-        ? "Synced with your BSMS Web account and shown across your devices."
-        : "Tracked on this device. Sign in to sync your play time across devices.";
-    }
-
     buildGameOptions(games);
 
     const values = days.map(day => dayMs(data, day.key, selectedGame));
@@ -253,8 +264,12 @@
 
   async function open() {
     modal.classList.add("show");
-    playtime.flush();
     render();
+    if (!playtime.isSignedIn()) {
+      if (el.close) el.close.focus();
+      return;
+    }
+    playtime.flush();
     if (el.close) el.close.focus();
 
     if (playtime.isSignedIn()) {

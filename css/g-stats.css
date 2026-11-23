@@ -18,6 +18,23 @@
 .stats-popup h2 { margin: 0 0 4px; font-size: 30px; }
 .stats-sub { margin: 0 0 20px; color: var(--fg2); font-size: 17px; }
 
+.stats-login-required {
+  padding: 28px 20px;
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--msg-bg);
+  text-align: center;
+}
+.stats-login-required p {
+  max-width: 520px;
+  margin: 0 auto 18px;
+  color: var(--fg2);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.stats-login-required .btn { display: inline-flex; justify-content: center; text-decoration: none; }
+
 .stats-close {
   position: absolute;
   top: 12px;

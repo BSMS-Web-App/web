@@ -9,8 +9,6 @@ import { handleApiCors } from '../../lib/api-cors.js';
 import { legalAcceptanceRequired } from '../legal-policy.js';
 import { getUserBySession } from '../games.js';
 
-const MAX_DEVICES = 20;
-const MAX_DAYS = 400;
 const MAX_GAMES = 1000;
 const MAX_DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_GAME_MS = 10 * 365 * 24 * 60 * 60 * 1000;
@@ -40,7 +38,7 @@ export function validateSnapshot(input) {
     const daysIn = input.days && typeof input.days === 'object' && !Array.isArray(input.days) ? input.days : {};
     const gameEntries = Object.entries(gamesIn);
     const dayEntries = Object.entries(daysIn);
-    if (gameEntries.length > MAX_GAMES || dayEntries.length > MAX_DAYS) return null;
+    if (gameEntries.length > MAX_GAMES) return null;
 
     const now = Date.now();
     const games = {};
@@ -115,13 +113,12 @@ export function mergeMaxDays(existing, incoming) {
         out[key] = target;
     }
 
-    const keys = Object.keys(out).sort();
-    for (const key of keys.slice(0, Math.max(0, keys.length - MAX_DAYS))) delete out[key];
     return out;
 }
 
 /**
  * Combines every device snapshot for an account into the totals shown in the UI.
+ * Device records are retained without an arbitrary per-account device cap.
  */
 export function aggregateStats(state) {
     const games = {};
@@ -216,13 +213,6 @@ export default async function handler(req, res) {
                     days: mergeMaxDays(previous.days, stats.days),
                     updated: Date.now()
                 };
-
-                // Keep the account record small by dropping the least recently
-                // updated devices once the limit is reached.
-                const ordered = Object.entries(devices)
-                    .sort((a, b) => number(b[1] && b[1].updated) - number(a[1] && a[1].updated))
-                    .map(([id]) => id);
-                for (const id of ordered.slice(MAX_DEVICES)) delete devices[id];
 
                 next.devices = devices;
                 next.updated = Date.now();
