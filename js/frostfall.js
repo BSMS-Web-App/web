@@ -1689,7 +1689,7 @@
             if (!reached[sli]) { reached[sli] = 1; queue[tail++] = sli; }
           }
         };
-        var runFlood = function (seedTol, growTol) {
+        var runFlood = function (growTol) {
           head = 0; tail = 0;
           for (x = card.x0; x <= card.x1; x++) {
             seedPixel(x, card.y0, topMed);
@@ -1717,11 +1717,11 @@
             }
           }
         };
-        runFlood(78, 96);
+        runFlood(96);
         /* only open the tolerance up when the panel model clearly missed */
         var cleared = 0;
         for (y = 0; y < chh; y++) for (x = 0; x < cw; x++) if (!reached[y * cw + x]) cleared++;
-        if (cleared / (cw * chh) > 0.55) runFlood(130, 152);
+        if (cleared / (cw * chh) > 0.55) runFlood(152);
         for (y = 0; y < chh; y++) for (x = 0; x < cw; x++) {
           if (reached[y * cw + x]) data[((card.y0 + y) * w + card.x0 + x) * 4 + 3] = 0;
         }
@@ -1877,29 +1877,6 @@
     while (box.w > 10 && columnDensity(box.x) < 0.16) { box.x++; box.w--; }
     while (box.w > 10 && columnDensity(box.x + box.w - 1) < 0.16) box.w--;
     while (box.h > 10 && rowDensity(box.y) < 0.16) { box.y++; box.h--; }
-    /* A wash of panel can survive the key when a card's highlight drifts far
-       from the corner model - the Long Night's card kept a strip of it down one
-       side. It hides from a colour test but not from a shape test: a strip of
-       panel is a column with no ink in it and no vertical detail, while every
-       drawn edge either turns dark or steps sideways. Trim such columns, never
-       more than half the frame. */
-    var washColumn = function (cx) {
-      var prevR = -1, prevG = -1, prevB = -1, rough = 0, minLum = 255, seen = 0;
-      for (var wy = box.y; wy < box.y + box.h; wy++) {
-        if (!mask[wy * cw + cx]) { prevR = -1; continue; }
-        var base = ((card.y0 + wy) * state.w + wx0 + cx) * 4;
-        var pr = data[base], pg = data[base + 1], pb = data[base + 2];
-        var lum = pr * 0.299 + pg * 0.587 + pb * 0.114;
-        if (lum < minLum) minLum = lum;
-        if (prevR >= 0) { rough += Math.abs(pr - prevR) + Math.abs(pg - prevG) + Math.abs(pb - prevB); seen++; }
-        prevR = pr; prevG = pg; prevB = pb;
-      }
-      if (seen < 8 || minLum < 112) return false;
-      return rough / seen < 12;
-    };
-    var keepW = Math.round(card.w * 0.5);
-    while (box.w > keepW && washColumn(box.x)) { box.x++; box.w--; }
-    while (box.w > keepW && washColumn(box.x + box.w - 1)) box.w--;
     var out = { x: wx0 + box.x, y: card.y0 + box.y, w: box.w, h: box.h, card: card };
     frostfallArtBoxes[boxKey] = out;
     return out;
