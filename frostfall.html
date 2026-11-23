@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=36">
+<link rel="stylesheet" href="/css/frostfall.css?v=37">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -140,6 +140,8 @@
         <small id="ff-enemy-hp-text">24 / 24</small>
         <em id="ff-gimmick" class="ff-gimmick" hidden>ECHO CHARGE</em>
       </div>
+      <!-- === NEW: pause / quit a fight === -->
+      <button id="ff-battle-pause-button" class="ff-icon-button ff-battle-pause-open" type="button" aria-label="Pause battle">PAUSE</button>
     </div>
     <div id="ff-rating" class="ff-rating" aria-hidden="true" hidden>PERFECT!</div>
     <div id="ff-fx" class="ff-fx" aria-hidden="true"></div>
@@ -172,6 +174,18 @@
       </div>
       <div id="ff-skills" class="ff-skills" hidden></div>
       <p id="ff-battle-hint" class="ff-battle-hint">ARROWS SELECT &middot; E CONFIRM</p>
+    </div>
+
+    <!-- === NEW: the pause panel for a battle === -->
+    <div id="ff-battle-pause" class="ff-battle-pause" role="dialog" aria-modal="true" aria-labelledby="ff-battle-pause-title" hidden>
+      <div class="ff-panel ff-battle-pause-panel">
+        <div class="ff-menu-head"><h2 id="ff-battle-pause-title">PAUSED</h2></div>
+        <p class="ff-panel-copy" id="ff-battle-pause-copy">The snow holds still mid-swing.</p>
+        <div class="ff-menu-actions">
+          <button id="ff-battle-pause-resume" class="ff-button gold" type="button">RESUME</button>
+          <button id="ff-battle-pause-quit" class="ff-button danger" type="button">QUIT BATTLE</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -238,6 +252,9 @@
       <div id="ff-ended-record" class="ff-ended-record" hidden></div>
       <div class="ff-title-actions">
         <button id="ff-ended-resume" class="ff-button gold" type="button" hidden>CONTINUE YOUR RUN</button>
+        <!-- === NEW: a finished file opened from the file list can be left, or started over on purpose === -->
+        <button id="ff-ended-renew" class="ff-button danger" type="button" hidden>START A NEW STORY</button>
+        <button id="ff-ended-back" class="ff-button ghost" type="button" hidden>BACK TO FILES</button>
         <a class="ff-button ghost" href="/events">SEE WHAT'S NEXT</a>
       </div>
     </div>
@@ -260,6 +277,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=7"></script>
-<script src="/js/frostfall.js?v=124"></script>
+<script src="/js/frostfall.js?v=125"></script>
 </body>
 </html>

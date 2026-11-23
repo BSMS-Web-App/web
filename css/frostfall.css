@@ -552,6 +552,15 @@ a { color: inherit; }
   outline: none;
 }
 .ff-file-card.empty { background: #150d26; }
+/* === NEW: a finished file reads as a record of the run === */
+.ff-file-card.done .ff-file-top em { color: #ffcf4a; }
+.ff-file-card.done .ff-file-start { color: #ffcf4a; }
+.ff-file-meta {
+  font: 7px/1.6 'Press Start 2P', monospace;
+  color: var(--ff-muted);
+  letter-spacing: .04em;
+  overflow-wrap: anywhere;
+}
 .ff-file-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .ff-file-top b { font: 9px 'Press Start 2P', monospace; color: #ffe9a8; letter-spacing: .08em; }
 .ff-file-top em { font: 7px 'Press Start 2P', monospace; font-style: normal; color: #9fe6ff; letter-spacing: .04em; }
@@ -686,7 +695,17 @@ a { color: inherit; }
 
 /* --------------------------------------------------------------- battle */
 .ff-battle { position: absolute; z-index: 20; inset: 0; pointer-events: none; }
-.ff-battle-top { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(440px, calc(100% - 28px)); }
+.ff-battle-top {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 28px));
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ff-battle-top .ff-enemy-plate { flex: 1; min-width: 0; }
 .ff-enemy-plate {
   display: flex;
   flex-direction: column;
@@ -776,6 +795,22 @@ a { color: inherit; }
 .ff-skill-btn em { display: block; margin-top: 3px; font: 14px/1.1 'VT323', monospace; font-style: normal; color: var(--ff-muted); }
 .ff-skill-btn:disabled { opacity: .45; cursor: not-allowed; }
 .ff-battle-hint { margin: 8px 0 0; text-align: center; font: 7px 'Press Start 2P', monospace; color: var(--ff-muted); letter-spacing: .12em; }
+/* === NEW: pause / quit a fight === */
+.ff-battle-pause-open { flex: 0 0 auto; pointer-events: auto; }
+.ff-battle-pause {
+  position: absolute;
+  z-index: 26;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(9, 5, 18, .8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: auto;
+}
+.ff-battle-pause[hidden] { display: none; }
+.ff-battle-pause-panel { width: min(440px, 100%); text-align: left; }
 
 /* ------------------------------------------------------------- level up */
 #ff-levelup {
