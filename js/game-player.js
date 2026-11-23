@@ -235,6 +235,7 @@ async function load() {
       clearTimeout(frameLoadTimer);
       frameLoadTimer = null;
       loading.classList.add("is-hidden");
+      if (window.BSMSPlaytime) window.BSMSPlaytime.start({ id, name: game.name });
       if (cloud && cloudRestoreAvailable) syncInterval = setInterval(() => sync(), 20000);
     }, { once: true });
 
