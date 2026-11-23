@@ -4171,7 +4171,6 @@
     return {
       empty: false,
       finished: Boolean(raw.ending),
-      ending: Boolean(raw.ending),
       raw: raw,
       name: String(raw.name || 'NICO').slice(0, 12),
       level: Math.max(1, Number(raw.level) || 1),
@@ -7779,9 +7778,25 @@
     sound('click');
   }
 
+  /* === NEW: a quit has to leave you standing in the world, not be undone by
+     the next frame. Auto encounters grab the player inside 1.3 units, and the
+     cooldown from the fight that just ended has usually run out by the time
+     you quit it, so the same shade would pull you straight back in. Holding
+     the nearby ones gives you a moment to step away; walking into one or
+     pressing E still starts the fight again. */
+  function holdNearbyEncounters() {
+    if (!world || !player) return;
+    for (var i = 0; i < world.interactables.length; i++) {
+      var item = world.interactables[i];
+      if (!item.auto || item.disabled) continue;
+      if (Math.hypot(player.x - item.x, player.z - item.z) < 3) item.cooldown = Date.now() + 2600;
+    }
+  }
+
   function quitBattle() {
     if (mode !== 'battlepause' || !battle || battle.ended) return;
     if (!window.confirm('Quit this battle? You keep the damage you have taken.')) return;
+    holdNearbyEncounters();
     mode = 'battle';
     ui.battlePause.hidden = true;
     battle.ended = true;
