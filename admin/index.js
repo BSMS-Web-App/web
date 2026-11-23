@@ -56,8 +56,13 @@ const Admin = {
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+            const error = new Error(data.error || res.statusText || 'Admin API request failed.');
+            if (res.status === 428 && data.code === 'LEGAL_ACCEPTANCE_REQUIRED') {
+                error.code = data.code;
+                throw error;
+            }
             alert("Admin API Error: " + (data.error || res.statusText));
-            throw new Error(data.error);
+            throw error;
         }
         return data;
     },
@@ -149,6 +154,10 @@ const Admin = {
             this.renderUsers();
             this.renderBannedDevices();
         } catch (e) {
+            if (e.code === 'LEGAL_ACCEPTANCE_REQUIRED') {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--fg2)">Accept the required legal updates to continue using the Admin Console.</td></tr>';
+                return;
+            }
             tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger)">Failed to load accounts. Ensure your account has staff privileges.</td></tr>';
         }
     },
@@ -1321,4 +1330,5 @@ const Admin = {
 window.addEventListener('DOMContentLoaded', () => {
     Admin.loadUsers();
     document.getElementById('support-admin-reply-form')?.addEventListener('submit', event => Admin.sendSupportReply(event));
+    window.addEventListener('bsms:legal-accepted', () => Admin.loadUsers());
 });
