@@ -202,10 +202,10 @@
   pointer-events: none;
 }
 .stats-calendar-dot:hover::after, .stats-calendar-dot:focus-visible::after, .stats-calendar-dot.is-pinned::after { display: block; }
-.stats-calendar-dot[data-level="1"], .stats-calendar-legend i[data-level="1"] { background: #f7b8c4; }
-.stats-calendar-dot[data-level="2"], .stats-calendar-legend i[data-level="2"] { background: #ed8295; }
-.stats-calendar-dot[data-level="3"], .stats-calendar-legend i[data-level="3"] { background: #d94b66; }
-.stats-calendar-dot[data-level="4"], .stats-calendar-legend i[data-level="4"] { background: #8f102b; }
+.stats-calendar-dot[data-level="1"], .stats-calendar-legend i[data-level="1"] { background: #8f102b; }
+.stats-calendar-dot[data-level="2"], .stats-calendar-legend i[data-level="2"] { background: #d94b66; }
+.stats-calendar-dot[data-level="3"], .stats-calendar-legend i[data-level="3"] { background: #ed8295; }
+.stats-calendar-dot[data-level="4"], .stats-calendar-legend i[data-level="4"] { background: #f7b8c4; }
 .stats-calendar-legend { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-top: 10px; }
 .stats-calendar-legend span { color: var(--fg2); font-size: 11px; margin: 0 3px; }
 
