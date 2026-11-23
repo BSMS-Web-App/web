@@ -43,6 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/g.css">
 <link rel="stylesheet" href="/css/g-notice.css">
+<link rel="stylesheet" href="/css/g-stats.css">
 <script src="/js/legal-updates.js" defer></script>
 </head>
 <body>
@@ -72,9 +73,42 @@ SPDX-License-Identifier: AGPL-3.0-only
   </div>
 </div>
 
-<main id="mainContent"><div class="hero"><h1>Game <span>Vault</span></h1><p>Browse the 55GMS collection and launch games directly from the Game Vault.</p></div><div class="search-container"><input type="search" id="gameSearch" class="search-bar" placeholder="Search games..." autocomplete="off"><div class="az-filters" id="azFilters"></div></div><div class="launcher-container"><div class="launcher-grid" id="gamesGrid"><div class="games-empty">Loading game library…</div></div></div></main>
+<main id="mainContent"><div class="hero"><h1>Game <span>Vault</span></h1><p>Browse the 55GMS collection and launch games directly from the Game Vault.</p></div><div class="search-container"><div class="vault-toolbar"><input type="search" id="gameSearch" class="search-bar" placeholder="Search games..." autocomplete="off"><button type="button" id="gameStatsBtn" class="btn sec vault-stats-btn" data-ga="games_stats_btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 20v-7m5 7V6m5 14v-4"/></svg><span>My Stats</span></button></div><div class="az-filters" id="azFilters"></div></div><div class="launcher-container"><div class="launcher-grid" id="gamesGrid"><div class="games-empty">Loading game library…</div></div></div></main>
+<!-- Game Playtime Stats -->
+<div id="gameStatsModal" class="overlay stats-overlay" role="dialog" aria-modal="true" aria-labelledby="gameStatsTitle">
+  <div class="popup stats-popup">
+    <button type="button" class="stats-close" id="gameStatsClose" aria-label="Close playtime stats">×</button>
+    <h2 id="gameStatsTitle">Your playtime</h2>
+    <p class="stats-sub" id="statsSub">Time spent playing games in the Game Vault.</p>
+
+    <div class="stats-cards">
+      <div class="stats-card"><span>Total play time</span><strong id="statsTotalTime">0m</strong></div>
+      <div class="stats-card"><span>This week</span><strong id="statsWeekTime">0m</strong></div>
+      <div class="stats-card"><span>Today</span><strong id="statsTodayTime">0m</strong></div>
+      <div class="stats-card"><span>Games played</span><strong id="statsGameCount">0</strong></div>
+    </div>
+
+    <div class="stats-controls">
+      <div class="stats-ranges" id="statsRanges" role="group" aria-label="Time window"></div>
+      <label class="stats-game-select" for="statsGameSelect">Game
+        <select id="statsGameSelect"><option value="">All games</option></select>
+      </label>
+    </div>
+
+    <div class="stats-chart-block">
+      <div class="stats-chart-peak" id="statsChartPeak"></div>
+      <div class="stats-chart" id="statsChart" role="img" aria-label="Play time per day"></div>
+    </div>
+
+    <h3 class="stats-section-title">Games played</h3>
+    <div class="stats-list" id="statsList"></div>
+  </div>
+</div>
+
 <script>function closePopup(id){const p=document.getElementById(id);if(p)p.classList.remove("show");}</script>
 <!-- Core Application Script -->
+<script src="/js/playtime.js"></script>
+<script src="/js/game-stats.js"></script>
 <script src="/js/g.js"></script>
 <script src="/js/g-notice.js"></script>    
   <script src="/js/last-harvest-announcement.js?v=2" defer></script>

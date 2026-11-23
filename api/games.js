@@ -8,7 +8,7 @@ import { db } from './db.js';
 import { handleApiCors } from '../lib/api-cors.js';
 import { legalAcceptanceRequired } from './legal-policy.js';
 
-async function getUserBySession(sessionId, uidHint) {
+export async function getUserBySession(sessionId, uidHint) {
     if (!db || !sessionId) return null;
 
     try {
