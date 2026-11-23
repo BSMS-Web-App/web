@@ -80,7 +80,8 @@
     endedRecord: $('ff-ended-record'), endedResume: $('ff-ended-resume'),
     /* === NEW: a finished file can be opened from the file list, so the record
        screen needs a way back and an explicit way to start over === */
-    endedBack: $('ff-ended-back'), endedRenew: $('ff-ended-renew'), fallback: $('ff-fallback'),
+    endedBack: $('ff-ended-back'), endedRenew: $('ff-ended-renew'),
+    endedFiles: $('ff-ended-files'), fallback: $('ff-fallback'),
     /* === NEW: battle pause / quit === */
     battlePauseOpen: $('ff-battle-pause-button'), battlePause: $('ff-battle-pause'),
     battlePauseCopy: $('ff-battle-pause-copy'), battlePauseResume: $('ff-battle-pause-resume'),
@@ -4121,9 +4122,17 @@
     return false;
   }
 
+  /* === NEW: finished files keep their records readable after the event === */
+  function finishedRunExists() {
+    for (var i = 0; i < SLOT_KEYS.length; i++) {
+      if (slotInfo(i).finished) return true;
+    }
+    return false;
+  }
+
   function canEnterFiles() {
     if (clock() < START) return false;
-    return windowOpen() || openRunExists();
+    return windowOpen() || openRunExists() || finishedRunExists();
   }
 
   function openTitleOrEnded() {
@@ -4410,11 +4419,14 @@
     }
     /* === NEW: reached from the file list, the record needs a way back and an
        explicit, warned way to start that file over === */
-    if (ui.endedBack) ui.endedBack.hidden = !(viewingClosedFile && windowOpen());
+    if (ui.endedBack) ui.endedBack.hidden = !viewingClosedFile;
     if (ui.endedRenew) {
       ui.endedRenew.hidden = !(viewingClosedFile && windowOpen());
       ui.endedRenew.dataset.slot = record ? String(record.slot) : '';
     }
+    /* === NEW: past END the ended screen is the only door, so it has to open
+       the file list when finished files are waiting in it === */
+    if (ui.endedFiles) ui.endedFiles.hidden = viewingClosedFile || !(!windowOpen() && finishedRunExists());
   }
 
   function backToFiles() {
@@ -7297,7 +7309,8 @@
         battle.busy = true;
         setBattleButtons(false);
         log('YOU SLIP AWAY INTO THE SNOW...');
-        setTimeout(function () { finishBattle(false); }, 900);
+        /* === NEW: the shade you ran from must not grab you again on landing === */
+        setTimeout(function () { holdNearbyEncounters(); finishBattle(false); }, 900);
       } else {
         battle.busy = true;
         setBattleButtons(false);
@@ -8001,6 +8014,7 @@
     ui.endingAgain.addEventListener('click', playAgain);
     if (ui.endedResume) ui.endedResume.addEventListener('click', resumeEndedRun);
     if (ui.endedBack) ui.endedBack.addEventListener('click', backToFiles);
+    if (ui.endedFiles) ui.endedFiles.addEventListener('click', backToFiles);
     if (ui.endedRenew) ui.endedRenew.addEventListener('click', renewClosedFile);
     if (ui.battlePauseOpen) ui.battlePauseOpen.addEventListener('click', pauseBattle);
     if (ui.battlePauseResume) ui.battlePauseResume.addEventListener('click', resumeBattle);
