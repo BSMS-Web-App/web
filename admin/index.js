@@ -23,6 +23,7 @@ const Admin = {
         
         if (tabId === 'users' || tabId === 'devices') this.loadUsers();
         if (tabId === 'announcements') this.loadAnnouncements();
+        if (tabId === 'updates') this.loadUpdates();
         if (tabId === 'reports') this.loadReports();
         if (tabId === 'support') this.loadSupportConversations();
         if (tabId === 'db') this.loadDB();
@@ -117,7 +118,10 @@ const Admin = {
             const modBanner = document.getElementById('mod-banner');
             const bulkBtn = document.getElementById('bulk-ban-btn');
             const navDb = document.getElementById('nav-btn-db');
+            const navUpdates = document.getElementById('nav-btn-updates');
             const selectAllBox = document.getElementById('bulk-select-all');
+
+            if (navUpdates) navUpdates.style.display = this.callerRole === 'owner' ? 'block' : 'none';
 
             // Strictly: Only OWNER can access raw DB inspector!
             if (this.callerRole === 'owner') {
@@ -1117,6 +1121,120 @@ const Admin = {
         } catch (_) {}
     },
 
+    loadUpdates: async function() {
+        const list = document.getElementById('updates-list');
+        const status = document.getElementById('update-publish-status');
+        if (this.callerRole !== 'owner') {
+            if (list) list.textContent = 'Only the platform owner can manage website releases.';
+            return;
+        }
+        if (list) list.textContent = 'Loading published releases...';
+        try {
+            const response = await fetch('/api/updates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' },
+                body: JSON.stringify({ action: 'admin-list' }),
+                cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Could not load website releases.');
+            if (list) {
+                list.replaceChildren();
+                const releases = Array.isArray(data.releases) ? data.releases : [];
+                if (!releases.length) list.textContent = 'No website releases have been published yet.';
+                releases.forEach(release => {
+                    const card = document.createElement('article');
+                    card.style.cssText = 'padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--panel);';
+                    const heading = document.createElement('div');
+                    heading.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;';
+                    const version = document.createElement('strong');
+                    version.textContent = release.version || 'Website update';
+                    version.style.cssText = 'font-family:var(--font-brand);font-size:19px;color:var(--fg);';
+                    const date = document.createElement('span');
+                    date.textContent = Number(release.publishedAt) ? new Date(Number(release.publishedAt)).toLocaleString() : '';
+                    date.style.cssText = 'font-size:12px;color:var(--fg2);';
+                    heading.append(version, date);
+                    const body = document.createElement('div');
+                    body.style.cssText = 'margin-top:9px;color:var(--fg2);line-height:1.6;';
+                    body.innerHTML = this.parseMarkdown(release.content || '');
+                    card.append(heading, body);
+                    if (release.detailsUrl) {
+                        const link = document.createElement('a');
+                        link.href = release.detailsUrl;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = 'View full release notes on GitHub';
+                        link.style.cssText = 'display:inline-block;margin-top:10px;color:var(--red);font-weight:700;';
+                        card.appendChild(link);
+                    }
+                    list.appendChild(card);
+                });
+            }
+            if (status && status.textContent === 'Loading releases...') status.textContent = '';
+        } catch (error) {
+            if (list) list.textContent = error.message;
+            if (status) status.textContent = error.message;
+        }
+    },
+
+    updateReleasePreview: function() {
+        const preview = document.getElementById('update-preview');
+        const content = document.getElementById('update-content')?.value || '';
+        if (!preview) return;
+        preview.innerHTML = content.trim()
+            ? this.parseMarkdown(content)
+            : '<span style="color:var(--fg2);font-style:italic;">Your release preview will appear here.</span>';
+    },
+
+    insertUpdateMarkdown: function(before, after, placeholder) {
+        const textarea = document.getElementById('update-content');
+        if (!textarea) return;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selected = textarea.value.slice(start, end) || placeholder;
+        textarea.setRangeText(before + selected + after, start, end, 'select');
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+
+    publishUpdate: async function() {
+        const version = document.getElementById('update-version')?.value.trim() || '';
+        const content = document.getElementById('update-content')?.value.trim() || '';
+        const detailsUrl = document.getElementById('update-details-url')?.value.trim() || '';
+        const button = document.getElementById('update-publish-btn');
+        const status = document.getElementById('update-publish-status');
+        if (this.callerRole !== 'owner') {
+            if (status) status.textContent = 'Only the platform owner can publish website updates.';
+            return;
+        }
+        if (!version || !content) {
+            if (status) status.textContent = 'Enter a version number and release details before publishing.';
+            return;
+        }
+        if (button) { button.disabled = true; button.textContent = 'Publishing...'; }
+        if (status) status.textContent = 'Publishing release...';
+        try {
+            const response = await fetch('/api/updates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' },
+                body: JSON.stringify({ action: 'publish', version, content, detailsUrl }),
+                cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'The release could not be published.');
+            document.getElementById('update-version').value = '';
+            document.getElementById('update-details-url').value = '';
+            document.getElementById('update-content').value = '';
+            this.updateReleasePreview();
+            if (status) status.textContent = 'Version ' + data.release.version + ' was published successfully.';
+            await this.loadUpdates();
+        } catch (error) {
+            if (status) status.textContent = error.message;
+        } finally {
+            if (button) { button.disabled = false; button.textContent = 'Publish Website Update'; }
+        }
+    },
+
     escapeHTML: function(str) {
         if (!str) return '';
         return String(str)
@@ -1129,32 +1247,74 @@ const Admin = {
 
     parseMarkdown: function(text) {
         if (!text) return '';
-        let escaped = this.escapeHTML(text);
+        const inline = value => this.escapeHTML(value)
+            .replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>')
+            .replace(/\x60([^\x60]+)\x60/g, '<code>$1</code>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/~~(.+?)~~/g, '<del>$1</del>')
+            .replace(/__(.+?)__/g, '<u>$1</u>')
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            .replace(/_([^_]+)_/g, '<em>$1</em>')
+            .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--red);text-decoration:underline;">$1</a>');
 
-        // Support explicit underline <u> tags
-        escaped = escaped.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
+        const lines = String(text).replace(/\r/g, '').split('\n');
+        const output = [];
+        let paragraph = [];
+        let listType = '';
 
-        // Headings: ## and #
-        escaped = escaped.replace(/^##\s+(.*$)/gim, '<h2 style="font-family:var(--font-brand); font-size:20px; margin:10px 0 6px; color:var(--red); font-weight:bold;">$1</h2>');
-        escaped = escaped.replace(/^#\s+(.*$)/gim, '<h1 style="font-family:var(--font-brand); font-size:24px; margin:12px 0 8px; color:var(--fg); font-weight:bold;">$1</h1>');
+        const flushParagraph = () => {
+            if (!paragraph.length) return;
+            output.push('<p style="margin:7px 0;">' + paragraph.map(inline).join('<br>') + '</p>');
+            paragraph = [];
+        };
+        const closeList = () => {
+            if (!listType) return;
+            output.push('</' + listType + '>');
+            listType = '';
+        };
 
-        // Bold: **text**
-        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        for (const line of lines) {
+            const heading = line.match(/^(#{1,3})\s+(.+)$/);
+            const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+            const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+            const quote = line.match(/^\s*>\s?(.+)$/);
 
-        // Underline: __text__
-        escaped = escaped.replace(/__(.+?)__/g, '<u>$1</u>');
-
-        // Italics: *text* or _text_
-        escaped = escaped.replace(/\*([^\*]+?)\*/g, '<em>$1</em>');
-        escaped = escaped.replace(/\b_([^_]+?)_\b/g, '<em>$1</em>');
-
-        // Markdown Links: [text](https://url)
-        escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--red); text-decoration:underline;">$1</a>');
-
-        // Line breaks
-        escaped = escaped.replace(/\n/g, '<br>');
-
-        return escaped;
+            if (!line.trim()) {
+                flushParagraph();
+                closeList();
+                continue;
+            }
+            if (heading) {
+                flushParagraph();
+                closeList();
+                const level = heading[1].length;
+                const sizes = { 1: 24, 2: 20, 3: 17 };
+                output.push('<h' + level + ' style="font-family:var(--font-brand);font-size:' + sizes[level] + 'px;margin:12px 0 7px;color:var(--fg);">' + inline(heading[2]) + '</h' + level + '>');
+                continue;
+            }
+            if (unordered || ordered) {
+                flushParagraph();
+                const nextType = unordered ? 'ul' : 'ol';
+                if (listType !== nextType) {
+                    closeList();
+                    listType = nextType;
+                    output.push('<' + listType + ' style="padding-left:22px;margin:8px 0;">');
+                }
+                output.push('<li>' + inline((unordered || ordered)[1]) + '</li>');
+                continue;
+            }
+            if (quote) {
+                flushParagraph();
+                closeList();
+                output.push('<blockquote style="margin:9px 0;padding:7px 12px;border-left:3px solid var(--red);color:var(--fg2);">' + inline(quote[1]) + '</blockquote>');
+                continue;
+            }
+            closeList();
+            paragraph.push(line);
+        }
+        flushParagraph();
+        closeList();
+        return output.join('');
     }
 };
 

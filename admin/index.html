@@ -13,6 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <link rel="icon" href="/img/icon.png">
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/admin.css">
+    <script src="/js/updates.js" defer></script>
 </head>
 <body>
 
@@ -22,6 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
     </div>
     <button class="nav-btn active" onclick="Admin.switchTab('users', this)">Accounts Registry</button>
     <button class="nav-btn" onclick="Admin.switchTab('announcements', this)">Announcements</button>
+    <button class="nav-btn" id="nav-btn-updates" style="display:none;" onclick="Admin.switchTab('updates', this)">Website Updates</button>
     <button class="nav-btn" onclick="Admin.switchTab('chat', this)">Chat Moderation</button>
     <button class="nav-btn" onclick="Admin.switchTab('reports', this)">Reports &amp; Requests</button>
     <button class="nav-btn" onclick="Admin.switchTab('support', this)">General Support Inbox</button>
@@ -78,6 +80,38 @@ SPDX-License-Identifier: AGPL-3.0-only
         <div id="announcements-list" style="display:flex; flex-direction:column; gap:14px;">
             <div style="text-align:center; color:var(--fg2); padding:30px;">Loading announcements...</div>
         </div>
+    </div>
+
+    <!-- Website Updates Panel -->
+    <div id="updates-panel" class="panel">
+        <div class="panel-header">
+            <div><h1>Website Updates</h1><p style="color:var(--fg2);margin:4px 0 0;">Publish versioned website releases to the What’s New popup.</p></div>
+            <button class="btn" type="button" onclick="Admin.loadUpdates()">Refresh</button>
+        </div>
+        <div id="updates-owner-notice" class="banner-mod" style="display:none;">Release publishing is restricted to the platform owner.</div>
+        <div id="update-create-card" style="background:var(--panel);border:2px solid var(--border);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:15px;">
+            <h2 style="font-family:var(--font-brand);font-size:24px;margin:0;color:var(--fg);">Create a Website Release</h2>
+            <div class="form-group" style="margin:0;"><label for="update-version">Version Number</label><input type="text" id="update-version" maxlength="40" placeholder="e.g. v6.14.0"></div>
+            <div class="form-group" style="margin:0;"><label for="update-details-url">GitHub Release Notes URL <span style="color:var(--fg2);font-weight:normal;">(optional)</span></label><input type="url" id="update-details-url" placeholder="https://github.com/BSMS-Web-App/web/releases/tag/v6.14.0"></div>
+            <div class="form-group" style="margin:0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:10px;flex-wrap:wrap;">
+                    <label for="update-content" style="margin:0;">Release Details <span style="color:var(--fg2);font-weight:normal;">(Markdown supported)</span></label>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button type="button" class="btn sec sm" onclick="Admin.insertUpdateMarkdown('**','**','bold text')"><b>B</b></button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertUpdateMarkdown('*','*','italic text')"><i>I</i></button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertUpdateMarkdown('## ','','Heading')">H2</button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertUpdateMarkdown('- ','','List item')">List</button>
+                        <button type="button" class="btn sec sm" onclick="Admin.insertUpdateMarkdown('[','](https://)','link text')">Link</button>
+                    </div>
+                </div>
+                <textarea id="update-content" rows="9" maxlength="30000" oninput="Admin.updateReleasePreview()" placeholder="# What's new&#10;&#10;**New feature:** Describe the change.&#10;- First improvement&#10;- Another improvement"></textarea>
+                <p style="color:var(--fg2);font-size:12px;margin:6px 0 0;">Use headings, bold, italics, lists, links, blockquotes, and inline code. Maximum 30,000 characters.</p>
+            </div>
+            <div><label style="display:block;font-family:var(--font-brand);font-size:17px;color:var(--fg2);margin-bottom:6px;">Live Preview</label><div id="update-preview" style="background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;color:var(--fg);line-height:1.6;"><span style="color:var(--fg2);font-style:italic;">Your release preview will appear here.</span></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><p id="update-publish-status" role="status" aria-live="polite" style="margin:0;color:var(--fg2);font-size:13px;"></p><button id="update-publish-btn" class="btn" type="button" onclick="Admin.publishUpdate()">Publish Website Update</button></div>
+        </div>
+        <h2 style="font-family:var(--font-brand);font-size:26px;margin:22px 0 12px;color:var(--fg);">Published Releases</h2>
+        <div id="updates-list" style="display:flex;flex-direction:column;gap:12px;"><div style="text-align:center;color:var(--fg2);padding:24px;">Select Website Updates to load releases.</div></div>
     </div>
 
     <!-- Chat Moderation Panel -->

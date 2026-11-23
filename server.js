@@ -20,7 +20,7 @@ import exportDataHandler from './api/export-data.js';
 import profanityFilterHandler from './api/profanity-filter.js';
 import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
-import legalHandler from './api/legal.js';
+import updatesHandler from './api/updates.js';
 import versionHandler from './api/version.js';
 import lastHarvestHandler from './api/last-harvest.js';
 import reportsHandler from './api/reports.js';
@@ -177,7 +177,7 @@ app.use('/api/version', (req, res) => versionHandler(req, res));
 app.use('/api/last-harvest', (req, res) => lastHarvestHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
-app.use('/api/legal', (req, res) => legalHandler(req, res));
+app.use('/api/updates', (req, res) => updatesHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
 app.use('/api/voice', (req, res) => voiceHandler(req, res));
 
