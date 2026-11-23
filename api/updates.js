@@ -30,12 +30,13 @@ async function getReleases() {
         .sort((a, b) => Number(b.publishedAt || 0) - Number(a.publishedAt || 0));
 }
 
-function unseenReleases(releases, account) {
+function unseenReleases(releases, account, uid) {
     const seen = new Set(Array.isArray(account.updatesSeen) ? account.updatesSeen : []);
     const start = releaseStart(account);
     return releases.filter(release =>
         release.active !== false &&
         Number(release.publishedAt || 0) >= start &&
+        release.publishedBy !== uid &&
         !seen.has(release.id)
     );
 }
@@ -190,13 +191,6 @@ async function publishRelease(user, payload, res, releases) {
     };
     await ref.set(release);
 
-    // The publisher has already authored the release; do not show it as unread to them.
-    await db.ref('/accounts/' + user.uid + '/updatesSeen').transaction(current => {
-        const seen = new Set(Array.isArray(current) ? current : []);
-        seen.add(ref.key);
-        return [...seen];
-    });
-
     return res.status(201).json({ success: true, release: { ...release, id: ref.key } });
 }
 
@@ -221,7 +215,7 @@ export default async function handler(req, res) {
             const releases = await getReleases();
             return res.status(200).json({
                 success: true,
-                releases: unseenReleases(releases, user.account),
+                releases: unseenReleases(releases, user.account, user.uid),
                 latestReleaseVersion: releases.find(release => release.active !== false)?.version || null,
                 legal: {
                     versions: LEGAL_POLICY_VERSIONS,
