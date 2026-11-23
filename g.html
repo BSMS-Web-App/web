@@ -94,15 +94,19 @@ SPDX-License-Identifier: AGPL-3.0-only
     </div>
 
     <div class="stats-controls">
-      <div class="stats-ranges" id="statsRanges" role="group" aria-label="Time window"></div>
       <label class="stats-game-select" for="statsGameSelect">Game
         <select id="statsGameSelect"><option value="">All games</option></select>
       </label>
     </div>
 
     <div class="stats-chart-block">
-      <div class="stats-chart-peak" id="statsChartPeak"></div>
-      <div class="stats-chart" id="statsChart" role="img" aria-label="Play time per day"></div>
+      <div class="stats-chart-heading"><strong>Last 7 days</strong><span class="stats-chart-peak" id="statsChartPeak"></span></div>
+      <div class="stats-chart" id="statsChart" role="img" aria-label="Play time for each of the last seven days"></div>
+    </div>
+
+    <div class="stats-calendar-block">
+      <div class="stats-calendar-heading"><strong>Playtime activity</strong><span class="stats-chart-peak">Last 12 months</span></div>
+      <div class="stats-calendar-scroll" id="statsCalendar" aria-label="Daily playtime calendar"></div>
     </div>
 
     <h3 class="stats-section-title">Games played</h3>
