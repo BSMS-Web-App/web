@@ -63,8 +63,12 @@ const allowedOrigins = new Set([
 
 function apiCors(req, res, next) {
     const origin = req.get('Origin');
+    // Vercel preview URLs are unique per deployment; allow only this project's
+    // own HTTPS preview hostname pattern, never arbitrary vercel.app origins.
+    const isProjectPreview = typeof origin === 'string' &&
+        /^https:\/\/bsms-[a-z0-9-]+-jellyfishjelly\.vercel\.app$/.test(origin);
 
-    if (origin && !allowedOrigins.has(origin)) {
+    if (origin && !allowedOrigins.has(origin) && !isProjectPreview) {
         return res.status(403).json({ error: 'Origin is not allowed.' });
     }
 
