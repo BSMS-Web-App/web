@@ -80,8 +80,7 @@
     endedRecord: $('ff-ended-record'), endedResume: $('ff-ended-resume'),
     /* === NEW: a finished file can be opened from the file list, so the record
        screen needs a way back and an explicit way to start over === */
-    endedBack: $('ff-ended-back'), endedRenew: $('ff-ended-renew'),
-    endedFiles: $('ff-ended-files'), fallback: $('ff-fallback'),
+    endedRenew: $('ff-ended-renew'), endedFiles: $('ff-ended-files'), fallback: $('ff-fallback'),
     /* === NEW: battle pause / quit === */
     battlePauseOpen: $('ff-battle-pause-button'), battlePause: $('ff-battle-pause'),
     battlePauseCopy: $('ff-battle-pause-copy'), battlePauseResume: $('ff-battle-pause-resume'),
@@ -4115,13 +4114,6 @@
     return !!(info && info.raw && info.raw.started && !info.raw.ending);
   }
 
-  function openRunExists() {
-    for (var i = 0; i < SLOT_KEYS.length; i++) {
-      if (slotStillPlayable(slotInfo(i))) return true;
-    }
-    return false;
-  }
-
   /* === NEW: finished files keep their records readable after the event === */
   function finishedRunExists() {
     for (var i = 0; i < SLOT_KEYS.length; i++) {
@@ -4132,7 +4124,11 @@
 
   function canEnterFiles() {
     if (clock() < START) return false;
-    return windowOpen() || openRunExists() || finishedRunExists();
+    if (windowOpen() || finishedRunExists()) return true;
+    for (var i = 0; i < SLOT_KEYS.length; i++) {
+      if (slotStillPlayable(slotInfo(i))) return true;
+    }
+    return false;
   }
 
   function openTitleOrEnded() {
@@ -4174,7 +4170,7 @@
 
   function slotInfo(index) {
     var raw = slotRaw(index);
-    if (!raw || !raw.started) return { empty: true, finished: false, gender: slotPick[index] || selectedGender };
+    if (!raw || !raw.started) return { empty: true, finished: false };
     /* === NEW: a finished file is a filled slot that holds a record, not an
        empty one waiting to be overwritten === */
     return {
@@ -4211,7 +4207,7 @@
       var info = slotInfo(i);
       /* === NEW: a finished file reads as a record of the run, the way the
          ended screen does, instead of "NO DATA / NEW FILE" === */
-      var finished = !!(info.finished && info.raw);
+      var finished = info.finished;
       var gender = info.empty ? (slotPick[i] || selectedGender) : info.gender;
       var card = document.createElement('div');
       card.className = 'ff-file-card' + (info.empty ? ' empty' : '') + (finished ? ' done' : '');
@@ -4256,7 +4252,7 @@
     var picked = gender === 'girl' ? 'girl' : 'boy';
     slotPick[index] = picked;
     var info = slotInfo(index);
-    if (!info.empty && info.raw) {
+    if (info.raw) {
       info.raw.gender = picked;
       try { localStorage.setItem(SLOT_KEYS[index] || SAVE_KEY, JSON.stringify(info.raw)); } catch (error) { /* ignore */ }
     }
@@ -4272,8 +4268,7 @@
     var info = slotInfo(index);
     /* === NEW: past END only a run that was already under way may open, and a
        finished record may always be read === */
-    if (clock() < START) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
-    if (!windowOpen() && !slotStillPlayable(info) && !info.finished) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
+    if (clock() < START || (!windowOpen() && !slotStillPlayable(info) && !info.finished)) { toast('A CHRISTMAS TALE IS NOT OPEN RIGHT NOW.'); return; }
     /* === NEW: a finished file opens its record; it is never erased by a tap === */
     if (info.finished) { showEnded(index); return; }
     activeSlot = index;
@@ -4350,7 +4345,7 @@
     var finished = null;
     for (var i = 0; i < SLOT_KEYS.length; i++) {
       /* === NEW: a slot can be named so the file list can open one record === */
-      if (slot !== undefined && slot !== null && i !== slot) continue;
+      if (slot !== null && i !== slot) continue;
       var info = slotInfo(i);
       if (!info.raw || !info.raw.started) continue;
       var row = {
@@ -4368,11 +4363,12 @@
   }
 
   function paintEndedRecord(slot) {
-    var record = runRecord(slot);
+    var at = typeof slot === 'number' && isFinite(slot) ? slot : null;
+    var record = runRecord(at);
     var unfinished = !!(record && !record.ending);
     /* === NEW: a finished file read from the file list is a record, not the
        closing of the event === */
-    var viewingClosedFile = !!(record && record.ending && slot !== undefined && slot !== null);
+    var viewingClosedFile = !!(record && record.ending && at !== null);
     if (ui.endedTitle) {
       ui.endedTitle.textContent = unfinished
         ? 'THE WINDOW CLOSED. YOUR RUN DID NOT.'
@@ -4417,16 +4413,17 @@
       ui.endedResume.hidden = !unfinished;
       ui.endedResume.dataset.slot = record ? String(record.slot) : '';
     }
-    /* === NEW: reached from the file list, the record needs a way back and an
-       explicit, warned way to start that file over === */
-    if (ui.endedBack) ui.endedBack.hidden = !viewingClosedFile;
+    /* === NEW: one door to the file list. It reads BACK TO FILES on a record
+       opened from the list, and FINISHED FILES after the event, when the list
+       is otherwise shut. START A NEW STORY is the warned, separate step. === */
     if (ui.endedRenew) {
       ui.endedRenew.hidden = !(viewingClosedFile && windowOpen());
       ui.endedRenew.dataset.slot = record ? String(record.slot) : '';
     }
-    /* === NEW: past END the ended screen is the only door, so it has to open
-       the file list when finished files are waiting in it === */
-    if (ui.endedFiles) ui.endedFiles.hidden = viewingClosedFile || !(!windowOpen() && finishedRunExists());
+    if (ui.endedFiles) {
+      ui.endedFiles.hidden = !(viewingClosedFile || (!windowOpen() && finishedRunExists()));
+      ui.endedFiles.textContent = viewingClosedFile ? 'BACK TO FILES' : 'FINISHED FILES';
+    }
   }
 
   function backToFiles() {
@@ -6550,8 +6547,6 @@
     ui.prompt.hidden = true;
     ui.dialogue.hidden = true;
     ui.battle.hidden = false;
-    /* === NEW: a new fight always starts unpaused === */
-    if (ui.battlePause) ui.battlePause.hidden = true;
     ui.battle.classList.remove('ff-mortal');
     ui.skills.hidden = true;
     ui.actions.hidden = false;
@@ -7777,7 +7772,7 @@
      damage already taken. */
   function pauseBattle() {
     if (!battle || battle.ended || mode !== 'battle') return;
-    if (battle.window || battle.busy || battle.state !== 'menu') { toast('WAIT FOR YOUR TURN TO PAUSE.'); return; }
+    if (battle.state !== 'menu') { toast('WAIT FOR YOUR TURN TO PAUSE.'); return; }
     mode = 'battlepause';
     if (ui.battlePauseCopy) ui.battlePauseCopy.textContent = battle.def.name + ' · TURN ' + battle.turn + ' · HP ' + Math.max(0, Math.ceil(battle.displayHp)) + ' / ' + save.maxHp;
     ui.battlePause.hidden = false;
@@ -7810,15 +7805,11 @@
     if (mode !== 'battlepause' || !battle || battle.ended) return;
     if (!window.confirm('Quit this battle? You keep the damage you have taken.')) return;
     holdNearbyEncounters();
-    mode = 'battle';
-    ui.battlePause.hidden = true;
+    resumeBattle();
     battle.ended = true;
     battle.busy = true;
     setBattleButtons(false);
-    hideTiming();
-    hideTelegraph();
     log('YOU STEP BACK OUT OF THE FIGHT.');
-    sound('click');
     setTimeout(function () { finishBattle(false); }, 420);
   }
 
@@ -8013,7 +8004,6 @@
     ui.sound.addEventListener('click', toggleSound);
     ui.endingAgain.addEventListener('click', playAgain);
     if (ui.endedResume) ui.endedResume.addEventListener('click', resumeEndedRun);
-    if (ui.endedBack) ui.endedBack.addEventListener('click', backToFiles);
     if (ui.endedFiles) ui.endedFiles.addEventListener('click', backToFiles);
     if (ui.endedRenew) ui.endedRenew.addEventListener('click', renewClosedFile);
     if (ui.battlePauseOpen) ui.battlePauseOpen.addEventListener('click', pauseBattle);

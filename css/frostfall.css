@@ -809,7 +809,6 @@ a { color: inherit; }
   -webkit-backdrop-filter: blur(5px);
   pointer-events: auto;
 }
-.ff-battle-pause[hidden] { display: none; }
 .ff-battle-pause-panel { width: min(440px, 100%); text-align: left; }
 
 /* ------------------------------------------------------------- level up */
@@ -901,7 +900,6 @@ a { color: inherit; }
   margin: 0 0 20px;
   text-align: left;
 }
-.ff-ended-record[hidden] { display: none; }
 .ff-ended-record div {
   display: flex;
   flex-direction: column;
