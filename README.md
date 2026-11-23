@@ -42,7 +42,7 @@ The production website is available at [bsms-web.com](https://bsms-web.com). Ver
 | Document | Description |
 | --- | --- |
 | [Contributing Guide](CONTRIBUTING.md) | Branching rules, development workflow, and pull-request expectations. |
-| [Changelog](CHANGELOG.md) | A chronological record of notable updates, improvements, and changes to BSMS Web. |
+| [GitHub Releases](https://github.com/BSMS-Web-App/web/releases) | Tagged website releases and their detailed release notes. |
 | [Security Policy](SECURITY.md) | Instructions for reporting security vulnerabilities responsibly. |
 | [Mac Database and Media API](mac-api/README.md) | Database API architecture, access model, persistence, and operations. |
 | [Voice Infrastructure](mac-api/voice/README.md) | LiveKit setup, network requirements, environment variables, and voice-call testing. |
