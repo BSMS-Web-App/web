@@ -6408,6 +6408,7 @@
     ui.actions.hidden = false;
     ui.timing.hidden = true;
     ui.telegraph.hidden = true;
+    ui.battle.classList.remove('ff-window-open');
     ui.battleHint.textContent = 'CHOOSE AN ACTION';
   }
 
@@ -6548,6 +6549,8 @@
     ui.dialogue.hidden = true;
     ui.battle.hidden = false;
     ui.battle.classList.remove('ff-mortal');
+    /* === NEW: a lingering chapter toast would sit on the enemy plate === */
+    ui.toast.hidden = true;
     ui.skills.hidden = true;
     ui.actions.hidden = false;
     ui.timing.hidden = true;
@@ -6624,12 +6627,15 @@
       ? 'SPACE / E / TAP · INNER ZONE = SUPERGUARD'
       : 'SPACE / E / TAP · GOLD ZONE = PERFECT';
     ui.timingMarker.style.left = '0%';
-    ui.actions.hidden = true;
+    /* === NEW: hold the action strip open so the plate does not slide under the meter === */
+    ui.actions.hidden = false;
+    ui.battle.classList.add('ff-window-open');
     ui.skills.hidden = true;
   }
 
   function hideTiming() {
     ui.timing.hidden = true;
+    ui.battle.classList.remove('ff-window-open');
     if (battle) {
       if (battle.windowTimer) clearTimeout(battle.windowTimer);
       battle.windowTimer = null;

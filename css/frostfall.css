@@ -2124,3 +2124,45 @@ a { color: inherit; }
 /* level-up: a maxed BP option reads as spent, not choosable */
 .ff-level-option:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .ff-level-option.bp.maxed em { color: #ffb0c8; }
+
+/* ============================================================
+   NEW: phone battle UI — the log and windup chip stack under the
+   enemy plate instead of over it, the timing meter takes the action
+   strip's place without moving the plate, and STRIKE is thumb-sized.
+   ============================================================ */
+.ff-battle-top { flex-wrap: wrap; }
+.ff-battle-top .ff-battle-log,
+.ff-battle-top .ff-telegraph {
+  position: static;
+  flex: 0 0 100%;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  left: auto;
+  top: auto;
+  transform: none;
+  text-align: center;
+  animation: none;
+}
+.ff-battle-top .ff-telegraph { animation: ff-telegraph-in .16s ease-out both; }
+@keyframes ff-telegraph-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The window hides the cards but keeps their row, so the plate stays put.
+   #ff-battle is pointer-events:none, so the meter has to claim its own taps. */
+.ff-timing { pointer-events: auto; }
+#ff-battle.ff-window-open #ff-actions,
+#ff-battle.ff-window-open .ff-battle-hint { visibility: hidden; pointer-events: none; }
+
+@media (pointer: coarse), (max-width: 900px) {
+  .ff-timing { padding: 6px 10px 7px; }
+  .ff-timing p { margin-bottom: 2px; }
+  #ff-timing-label { font-size: 11px; }
+  .ff-timing-track { height: 20px; }
+  .ff-timing-button { min-height: 44px; margin-top: 3px; padding: 4px 26px; }
+  /* the keyboard hint cannot wrap inside the strip without lifting the meter
+     over the plate; the button and the gold zone carry the instruction */
+  .ff-timing small { display: none; }
+}

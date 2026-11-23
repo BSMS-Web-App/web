@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=41">
+<link rel="stylesheet" href="/css/frostfall.css?v=44">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -142,11 +142,12 @@
       </div>
       <!-- === NEW: pause / quit a fight === -->
       <button id="ff-battle-pause-button" class="ff-icon-button ff-battle-pause-open" type="button" aria-label="Pause battle">PAUSE</button>
+      <!-- === NEW: log and windup chip stack under the plate instead of over it === -->
+      <p id="ff-battle-log" class="ff-battle-log" aria-live="polite">A FROST MITE BLOCKS THE PATH!</p>
+      <p id="ff-telegraph" class="ff-telegraph" hidden>ATTACK INCOMING</p>
     </div>
     <div id="ff-rating" class="ff-rating" aria-hidden="true" hidden>PERFECT!</div>
     <div id="ff-fx" class="ff-fx" aria-hidden="true"></div>
-    <p id="ff-battle-log" class="ff-battle-log" aria-live="polite">A FROST MITE BLOCKS THE PATH!</p>
-    <p id="ff-telegraph" class="ff-telegraph" hidden>ATTACK INCOMING</p>
     <div id="ff-timing" class="ff-timing" hidden>
       <p id="ff-timing-label">PRESS ON THE BEAT</p>
       <div class="ff-timing-track"><span id="ff-timing-zone"></span><i id="ff-timing-marker"></i></div>
@@ -278,6 +279,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=7"></script>
-<script src="/js/frostfall.js?v=129"></script>
+<script src="/js/frostfall.js?v=131"></script>
 </body>
 </html>
