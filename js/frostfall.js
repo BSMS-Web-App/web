@@ -3540,14 +3540,88 @@
     });
   }
 
-  function house(x, z, w, d, h, wall, roof) {
+  /* === NEW: BLOCK HOUSES === flat-roofed, hard-edged and saturated: a plain
+     box with a thick roof slab, dark trim, bright window panes, a striped
+     awning and an optional chunky pixel sign band. */
+  function blockHouse(x, z, w, d, h, opts) {
+    opts = opts || {};
+    var wall = opts.wall === undefined ? 0xf7e7c6 : opts.wall;
+    var trim = opts.trim === undefined ? 0x8a5a3c : opts.trim;
+    var face = z + d / 2 + 0.02;
+    var doorH = Math.min(1.9, h * 0.46);
     box(x, h / 2, z, w, h, d, wall);
-    box(x, h, z, w * 0.84, h * 0.58, d * 0.84, roof, { geo: 'cone4', ry: Math.PI / 4 });
-    box(x - w * 0.28, h * 0.62, z + d / 2 + 0.06, 0.7, 0.7, 0.08, 0xffd77a);
-    box(x + w * 0.28, h * 0.62, z + d / 2 + 0.06, 0.7, 0.7, 0.08, 0xffd77a);
-    box(x, h * 0.17, z + d / 2 + 0.07, 0.9, h * 0.34, 0.12, 0x3a2a20);
-    box(x + w * 0.22, h + h * 0.42, z - d * 0.2, 0.5, 1.2, 0.5, 0x4a3a32);
-    world.colliders.push({ x: x, z: z, hw: w / 2, hd: d / 2 });
+    box(x, h + 0.16, z, w + 0.52, 0.32, d + 0.52, trim);
+    box(x, h - 0.24, z, w + 0.26, 0.3, d + 0.26, trim);
+    if (opts.chimney) box(x + w * 0.22, h + 1.1, z - d * 0.2, 0.55, 1.8, 0.55, trim);
+    box(x, doorH * 0.5 + 0.02, face, 1.2, doorH + 0.14, 0.16, trim);
+    box(x, doorH * 0.46, face + 0.09, 0.86, doorH * 0.9, 0.1, 0x6b4230);
+    var winY = h * 0.45;
+    [-1, 1].forEach(function (side) {
+      box(x + side * w * 0.3, winY, face, 1.3, 1.3, 0.14, trim);
+      box(x + side * w * 0.3, winY, face + 0.08, 1.0, 1.0, 0.1, 0xbfe9ff);
+    });
+    if (opts.awning !== false) {
+      var awning = opts.awning === undefined ? 0xe2483f : opts.awning;
+      for (var i = 0; i < 3; i++) {
+        box(x - 0.75 + i * 0.75, doorH + 0.24, face + 0.5, 0.75, 0.18, 1.0, i % 2 ? 0xfffdf4 : awning, { rx: -0.32 });
+      }
+    }
+    if (opts.sign) {
+      var px = Math.min(0.15, (w * 0.66) / (String(opts.sign).length * 4));
+      var bandY = h * 0.8;
+      box(x, bandY, face + 0.04, w * 0.76, 5 * px + 0.36, 0.16, opts.board === undefined ? 0xfff7e6 : opts.board);
+      pixelText(opts.sign, x, bandY - 2.5 * px, face + 0.12, px, opts.ink === undefined ? 0xc8323c : opts.ink);
+    }
+    world.colliders.push({ x: x, z: z, hw: w / 2 + 0.15, hd: d / 2 + 0.15 });
+  }
+
+  function house(x, z, w, d, h, wall, roof) {
+    blockHouse(x, z, w, d, h, { wall: wall, trim: roof, awning: false, chimney: true });
+  }
+
+  /* === NEW: CHECKER LAWN === two batched tones of block tiles, so the ground
+     reads as a chunky checkerboard without one draw call per tile. */
+  function checkerGround(x, z, width, depth, tile, colorA, colorB, topY) {
+    if (!world || !renderer) return;
+    var groups = {};
+    var cols = Math.max(1, Math.round(width / tile));
+    var rows = Math.max(1, Math.round(depth / tile));
+    var y = topY === undefined ? 0.03 : topY;
+    for (var ix = 0; ix < cols; ix++) {
+      for (var iz = 0; iz < rows; iz++) {
+        var tone = (ix + iz) % 2 === 0 ? colorA : colorB;
+        var list = groups[tone] || (groups[tone] = []);
+        list.push(mat.compose([
+          x - width / 2 + tile * (ix + 0.5), y, z - depth / 2 + tile * (iz + 0.5)
+        ], [0, 0, 0], [tile, 0.08, tile]));
+      }
+    }
+    Object.keys(groups).forEach(function (key) {
+      for (var start = 0; start < groups[key].length; start += 400) {
+        var geo = renderer.batchGeometry('cube', groups[key].slice(start, start + 400));
+        if (!geo) continue;
+        world.geometries.push(geo);
+        world.objects.push({ geo: geo, model: mat.identity(), color: rgb(Number(key)), alpha: 1, hidden: false });
+      }
+    });
+  }
+
+  function blockBush(x, z, s, leaf) {
+    s = s || 1;
+    box(x, 0.34 * s, z, 1.15 * s, 0.68 * s, 1.15 * s, leaf === undefined ? 0x45a94e : leaf);
+    box(x + 0.38 * s, 0.5 * s, z - 0.22 * s, 0.72 * s, 0.72 * s, 0.72 * s, 0x59c163);
+    box(x - 0.4 * s, 0.46 * s, z + 0.24 * s, 0.64 * s, 0.64 * s, 0.64 * s, 0x3d9a48);
+  }
+
+  function blockFence(x, z, length, ry, color) {
+    color = color === undefined ? 0xfaf6ea : color;
+    var posts = Math.max(2, Math.round(length / 1.6));
+    for (var i = 0; i <= posts; i++) {
+      var off = -length / 2 + (length * i) / posts;
+      box(x + Math.cos(ry) * off, 0.55, z + Math.sin(ry) * off, 0.3, 1.1, 0.3, color);
+    }
+    box(x, 0.8, z, length, 0.18, 0.16, color, { ry: ry });
+    box(x, 0.42, z, length, 0.18, 0.16, color, { ry: ry });
   }
 
   function lamp(x, z, tint) {
@@ -3556,12 +3630,19 @@
     box(x, 2.78, z, 1.4, 1.4, 1.4, 0xffd76a, { geo: 'cylinder', alpha: 0.12 });
   }
 
-  var PINES = ['tree-snow-a', 'tree-snow-b', 'tree-snow-c'];
+  /* === NEW: BLOCK TREES === a trunk with stacked cube canopies in saturated
+     greens, so every map shares the chunky block look. */
   function tree(x, z, s, tint) {
     s = s || 1;
-    var pick = PINES[Math.abs(Math.round(x * 3 + z * 5)) % PINES.length];
-    modelProp(pick, x, z, { s: 2.15 * s, ry: (x * 0.7 + z * 1.1) % 6.283, color: tint });
-    world.colliders.push({ x: x, z: z, hw: 0.42 * s, hd: 0.42 * s });
+    var snowy = tint === 0x9aa0c0;
+    var leaf = snowy ? 0x2f6d52 : 0x3f9f4a;
+    var leaf2 = snowy ? 0x3d8563 : 0x57bd5f;
+    box(x, 0.8 * s, z, 0.5 * s, 1.6 * s, 0.5 * s, snowy ? 0x4a3a44 : 0x8a5a3c);
+    box(x, 2.1 * s, z, 2.8 * s, 1.5 * s, 2.8 * s, leaf);
+    box(x - 1.2 * s, 1.9 * s, z + 0.5 * s, 1.5 * s, 1.1 * s, 1.5 * s, leaf2);
+    box(x + 1.15 * s, 2.6 * s, z - 0.45 * s, 1.4 * s, 1.2 * s, 1.4 * s, leaf2);
+    box(x, 3.1 * s, z, 1.7 * s, 0.95 * s, 1.7 * s, leaf);
+    world.colliders.push({ x: x, z: z, hw: 0.45 * s, hd: 0.45 * s });
   }
 
   function snowman(x, z, s, tint) {
@@ -3651,15 +3732,25 @@
     box(x + 1.5, 0.7, z - 4, 0.2, 0.8, 0.2, 0x5a4028);
   }
 
+  /* === NEW: BLOCK TOWN === the town map rebuilt as a sunny, saturated block
+     world: checkered lawn, cream sidewalk, flat shopfronts with pixel signs
+     and cube-canopy trees. */
   function buildRoadtown() {
-    box(0, -0.3, 0, 64, 0.6, 64, 0xeaf4ff);
-    box(0, 0.02, 0, 7, 0.06, 54, 0x6d8cb8);
-    studs(0, 0, 7, 54, 0.05, 0xe8f4ff, 1.75);
-    for (var m = -24; m <= 24; m += 4) box(0, 0.15, m, 0.32, 0.03, 1.4, 0xdce9f7);
-    house(-10.5, 3, 7, 6, 4, 0x9a7561, 0x6b4a3a);
-    house(10.5, 2, 6, 5, 3.8, 0x7f8fa8, 0x51617a);
-    house(-11, -9, 6, 6, 4.4, 0x8a6a8f, 0x5d4166);
-    house(11, -10, 7, 6, 4, 0x6f8a78, 0x47604f);
+    box(0, -0.3, 0, 64, 0.6, 64, 0x67bf43);
+    checkerGround(0, 0, 64, 64, 4, 0x8ee06a, 0x67bf43, 0.02);
+    box(0, 0.06, 0, 8.6, 0.12, 56, 0xf3e4bd);
+    studs(0, 0, 8.6, 56, 0.12, 0xe6d2a2, 1.75);
+    box(-4.5, 0.1, 0, 0.42, 0.2, 56, 0xdcc78f);
+    box(4.5, 0.1, 0, 0.42, 0.2, 56, 0xdcc78f);
+    for (var m = -24; m <= 24; m += 4) box(0, 0.15, m, 7.6, 0.03, 0.24, 0xe3cfa0);
+    blockHouse(-11.6, 2.5, 7.6, 7, 4.7, {
+      wall: 0xfdf1d8, trim: 0xd9524b, board: 0xfff7e6, ink: 0xc8323c, sign: 'LIBRARY', awning: 0x4aa3d8
+    });
+    blockHouse(11.5, 2, 7, 6, 4.6, {
+      wall: 0xffe3b8, trim: 0x9a6535, board: 0x6b4a2c, ink: 0xfff1c7, sign: 'GENERAL STORE', awning: 0xe2483f
+    });
+    blockHouse(-11.5, -9.5, 6.4, 6, 4.4, { wall: 0xbfe6c4, trim: 0x2f7a4d, awning: 0xffffff });
+    blockHouse(11.5, -10.5, 7, 6, 4.2, { wall: 0xbcd8f2, trim: 0x3d5f8a, awning: 0xffcf3f });
     sign('ROADTOWN', 0, 7.6);
     inspect(0, 7.6, 'ROADTOWN', [
       'ROADTOWN · POP. 214 · RELICS 0 · SNOW 6 FT.',
@@ -3671,22 +3762,25 @@
       'The fountain is frozen mid-splash. It looks personally offended.',
       'A little plaque reads NO SKATING. It is covered in skate marks and one set of claw marks.'
     ], 2.6);
-    inspect(10.5, 2, 'GENERAL STORE', [
+    inspect(11.5, 5.6, 'GENERAL STORE', [
       'A hand-painted sign: GENERAL STORE · OPEN · PROBABLY.',
       'The door is locked. A note says GONE TO FROSTFEST 2010. BACK IN 16 YEARS.'
     ], 2.8);
-    lamp(-3.6, 2.5); lamp(3.6, -1.5); lamp(-3.6, -10); lamp(3.6, 8);
-    tree(-16, 8, 1.1); tree(16, 6, 1.0); tree(-17, -16, 1.2); tree(17, -18, 1.1);
-    tree(-6.5, -19, 0.9); tree(7, -20, 1.0);
-    snowPile(-7, 10, 1); snowPile(7, -13, 0.9); snowPile(13, 12, 1.1);
-    snowPile(-14, 14, 0.8); snowPile(5, -16, 0.7);
-    bench(-2.4, 1.6, -0.55); bench(2.4, -6.4, 2.55);
+    lamp(-3.9, 2.5); lamp(3.9, -1.5); lamp(-3.9, -10); lamp(3.9, 8);
+    tree(-8.4, 13.5, 1.1); tree(8.4, 14, 1.0); tree(-15.5, -3, 1.05); tree(15.5, -3.5, 1.0);
+    tree(-17, -16, 1.2); tree(17, -18, 1.1);
+    tree(-7, -19.5, 0.95); tree(7.5, -20, 1.0);
+    blockFence(-5.4, 9.5, 9, Math.PI / 2); blockFence(5.4, 9.5, 9, Math.PI / 2);
+    blockFence(-5.4, -13, 8, Math.PI / 2); blockFence(5.4, -14, 8, Math.PI / 2);
+    blockBush(-6.2, 5.2, 1.1); blockBush(6.4, 6.4, 0.9); blockBush(-6.6, -6.4, 1);
+    blockBush(6.2, -3.2, 0.85); blockBush(13.6, -4.6, 1.05);
+    bench(-2.8, 1.6, -0.55); bench(2.8, -6.4, 2.55);
     snowman(-7.6, 6.4, 1);
-    presents(9.2, 4.8);
-    candyCane(-3.0, 4.6); candyCane(3.0, 1.2); candyCane(-3.0, -3.4); candyCane(3.0, -8.4);
+    presents(9.6, 4.9);
+    candyCane(-3.2, 4.6); candyCane(3.2, 1.2); candyCane(-3.2, -3.4); candyCane(3.2, -8.4);
     sled(-13.4, 6.6, 0.45);
-    wreathOn(10.5, 2.0, 4.56, 0);
-    wreathOn(-10.5, 2.4, 6.06, 0);
+    wreathOn(11.5, 2.4, 5.06, 0);
+    wreathOn(-11.6, 2.6, 6.06, 0);
   }
 
   function buildPines() {
@@ -3823,7 +3917,7 @@
     {
       num: 'ONE', title: 'ROADTOWN IN THE SNOW', sub: 'Frostfest 2010, population: you',
       relic: 'CANDY CANE CLAYMORE',
-      theme: 'day', fog: [0.78, 0.87, 0.96], spawn: [0.9, 12],
+      theme: 'day', fog: [0.62, 0.82, 0.99], spawn: [0.9, 12],
       intro: [
         'Frostfest 2010 was supposed to be a party. You got the server instead.',
         'Roadtown is snowed in, the tree is dark, and something under the ice has started knocking.',
@@ -5331,7 +5425,7 @@
      follow the chapter lighting; a daylight sky behind the pines at midnight
      read as a rendering bug, and a snow-white shelf glowed in the dark. */
   var CHAPTER_TINTS = {
-    day: { sky: [0.7216, 0.8314, 0.9098], shelf: 0xdfeefb },
+    day: { sky: [0.5333, 0.7686, 0.9804], shelf: 0x67bf43 },
     lake: { sky: [0.6078, 0.7529, 0.8627], shelf: 0xcfe4f2 },
     dusk: { sky: [0.4353, 0.3294, 0.4392], shelf: 0x8a7280 },
     night: { sky: [0.1098, 0.1216, 0.2275], shelf: 0x33405e }

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=47">
+<link rel="stylesheet" href="/css/frostfall.css?v=48">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -173,11 +173,11 @@
         </div>
       </div>
       <div id="ff-actions" class="ff-actions">
-        <button class="ff-action-btn act-attack" type="button" data-act="attack" data-index="0"><b>SWORD</b><span class="ff-act-icon" aria-hidden="true"></span><small>ATTACK</small></button>
-        <button class="ff-action-btn act-skill" type="button" data-act="skill" data-index="1"><b>MOVES</b><span class="ff-act-icon" aria-hidden="true"></span><small>SP</small></button>
-        <button class="ff-action-btn act-guard" type="button" data-act="guard" data-index="2"><b>GUARD</b><span class="ff-act-icon" aria-hidden="true"></span><small>+2 SP</small></button>
-        <button class="ff-action-btn act-item" type="button" data-act="item" data-index="3"><b>COCOA</b><span class="ff-act-icon" aria-hidden="true"></span><small>&times;<span id="ff-cocoa-count">2</span></small></button>
-        <button class="ff-action-btn act-run" type="button" data-act="run" data-index="4"><b>RUN</b><span class="ff-act-icon" aria-hidden="true"></span><small>AWAY</small></button>
+        <button class="ff-action-btn act-attack" type="button" data-act="attack" data-index="0"><b>SWORD</b><span class="ff-act-icon" aria-hidden="true"></span><small>ATTACK</small><span class="ff-key" aria-hidden="true">1</span></button>
+        <button class="ff-action-btn act-skill" type="button" data-act="skill" data-index="1"><b>MOVES</b><span class="ff-act-icon" aria-hidden="true"></span><small>SP</small><span class="ff-key" aria-hidden="true">2</span></button>
+        <button class="ff-action-btn act-guard" type="button" data-act="guard" data-index="2"><b>GUARD</b><span class="ff-act-icon" aria-hidden="true"></span><small>+2 SP</small><span class="ff-key" aria-hidden="true">3</span></button>
+        <button class="ff-action-btn act-item" type="button" data-act="item" data-index="3"><b>COCOA</b><span class="ff-act-icon" aria-hidden="true"></span><small>&times;<span id="ff-cocoa-count">2</span></small><span class="ff-key" aria-hidden="true">4</span></button>
+        <button class="ff-action-btn act-run" type="button" data-act="run" data-index="4"><b>RUN</b><span class="ff-act-icon" aria-hidden="true"></span><small>AWAY</small><span class="ff-key" aria-hidden="true">5</span></button>
       </div>
       <div id="ff-skills" class="ff-skills" hidden></div>
       <p id="ff-battle-hint" class="ff-battle-hint">ARROWS SELECT &middot; E CONFIRM</p>
@@ -285,6 +285,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=7"></script>
-<script src="/js/frostfall.js?v=131"></script>
+<script src="/js/frostfall.js?v=133"></script>
 </body>
 </html>
