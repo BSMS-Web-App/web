@@ -90,8 +90,12 @@ SPDX-License-Identifier: AGPL-3.0-only
         </div>
         <div id="updates-owner-notice" class="banner-mod" style="display:none;">Release publishing is restricted to the platform owner.</div>
         <div id="update-create-card" style="background:var(--panel);border:2px solid var(--border);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:15px;">
-            <h2 style="font-family:var(--font-brand);font-size:24px;margin:0;color:var(--fg);">Create a Website Release</h2>
+            <h2 id="update-editor-heading" style="font-family:var(--font-brand);font-size:24px;margin:0;color:var(--fg);">Create a Website Release</h2>
             <div class="form-group" style="margin:0;"><label for="update-version">Version Number</label><input type="text" id="update-version" maxlength="40" placeholder="e.g. v6.14.0"></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">
+                <div class="form-group" style="margin:0;"><label for="update-starts-on">Start showing popup on</label><input type="date" id="update-starts-on"></div>
+                <div class="form-group" style="margin:0;"><label for="update-release-date">Release date shown in popup</label><input type="date" id="update-release-date"></div>
+            </div>
             <div class="form-group" style="margin:0;"><label for="update-details-url">GitHub Release Notes URL <span style="color:var(--fg2);font-weight:normal;">(optional)</span></label><input type="url" id="update-details-url" placeholder="https://github.com/BSMS-Web-App/web/releases/tag/v6.14.0"></div>
             <div class="form-group" style="margin:0;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:10px;flex-wrap:wrap;">
@@ -114,7 +118,7 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <div class="form-group"><label for="update-privacy">Privacy Policy (Markdown)</label><textarea id="update-privacy" rows="10" maxlength="50000" placeholder="Current Privacy Policy"></textarea></div>
             </details>
             <div><label style="display:block;font-family:var(--font-brand);font-size:17px;color:var(--fg2);margin-bottom:6px;">Live Preview</label><div id="update-preview" style="background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;color:var(--fg);line-height:1.6;"><span style="color:var(--fg2);font-style:italic;">Your release preview will appear here.</span></div></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><p id="update-publish-status" role="status" aria-live="polite" style="margin:0;color:var(--fg2);font-size:13px;"></p><button id="update-publish-btn" class="btn" type="button" onclick="Admin.publishUpdate()">Publish Website Update</button></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><p id="update-publish-status" role="status" aria-live="polite" style="margin:0;color:var(--fg2);font-size:13px;"></p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button id="update-cancel-edit-btn" class="btn sec" type="button" style="display:none;" onclick="Admin.cancelUpdateEdit()">Cancel edit</button><button id="update-publish-btn" class="btn" type="button" onclick="Admin.publishUpdate()">Publish Website Update</button></div></div>
         </div>
         <h2 style="font-family:var(--font-brand);font-size:26px;margin:22px 0 12px;color:var(--fg);">Published Releases</h2>
         <div id="updates-list" style="display:flex;flex-direction:column;gap:12px;"><div style="text-align:center;color:var(--fg2);padding:24px;">Select Website Updates to load releases.</div></div>

@@ -168,7 +168,6 @@
                 '<div id="bsms-legal-success"></div>' +
                 '<p id="bsms-updates-error" class="bsms-error" role="alert" hidden></p>' +
                 '<div id="bsms-updates-actions" class="bsms-actions"></div>' +
-                '<p class="bsms-footer">Release information is published by the BSMS Web team. Your viewed updates are saved to your account.</p>' +
             '</section>';
         shadowRoot.appendChild(overlay);
         previousBodyOverflow = document.body.style.overflow;
@@ -285,16 +284,6 @@
         container.replaceChildren();
         if (!releases.length) return;
 
-        const heading = document.createElement('div');
-        heading.className = 'bsms-section-heading';
-        const label = document.createElement('span');
-        label.textContent = 'Website updates';
-        const count = document.createElement('span');
-        count.className = 'bsms-count';
-        count.textContent = releases.length + (releases.length === 1 ? ' new release' : ' new releases');
-        heading.append(label, count);
-        container.appendChild(heading);
-
         releases.forEach(release => {
             const card = document.createElement('article');
             card.className = 'bsms-release';
@@ -310,10 +299,11 @@
             cardHead.append(version, pill);
             card.appendChild(cardHead);
 
-            if (Number(release.publishedAt) > 0) {
+            const shownDate = release.releaseDate || release.publishedAt;
+            if (Number(shownDate) > 0) {
                 const date = document.createElement('div');
                 date.className = 'bsms-release-date';
-                date.textContent = new Date(Number(release.publishedAt)).toLocaleDateString(undefined, {
+                date.textContent = new Date(Number(shownDate)).toLocaleDateString(undefined, {
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
                 card.appendChild(date);
@@ -465,16 +455,10 @@
             const viewed = document.createElement('button');
             viewed.type = 'button';
             viewed.className = 'bsms-primary';
-            viewed.textContent = 'I’ve read these updates';
+            viewed.textContent = 'Got it';
             viewed.addEventListener('click', markViewed);
             actions.appendChild(viewed);
 
-            const later = document.createElement('button');
-            later.type = 'button';
-            later.className = 'bsms-secondary';
-            later.textContent = 'Later';
-            later.addEventListener('click', deferUpdates);
-            actions.appendChild(later);
             return;
         }
 
@@ -541,14 +525,14 @@
         try {
             await updatesRequest('POST', {
                 action: 'mark-viewed',
-                ids: currentReleases.map(release => release.id)
+                ids: currentReleases.map(release => release.id + ':' + (Number(release.revision) || 1))
             });
             closeOverlay();
         } catch (error) {
             showError(error.message);
             if (button) {
                 button.disabled = false;
-                button.textContent = 'I’ve read these updates';
+                button.textContent = 'Got it';
             }
         } finally {
             isSubmitting = false;

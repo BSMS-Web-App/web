@@ -1162,7 +1162,26 @@ const Admin = {
                                     const html = await page.text();
                                     const parsed = new DOMParser().parseFromString(html, 'text/html');
                                     const main = parsed.querySelector('main');
-                                    currentContent = main?.innerText?.trim() || main?.textContent?.trim() || '';
+                                    if (main) {
+                                        main.querySelectorAll('script,style,button,nav,form').forEach(node => node.remove());
+                                        const toMarkdown = node => {
+                                            if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+                                            if (node.nodeType !== Node.ELEMENT_NODE) return '';
+                                            const tag = node.tagName.toLowerCase();
+                                            const inner = Array.from(node.childNodes).map(toMarkdown).join('');
+                                            if (/^h[1-6]$/.test(tag)) return '#'.repeat(Number(tag[1])) + ' ' + inner.trim() + '\n\n';
+                                            if (tag === 'p' || tag === 'div' || tag === 'section') return inner.trim() + '\n\n';
+                                            if (tag === 'strong' || tag === 'b') return '**' + inner + '**';
+                                            if (tag === 'em' || tag === 'i') return '*' + inner + '*';
+                                            if (tag === 'a') return '[' + inner.trim() + '](' + (node.getAttribute('href') || '') + ')';
+                                            if (tag === 'br') return '\n';
+                                            if (tag === 'li') return '- ' + inner.trim() + '\n';
+                                            if (tag === 'ul' || tag === 'ol') return inner + '\n';
+                                            if (tag === 'blockquote') return inner.trim().split('\n').map(line => '> ' + line).join('\n') + '\n\n';
+                                            return inner;
+                                        };
+                                        currentContent = toMarkdown(main).replace(/\n{3,}/g, '\n\n').trim();
+                                    }
                                 }
                             } catch (_) {}
                         }
@@ -1196,6 +1215,16 @@ const Admin = {
                         link.style.cssText = 'display:inline-block;margin-top:10px;color:var(--red);font-weight:700;';
                         card.appendChild(link);
                     }
+                    const controls = document.createElement('div');
+                    controls.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);';
+                    const edit = document.createElement('button');
+                    edit.type = 'button'; edit.className = 'btn sec sm'; edit.textContent = 'Edit';
+                    edit.addEventListener('click', () => this.editUpdate(release));
+                    const remove = document.createElement('button');
+                    remove.type = 'button'; remove.className = 'btn warn sm'; remove.textContent = 'Delete';
+                    remove.addEventListener('click', () => this.deleteUpdate(release.id));
+                    controls.append(edit, remove);
+                    card.appendChild(controls);
                     list.appendChild(card);
                 });
             }
@@ -1204,6 +1233,47 @@ const Admin = {
             if (list) list.textContent = error.message;
             if (status) status.textContent = error.message;
         }
+    },
+
+
+    editUpdate: function(release) {
+        const card = document.getElementById('update-create-card');
+        if (!card || !release?.id) return;
+        card.dataset.editingId = release.id;
+        document.getElementById('update-editor-heading').textContent = 'Edit Website Release';
+        document.getElementById('update-version').value = release.version || '';
+        document.getElementById('update-details-url').value = release.detailsUrl || '';
+        document.getElementById('update-content').value = release.content || '';
+        const toDate = value => { if (!(Number(value) > 0)) return ''; const date = new Date(Number(value)); return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0'); };
+        document.getElementById('update-starts-on').value = toDate(release.startsAt || release.publishedAt);
+        document.getElementById('update-release-date').value = toDate(release.releaseDate || release.publishedAt);
+        document.getElementById('update-publish-btn').textContent = 'Save Release Changes';
+        document.getElementById('update-cancel-edit-btn').style.display = '';
+        this.updateReleasePreview();
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+
+    cancelUpdateEdit: function() {
+        const card = document.getElementById('update-create-card');
+        if (card) delete card.dataset.editingId;
+        ['update-version', 'update-details-url', 'update-content', 'update-starts-on', 'update-release-date'].forEach(id => { const field = document.getElementById(id); if (field) field.value = ''; });
+        document.getElementById('update-editor-heading').textContent = 'Create a Website Release';
+        document.getElementById('update-publish-btn').textContent = 'Publish Website Update';
+        document.getElementById('update-cancel-edit-btn').style.display = 'none';
+        this.updateReleasePreview();
+    },
+
+    deleteUpdate: async function(id) {
+        if (this.callerRole !== 'owner' || !id) return;
+        const status = document.getElementById('update-publish-status');
+        if (!window.confirm('Delete this release? It will no longer appear in the updates popup for any account.')) return;
+        try {
+            const response = await fetch('/api/updates', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' }, body: JSON.stringify({ action: 'delete', id }), cache: 'no-store' });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'The release could not be deleted.');
+            if (status) status.textContent = 'Release deleted. It will no longer be shown to users.';
+            await this.loadUpdates();
+        } catch (error) { if (status) status.textContent = error.message; }
     },
 
     updateReleasePreview: function() {
@@ -1246,13 +1316,19 @@ const Admin = {
             const response = await fetch('/api/updates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' },
-                body: JSON.stringify({ action: 'publish', version, content, detailsUrl, policies: Object.fromEntries(['terms', 'privacy'].filter(key => document.getElementById('update-' + key)?.dataset.edited).map(key => [key, document.getElementById('update-' + key).value])) }),
+                body: JSON.stringify({ action: document.getElementById('update-create-card')?.dataset.editingId ? 'edit' : 'publish', id: document.getElementById('update-create-card')?.dataset.editingId || undefined, version, content, detailsUrl, startsOn: document.getElementById('update-starts-on')?.value || '', releaseDate: document.getElementById('update-release-date')?.value || '', timezoneOffset: new Date().getTimezoneOffset(), policies: Object.fromEntries(['terms', 'privacy'].filter(key => document.getElementById('update-' + key)?.dataset.edited).map(key => [key, document.getElementById('update-' + key).value])) }),
                 cache: 'no-store'
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.error || 'The release could not be published.');
+            document.getElementById('update-create-card').dataset.editingId = '';
             document.getElementById('update-version').value = '';
             document.getElementById('update-details-url').value = '';
+            document.getElementById('update-starts-on').value = '';
+            document.getElementById('update-release-date').value = '';
+            document.getElementById('update-editor-heading').textContent = 'Create a Website Release';
+            document.getElementById('update-publish-btn').textContent = 'Publish Website Update';
+            document.getElementById('update-cancel-edit-btn').style.display = 'none';
             document.getElementById('update-content').value = '';
             ['terms', 'privacy'].forEach(key => { const field = document.getElementById('update-' + key); if (field) delete field.dataset.edited; });
             this.updateReleasePreview();

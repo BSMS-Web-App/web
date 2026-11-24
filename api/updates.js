@@ -58,8 +58,9 @@ function unseenReleases(releases, account, uid) {
     return releases.filter(release =>
         release.active !== false &&
         Number(release.publishedAt || 0) >= start &&
+        Number(release.startsAt || release.publishedAt || 0) <= Date.now() &&
         release.publishedBy !== uid &&
-        !seen.has(release.id)
+        !seen.has(release.id + ':' + (Number(release.revision) || 1)) && ((Number(release.revision) || 1) > 1 || !seen.has(release.id))
     );
 }
 
@@ -161,10 +162,10 @@ async function markViewed(user, payload, res, releases) {
     }
     const start = releaseStart(user.account);
     const allowed = new Set(releases
-        .filter(release => release.active !== false && Number(release.publishedAt || 0) >= start)
-        .map(release => release.id));
+        .filter(release => release.active !== false && Number(release.startsAt || release.publishedAt || 0) <= Date.now() && Number(release.publishedAt || 0) >= start)
+        .map(release => release.id + ':' + (Number(release.revision) || 1)));
     const ids = [...new Set(payload.ids
-        .filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id))
+        .filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}:\d{1,8}$/.test(id))
         .filter(id => allowed.has(id)))];
     if (!ids.length) return res.status(400).json({ error: 'No valid unseen update IDs were supplied.' });
 
@@ -219,11 +220,23 @@ async function publishRelease(user, payload, res, releases) {
 
     const ref = db.ref('/updates/releases').push();
     const publishedAt = Date.now();
+    const parseDate = value => {
+        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+        const [year, month, day] = value.split('-').map(Number);
+        const offset = Number.isFinite(Number(payload.timezoneOffset)) ? Math.max(-840, Math.min(840, Number(payload.timezoneOffset))) : 0;
+        const timestamp = Date.UTC(year, month - 1, day) + offset * 60000;
+        return Number.isFinite(timestamp) ? timestamp : null;
+    };
+    const startsAt = parseDate(payload.startsOn) ?? publishedAt;
+    const releaseDate = parseDate(payload.releaseDate) ?? publishedAt;
     const release = {
         version,
         content: payload.content.trim(),
         detailsUrl,
         publishedAt,
+        startsAt,
+        releaseDate,
+        revision: 1,
         publishedBy: user.uid,
         publishedByName: String(user.account.displayName || user.account.username || 'BSMS Web owner'),
         active: true
@@ -295,6 +308,48 @@ export default async function handler(req, res) {
         if (action === 'publish') {
             if (!await requireOwner(user, res, policyBundle.versions)) return;
             return await publishRelease(user, payload, res, await getReleases());
+        }
+        if (action === 'edit') {
+            if (!await requireOwner(user, res, policyBundle.versions)) return;
+            const id = typeof payload.id === 'string' ? payload.id : '';
+            if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
+            const ref = db.ref('/updates/releases/' + id);
+            const snap = await ref.once('value');
+            const existing = snap.val();
+            if (!existing) return res.status(404).json({ error: 'That release no longer exists.' });
+            if (typeof payload.version !== 'string' || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim()) || typeof payload.content !== 'string' || !payload.content.trim() || payload.content.length > 30000) return res.status(400).json({ error: 'Enter a valid version and release details.' });
+            const detailsUrl = validateDetailsUrl(payload.detailsUrl);
+            if (detailsUrl === null) return res.status(400).json({ error: 'Use a valid GitHub release URL, or leave the field empty.' });
+            const parseDate = value => { if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const offset = Number.isFinite(Number(payload.timezoneOffset)) ? Math.max(-840, Math.min(840, Number(payload.timezoneOffset))) : 0; return Date.UTC(year, month - 1, day) + offset * 60000; };
+            const startsAt = parseDate(payload.startsOn);
+            const releaseDate = parseDate(payload.releaseDate);
+            const policyChanges = payload.policies && typeof payload.policies === 'object' ? payload.policies : {};
+            const policyUpdates = {};
+            for (const key of POLICY_KEYS) {
+                if (policyChanges[key] === undefined) continue;
+                if (typeof policyChanges[key] !== 'string' || policyChanges[key].length > 50000) return res.status(400).json({ error: 'Each legal document must be 50,000 characters or fewer.' });
+                const policyContent = policyChanges[key].trim();
+                const oldPolicySnapshot = await db.ref('/updates/policies/' + key).once('value');
+                const oldPolicy = oldPolicySnapshot.val() || {};
+                if (policyContent !== String(oldPolicy.content || '')) {
+                    const policyVersion = 'v-' + createHash('sha256').update(policyContent).digest('hex').slice(0, 16);
+                    policyUpdates[key] = { content: policyContent, version: policyVersion, updatedAt: Date.now(), updatedBy: user.uid };
+                }
+            }
+            if (Object.keys(policyUpdates).length) await db.ref('/updates/policies').update(policyUpdates);
+            const updated = { ...existing, version: payload.version.trim(), content: payload.content.trim(), detailsUrl, startsAt: startsAt ?? existing.startsAt ?? existing.publishedAt, releaseDate: releaseDate ?? existing.releaseDate ?? existing.publishedAt, revision: (Number(existing.revision) || 1) + 1, editedAt: Date.now(), editedBy: user.uid };
+            await ref.set(updated);
+            return res.status(200).json({ success: true, release: { ...updated, id } });
+        }
+        if (action === 'delete') {
+            if (!await requireOwner(user, res, policyBundle.versions)) return;
+            const id = typeof payload.id === 'string' ? payload.id : '';
+            if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
+            const ref = db.ref('/updates/releases/' + id);
+            const snap = await ref.once('value');
+            if (!snap.exists()) return res.status(404).json({ error: 'That release no longer exists.' });
+            await ref.remove();
+            return res.status(200).json({ success: true, deletedId: id });
         }
         return res.status(400).json({ error: 'Unknown updates action.' });
     } catch (error) {
