@@ -1153,7 +1153,7 @@ const Admin = {
                 if (data.documents) {
                     for (const key of ['terms', 'privacy']) {
                         const field = document.getElementById('update-' + key);
-                        if (!field || field.dataset.edited) continue;
+                        if (!field) continue;
                         let currentContent = data.documents[key]?.content || '';
                         if (!currentContent) {
                             try {
@@ -1185,14 +1185,9 @@ const Admin = {
                                 }
                             } catch (_) {}
                         }
-                        if (!field.dataset.edited) field.value = currentContent;
-                        if (!field.dataset.changeListenerAttached) {
-                            field.addEventListener('input', () => {
-                                field.dataset.edited = '1';
-                                const policyButton = document.getElementById('update-policy-publish-btn');
-                                if (policyButton) policyButton.disabled = false;
-                            });
-                            field.dataset.changeListenerAttached = '1';
+                        if (field.dataset.originalContent === undefined) {
+                            field.value = currentContent;
+                            field.dataset.originalContent = currentContent;
                         }
                     }
                 }
@@ -1235,12 +1230,6 @@ const Admin = {
                     list.appendChild(card);
                 });
             }
-            const policyButton = document.getElementById('update-policy-publish-btn');
-            if (policyButton) {
-                policyButton.disabled = !['terms', 'privacy'].some(key =>
-                    document.getElementById('update-' + key)?.dataset.edited === '1'
-                );
-            }
             if (status && status.textContent === 'Loading releases...') status.textContent = '';
         } catch (error) {
             if (list) list.textContent = error.message;
@@ -1248,63 +1237,6 @@ const Admin = {
         }
     },
 
-
-    publishPolicies: async function() {
-        const status = document.getElementById('update-publish-status');
-        const button = document.getElementById('update-policy-publish-btn');
-        if (this.callerRole !== 'owner') {
-            if (status) status.textContent = 'Only the platform owner can publish legal documents.';
-            return;
-        }
-
-        const policies = Object.fromEntries(['terms', 'privacy']
-            .filter(key => document.getElementById('update-' + key)?.dataset.edited === '1')
-            .map(key => [key, document.getElementById('update-' + key).value]));
-
-        if (!Object.keys(policies).length) {
-            if (status) status.textContent = 'Make a change to a policy before publishing.';
-            return;
-        }
-
-        if (Object.values(policies).some(value => !value.trim())) {
-            if (status) status.textContent = 'The Terms of Service and Privacy Policy cannot be empty.';
-            return;
-        }
-
-        if (button) { button.disabled = true; button.textContent = 'Publishing policies...'; }
-        if (status) status.textContent = 'Publishing legal documents...';
-
-        try {
-            const response = await fetch('/api/updates', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-ID': localStorage.getItem('session_id') || ''
-                },
-                body: JSON.stringify({ action: 'publish-policies', policies }),
-                cache: 'no-store'
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'The legal documents could not be published.');
-
-            ['terms', 'privacy'].forEach(key => {
-                const field = document.getElementById('update-' + key);
-                if (field) delete field.dataset.edited;
-            });
-            if (status) status.textContent = data.message || 'Legal documents published successfully.';
-            await this.loadUpdates();
-        } catch (error) {
-            if (status) status.textContent = error.message;
-        } finally {
-            const stillDirty = ['terms', 'privacy'].some(key =>
-                document.getElementById('update-' + key)?.dataset.edited === '1'
-            );
-            if (button) {
-                button.disabled = !stillDirty;
-                button.textContent = 'Publish Policy Updates';
-            }
-        }
-    },
 
     editUpdate: function(release) {
         const card = document.getElementById('update-create-card');
@@ -1386,7 +1318,10 @@ const Admin = {
             const response = await fetch('/api/updates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' },
-                body: JSON.stringify({ action: document.getElementById('update-create-card')?.dataset.editingId ? 'edit' : 'publish', id: document.getElementById('update-create-card')?.dataset.editingId || undefined, version, content, detailsUrl, startsOn: document.getElementById('update-starts-on')?.value || '', releaseDate: document.getElementById('update-release-date')?.value || '', timezoneOffset: new Date().getTimezoneOffset(), policies: Object.fromEntries(['terms', 'privacy'].filter(key => document.getElementById('update-' + key)?.dataset.edited).map(key => [key, document.getElementById('update-' + key).value])) }),
+                body: JSON.stringify({ action: document.getElementById('update-create-card')?.dataset.editingId ? 'edit' : 'publish', id: document.getElementById('update-create-card')?.dataset.editingId || undefined, version, content, detailsUrl, startsOn: document.getElementById('update-starts-on')?.value || '', releaseDate: document.getElementById('update-release-date')?.value || '', timezoneOffset: new Date().getTimezoneOffset(), policies: Object.fromEntries(['terms', 'privacy'].filter(key => {
+                    const field = document.getElementById('update-' + key);
+                    return field && field.dataset.originalContent !== undefined && field.value.trim() !== field.dataset.originalContent.trim();
+                }).map(key => [key, document.getElementById('update-' + key).value])) }),
                 cache: 'no-store'
             });
             const data = await response.json().catch(() => ({}));
@@ -1400,9 +1335,13 @@ const Admin = {
             document.getElementById('update-publish-btn').textContent = 'Publish Website Update';
             document.getElementById('update-cancel-edit-btn').style.display = 'none';
             document.getElementById('update-content').value = '';
-            ['terms', 'privacy'].forEach(key => { const field = document.getElementById('update-' + key); if (field) delete field.dataset.edited; });
-            const policyButton = document.getElementById('update-policy-publish-btn');
-            if (policyButton) policyButton.disabled = true;
+            ['terms', 'privacy'].forEach(key => {
+                const field = document.getElementById('update-' + key);
+                if (field) {
+                    delete field.dataset.edited;
+                    delete field.dataset.originalContent;
+                }
+            });
             this.updateReleasePreview();
             if (status) status.textContent = 'Version ' + data.release.version + ' was published successfully.';
             await this.loadUpdates();

@@ -685,8 +685,9 @@
             return;
         }
 
+        let releasesDeferred = false;
         try {
-            if (sessionStorage.getItem(DEFERRED_KEY) === session) return;
+            releasesDeferred = sessionStorage.getItem(DEFERRED_KEY) === session;
         } catch {}
 
         const sequence = ++checkSequence;
@@ -694,7 +695,9 @@
             const data = await updatesRequest('GET');
             if (sequence !== checkSequence || session !== getSessionId()) return;
             requestError = '';
-            if (data.legal?.needsAcceptance || (Array.isArray(data.releases) && data.releases.length)) {
+            // A deferred release announcement must never suppress mandatory
+            // legal acknowledgments for a newly published policy version.
+            if (data.legal?.needsAcceptance || (!releasesDeferred && Array.isArray(data.releases) && data.releases.length)) {
                 render(data);
             } else {
                 closeOverlay();

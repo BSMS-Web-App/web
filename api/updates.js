@@ -80,13 +80,18 @@ function validateDetailsUrl(value) {
     } catch { return null; }
 }
 
-async function requireOwner(user, res) {
+async function requireOwner(user, res, versions) {
     if (user.account.role !== 'owner') {
         res.status(403).json({ error: 'Only the BSMS Web owner can manage website releases.' });
         return false;
     }
-    // The owner must be able to publish/correct policy updates even while their
-    // own account is awaiting acknowledgment of the newly published version.
+    if (policyStatus(user.account, versions).needsAcceptance) {
+        res.status(428).json({
+            error: 'Review and accept the current legal policies before managing releases.',
+            code: 'LEGAL_ACCEPTANCE_REQUIRED'
+        });
+        return false;
+    }
     return true;
 }
 
@@ -126,33 +131,6 @@ async function buildPolicyUpdates(user, changes) {
         }
     }
     return updates;
-}
-
-async function savePolicies(user, payload, res) {
-    const changes = payload.policies && typeof payload.policies === 'object'
-        ? payload.policies
-        : payload;
-    let updates;
-    try {
-        updates = await buildPolicyUpdates(user, changes);
-    } catch (error) {
-        return res.status(400).json({ error: error.message });
-    }
-
-    const changedPolicies = Object.keys(updates);
-    if (changedPolicies.length) {
-        await db.ref('/updates/policies').update(updates);
-    }
-
-    const bundle = await getPolicyBundle();
-    return res.status(200).json({
-        success: true,
-        changedPolicies,
-        versions: bundle.versions,
-        message: changedPolicies.length
-            ? 'The updated legal documents are now published and users will be asked to review them.'
-            : 'No policy changes were detected.'
-    });
 }
 
 async function acceptPolicies(user, payload, res, versions) {
@@ -342,12 +320,8 @@ export default async function handler(req, res) {
         if (action === 'mark-viewed') {
             return await markViewed(user, payload, res, await getReleases());
         }
-        if (action === 'publish-policies') {
-            if (!await requireOwner(user, res)) return;
-            return await savePolicies(user, payload, res);
-        }
         if (action === 'admin-list') {
-            if (!await requireOwner(user, res)) return;
+            if (!await requireOwner(user, res, policyBundle.versions)) return;
             return res.status(200).json({
                 success: true,
                 releases: await getReleases(),
@@ -356,23 +330,21 @@ export default async function handler(req, res) {
             });
         }
         if (action === 'publish') {
-            if (!await requireOwner(user, res)) return;
+            if (!await requireOwner(user, res, policyBundle.versions)) return;
             return await publishRelease(user, payload, res, await getReleases());
         }
         if (action === 'edit') {
-            if (!await requireOwner(user, res)) return;
+            if (!await requireOwner(user, res, policyBundle.versions)) return;
             const id = typeof payload.id === 'string' ? payload.id : '';
             if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
             const ref = db.ref('/updates/releases/' + id);
             const snap = await ref.once('value');
             const existing = snap.val();
             if (!existing) return res.status(404).json({ error: 'That release no longer exists.' });
-            const allReleases = await getReleases();
-            if (allReleases.some(release => release.id !== id && release.version === String(payload.version || '').trim())) {
-                return res.status(409).json({ error: 'Another release already uses that version number.' });
-            }
             if (typeof payload.version !== 'string' || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim()) || typeof payload.content !== 'string' || !payload.content.trim() || payload.content.length > 30000) return res.status(400).json({ error: 'Enter a valid version and release details.' });
-            const detailsUrl = validateDetailsUrl(payload.detailsUrl);
+            const detailsUrl = payload.detailsUrl === existing.detailsUrl
+                ? (existing.detailsUrl || '')
+                : validateDetailsUrl(payload.detailsUrl);
             if (detailsUrl === null) return res.status(400).json({ error: 'Use a valid GitHub release URL, or leave the field empty.' });
             const parseDate = value => { if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const offset = Number.isFinite(Number(payload.timezoneOffset)) ? Math.max(-840, Math.min(840, Number(payload.timezoneOffset))) : 0; return Date.UTC(year, month - 1, day) + offset * 60000; };
             const startsAt = parseDate(payload.startsOn);
@@ -385,7 +357,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, release: { ...updated, id } });
         }
         if (action === 'delete') {
-            if (!await requireOwner(user, res)) return;
+            if (!await requireOwner(user, res, policyBundle.versions)) return;
             const id = typeof payload.id === 'string' ? payload.id : '';
             if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
             const ref = db.ref('/updates/releases/' + id);
