@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=44">
+<link rel="stylesheet" href="/css/frostfall.css?v=46">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -134,17 +134,23 @@
 
   <div id="ff-battle" class="ff-battle" hidden>
     <div class="ff-battle-top">
-      <div id="ff-enemy-plate" class="ff-enemy-plate">
-        <span id="ff-enemy-name">FROST MITE</span>
-        <div class="ff-battle-bar"><i id="ff-enemy-hp"></i></div>
-        <small id="ff-enemy-hp-text">24 / 24</small>
-        <em id="ff-gimmick" class="ff-gimmick" hidden>ECHO CHARGE</em>
+      <!-- === NEW: the plate row and the log row; display:contents keeps them
+           flat in the phone layout, short landscape pairs the chip with the log === -->
+      <div class="ff-battle-row">
+        <div id="ff-enemy-plate" class="ff-enemy-plate">
+          <span id="ff-enemy-name">FROST MITE</span>
+          <div class="ff-battle-bar"><i id="ff-enemy-hp"></i></div>
+          <small id="ff-enemy-hp-text">24 / 24</small>
+          <em id="ff-gimmick" class="ff-gimmick" hidden>ECHO CHARGE</em>
+        </div>
+        <!-- === NEW: pause / quit a fight === -->
+        <button id="ff-battle-pause-button" class="ff-icon-button ff-battle-pause-open" type="button" aria-label="Pause battle">PAUSE</button>
       </div>
-      <!-- === NEW: pause / quit a fight === -->
-      <button id="ff-battle-pause-button" class="ff-icon-button ff-battle-pause-open" type="button" aria-label="Pause battle">PAUSE</button>
-      <!-- === NEW: log and windup chip stack under the plate instead of over it === -->
-      <p id="ff-battle-log" class="ff-battle-log" aria-live="polite">A FROST MITE BLOCKS THE PATH!</p>
-      <p id="ff-telegraph" class="ff-telegraph" hidden>ATTACK INCOMING</p>
+      <div class="ff-battle-row">
+        <!-- === NEW: log and windup chip stack under the plate instead of over it === -->
+        <p id="ff-battle-log" class="ff-battle-log" aria-live="polite">A FROST MITE BLOCKS THE PATH!</p>
+        <p id="ff-telegraph" class="ff-telegraph" hidden>ATTACK INCOMING</p>
+      </div>
     </div>
     <div id="ff-rating" class="ff-rating" aria-hidden="true" hidden>PERFECT!</div>
     <div id="ff-fx" class="ff-fx" aria-hidden="true"></div>
