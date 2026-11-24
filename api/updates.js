@@ -5,7 +5,6 @@
  */
 import { db, requestMacApi } from './db.js';
 import { LEGAL_POLICY_VERSIONS, getLegalPolicyStatus } from './legal-policy.js';
-import { createHash } from 'node:crypto';
 import { handleApiCors } from '../lib/api-cors.js';
 
 async function getAuthenticatedUser(sessionId) {
@@ -23,8 +22,6 @@ function releaseStart(account) {
     return Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0;
 }
 
-async function getPolicyConfig() { const snap=await db.ref('/updates/policies').once('value'); const saved=snap.val()||{}; return Object.fromEntries(['terms','privacy'].map(key=>[key,saved[key]||{version:LEGAL_POLICY_VERSIONS[key],content:''}])); }
-function dynamicLegalStatus(account, config) { const accepted=account?.legalAcceptance||{}; const policies={}; for(const key of ['terms','privacy']) { const version=config[key].version; const record=accepted[key]||{}; const acceptedVersion=record.version||null; policies[key]={version,acceptedVersion,acceptedAt:record.acceptedAt||null,required:acceptedVersion!==version,updated:!!acceptedVersion&&acceptedVersion!==version,firstAcknowledgment:!acceptedVersion,content:config[key].content||''}; } return {policies,needsAcceptance:Object.values(policies).some(p=>p.required)}; }
 async function getReleases() {
     const snapshot = await db.ref('/updates/releases').once('value');
     return Object.entries(snapshot.val() || {})
@@ -87,7 +84,7 @@ async function acceptPolicies(user, payload, res) {
         return res.status(409).json({
             error: 'The legal documents changed while you were reviewing them. Please reload and review the current versions.',
             code: 'LEGAL_VERSION_CHANGED',
-            versions,
+            versions: LEGAL_POLICY_VERSIONS,
             policies: status.policies,
             needsAcceptance: status.needsAcceptance
         });
@@ -121,7 +118,7 @@ async function acceptPolicies(user, payload, res) {
         const history = db.ref('/accounts/' + user.uid + '/legalAcceptanceHistory').push();
         await history.set({
             policies: acceptedPolicies,
-            versions: Object.fromEntries(acceptedPolicies.map(key => [key, versions[key]])),
+            versions: Object.fromEntries(acceptedPolicies.map(key => [key, LEGAL_POLICY_VERSIONS[key]])),
             acceptedAt: now
         });
     } catch (error) {
@@ -159,7 +156,7 @@ async function markViewed(user, payload, res, releases) {
     return res.status(200).json({ success: true, viewedIds: ids });
 }
 
-async function publishRelease(user, payload, res, releases, policyConfig) {
+async function publishRelease(user, payload, res, releases) {
     if (typeof payload.version !== 'string' ||
         !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim())) {
         return res.status(400).json({ error: 'Enter a valid release version, such as v6.14.0.' });
@@ -213,7 +210,7 @@ export default async function handler(req, res) {
             return res.status(403).json({ error: 'This account is banned.', account_status: 'banned' });
         }
 
-        const policyConfig = await getPolicyConfig();\n        const versions = Object.fromEntries(['terms','privacy'].map(key => [key, policyConfig[key].version]));\n        const legal = dynamicLegalStatus(user.account, policyConfig);
+        const legal = getLegalPolicyStatus(user.account);
         if (req.method === 'GET') {
             const releases = await getReleases();
             return res.status(200).json({
@@ -240,7 +237,7 @@ export default async function handler(req, res) {
                 needsAcceptance: legal.needsAcceptance
             });
         }
-        if (action === 'accept') return await acceptPolicies(user, payload, res, versions, legal);
+        if (action === 'accept') return await acceptPolicies(user, payload, res);
         if (action === 'mark-viewed') {
             return await markViewed(user, payload, res, await getReleases());
         }
@@ -254,7 +251,7 @@ export default async function handler(req, res) {
         }
         if (action === 'publish') {
             if (!await requireOwner(user, res)) return;
-            return await publishRelease(user, payload, res, await getReleases(), policyConfig);
+            return await publishRelease(user, payload, res, await getReleases());
         }
         return res.status(400).json({ error: 'Unknown updates action.' });
     } catch (error) {
