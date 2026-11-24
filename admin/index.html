@@ -107,6 +107,12 @@ SPDX-License-Identifier: AGPL-3.0-only
                 <textarea id="update-content" rows="9" maxlength="30000" oninput="Admin.updateReleasePreview()" placeholder="# What's new&#10;&#10;**New feature:** Describe the change.&#10;- First improvement&#10;- Another improvement"></textarea>
                 <p style="color:var(--fg2);font-size:12px;margin:6px 0 0;">Use headings, bold, italics, lists, links, blockquotes, and inline code. Maximum 30,000 characters.</p>
             </div>
+            <details style="border:1px solid var(--border);border-radius:14px;padding:15px;background:var(--panel-alt);">
+                <summary style="cursor:pointer;font-weight:700;color:var(--fg);">Legal documents · Edit Terms and Privacy</summary>
+                <p style="color:var(--fg2);font-size:13px;">Leave a field unchanged to keep its currently published document. Editing and publishing a document creates a new version and requires users to review it.</p>
+                <div class="form-group"><label for="update-terms">Terms of Service (Markdown)</label><textarea id="update-terms" rows="10" maxlength="50000" placeholder="Current Terms of Service"></textarea></div>
+                <div class="form-group"><label for="update-privacy">Privacy Policy (Markdown)</label><textarea id="update-privacy" rows="10" maxlength="50000" placeholder="Current Privacy Policy"></textarea></div>
+            </details>
             <div><label style="display:block;font-family:var(--font-brand);font-size:17px;color:var(--fg2);margin-bottom:6px;">Live Preview</label><div id="update-preview" style="background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:100px;color:var(--fg);line-height:1.6;"><span style="color:var(--fg2);font-style:italic;">Your release preview will appear here.</span></div></div>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><p id="update-publish-status" role="status" aria-live="polite" style="margin:0;color:var(--fg2);font-size:13px;"></p><button id="update-publish-btn" class="btn" type="button" onclick="Admin.publishUpdate()">Publish Website Update</button></div>
         </div>

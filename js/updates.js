@@ -642,7 +642,7 @@
         if (reviewLayer) reviewLayer.remove();
 
         const title = key === 'terms' ? 'Terms of Service' : 'Privacy Policy';
-        const path = key === 'terms' ? '/terms?embed=1' : '/privacy?embed=1';
+        const documentContent = currentLegal?.documents?.[key]?.content || '';
         reviewLayer = document.createElement('div');
         reviewLayer.className = 'bsms-review-layer';
 
@@ -663,11 +663,11 @@
         back.addEventListener('click', closeDocument);
         bar.append(label, back);
 
-        const frame = document.createElement('iframe');
-        frame.className = 'bsms-frame';
-        frame.title = title;
-        frame.src = path;
-        panel.append(bar, frame);
+        const documentBody = document.createElement('div');
+        documentBody.className = 'bsms-review-content bsms-release-markdown';
+        documentBody.style.cssText = 'overflow:auto;padding:22px 26px;color:var(--bsms-fg2);line-height:1.7;';
+        documentBody.innerHTML = documentContent ? markdownToHTML(documentContent) : '<p>This policy has not yet been republished in the editable policy system. The currently published page remains available at <a href="' + (key === 'terms' ? '/terms' : '/privacy') + '" target="_blank" rel="noopener noreferrer">the policy page</a>.</p>';
+        panel.append(bar, documentBody);
         reviewLayer.appendChild(panel);
         shadowRoot.appendChild(reviewLayer);
         document.body.style.overflow = 'hidden';

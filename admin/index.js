@@ -1150,6 +1150,26 @@ const Admin = {
             if (list) {
                 list.replaceChildren();
                 const releases = Array.isArray(data.releases) ? data.releases : [];
+                if (data.documents) {
+                    for (const key of ['terms', 'privacy']) {
+                        const field = document.getElementById('update-' + key);
+                        if (!field || field.dataset.edited) continue;
+                        let currentContent = data.documents[key]?.content || '';
+                        if (!currentContent) {
+                            try {
+                                const page = await fetch(key === 'terms' ? '/terms?embed=1' : '/privacy?embed=1', { cache: 'no-store' });
+                                if (page.ok) {
+                                    const html = await page.text();
+                                    const parsed = new DOMParser().parseFromString(html, 'text/html');
+                                    const main = parsed.querySelector('main');
+                                    currentContent = main?.innerText?.trim() || main?.textContent?.trim() || '';
+                                }
+                            } catch (_) {}
+                        }
+                        field.value = currentContent;
+                        field.addEventListener('input', () => { field.dataset.edited = '1'; }, { once: true });
+                    }
+                }
                 if (!releases.length) list.textContent = 'No website releases have been published yet.';
                 releases.forEach(release => {
                     const card = document.createElement('article');
@@ -1226,7 +1246,7 @@ const Admin = {
             const response = await fetch('/api/updates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' },
-                body: JSON.stringify({ action: 'publish', version, content, detailsUrl }),
+                body: JSON.stringify({ action: 'publish', version, content, detailsUrl, policies: Object.fromEntries(['terms', 'privacy'].filter(key => document.getElementById('update-' + key)?.dataset.edited).map(key => [key, document.getElementById('update-' + key).value])) }),
                 cache: 'no-store'
             });
             const data = await response.json().catch(() => ({}));
@@ -1234,6 +1254,7 @@ const Admin = {
             document.getElementById('update-version').value = '';
             document.getElementById('update-details-url').value = '';
             document.getElementById('update-content').value = '';
+            ['terms', 'privacy'].forEach(key => { const field = document.getElementById('update-' + key); if (field) delete field.dataset.edited; });
             this.updateReleasePreview();
             if (status) status.textContent = 'Version ' + data.release.version + ' was published successfully.';
             await this.loadUpdates();

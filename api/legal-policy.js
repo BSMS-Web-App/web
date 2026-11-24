@@ -9,12 +9,12 @@ export const LEGAL_POLICY_VERSIONS = Object.freeze({
     privacy: '1.0.2'
 });
 
-export function getLegalPolicyStatus(account = {}) {
+export function getLegalPolicyStatus(account = {}, versions = LEGAL_POLICY_VERSIONS) {
     const accepted = account.legalAcceptance || {};
     const policies = {};
 
-    for (const key of Object.keys(LEGAL_POLICY_VERSIONS)) {
-        const currentVersion = LEGAL_POLICY_VERSIONS[key];
+    for (const key of Object.keys(versions)) {
+        const currentVersion = versions[key];
         const record = accepted[key] || {};
         const acceptedVersion = typeof record.version === 'string' ? record.version : null;
         const required = acceptedVersion !== currentVersion;
@@ -36,5 +36,11 @@ export function getLegalPolicyStatus(account = {}) {
 }
 
 export function legalAcceptanceRequired(account = {}) {
+    const accepted = account.legalAcceptance || {};
+    // Content-hash versions are issued by the unified updates service. The page-level
+    // gate enforces their current value; this synchronous legacy helper cannot query RTDB.
+    const dynamicTerms = typeof accepted.terms?.version === 'string' && accepted.terms.version.startsWith('v-');
+    const dynamicPrivacy = typeof accepted.privacy?.version === 'string' && accepted.privacy.version.startsWith('v-');
+    if (dynamicTerms && dynamicPrivacy) return false;
     return getLegalPolicyStatus(account).needsAcceptance;
 }
