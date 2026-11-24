@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import { db, requestMacApi } from './db.js';
-import { LEGAL_POLICY_VERSIONS, getLegalPolicyStatus } from './legal-policy.js';
+import { LEGAL_POLICY_VERSIONS } from './legal-policy.js';
+import { createHash } from 'node:crypto';
 import { handleApiCors } from '../lib/api-cors.js';
 
 async function getAuthenticatedUser(sessionId) {
@@ -22,6 +23,30 @@ function releaseStart(account) {
     return Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0;
 }
 
+async function getPolicyConfig() {
+    const snap = await db.ref('/updates/policies').once('value');
+    const saved = snap.val() || {};
+    const policies = {};
+    for (const key of ['terms', 'privacy']) {
+        const fallback = LEGAL_POLICY_VERSIONS[key];
+        const record = saved[key] || {};
+        policies[key] = { version: record.version || fallback, content: record.content || '', publishedAt: record.publishedAt || null };
+    }
+    return policies;
+}
+function policyStatus(account, policies) {
+    const accepted = account?.legalAcceptance || {};
+    const result = {};
+    for (const key of ['terms', 'privacy']) {
+        const version = policies[key].version;
+        const record = accepted[key] || {};
+        const acceptedVersion = typeof record.version === 'string' ? record.version : null;
+        result[key] = { version, acceptedVersion, acceptedAt: record.acceptedAt || null,
+            required: acceptedVersion !== version, updated: Boolean(acceptedVersion && acceptedVersion !== version),
+            firstAcknowledgment: !acceptedVersion, content: policies[key].content || '' };
+    }
+    return { policies: result, needsAcceptance: Object.values(result).some(p => p.required) };
+}
 async function getReleases() {
     const snapshot = await db.ref('/updates/releases').once('value');
     return Object.entries(snapshot.val() || {})
@@ -84,7 +109,7 @@ async function acceptPolicies(user, payload, res) {
         return res.status(409).json({
             error: 'The legal documents changed while you were reviewing them. Please reload and review the current versions.',
             code: 'LEGAL_VERSION_CHANGED',
-            versions: LEGAL_POLICY_VERSIONS,
+            versions: policyVersions,
             policies: status.policies,
             needsAcceptance: status.needsAcceptance
         });
@@ -110,7 +135,7 @@ async function acceptPolicies(user, payload, res) {
 
     await db.ref('/accounts/' + user.uid + '/legalAcceptance').update(updates);
     const savedSnapshot = await db.ref('/accounts/' + user.uid).once('value');
-    if (getLegalPolicyStatus(savedSnapshot.val() || {}).needsAcceptance) {
+    if (policyStatus(savedSnapshot.val() || {}, await getPolicyConfig()).needsAcceptance) {
         throw new Error('Your acknowledgments could not be verified after saving. Please try again.');
     }
 
@@ -118,7 +143,7 @@ async function acceptPolicies(user, payload, res) {
         const history = db.ref('/accounts/' + user.uid + '/legalAcceptanceHistory').push();
         await history.set({
             policies: acceptedPolicies,
-            versions: Object.fromEntries(acceptedPolicies.map(key => [key, LEGAL_POLICY_VERSIONS[key]])),
+            versions: Object.fromEntries(acceptedPolicies.map(key => [key, policyVersions[key]]),
             acceptedAt: now
         });
     } catch (error) {
@@ -156,7 +181,7 @@ async function markViewed(user, payload, res, releases) {
     return res.status(200).json({ success: true, viewedIds: ids });
 }
 
-async function publishRelease(user, payload, res, releases) {
+async function publishRelease(user, payload, res, releases, policyConfig) {
     if (typeof payload.version !== 'string' ||
         !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim())) {
         return res.status(400).json({ error: 'Enter a valid release version, such as v6.14.0.' });
@@ -210,7 +235,7 @@ export default async function handler(req, res) {
             return res.status(403).json({ error: 'This account is banned.', account_status: 'banned' });
         }
 
-        const legal = getLegalPolicyStatus(user.account);
+        const policyConfig = await getPolicyConfig();\n        const policyVersions = Object.fromEntries(['terms','privacy'].map(key => [key, policyConfig[key].version]));\n        const legal = policyStatus(user.account, policyConfig);
         if (req.method === 'GET') {
             const releases = await getReleases();
             return res.status(200).json({
@@ -237,7 +262,7 @@ export default async function handler(req, res) {
                 needsAcceptance: legal.needsAcceptance
             });
         }
-        if (action === 'accept') return await acceptPolicies(user, payload, res);
+        if (action === 'accept') return await acceptPolicies(user, payload, res, policyVersions, legal);
         if (action === 'mark-viewed') {
             return await markViewed(user, payload, res, await getReleases());
         }
@@ -251,7 +276,7 @@ export default async function handler(req, res) {
         }
         if (action === 'publish') {
             if (!await requireOwner(user, res)) return;
-            return await publishRelease(user, payload, res, await getReleases());
+            return await publishRelease(user, payload, res, await getReleases(), policyConfig);
         }
         return res.status(400).json({ error: 'Unknown updates action.' });
     } catch (error) {
