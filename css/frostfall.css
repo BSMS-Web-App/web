@@ -2251,3 +2251,38 @@ a { color: inherit; }
   font: 8px/1.3 'Press Start 2P', monospace;
   text-align: center;
 }
+
+/* === NEW: GAME OVER === losing to JJ erases the file, so the screen is
+   opaque and sits over the frozen world: no retry, no wake-up by the fire. */
+.ff-gameover {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(150, 20, 40, .55), transparent 64%),
+    #0a050e;
+}
+.ff-gameover-in {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  width: min(460px, 100%);
+}
+.ff-gameover .ff-eyebrow { color: #ff9aae; }
+.ff-gameover h2 {
+  margin: 0;
+  font: 30px/1.15 'Press Start 2P', monospace;
+  letter-spacing: 2px;
+  color: #ff5c74;
+  text-shadow: 0 4px 0 #3a0a12, 0 0 26px rgba(255, 92, 116, .5);
+}
+.ff-gameover-copy {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.35;
+  color: #e9dcff;
+}

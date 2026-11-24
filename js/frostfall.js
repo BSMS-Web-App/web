@@ -75,6 +75,8 @@
     menu: $('ff-menu'), menuClose: $('ff-menu-close'), menuName: $('ff-menu-name'), menuLevel: $('ff-menu-level'),
     menuHp: $('ff-menu-hp'), menuSp: $('ff-menu-sp'), menuBp: $('ff-menu-bp'), menuShards: $('ff-menu-shards'),
     menuObjective: $('ff-menu-objective'), menuResume: $('ff-menu-resume'), menuRestart: $('ff-menu-restart'), menuReset: $('ff-menu-reset'),
+    /* === NEW: JJ THE HAND SMASHER ends the run, so it gets its own screen === */
+    gameover: $('ff-gameover'), gameoverStart: $('ff-gameover-start'),
     ending: $('ff-ending'), endingLines: $('ff-ending-lines'), endingStats: $('ff-ending-stats'), endingAgain: $('ff-ending-again'),
     ended: $('ff-ended'), endedTitle: $('ff-ended-title'), endedCopy: $('ff-ended-copy'),
     endedRecord: $('ff-ended-record'), endedResume: $('ff-ended-resume'),
@@ -3089,6 +3091,28 @@
       addPart(actor, 0x241740, [0, 0, 0], [0.6, 3.5, 0], [0.26, 0.9, 0.26], { geo: 'cone6', rz: -0.45 });
       addPart(actor, 0x1b1130, [0, 0, 0], [0, 1.2, -0.5], [2.0, 1.8, 0.4], { alpha: 0.55 });
       glowEyes(actor, 0xff5c74, 2.92, 0.5, 0.24, 0.16);
+    } else if (model === 'jj') {
+      /* === NEW: JJ THE HAND SMASHER === a blocky bruiser built around two
+         oversized fists, so the silhouette reads as "hands" from any angle. */
+      actor.baseY = 0;
+      addPart(actor, 0x2b3f6b, [0, 0, 0], [-0.34, 0.56, 0], [0.56, 1.12, 0.62]);
+      addPart(actor, 0x2b3f6b, [0, 0, 0], [0.34, 0.56, 0], [0.56, 1.12, 0.62]);
+      addPart(actor, 0x1b2544, [0, 0, 0], [-0.36, 0.1, 0.1], [0.72, 0.32, 0.84]);
+      addPart(actor, 0x1b2544, [0, 0, 0], [0.36, 0.1, 0.1], [0.72, 0.32, 0.84]);
+      addPart(actor, 0xe8563f, [0, 0, 0], [0, 1.72, 0], [1.5, 1.4, 0.9]);
+      addPart(actor, 0xc23c2c, [0, 0, 0], [0, 1.18, 0], [1.58, 0.34, 0.98]);
+      addPart(actor, 0xffd8a8, [0, 0, 0], [0, 2.02, 0.46], [0.5, 0.42, 0.1]);
+      addPart(actor, 0xf0b088, [0, 0, 0], [-1.02, 1.9, 0], [0.46, 1.0, 0.46]);
+      addPart(actor, 0xf0b088, [0, 0, 0], [1.02, 1.9, 0], [0.46, 1.0, 0.46]);
+      addPart(actor, 0xf0b088, [0, 0, 0], [-1.14, 1.0, 0.18], [1.0, 0.95, 1.0]);
+      addPart(actor, 0xf0b088, [0, 0, 0], [1.14, 1.0, 0.18], [1.0, 0.95, 1.0]);
+      addPart(actor, 0xffd3b0, [0, 0, 0], [-1.14, 1.38, 0.18], [1.06, 0.22, 1.06]);
+      addPart(actor, 0xffd3b0, [0, 0, 0], [1.14, 1.38, 0.18], [1.06, 0.22, 1.06]);
+      addPart(actor, 0xf0b088, [0, 0, 0], [0, 2.68, 0], [0.86, 0.82, 0.82]);
+      addPart(actor, 0x241a16, [0, 0, 0], [0, 3.05, 0], [0.96, 0.26, 0.9]);
+      addPart(actor, 0xe8563f, [0, 0, 0], [0, 3.05, 0.25], [0.92, 0.2, 0.4]);
+      glowEyes(actor, 0xfff3c4, 2.72, 0.44, 0.2, 0.12);
+      addPart(actor, 0xff5c74, [0, 0, 0], [0, 0.06, 0], [2.7, 0.08, 2.7], { geo: 'disc', alpha: 0.2 });
     } else {
       actor.baseY = 0.4;
       addPart(actor, 0x35245c, [0, 0, 0], [0, 1.3, 0], [0.95, 1.15, 0.75]);
@@ -3732,6 +3756,10 @@
     box(x + 1.5, 0.7, z - 4, 0.2, 0.8, 0.2, 0x5a4028);
   }
 
+  /* === NEW: JJ THE HAND SMASHER === the ring sits on the south end of the
+     Roadtown path, past the fountain, so it is a detour you have to walk into. */
+  var JJ_RING = { x: 0, z: -22 };
+
   /* === NEW: BLOCK TOWN === the town map rebuilt as a sunny, saturated block
      world: checkered lawn, cream sidewalk, flat shopfronts with pixel signs
      and cube-canopy trees. */
@@ -3781,6 +3809,26 @@
     sled(-13.4, 6.6, 0.45);
     wreathOn(11.5, 2.4, 5.06, 0);
     wreathOn(-11.6, 2.6, 6.06, 0);
+    /* === NEW: JJ'S RING === a bare-knuckle square on the south end of the
+       plaza: pale slab, dark mat, four posts and a rope for each side. */
+    box(JJ_RING.x, 0.1, JJ_RING.z, 9.2, 0.08, 9.2, 0xcfc0a4);
+    box(JJ_RING.x, 0.16, JJ_RING.z, 5.4, 0.04, 5.4, 0x3a2f4a);
+    studs(JJ_RING.x, JJ_RING.z, 5.4, 5.4, 0.18, 0xffcf3f, 2.7);
+    box(-4.2, 0.85, -26.2, 0.34, 1.7, 0.34, 0x8a6242);
+    box(4.2, 0.85, -26.2, 0.34, 1.7, 0.34, 0x8a6242);
+    box(-4.2, 0.85, -17.8, 0.34, 1.7, 0.34, 0x8a6242);
+    box(4.2, 0.85, -17.8, 0.34, 1.7, 0.34, 0x8a6242);
+    box(0, 1.12, -26.2, 8.6, 0.16, 0.16, 0xd8474f);
+    box(0, 1.12, -17.8, 8.6, 0.16, 0.16, 0xd8474f);
+    box(-4.2, 1.12, -22, 0.16, 0.16, 8.6, 0xd8474f);
+    box(4.2, 1.12, -22, 0.16, 0.16, 8.6, 0xd8474f);
+    /* the board hangs behind the ring so it backdrops JJ instead of hiding him */
+    sign('JJ RING', 0, -28.6);
+    inspect(0, -17.2, 'JJ RING', [
+      'A board in chipped chalk: JJ THE HAND SMASHER · FOUR TURNS · NO REFUNDS.',
+      'Under it, smaller: "if he still has both hands up when the fourth turn ends, the run is over. yours. all of it."',
+      'A tally of crossed-out names runs down the side of the board. It is a long board.'
+    ], 2.6);
   }
 
   function buildPines() {
@@ -5385,6 +5433,43 @@
     world.interactables.push(bossItem);
   }
 
+  /* === NEW: JJ THE HAND SMASHER === an optional boss in the Roadtown ring.
+     Nothing in the story needs him beaten; the fight exists to be a fair
+     four-turn race, and the losing side of it costs the whole file. */
+  function spawnHandSmasher() {
+    if (!world || world.chapter !== 0) return;
+    var actor = buildEnemy('jj');
+    actor.x = JJ_RING.x;
+    actor.z = JJ_RING.z;
+    actor.scale = 1.2;
+    actor.y = actor.baseY * actor.scale;
+    /* JJ's face is on his +z side, and the ring is entered from +z, so he
+       stands square to the entrance with both fists in view. */
+    actor.yaw = 0;
+    actor.phase = Math.random() * 6;
+    addActor(actor);
+    var item = {
+      x: JJ_RING.x, z: JJ_RING.z, r: 3.4, label: 'CHALLENGE JJ',
+      action: function () {
+        if (!window.confirm('JJ THE HAND SMASHER: BEAT HIM IN 4 TURNS OR YOUR ENTIRE SAVE IS ERASED. FIGHT HIM?')) return;
+        startBattle(
+          {
+            name: 'JJ THE HAND SMASHER', hp: 36, atk: 5, xp: 0, model: 'jj',
+            boss: true, agility: 6, turnLimit: 4, noArticle: true
+          },
+          {
+            foe: actor,
+            onWin: function () {
+              toast('JJ LOWERS HIS HANDS. THE RUN SURVIVES.');
+              updateHud();
+            }
+          }
+        );
+      }
+    };
+    world.interactables.push(item);
+  }
+
   function spawnShard(chapter) {
     var relic = buildRelicActor(CHAPTERS.indexOf(chapter));
     relic.x = chapter.boss.x;
@@ -5467,6 +5552,8 @@
     addNpc(chapter, index);
     addVillagers(chapter, index);
     spawnEnemies(chapter);
+    /* === NEW: JJ only stands in his ring in Roadtown === */
+    spawnHandSmasher();
     camera.yaw = 0.2;
     camera.pitch = 0.44;
     camera.dist = 16;
@@ -6566,6 +6653,8 @@
       else if (g.threshold) text = 'ECHO ' + g.charge + '/3 · ' + Math.max(0, g.threshold - (g.chargeDamage || 0)) + ' DAMAGE TO BREAK IT';
       else if (g.obscured) text = 'THE DARK HIDES THE BEAT · USE CURE';
       else if (g.burrowEvery) text = 'BURROWS EVERY ' + g.burrowEvery + 'RD TURN';
+      /* === NEW: JJ's clock is the whole mechanic, so it lives on the plate === */
+      else if (g.turnsLeft) text = g.turnsLeft + (g.turnsLeft === 1 ? ' TURN LEFT · THEN THE HANDS COME DOWN' : ' TURNS LEFT · THEN THE HANDS COME DOWN');
       else text = g.name || '';
     }
     ui.gimmick.hidden = !text;
@@ -6611,6 +6700,8 @@
     if (def.model === 'serpent') return { coils: 3, name: 'ARMORED COILS · PERFECT BREAKS ONE' };
     if (def.model === 'bell') return { charge: 0, threshold: Math.max(16, Math.round(def.hp * 0.24)), chargeDamage: 0, name: 'ECHO CHARGE' };
     if (def.model === 'night') return { pulse: 0, name: 'THE LONG NIGHT DRAINS THE FIRE' };
+    /* === NEW: JJ has no trick. He has a clock. */
+    if (def.model === 'jj') return { turnsLeft: def.turnLimit || 4, name: 'FOUR TURNS · THEN THE HANDS COME DOWN' };
     return null;
   }
 
@@ -6653,7 +6744,9 @@
     buildBattleScene(def);
     updateBattleUI();
     setBattleButtons(false);
-    log((/^THE /.test(def.name) ? '' : 'A ') + def.name + ' BLOCKS THE PATH!');
+    log((def.noArticle || /^THE /.test(def.name) ? '' : 'A ') + def.name + ' BLOCKS THE PATH!');
+    /* === NEW: a turn-limit boss states the rule on the first line === */
+    if (def.turnLimit) log(def.turnLimit + ' TURNS. IF HE IS STILL STANDING, THE RUN ENDS.');
     sound('battle');
     battle.queue = queueFor(opts.advantage, def);
     ui.battleHint.textContent = '...';
@@ -6680,6 +6773,14 @@
 
   function beginPlayerMenu() {
     if (!battle || battle.ended) return;
+    /* === NEW: JJ THE HAND SMASHER === battle.turn starts at 1 and ticks once
+       per enemy turn, so turn 5 is the menu after the player's fourth action.
+       Extra actions from FIRST STRIKE keep the same turn, so they are free. */
+    if (battle.def.turnLimit) {
+      if (battle.turn > battle.def.turnLimit) { jjGameOver(); return; }
+      if (battle.gimmick) battle.gimmick.turnsLeft = battle.def.turnLimit - battle.turn + 1;
+      updateGimmickUi();
+    }
     /* Happy HP / SP tops the player up at the start of their turn, never past
        the cap. */
     if (battle.mods.regenHp && save.hp < save.maxHp) {
@@ -7733,6 +7834,39 @@
     }, 1500);
   }
 
+  /* === NEW: JJ THE HAND SMASHER ===
+     Losing any other fight wakes you up by the fire. Losing this one does not:
+     JJ takes the clock, the save file goes with it, and the run is over. */
+  function jjGameOver() {
+    if (!battle || battle.ended) return;
+    battle.ended = true;
+    battle.busy = true;
+    setBattleButtons(false);
+    hideTiming();
+    hideTelegraph();
+    clearBattleFeedback();
+    log('JJ RAISES BOTH HANDS. FOUR TURNS WAS ALL YOU HAD.');
+    rate('TOO SLOW!', 'boss');
+    flashStage('red');
+    sound('crack');
+    setTimeout(function () {
+      battle = null;
+      hideBattle();
+      eraseRun();
+    }, 1500);
+  }
+
+  function eraseRun() {
+    try { localStorage.removeItem(SLOT_KEYS[activeSlot] || SAVE_KEY); } catch (error) { /* ignore */ }
+    save = null;
+    mode = 'gameover';
+    ui.hud.hidden = true;
+    ui.objective.hidden = true;
+    ui.touch.hidden = true;
+    ui.prompt.hidden = true;
+    if (ui.gameover) ui.gameover.hidden = false;
+  }
+
   function respawn() {
     save.hp = Math.max(1, Math.ceil(save.maxHp * 0.5));
     save.sp = save.maxSp;
@@ -8070,6 +8204,8 @@
     if (ui.startPrompt) ui.startPrompt.addEventListener('click', openFileSelect);
     if (ui.fileBack) ui.fileBack.addEventListener('click', closeFileSelect);
     bindFileGrid();
+    /* === NEW: the run is already erased, so the only way out is a new file === */
+    if (ui.gameoverStart) ui.gameoverStart.addEventListener('click', function () { location.reload(); });
     if (ui.nameStart) ui.nameStart.addEventListener('click', beginNewStory);
     ui.cutNext.addEventListener('click', advanceCutscene);
     ui.cutSkip.addEventListener('click', skipCutscene);

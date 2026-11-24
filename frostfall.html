@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=48">
+<link rel="stylesheet" href="/css/frostfall.css?v=49">
 </head>
 <body class="ff-body">
 <div id="ff-app" data-theme="day">
@@ -275,6 +275,16 @@
     <p id="ff-sheet-debug-note">animations.jpg</p>
   </div>
 
+  <!-- === NEW: GAME OVER === losing to JJ the Hand Smasher ends the whole run -->
+  <div id="ff-gameover" class="ff-gameover" role="dialog" aria-modal="true" aria-labelledby="ff-gameover-title" hidden>
+    <div class="ff-gameover-in">
+      <p class="ff-eyebrow">THE HANDS COME DOWN</p>
+      <h2 id="ff-gameover-title">GAME OVER</h2>
+      <p class="ff-gameover-copy">JJ THE HAND SMASHER gave you four turns. You needed one more. Your save file has been erased.</p>
+      <button id="ff-gameover-start" class="ff-button gold" type="button">START A NEW RUN</button>
+    </div>
+  </div>
+
   <div id="ff-fallback" class="ff-screen" hidden>
     <div class="ff-panel">
       <p class="ff-eyebrow">A CHRISTMAS TALE</p>
@@ -285,6 +295,6 @@
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=7"></script>
-<script src="/js/frostfall.js?v=133"></script>
+<script src="/js/frostfall.js?v=136"></script>
 </body>
 </html>
