@@ -299,9 +299,11 @@ app.post('/v1/media-upload-ticket', mediaTicketCors, mediaTicketLimiter, (req, r
   }
   if (!validSession(account)) return sendError(res, 401, 'Your session is invalid. Please sign in again.');
 
-  // Keep this in sync with api/legal-policy.js so uploads respect the same policy gate.
-  if (account.legalAcceptance?.terms?.version !== '1.0.1' ||
-      account.legalAcceptance?.privacy?.version !== '1.0.2') {
+  // Match the same live, content-hash policy versions used by /api/updates.
+  const currentTermsVersion = database.updates?.policies?.terms?.version || '1.0.1';
+  const currentPrivacyVersion = database.updates?.policies?.privacy?.version || '1.0.2';
+  if (account.legalAcceptance?.terms?.version !== currentTermsVersion ||
+      account.legalAcceptance?.privacy?.version !== currentPrivacyVersion) {
     return res.status(428).json({
       error: 'Please review and accept the current Terms of Service and Privacy Policy before uploading media.',
       code: 'LEGAL_ACCEPTANCE_REQUIRED'

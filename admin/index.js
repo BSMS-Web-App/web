@@ -1130,13 +1130,23 @@ const Admin = {
         } catch (_) {}
     },
 
-    loadUpdates: async function() {
+    loadUpdates: async function(forcePolicyReload = false) {
         const list = document.getElementById('updates-list');
         const status = document.getElementById('update-publish-status');
         if (this.callerRole !== 'owner') {
             if (list) list.textContent = 'Only the platform owner can manage website releases.';
             return;
         }
+        const policyValuesAtStart = Object.fromEntries(['terms', 'privacy'].map(key => [
+            key, document.getElementById('update-' + key)?.value || ''
+        ]));
+        const hasPolicyDrafts = ['terms', 'privacy'].some(key => {
+            const field = document.getElementById('update-' + key);
+            return field?.dataset.originalContent !== undefined &&
+                field.value.trim() !== field.dataset.originalContent.trim();
+        });
+        if (forcePolicyReload && hasPolicyDrafts &&
+            !window.confirm('Discard your unsaved Terms or Privacy edits and reload the latest published policy text?')) return;
         if (list) list.textContent = 'Loading published releases...';
         try {
             const response = await fetch('/api/updates', {
@@ -1146,7 +1156,12 @@ const Admin = {
                 cache: 'no-store'
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'Could not load website releases.');
+            if (!response.ok) {
+                const error = new Error(data.error || 'Could not load website releases.');
+                error.status = response.status;
+                error.data = data;
+                throw error;
+            }
             if (list) {
                 list.replaceChildren();
                 const releases = Array.isArray(data.releases) ? data.releases : [];
@@ -1185,9 +1200,21 @@ const Admin = {
                                 }
                             } catch (_) {}
                         }
-                        if (field.dataset.originalContent === undefined) {
+                        const originalContent = field.dataset.originalContent;
+                        const editedWhileLoading = originalContent === undefined &&
+                            field.value !== policyValuesAtStart[key];
+                        const hasUnsavedChanges = !forcePolicyReload && (
+                            editedWhileLoading || (originalContent !== undefined &&
+                                field.value.trim() !== originalContent.trim())
+                        );
+                        const currentVersion = data.documents?.[key]?.version || (key === 'terms' ? '1.0.1' : '1.0.2');
+                        if (!hasUnsavedChanges) {
                             field.value = currentContent;
                             field.dataset.originalContent = currentContent;
+                            field.dataset.originalVersion = currentVersion;
+                        } else if (editedWhileLoading) {
+                            field.dataset.originalContent = currentContent;
+                            field.dataset.originalVersion = currentVersion;
                         }
                     }
                 }
@@ -1234,6 +1261,7 @@ const Admin = {
         } catch (error) {
             if (list) list.textContent = error.message;
             if (status) status.textContent = error.message;
+            if (error.status === 428) window.BSMSUpdates?.check?.();
         }
     },
 
@@ -1241,6 +1269,11 @@ const Admin = {
     editUpdate: function(release) {
         const card = document.getElementById('update-create-card');
         if (!card || !release?.id) return;
+        const currentEditId = card.dataset.editingId || '';
+        const hasReleaseDraft = ['update-version', 'update-details-url', 'update-content', 'update-starts-on', 'update-release-date']
+            .some(id => Boolean(document.getElementById(id)?.value));
+        if (hasReleaseDraft && currentEditId !== release.id &&
+            !window.confirm('Discard the unsaved release draft and load this release instead?')) return;
         card.dataset.editingId = release.id;
         document.getElementById('update-editor-heading').textContent = 'Edit Website Release';
         document.getElementById('update-version').value = release.version || '';
@@ -1272,10 +1305,16 @@ const Admin = {
         try {
             const response = await fetch('/api/updates', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' }, body: JSON.stringify({ action: 'delete', id }), cache: 'no-store' });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'The release could not be deleted.');
+            if (!response.ok) {
+                const error = new Error(data.error || 'The release could not be deleted.');
+                error.status = response.status;
+                error.data = data;
+                throw error;
+            }
+            if (document.getElementById('update-create-card')?.dataset.editingId === id) this.cancelUpdateEdit();
             if (status) status.textContent = 'Release deleted. It will no longer be shown to users.';
             await this.loadUpdates();
-        } catch (error) { if (status) status.textContent = error.message; }
+        } catch (error) { if (status) status.textContent = error.message; if (error.status === 428) window.BSMSUpdates?.check?.(); }
     },
 
     updateReleasePreview: function() {
@@ -1312,20 +1351,58 @@ const Admin = {
             if (status) status.textContent = 'Enter a version number and release details before publishing.';
             return;
         }
+        const uninitializedPolicyDraft = ['terms', 'privacy'].some(key => {
+            const field = document.getElementById('update-' + key);
+            return field && field.dataset.originalContent === undefined && field.value.trim();
+        });
+        if (uninitializedPolicyDraft) {
+            if (status) status.textContent = 'Refresh the release editor before publishing policy changes so the current document version can be checked.';
+            return;
+        }
         if (button) { button.disabled = true; button.textContent = 'Publishing...'; }
         if (status) status.textContent = 'Publishing release...';
         try {
             const response = await fetch('/api/updates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Session-ID': localStorage.getItem('session_id') || '' },
-                body: JSON.stringify({ action: document.getElementById('update-create-card')?.dataset.editingId ? 'edit' : 'publish', id: document.getElementById('update-create-card')?.dataset.editingId || undefined, version, content, detailsUrl, startsOn: document.getElementById('update-starts-on')?.value || '', releaseDate: document.getElementById('update-release-date')?.value || '', timezoneOffset: new Date().getTimezoneOffset(), policies: Object.fromEntries(['terms', 'privacy'].filter(key => {
-                    const field = document.getElementById('update-' + key);
-                    return field && field.dataset.originalContent !== undefined && field.value.trim() !== field.dataset.originalContent.trim();
-                }).map(key => [key, document.getElementById('update-' + key).value])) }),
+                body: JSON.stringify((() => {
+                    const changedPolicies = ['terms', 'privacy'].filter(key => {
+                        const field = document.getElementById('update-' + key);
+                        return field && field.dataset.originalContent !== undefined &&
+                            field.value.trim() !== field.dataset.originalContent.trim();
+                    });
+                    const editingId = document.getElementById('update-create-card')?.dataset.editingId || '';
+                    const startsOn = document.getElementById('update-starts-on')?.value || '';
+                    const releaseDate = document.getElementById('update-release-date')?.value || '';
+                    const offsetForDate = value => {
+                        const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                        return match
+                            ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTimezoneOffset()
+                            : new Date().getTimezoneOffset();
+                    };
+                    return {
+                        action: editingId ? 'edit' : 'publish',
+                        id: editingId || undefined,
+                        version,
+                        content,
+                        detailsUrl,
+                        startsOn,
+                        releaseDate,
+                        timezoneOffset: new Date().getTimezoneOffset(),
+                        timezoneOffsets: { startsOn: offsetForDate(startsOn), releaseDate: offsetForDate(releaseDate) },
+                        policies: Object.fromEntries(changedPolicies.map(key => [key, document.getElementById('update-' + key).value])),
+                        policyVersions: Object.fromEntries(changedPolicies.map(key => [key, document.getElementById('update-' + key).dataset.originalVersion || (key === 'terms' ? '1.0.1' : '1.0.2')]))
+                    };
+                })()),
                 cache: 'no-store'
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'The release could not be published.');
+            if (!response.ok) {
+                const error = new Error(data.error || 'The release could not be published.');
+                error.status = response.status;
+                error.data = data;
+                throw error;
+            }
             document.getElementById('update-create-card').dataset.editingId = '';
             document.getElementById('update-version').value = '';
             document.getElementById('update-details-url').value = '';
@@ -1340,13 +1417,23 @@ const Admin = {
                 if (field) {
                     delete field.dataset.edited;
                     delete field.dataset.originalContent;
+                    delete field.dataset.originalVersion;
                 }
             });
             this.updateReleasePreview();
-            if (status) status.textContent = 'Version ' + data.release.version + ' was published successfully.';
+            const policyNames = (data.changedPolicies || []).map(key => key === 'terms' ? 'Terms of Service' : 'Privacy Policy');
+            if (status) {
+                status.textContent = policyNames.length
+                    ? 'Version ' + data.release.version + ' was saved, and ' + policyNames.join(' and ') + ' were updated. Users must review the new policy version(s).'
+                    : (data.changed === false ? 'Release saved; no release fields changed.' : 'Version ' + data.release.version + ' was published successfully.');
+            }
+            // Publishing new legal text also changes the owner's required
+            // acknowledgment; check immediately instead of waiting for focus.
+            window.BSMSUpdates?.check?.();
             await this.loadUpdates();
         } catch (error) {
             if (status) status.textContent = error.message;
+            if (error.status === 428) window.BSMSUpdates?.check?.();
         } finally {
             const editing = Boolean(document.getElementById('update-create-card')?.dataset.editingId);
             if (button) {
@@ -1442,5 +1529,8 @@ const Admin = {
 window.addEventListener('DOMContentLoaded', () => {
     Admin.loadUsers();
     document.getElementById('support-admin-reply-form')?.addEventListener('submit', event => Admin.sendSupportReply(event));
-    window.addEventListener('bsms:legal-accepted', () => Admin.loadUsers());
+    window.addEventListener('bsms:legal-accepted', () => {
+        Admin.loadUsers();
+        if (document.getElementById('updates-panel')?.classList.contains('active')) Admin.loadUpdates();
+    });
 });

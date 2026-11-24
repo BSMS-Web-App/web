@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { db } from './db.js';
+
 export const LEGAL_POLICY_VERSIONS = Object.freeze({
     terms: '1.0.1',
     privacy: '1.0.2'
@@ -35,12 +37,24 @@ export function getLegalPolicyStatus(account = {}, versions = LEGAL_POLICY_VERSI
     };
 }
 
-export function legalAcceptanceRequired(account = {}) {
-    const accepted = account.legalAcceptance || {};
-    // Content-hash versions are issued by the unified updates service. The page-level
-    // gate enforces their current value; this synchronous legacy helper cannot query RTDB.
-    const dynamicTerms = typeof accepted.terms?.version === 'string' && accepted.terms.version.startsWith('v-');
-    const dynamicPrivacy = typeof accepted.privacy?.version === 'string' && accepted.privacy.version.startsWith('v-');
-    if (dynamicTerms && dynamicPrivacy) return false;
-    return getLegalPolicyStatus(account).needsAcceptance;
+export async function getCurrentLegalPolicyVersions() {
+    const snapshot = await db.ref('/updates/policies').once('value');
+    const stored = snapshot.val() || {};
+    return {
+        terms: typeof stored.terms?.version === 'string' && stored.terms.version
+            ? stored.terms.version : LEGAL_POLICY_VERSIONS.terms,
+        privacy: typeof stored.privacy?.version === 'string' && stored.privacy.version
+            ? stored.privacy.version : LEGAL_POLICY_VERSIONS.privacy
+    };
+}
+
+export async function legalAcceptanceRequired(account = {}) {
+    try {
+        const versions = await getCurrentLegalPolicyVersions();
+        return getLegalPolicyStatus(account, versions).needsAcceptance;
+    } catch (error) {
+        console.error('[BSMS Web :: Legal] Could not load current policy versions:', error?.message || error);
+        // Fail closed if the current policy versions cannot be verified.
+        return true;
+    }
 }

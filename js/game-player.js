@@ -275,5 +275,7 @@ back.addEventListener("click", event => {
   location.assign("/g");
 });
 
+window.addEventListener("bsms:legal-accepted", () => location.reload());
+
 load();
 })();

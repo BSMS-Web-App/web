@@ -65,7 +65,7 @@ export default async function handler(req, res) {
         if (!staff) {
             return res.status(403).json({ error: "Unauthorized: Administrator or Owner privileges required." });
         }
-        if (legalAcceptanceRequired(staff.account)) {
+        if (await legalAcceptanceRequired(staff.account)) {
             return res.status(428).json({ error: 'Legal policy acceptance is required.', code: 'LEGAL_ACCEPTANCE_REQUIRED' });
         }
 

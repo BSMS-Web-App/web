@@ -76,7 +76,7 @@ export default async function handler(req, res) {
                 ban_expires: account.ban_expires || null
             });
         }
-        if (legalAcceptanceRequired(account)) {
+        if (await legalAcceptanceRequired(account)) {
             return res.status(428).json({ error: 'Legal policy acceptance is required.', code: 'LEGAL_ACCEPTANCE_REQUIRED' });
         }
 

@@ -32,7 +32,7 @@ async function authenticate(sessionId) {
         const snapshot = await db.ref('/accounts/' + session.uid).once('value');
         const account = snapshot.val();
         if (!account || account.account_status === 'banned' || account.account_status === 'deleted') return null;
-        if (legalAcceptanceRequired(account)) return { legalRequired: true };
+        if (await legalAcceptanceRequired(account)) return { legalRequired: true };
         return { uid: session.uid, account };
     } catch {
         return null;

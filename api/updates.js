@@ -23,6 +23,18 @@ function releaseStart(account) {
     return Number.isFinite(createdAt) && createdAt > 0 ? createdAt : 0;
 }
 
+function releaseActivityAt(release) {
+    const editedAt = Number(release?.editedAt);
+    if (Number.isFinite(editedAt) && editedAt > 0) return editedAt;
+    const publishedAt = Number(release?.publishedAt);
+    return Number.isFinite(publishedAt) && publishedAt > 0 ? publishedAt : 0;
+}
+
+function releaseRevision(release) {
+    const revision = Number(release?.revision);
+    return Number.isSafeInteger(revision) && revision >= 1 && revision <= 1000000000 ? revision : 1;
+}
+
 const POLICY_KEYS = ['terms', 'privacy'];
 
 async function getPolicyBundle() {
@@ -32,7 +44,7 @@ async function getPolicyBundle() {
     const versions = {};
     for (const key of POLICY_KEYS) {
         const content = typeof stored[key]?.content === 'string' ? stored[key].content : '';
-        const version = typeof stored[key]?.version === 'string' ? stored[key].version : LEGAL_POLICY_VERSIONS[key];
+        const version = typeof stored[key]?.version === 'string' && stored[key].version ? stored[key].version : LEGAL_POLICY_VERSIONS[key];
         policies[key] = { content, version };
         versions[key] = version;
     }
@@ -48,18 +60,26 @@ async function getReleases() {
     return Object.entries(snapshot.val() || {})
         .filter(([, release]) => release && typeof release === 'object')
         .map(([id, release]) => ({ ...release, id }))
-        .sort((a, b) => Number(b.publishedAt || 0) - Number(a.publishedAt || 0));
+        .sort((a, b) => releaseActivityAt(b) - releaseActivityAt(a));
+}
+
+function seenUpdateIds(value) {
+    if (Array.isArray(value)) return value.filter(item => typeof item === 'string');
+    if (!value || typeof value !== 'object') return [];
+    return Object.entries(value).flatMap(([key, item]) =>
+        typeof item === 'string' ? [item] : item === true ? [key] : []
+    );
 }
 
 function unseenReleases(releases, account, uid) {
-    const seen = new Set(Array.isArray(account.updatesSeen) ? account.updatesSeen : []);
+    const seen = new Set(seenUpdateIds(account.updatesSeen));
     const start = releaseStart(account);
     return releases.filter(release =>
         release.active !== false &&
-        Number(release.publishedAt || 0) >= start &&
+        releaseActivityAt(release) >= start &&
         Number(release.startsAt || release.publishedAt || 0) <= Date.now() &&
         release.publishedBy !== uid &&
-        !seen.has(release.id + ':' + (Number(release.revision) || 1)) && ((Number(release.revision) || 1) > 1 || !seen.has(release.id))
+        !seen.has(release.id + ':' + releaseRevision(release)) && (releaseRevision(release) > 1 || !seen.has(release.id))
     );
 }
 
@@ -73,11 +93,50 @@ function validateDetailsUrl(value) {
     if (typeof value !== 'string' || value.length > 500) return null;
     try {
         const url = new URL(value);
+        const parts = url.pathname.split('/').filter(Boolean);
         if (url.protocol !== 'https:' || url.hostname !== 'github.com' ||
-            !url.pathname.startsWith('/BSMS-Web-App/web/releases/tag/') ||
-            url.pathname.split('/').filter(Boolean).length < 5) return null;
+            url.username || url.password || url.port || url.search || url.hash ||
+            parts.length !== 5 || parts[0] !== 'BSMS-Web-App' ||
+            parts[1] !== 'web' || parts[2] !== 'releases' ||
+            parts[3] !== 'tag' || !parts[4]) return null;
         return url.toString();
     } catch { return null; }
+}
+
+function validReleaseVersion(value) {
+    return typeof value === 'string' &&
+        /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(value.trim());
+}
+
+function normalizeReleaseVersion(value) {
+    return String(value || '').trim().replace(/^v/, '');
+}
+
+function releaseTimezoneOffset(payload, field) {
+    const offsets = payload.timezoneOffsets && typeof payload.timezoneOffsets === 'object' && !Array.isArray(payload.timezoneOffsets)
+        ? payload.timezoneOffsets : {};
+    return offsets[field] ?? payload.timezoneOffset;
+}
+
+function parseReleaseDate(value, timezoneOffset) {
+    if (value === '' || value === null || value === undefined) return undefined;
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    if (year < 1) return null;
+    const date = new Date(0);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCFullYear(year, month - 1, day);
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+    const offset = Number.isInteger(Number(timezoneOffset))
+        ? Math.max(-840, Math.min(840, Number(timezoneOffset))) : 0;
+    return date.getTime() + offset * 60000;
+}
+
+function apiError(message, status = 400, code) {
+    const error = new Error(message);
+    error.status = status;
+    if (code) error.code = code;
+    return error;
 }
 
 async function requireOwner(user, res, versions) {
@@ -95,50 +154,105 @@ async function requireOwner(user, res, versions) {
     return true;
 }
 
+function getPolicyPayload(payload) {
+    const changes = payload.policies === undefined ? {} : payload.policies;
+    const versions = payload.policyVersions === undefined ? {} : payload.policyVersions;
+    if (!changes || typeof changes !== 'object' || Array.isArray(changes) ||
+        !versions || typeof versions !== 'object' || Array.isArray(versions) ||
+        Object.keys(changes).some(key => !POLICY_KEYS.includes(key)) ||
+        Object.keys(versions).some(key => !POLICY_KEYS.includes(key)) ||
+        Object.values(versions).some(value => typeof value !== 'string' || !value || value.length > 100)) {
+        throw apiError('The legal document update data is invalid.');
+    }
+    return { changes, versions };
+}
+
 async function buildPolicyUpdates(user, changes) {
     if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
-        const error = new Error('Provide the legal documents to publish.');
-        error.status = 400;
-        throw error;
+        throw apiError('Provide the legal documents to publish.');
     }
 
     const updates = {};
+    const expectedVersions = {};
     for (const key of POLICY_KEYS) {
         if (changes[key] === undefined) continue;
         if (typeof changes[key] !== 'string' || changes[key].length > 50000) {
-            const error = new Error('Each legal document must be 50,000 characters or fewer.');
-            error.status = 400;
-            throw error;
+            throw apiError('Each legal document must be 50,000 characters or fewer.');
         }
 
         const content = changes[key].trim();
-        if (!content) {
-            const error = new Error('The Terms of Service and Privacy Policy cannot be empty.');
-            error.status = 400;
-            throw error;
-        }
+        if (!content) throw apiError('The Terms of Service and Privacy Policy cannot be empty.');
 
         const oldSnapshot = await db.ref('/updates/policies/' + key).once('value');
         const old = oldSnapshot.val() || {};
+        const oldVersion = typeof old.version === 'string' && old.version ? old.version : LEGAL_POLICY_VERSIONS[key];
         if (content !== String(old.content || '')) {
-            const version = 'v-' + createHash('sha256').update(content).digest('hex').slice(0, 16);
+            expectedVersions[key] = oldVersion;
             updates[key] = {
                 content,
-                version,
+                version: 'v-' + createHash('sha256').update(content).digest('hex'),
                 updatedAt: Date.now(),
                 updatedBy: user.uid
             };
         }
     }
-    return updates;
+    return { updates, expectedVersions };
 }
 
-async function acceptPolicies(user, payload, res, versions) {
+async function commitUpdateMutation({ releaseId, release, policyUpdates = {}, expectedPolicyVersions = {}, expectedReleaseRevision, allowCreate = false }) {
+    const transaction = await db.ref('/updates').transaction(current => {
+        const root = current && typeof current === 'object' && !Array.isArray(current) ? { ...current } : {};
+        const storedReleases = root.releases && typeof root.releases === 'object' && !Array.isArray(root.releases)
+            ? { ...root.releases } : {};
+        const storedPolicies = root.policies && typeof root.policies === 'object' && !Array.isArray(root.policies)
+            ? { ...root.policies } : {};
+
+        if (releaseId) {
+            const existing = storedReleases[releaseId];
+            if (allowCreate && existing) throw apiError('That release ID is already in use. Please try again.', 409, 'RELEASE_ID_CONFLICT');
+            if (!allowCreate && !existing) throw apiError('That release no longer exists.', 404, 'RELEASE_NOT_FOUND');
+            if (!allowCreate && releaseRevision(existing) !== Number(expectedReleaseRevision || 1)) {
+                throw apiError('This release changed after you opened it. Refresh the release list and try again.', 409, 'RELEASE_CHANGED');
+            }
+
+            if (release) {
+                const duplicate = Object.entries(storedReleases).some(([id, item]) =>
+                    id !== releaseId && normalizeReleaseVersion(item?.version) === normalizeReleaseVersion(release.version));
+                if (duplicate) throw apiError('Another release already uses that version number.', 409, 'DUPLICATE_RELEASE_VERSION');
+                storedReleases[releaseId] = release;
+            } else {
+                delete storedReleases[releaseId];
+            }
+        }
+
+        for (const key of Object.keys(policyUpdates)) {
+            const currentVersion = typeof storedPolicies[key]?.version === 'string' && storedPolicies[key].version
+                ? storedPolicies[key].version : LEGAL_POLICY_VERSIONS[key];
+            if (expectedPolicyVersions[key] && expectedPolicyVersions[key] !== currentVersion) {
+                throw apiError('The ' + (key === 'terms' ? 'Terms of Service' : 'Privacy Policy') +
+                    ' changed in another session. Refresh the editor and review the latest text before publishing.',
+                    409, 'POLICY_CHANGED');
+            }
+        }
+
+        root.releases = storedReleases;
+        if (Object.keys(policyUpdates).length) root.policies = { ...storedPolicies, ...policyUpdates };
+        return root;
+    });
+    if (!transaction?.committed) throw new Error('The update could not be saved because the database changed repeatedly. Please try again.');
+}
+
+async function acceptPolicies(user, payload, res, requestedVersions) {
+    const latestBundle = await getPolicyBundle();
+    const versions = latestBundle.versions;
     const status = policyStatus(user.account, versions);
     const termsAccepted = payload.termsAccepted === true;
     const privacyAccepted = payload.privacyAccepted === true;
 
-    if (!payload.versions ||
+    if (!requestedVersions ||
+        requestedVersions.terms !== versions.terms ||
+        requestedVersions.privacy !== versions.privacy ||
+        !payload.versions ||
         payload.versions.terms !== versions.terms ||
         payload.versions.privacy !== versions.privacy) {
         return res.status(409).json({
@@ -146,6 +260,7 @@ async function acceptPolicies(user, payload, res, versions) {
             code: 'LEGAL_VERSION_CHANGED',
             versions,
             policies: status.policies,
+            documents: latestBundle.policies,
             needsAcceptance: status.needsAcceptance
         });
     }
@@ -169,9 +284,21 @@ async function acceptPolicies(user, payload, res, versions) {
     }
 
     await db.ref('/accounts/' + user.uid + '/legalAcceptance').update(updates);
-    const savedSnapshot = await db.ref('/accounts/' + user.uid).once('value');
-    if (policyStatus(savedSnapshot.val() || {}, versions).needsAcceptance) {
-        throw new Error('Your acknowledgments could not be verified after saving. Please try again.');
+    const [savedSnapshot, afterSaveBundle] = await Promise.all([
+        db.ref('/accounts/' + user.uid).once('value'),
+        getPolicyBundle()
+    ]);
+    const savedAccount = savedSnapshot.val() || {};
+    const afterSaveStatus = policyStatus(savedAccount, afterSaveBundle.versions);
+    if (afterSaveStatus.needsAcceptance) {
+        return res.status(409).json({
+            error: 'A legal document changed while your acknowledgments were being saved. Please review the latest versions.',
+            code: 'LEGAL_VERSION_CHANGED',
+            versions: afterSaveBundle.versions,
+            policies: afterSaveStatus.policies,
+            documents: afterSaveBundle.policies,
+            needsAcceptance: true
+        });
     }
 
     try {
@@ -192,37 +319,72 @@ async function acceptPolicies(user, payload, res, versions) {
         acceptedAt: now
     });
 }
+function parseViewedReleaseId(value) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const id = value.id;
+        const revision = Number(value.revision);
+        if (typeof id !== 'string' || !/^[A-Za-z0-9_:-]{1,100}$/.test(id) ||
+            !Number.isSafeInteger(revision) || revision < 1 || revision > 1000000000) return null;
+        return { id, revision };
+    }
+    if (typeof value !== 'string') return null;
+    const separator = value.lastIndexOf(':');
+    if (separator < 1) return null;
+    const id = value.slice(0, separator);
+    const revisionText = value.slice(separator + 1);
+    if (!/^[A-Za-z0-9_:-]{1,100}$/.test(id) || !/^\d{1,10}$/.test(revisionText)) return null;
+    const revision = Number(revisionText);
+    return Number.isSafeInteger(revision) && revision >= 1 && revision <= 1000000000
+        ? { id, revision }
+        : null;
+}
 
 async function markViewed(user, payload, res, releases) {
     if (!Array.isArray(payload.ids) || payload.ids.length < 1 || payload.ids.length > 100) {
         return res.status(400).json({ error: 'Provide one or more update IDs to mark as viewed.' });
     }
-    const start = releaseStart(user.account);
-    const allowed = new Set(releases
-        .filter(release => release.active !== false && Number(release.startsAt || release.publishedAt || 0) <= Date.now() && Number(release.publishedAt || 0) >= start)
-        .map(release => release.id + ':' + (Number(release.revision) || 1)));
-    const ids = [...new Set(payload.ids
-        .filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}:\d{1,8}$/.test(id))
-        .filter(id => allowed.has(id)))];
-    if (!ids.length) return res.status(400).json({ error: 'No valid unseen update IDs were supplied.' });
 
+    const requested = payload.ids.map(parseViewedReleaseId);
+    if (requested.some(item => !item)) {
+        return res.status(400).json({ error: 'One or more update IDs are invalid.' });
+    }
+
+    const start = releaseStart(user.account);
+    const now = Date.now();
+    const visible = new Map(releases
+        .filter(release => release.active !== false &&
+            release.publishedBy !== user.uid &&
+            releaseActivityAt(release) >= start &&
+            Number(release.startsAt || release.publishedAt || 0) <= now)
+        .map(release => [release.id, releaseRevision(release)]));
+
+    const unique = [...new Map(requested.map(item => [item.id, item])).values()];
+    const changed = unique.some(item => visible.get(item.id) !== item.revision);
+    if (changed) {
+        return res.status(409).json({
+            error: 'The release list changed while this popup was open. The latest updates have been reloaded.',
+            code: 'UPDATES_CHANGED'
+        });
+    }
+
+    // This operation is deliberately idempotent: a retry after a lost response
+    // must succeed even when these exact revisions were already recorded.
+    const viewedIds = unique.map(item => item.id + ':' + item.revision);
     const ref = db.ref('/accounts/' + user.uid + '/updatesSeen');
     const transaction = await ref.transaction(current => {
-        const seen = new Set(Array.isArray(current) ? current : []);
-        ids.forEach(id => seen.add(id));
+        const seen = new Set(seenUpdateIds(current));
+        viewedIds.forEach(id => seen.add(id));
         return [...seen];
     });
     if (!transaction?.committed) throw new Error('The viewed updates could not be saved.');
-    return res.status(200).json({ success: true, viewedIds: ids });
+    return res.status(200).json({ success: true, viewedIds });
 }
-
 async function publishRelease(user, payload, res, releases) {
-    if (typeof payload.version !== 'string' ||
-        !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim())) {
+    if (!validReleaseVersion(payload.version) || payload.version.trim().length > 40) {
         return res.status(400).json({ error: 'Enter a valid release version, such as v6.14.0.' });
     }
     const version = payload.version.trim();
-    if (releases.some(release => release.version === version)) {
+    if (releases.some(release => normalizeReleaseVersion(release.version) === normalizeReleaseVersion(version))) {
         return res.status(409).json({ error: 'That release version has already been published.' });
     }
     if (typeof payload.content !== 'string' || !payload.content.trim()) {
@@ -233,43 +395,42 @@ async function publishRelease(user, payload, res, releases) {
     }
     const detailsUrl = validateDetailsUrl(payload.detailsUrl);
     if (detailsUrl === null) {
-        return res.status(400).json({
-            error: 'Use a valid GitHub release URL for BSMS-Web-App/web, or leave the field empty.'
-        });
+        return res.status(400).json({ error: 'Use a valid GitHub release URL for BSMS-Web-App/web, or leave the field empty.' });
     }
 
-    const policyChanges = payload.policies && typeof payload.policies === 'object' ? payload.policies : {};
-    const policyUpdates = await buildPolicyUpdates(user, policyChanges);
-    if (Object.keys(policyUpdates).length) await db.ref('/updates/policies').update(policyUpdates);
+    const startsAtValue = parseReleaseDate(payload.startsOn, releaseTimezoneOffset(payload, 'startsOn'));
+    const releaseDateValue = parseReleaseDate(payload.releaseDate, releaseTimezoneOffset(payload, 'releaseDate'));
+    if (startsAtValue === null || releaseDateValue === null) {
+        return res.status(400).json({ error: 'Enter valid calendar dates for the release schedule.' });
+    }
 
-    const ref = db.ref('/updates/releases').push();
+    const { changes: policyChanges, versions: suppliedPolicyVersions } = getPolicyPayload(payload);
+    const { updates: policyUpdates, expectedVersions } = await buildPolicyUpdates(user, policyChanges);
+    const expectedPolicyVersions = { ...expectedVersions, ...suppliedPolicyVersions };
+    const releaseId = db.ref('/updates/releases').push().key;
     const publishedAt = Date.now();
-    const parseDate = value => {
-        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-        const [year, month, day] = value.split('-').map(Number);
-        const offset = Number.isFinite(Number(payload.timezoneOffset)) ? Math.max(-840, Math.min(840, Number(payload.timezoneOffset))) : 0;
-        const timestamp = Date.UTC(year, month - 1, day) + offset * 60000;
-        return Number.isFinite(timestamp) ? timestamp : null;
-    };
-    const startsAt = parseDate(payload.startsOn) ?? publishedAt;
-    const releaseDate = parseDate(payload.releaseDate) ?? publishedAt;
     const release = {
         version,
         content: payload.content.trim(),
         detailsUrl,
         publishedAt,
-        startsAt,
-        releaseDate,
+        startsAt: startsAtValue ?? publishedAt,
+        releaseDate: releaseDateValue ?? publishedAt,
         revision: 1,
         publishedBy: user.uid,
         publishedByName: String(user.account.displayName || user.account.username || 'BSMS Web owner'),
         active: true
     };
-    await ref.set(release);
 
-    return res.status(201).json({ success: true, release: { ...release, id: ref.key } });
+    await commitUpdateMutation({
+        releaseId,
+        release,
+        policyUpdates,
+        expectedPolicyVersions,
+        allowCreate: true
+    });
+    return res.status(201).json({ success: true, release: { ...release, id: releaseId }, changedPolicies: Object.keys(policyUpdates) });
 }
-
 export default async function handler(req, res) {
     if (!handleApiCors(req, res)) return;
     res.setHeader('Cache-Control', 'no-store, max-age=0');
@@ -293,7 +454,8 @@ export default async function handler(req, res) {
             return res.status(200).json({
                 success: true,
                 releases: unseenReleases(releases, user.account, user.uid),
-                latestReleaseVersion: releases.find(release => release.active !== false)?.version || null,
+                latestReleaseVersion: [...releases].filter(release => release.active !== false)
+                    .sort((a, b) => Number(b.publishedAt || 0) - Number(a.publishedAt || 0))[0]?.version || null,
                 legal: {
                     versions: policyBundle.versions,
                     policies: legal.policies,
@@ -341,20 +503,55 @@ export default async function handler(req, res) {
             const snap = await ref.once('value');
             const existing = snap.val();
             if (!existing) return res.status(404).json({ error: 'That release no longer exists.' });
-            if (typeof payload.version !== 'string' || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim()) || typeof payload.content !== 'string' || !payload.content.trim() || payload.content.length > 30000) return res.status(400).json({ error: 'Enter a valid version and release details.' });
-            const detailsUrl = payload.detailsUrl === existing.detailsUrl
+            if (!validReleaseVersion(payload.version) || payload.version.trim().length > 40 || typeof payload.content !== 'string' ||
+                !payload.content.trim() || payload.content.length > 30000) {
+                return res.status(400).json({ error: 'Enter a valid version and release details.' });
+            }
+            const detailsUrl = payload.detailsUrl == null || payload.detailsUrl === existing.detailsUrl
                 ? (existing.detailsUrl || '')
                 : validateDetailsUrl(payload.detailsUrl);
-            if (detailsUrl === null) return res.status(400).json({ error: 'Use a valid GitHub release URL, or leave the field empty.' });
-            const parseDate = value => { if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const offset = Number.isFinite(Number(payload.timezoneOffset)) ? Math.max(-840, Math.min(840, Number(payload.timezoneOffset))) : 0; return Date.UTC(year, month - 1, day) + offset * 60000; };
-            const startsAt = parseDate(payload.startsOn);
-            const releaseDate = parseDate(payload.releaseDate);
-            const policyChanges = payload.policies && typeof payload.policies === 'object' ? payload.policies : {};
-            const policyUpdates = await buildPolicyUpdates(user, policyChanges);
-            if (Object.keys(policyUpdates).length) await db.ref('/updates/policies').update(policyUpdates);
-            const updated = { ...existing, version: payload.version.trim(), content: payload.content.trim(), detailsUrl, startsAt: startsAt ?? existing.startsAt ?? existing.publishedAt, releaseDate: releaseDate ?? existing.releaseDate ?? existing.publishedAt, revision: (Number(existing.revision) || 1) + 1, editedAt: Date.now(), editedBy: user.uid };
-            await ref.set(updated);
-            return res.status(200).json({ success: true, release: { ...updated, id } });
+            if (detailsUrl === null) {
+                return res.status(400).json({ error: 'Use a valid GitHub release URL, or leave the field empty.' });
+            }
+
+            const startsAtValue = parseReleaseDate(payload.startsOn, releaseTimezoneOffset(payload, 'startsOn'));
+            const releaseDateValue = parseReleaseDate(payload.releaseDate, releaseTimezoneOffset(payload, 'releaseDate'));
+            if (startsAtValue === null || releaseDateValue === null) {
+                return res.status(400).json({ error: 'Enter valid calendar dates for the release schedule.' });
+            }
+
+            const { changes: policyChanges, versions: suppliedPolicyVersions } = getPolicyPayload(payload);
+            const { updates: policyUpdates, expectedVersions } = await buildPolicyUpdates(user, policyChanges);
+            const expectedPolicyVersions = { ...expectedVersions, ...suppliedPolicyVersions };
+            const updated = {
+                ...existing,
+                version: payload.version.trim(),
+                content: payload.content.trim(),
+                detailsUrl,
+                startsAt: startsAtValue ?? existing.startsAt ?? existing.publishedAt,
+                releaseDate: releaseDateValue ?? existing.releaseDate ?? existing.publishedAt
+            };
+            const releaseChanged = updated.version !== existing.version ||
+                updated.content !== existing.content || updated.detailsUrl !== (existing.detailsUrl || '') ||
+                updated.startsAt !== (existing.startsAt ?? existing.publishedAt) ||
+                updated.releaseDate !== (existing.releaseDate ?? existing.publishedAt);
+            if (releaseChanged && releaseRevision(existing) >= 1000000000) {
+                return res.status(409).json({ error: 'This release has reached its revision limit and cannot be changed further.' });
+            }
+            if (releaseChanged) {
+                updated.revision = (releaseRevision(existing)) + 1;
+                updated.editedAt = Date.now();
+                updated.editedBy = user.uid;
+            }
+
+            await commitUpdateMutation({
+                releaseId: id,
+                release: updated,
+                policyUpdates,
+                expectedPolicyVersions,
+                expectedReleaseRevision: releaseRevision(existing)
+            });
+            return res.status(200).json({ success: true, release: { ...updated, id }, changed: releaseChanged, changedPolicies: Object.keys(policyUpdates) });
         }
         if (action === 'delete') {
             if (!await requireOwner(user, res, policyBundle.versions)) return;
@@ -362,8 +559,13 @@ export default async function handler(req, res) {
             if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
             const ref = db.ref('/updates/releases/' + id);
             const snap = await ref.once('value');
-            if (!snap.exists()) return res.status(404).json({ error: 'That release no longer exists.' });
-            await ref.remove();
+            const existing = snap.val();
+            if (!existing) return res.status(404).json({ error: 'That release no longer exists.' });
+            await commitUpdateMutation({
+                releaseId: id,
+                release: null,
+                expectedReleaseRevision: releaseRevision(existing)
+            });
             return res.status(200).json({ success: true, deletedId: id });
         }
         return res.status(400).json({ error: 'Unknown updates action.' });

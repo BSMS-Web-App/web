@@ -467,9 +467,25 @@
             done.type = 'button';
             done.className = 'bsms-primary';
             done.textContent = 'Continue to BSMS Web';
-            done.addEventListener('click', () => {
-                window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
-                closeOverlay();
+            done.addEventListener('click', async () => {
+                if (isSubmitting) return;
+                isSubmitting = true;
+                done.disabled = true;
+                done.textContent = 'Checking…';
+                try {
+                    const refreshed = await updatesRequest('GET');
+                    if (!refreshed.legal?.needsAcceptance) {
+                        window.dispatchEvent(new CustomEvent('bsms:legal-accepted'));
+                    }
+                    render(refreshed);
+                } catch (error) {
+                    showError(error.message);
+                    done.disabled = false;
+                    done.textContent = 'Continue to BSMS Web';
+                } finally {
+                    isSubmitting = false;
+                    updateAcceptButton();
+                }
             });
             actions.appendChild(done);
         }
@@ -523,19 +539,40 @@
         }
 
         try {
-            await updatesRequest('POST', {
-                action: 'mark-viewed',
-                ids: currentReleases.map(release => release.id + ':' + (Number(release.revision) || 1))
-            });
-            closeOverlay();
+            for (let index = 0; index < currentReleases.length; index += 100) {
+                const batch = currentReleases.slice(index, index + 100);
+                await updatesRequest('POST', {
+                    action: 'mark-viewed',
+                    ids: batch.map(release => ({
+                        id: release.id,
+                        revision: Number(release.revision) || 1
+                    }))
+                });
+            }
+            // Re-check after saving: another release or policy may have been
+            // published while this popup was open.
+            const refreshed = await updatesRequest('GET');
+            render(refreshed);
         } catch (error) {
-            showError(error.message);
-            if (button) {
+            if (error.status === 409 && error.data?.code === 'UPDATES_CHANGED') {
+                try {
+                    const refreshed = await updatesRequest('GET');
+                    render(refreshed);
+                    if (overlay) showError('A release changed while this popup was open. Review the latest version, then select Got it again.');
+                    return;
+                } catch (refreshError) {
+                    showError(refreshError.message);
+                }
+            } else {
+                showError(error.message);
+            }
+            if (button?.isConnected) {
                 button.disabled = false;
                 button.textContent = 'Got it';
             }
         } finally {
             isSubmitting = false;
+            updateAcceptButton();
         }
     }
 
@@ -571,7 +608,9 @@
 
             const refreshed = await updatesRequest('GET');
             if (refreshed.legal?.needsAcceptance) {
-                throw new Error('The latest legal status still requires review. Please try again.');
+                render(refreshed);
+                showError('A policy changed while your acknowledgments were being saved. Review the latest version before continuing.');
+                return;
             }
             render(refreshed, true);
         } catch (error) {

@@ -174,7 +174,7 @@ export default async function handler(req, res) {
     if (account.account_status === 'banned') {
         return res.status(403).json({ error: 'Account banned.', account_status: 'banned' });
     }
-    if (legalAcceptanceRequired(account)) {
+    if (await legalAcceptanceRequired(account)) {
         return res.status(428).json({ error: 'Legal policy acceptance is required.', code: 'LEGAL_ACCEPTANCE_REQUIRED' });
     }
 

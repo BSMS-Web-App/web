@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         for (const key of ['terms', 'privacy']) {
             policies[key] = {
                 content: typeof stored[key]?.content === 'string' ? stored[key].content : '',
-                version: typeof stored[key]?.version === 'string' ? stored[key].version : LEGAL_POLICY_VERSIONS[key]
+                version: typeof stored[key]?.version === 'string' && stored[key].version ? stored[key].version : LEGAL_POLICY_VERSIONS[key]
             };
         }
         return res.status(200).json({ success: true, policies });

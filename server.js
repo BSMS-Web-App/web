@@ -21,6 +21,7 @@ import profanityFilterHandler from './api/profanity-filter.js';
 import linkPreviewHandler from './api/link-preview.js';
 import announcementsHandler from './api/announcements.js';
 import updatesHandler from './api/updates.js';
+import policiesHandler from './api/policies.js';
 import versionHandler from './api/version.js';
 import lastHarvestHandler from './api/last-harvest.js';
 import reportsHandler from './api/reports.js';
@@ -182,6 +183,7 @@ app.use('/api/last-harvest', (req, res) => lastHarvestHandler(req, res));
 app.use('/api/reports', (req, res) => reportsHandler(req, res));
 app.use('/api/support-conversations', (req, res) => supportConversationsHandler(req, res));
 app.use('/api/updates', (req, res) => updatesHandler(req, res));
+app.use('/api/policies', (req, res) => policiesHandler(req, res));
 app.use('/api/media', (req, res) => mediaHandler(req, res));
 app.use('/api/voice', (req, res) => voiceHandler(req, res));
 

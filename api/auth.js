@@ -8,7 +8,7 @@ import { db, admin } from './db.js';
 import crypto from 'crypto';
 import { hashPassword, verifyPassword, needsPasswordRehash } from './passwords.js';
 import { moderateContent } from './moderation.js';
-import { LEGAL_POLICY_VERSIONS, legalAcceptanceRequired } from './legal-policy.js';
+import { getCurrentLegalPolicyVersions, legalAcceptanceRequired } from './legal-policy.js';
 import { mediaUrl } from '../lib/media-url.js';
 import { handleApiCors } from '../lib/api-cors.js';
 
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
     if (!publicActions.has(action)) {
         legalUser = await getUserBySession(sessionId);
         if (!legalUser) return res.status(401).json({ error: 'Unauthorized.' });
-        if (legalAcceptanceRequired(legalUser.account)) {
+        if (await legalAcceptanceRequired(legalUser.account)) {
             return res.status(428).json({
                 error: 'Please review and accept the current Terms of Service and Privacy Policy before continuing.',
                 code: 'LEGAL_ACCEPTANCE_REQUIRED'
@@ -171,6 +171,7 @@ export default async function handler(req, res) {
                 const uid = db.ref('/accounts').push().key;
                 const newSessionId = sessionId || crypto.randomUUID();
                 const currentTimestamp = Date.now();
+                const acceptedPolicyVersions = await getCurrentLegalPolicyVersions();
                 
                 const newAccount = {
                     email,
@@ -188,8 +189,8 @@ export default async function handler(req, res) {
                     createdAt: currentTimestamp,
                     avatar: '',
                     legalAcceptance: {
-                        terms: { version: LEGAL_POLICY_VERSIONS.terms, acceptedAt: currentTimestamp },
-                        privacy: { version: LEGAL_POLICY_VERSIONS.privacy, acceptedAt: currentTimestamp }
+                        terms: { version: acceptedPolicyVersions.terms, acceptedAt: currentTimestamp },
+                        privacy: { version: acceptedPolicyVersions.privacy, acceptedAt: currentTimestamp }
                     },
                     sessions: {
                         [newSessionId]: {

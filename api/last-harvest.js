@@ -197,7 +197,7 @@ export default async function handler(req,res){
  let user;
  try{user=await resolveUser(sessionId);}catch(e){return res.status(503).json({error:'Account service unavailable.'});}
  if(!user)return res.status(401).json({error:'Please sign in to continue.'});
- if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot access this event.'});
+ if(user.account.account_status==='banned'||await legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot access this event.'});
  if(req.method==='GET' && req.query.action==='leaderboard'){
   const [boardSnap,accountsSnap]=await Promise.all([
    db.ref('/last_harvest/finishers').once('value'),db.ref('/accounts').once('value')
@@ -314,7 +314,7 @@ async function towerApi(req,res){
   if(badStamp)return res.status(400).json({error:'The '+badStamp+' value falls outside the contest window.'});
   const user=await resolveUser(req.headers['x-session-id']);
   if(!user)return res.status(401).json({error:'Please sign in to post a score.'});
-  if(user.account.account_status==='banned'||legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot post scores.'});
+  if(user.account.account_status==='banned'||await legalAcceptanceRequired(user.account))return res.status(403).json({error:'Your account cannot post scores.'});
   if(isStaffAccount(user.account))return res.status(403).json({error:'Staff accounts cannot appear on leaderboards or qualify for prizes.'});
   const body=req.body||{},floor=Math.floor(Number(body.floor));
   if(!Number.isInteger(floor)||floor<1||floor>500)return res.status(400).json({error:'Invalid floor.'});
