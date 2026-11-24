@@ -24,7 +24,6 @@ function releaseStart(account) {
 }
 
 const POLICY_KEYS = ['terms', 'privacy'];
-const DEFAULT_POLICIES = { terms: '', privacy: '' };
 
 async function getPolicyBundle() {
     const snapshot = await db.ref('/updates/policies').once('value');
@@ -81,19 +80,79 @@ function validateDetailsUrl(value) {
     } catch { return null; }
 }
 
-async function requireOwner(user, res, versions) {
+async function requireOwner(user, res) {
     if (user.account.role !== 'owner') {
         res.status(403).json({ error: 'Only the BSMS Web owner can manage website releases.' });
         return false;
     }
-    if (policyStatus(user.account, versions).needsAcceptance) {
-        res.status(428).json({
-            error: 'Review and accept the current legal policies before managing releases.',
-            code: 'LEGAL_ACCEPTANCE_REQUIRED'
-        });
-        return false;
-    }
+    // The owner must be able to publish/correct policy updates even while their
+    // own account is awaiting acknowledgment of the newly published version.
     return true;
+}
+
+async function buildPolicyUpdates(user, changes) {
+    if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
+        const error = new Error('Provide the legal documents to publish.');
+        error.status = 400;
+        throw error;
+    }
+
+    const updates = {};
+    for (const key of POLICY_KEYS) {
+        if (changes[key] === undefined) continue;
+        if (typeof changes[key] !== 'string' || changes[key].length > 50000) {
+            const error = new Error('Each legal document must be 50,000 characters or fewer.');
+            error.status = 400;
+            throw error;
+        }
+
+        const content = changes[key].trim();
+        if (!content) {
+            const error = new Error('The Terms of Service and Privacy Policy cannot be empty.');
+            error.status = 400;
+            throw error;
+        }
+
+        const oldSnapshot = await db.ref('/updates/policies/' + key).once('value');
+        const old = oldSnapshot.val() || {};
+        if (content !== String(old.content || '')) {
+            const version = 'v-' + createHash('sha256').update(content).digest('hex').slice(0, 16);
+            updates[key] = {
+                content,
+                version,
+                updatedAt: Date.now(),
+                updatedBy: user.uid
+            };
+        }
+    }
+    return updates;
+}
+
+async function savePolicies(user, payload, res) {
+    const changes = payload.policies && typeof payload.policies === 'object'
+        ? payload.policies
+        : payload;
+    let updates;
+    try {
+        updates = await buildPolicyUpdates(user, changes);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+
+    const changedPolicies = Object.keys(updates);
+    if (changedPolicies.length) {
+        await db.ref('/updates/policies').update(updates);
+    }
+
+    const bundle = await getPolicyBundle();
+    return res.status(200).json({
+        success: true,
+        changedPolicies,
+        versions: bundle.versions,
+        message: changedPolicies.length
+            ? 'The updated legal documents are now published and users will be asked to review them.'
+            : 'No policy changes were detected.'
+    });
 }
 
 async function acceptPolicies(user, payload, res, versions) {
@@ -202,20 +261,7 @@ async function publishRelease(user, payload, res, releases) {
     }
 
     const policyChanges = payload.policies && typeof payload.policies === 'object' ? payload.policies : {};
-    const policyUpdates = {};
-    for (const key of POLICY_KEYS) {
-        if (policyChanges[key] === undefined) continue;
-        if (typeof policyChanges[key] !== 'string' || policyChanges[key].length > 50000) {
-            return res.status(400).json({ error: 'Each legal document must be 50,000 characters or fewer.' });
-        }
-        const content = policyChanges[key].trim();
-        const oldSnapshot = await db.ref('/updates/policies/' + key).once('value');
-        const old = oldSnapshot.val() || {};
-        if (content !== String(old.content || '')) {
-            const version = 'v-' + createHash('sha256').update(content).digest('hex').slice(0, 16);
-            policyUpdates[key] = { content, version, updatedAt: Date.now(), updatedBy: user.uid };
-        }
-    }
+    const policyUpdates = await buildPolicyUpdates(user, policyChanges);
     if (Object.keys(policyUpdates).length) await db.ref('/updates/policies').update(policyUpdates);
 
     const ref = db.ref('/updates/releases').push();
@@ -296,8 +342,12 @@ export default async function handler(req, res) {
         if (action === 'mark-viewed') {
             return await markViewed(user, payload, res, await getReleases());
         }
+        if (action === 'publish-policies') {
+            if (!await requireOwner(user, res)) return;
+            return await savePolicies(user, payload, res);
+        }
         if (action === 'admin-list') {
-            if (!await requireOwner(user, res, policyBundle.versions)) return;
+            if (!await requireOwner(user, res)) return;
             return res.status(200).json({
                 success: true,
                 releases: await getReleases(),
@@ -306,17 +356,21 @@ export default async function handler(req, res) {
             });
         }
         if (action === 'publish') {
-            if (!await requireOwner(user, res, policyBundle.versions)) return;
+            if (!await requireOwner(user, res)) return;
             return await publishRelease(user, payload, res, await getReleases());
         }
         if (action === 'edit') {
-            if (!await requireOwner(user, res, policyBundle.versions)) return;
+            if (!await requireOwner(user, res)) return;
             const id = typeof payload.id === 'string' ? payload.id : '';
             if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
             const ref = db.ref('/updates/releases/' + id);
             const snap = await ref.once('value');
             const existing = snap.val();
             if (!existing) return res.status(404).json({ error: 'That release no longer exists.' });
+            const allReleases = await getReleases();
+            if (allReleases.some(release => release.id !== id && release.version === String(payload.version || '').trim())) {
+                return res.status(409).json({ error: 'Another release already uses that version number.' });
+            }
             if (typeof payload.version !== 'string' || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(payload.version.trim()) || typeof payload.content !== 'string' || !payload.content.trim() || payload.content.length > 30000) return res.status(400).json({ error: 'Enter a valid version and release details.' });
             const detailsUrl = validateDetailsUrl(payload.detailsUrl);
             if (detailsUrl === null) return res.status(400).json({ error: 'Use a valid GitHub release URL, or leave the field empty.' });
@@ -324,25 +378,14 @@ export default async function handler(req, res) {
             const startsAt = parseDate(payload.startsOn);
             const releaseDate = parseDate(payload.releaseDate);
             const policyChanges = payload.policies && typeof payload.policies === 'object' ? payload.policies : {};
-            const policyUpdates = {};
-            for (const key of POLICY_KEYS) {
-                if (policyChanges[key] === undefined) continue;
-                if (typeof policyChanges[key] !== 'string' || policyChanges[key].length > 50000) return res.status(400).json({ error: 'Each legal document must be 50,000 characters or fewer.' });
-                const policyContent = policyChanges[key].trim();
-                const oldPolicySnapshot = await db.ref('/updates/policies/' + key).once('value');
-                const oldPolicy = oldPolicySnapshot.val() || {};
-                if (policyContent !== String(oldPolicy.content || '')) {
-                    const policyVersion = 'v-' + createHash('sha256').update(policyContent).digest('hex').slice(0, 16);
-                    policyUpdates[key] = { content: policyContent, version: policyVersion, updatedAt: Date.now(), updatedBy: user.uid };
-                }
-            }
+            const policyUpdates = await buildPolicyUpdates(user, policyChanges);
             if (Object.keys(policyUpdates).length) await db.ref('/updates/policies').update(policyUpdates);
             const updated = { ...existing, version: payload.version.trim(), content: payload.content.trim(), detailsUrl, startsAt: startsAt ?? existing.startsAt ?? existing.publishedAt, releaseDate: releaseDate ?? existing.releaseDate ?? existing.publishedAt, revision: (Number(existing.revision) || 1) + 1, editedAt: Date.now(), editedBy: user.uid };
             await ref.set(updated);
             return res.status(200).json({ success: true, release: { ...updated, id } });
         }
         if (action === 'delete') {
-            if (!await requireOwner(user, res, policyBundle.versions)) return;
+            if (!await requireOwner(user, res)) return;
             const id = typeof payload.id === 'string' ? payload.id : '';
             if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return res.status(400).json({ error: 'Invalid release ID.' });
             const ref = db.ref('/updates/releases/' + id);
@@ -354,8 +397,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Unknown updates action.' });
     } catch (error) {
         console.error('[BSMS Web :: Updates] Request failed:', error?.message || error);
-        return res.status(503).json({
-            error: 'The updates service is temporarily unavailable. Please try again.'
+        const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 500
+            ? error.status
+            : 503;
+        return res.status(status).json({
+            error: status === 503
+                ? 'The updates service is temporarily unavailable. Please try again.'
+                : error.message
         });
     }
 }

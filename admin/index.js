@@ -1185,8 +1185,15 @@ const Admin = {
                                 }
                             } catch (_) {}
                         }
-                        field.value = currentContent;
-                        field.addEventListener('input', () => { field.dataset.edited = '1'; }, { once: true });
+                        if (!field.dataset.edited) field.value = currentContent;
+                        if (!field.dataset.changeListenerAttached) {
+                            field.addEventListener('input', () => {
+                                field.dataset.edited = '1';
+                                const policyButton = document.getElementById('update-policy-publish-btn');
+                                if (policyButton) policyButton.disabled = false;
+                            });
+                            field.dataset.changeListenerAttached = '1';
+                        }
                     }
                 }
                 if (!releases.length) list.textContent = 'No website releases have been published yet.';
@@ -1228,6 +1235,12 @@ const Admin = {
                     list.appendChild(card);
                 });
             }
+            const policyButton = document.getElementById('update-policy-publish-btn');
+            if (policyButton) {
+                policyButton.disabled = !['terms', 'privacy'].some(key =>
+                    document.getElementById('update-' + key)?.dataset.edited === '1'
+                );
+            }
             if (status && status.textContent === 'Loading releases...') status.textContent = '';
         } catch (error) {
             if (list) list.textContent = error.message;
@@ -1235,6 +1248,63 @@ const Admin = {
         }
     },
 
+
+    publishPolicies: async function() {
+        const status = document.getElementById('update-publish-status');
+        const button = document.getElementById('update-policy-publish-btn');
+        if (this.callerRole !== 'owner') {
+            if (status) status.textContent = 'Only the platform owner can publish legal documents.';
+            return;
+        }
+
+        const policies = Object.fromEntries(['terms', 'privacy']
+            .filter(key => document.getElementById('update-' + key)?.dataset.edited === '1')
+            .map(key => [key, document.getElementById('update-' + key).value]));
+
+        if (!Object.keys(policies).length) {
+            if (status) status.textContent = 'Make a change to a policy before publishing.';
+            return;
+        }
+
+        if (Object.values(policies).some(value => !value.trim())) {
+            if (status) status.textContent = 'The Terms of Service and Privacy Policy cannot be empty.';
+            return;
+        }
+
+        if (button) { button.disabled = true; button.textContent = 'Publishing policies...'; }
+        if (status) status.textContent = 'Publishing legal documents...';
+
+        try {
+            const response = await fetch('/api/updates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-ID': localStorage.getItem('session_id') || ''
+                },
+                body: JSON.stringify({ action: 'publish-policies', policies }),
+                cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'The legal documents could not be published.');
+
+            ['terms', 'privacy'].forEach(key => {
+                const field = document.getElementById('update-' + key);
+                if (field) delete field.dataset.edited;
+            });
+            if (status) status.textContent = data.message || 'Legal documents published successfully.';
+            await this.loadUpdates();
+        } catch (error) {
+            if (status) status.textContent = error.message;
+        } finally {
+            const stillDirty = ['terms', 'privacy'].some(key =>
+                document.getElementById('update-' + key)?.dataset.edited === '1'
+            );
+            if (button) {
+                button.disabled = !stillDirty;
+                button.textContent = 'Publish Policy Updates';
+            }
+        }
+    },
 
     editUpdate: function(release) {
         const card = document.getElementById('update-create-card');
@@ -1331,13 +1401,19 @@ const Admin = {
             document.getElementById('update-cancel-edit-btn').style.display = 'none';
             document.getElementById('update-content').value = '';
             ['terms', 'privacy'].forEach(key => { const field = document.getElementById('update-' + key); if (field) delete field.dataset.edited; });
+            const policyButton = document.getElementById('update-policy-publish-btn');
+            if (policyButton) policyButton.disabled = true;
             this.updateReleasePreview();
             if (status) status.textContent = 'Version ' + data.release.version + ' was published successfully.';
             await this.loadUpdates();
         } catch (error) {
             if (status) status.textContent = error.message;
         } finally {
-            if (button) { button.disabled = false; button.textContent = 'Publish Website Update'; }
+            const editing = Boolean(document.getElementById('update-create-card')?.dataset.editingId);
+            if (button) {
+                button.disabled = false;
+                button.textContent = editing ? 'Save Release Changes' : 'Publish Website Update';
+            }
         }
     },
 
