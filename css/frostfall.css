@@ -2171,13 +2171,21 @@ a { color: inherit; }
 
 /* ============================================================
    NEW: with the log in the top bar it was clamped to the plate's
-   440px, so restore its own 520px line length on wide screens;
-   in a short landscape the stack must clear the command strip,
-   so the plate collapses to one row and the windup chip sits
-   beside the log instead of under it.
+   440px, so restore its own 520px line length on wide screens while
+   the plate keeps its old frame; in a short landscape the stack must
+   clear the command strip, so the plate collapses to one row and the
+   windup chip sits beside the log instead of under it.
    ============================================================ */
-@media (min-width: 600px) {
+@media (min-width: 600px) and (min-height: 541px) {
   .ff-battle-top { width: min(520px, calc(100% - 28px)); }
+  /* the plate keeps its old 440px frame; only the log grows back to 520 */
+  .ff-battle-top .ff-battle-row:first-child {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: min(440px, 100%);
+    margin: 0 auto;
+  }
 }
 
 @media (orientation: landscape) and (max-height: 540px) {
@@ -2203,6 +2211,9 @@ a { color: inherit; }
   .ff-battle-top .ff-enemy-plate > .ff-gimmick { grid-area: 1 / 4; margin-top: 0; }
   .ff-battle-top .ff-battle-log { flex: 1 1 0; width: auto; padding: 3px 10px; font-size: 18px; }
   .ff-battle-top .ff-telegraph { flex: 0 0 auto; width: auto; padding: 6px 10px; }
-  /* the keyboard hint is the one thing here a touch landscape can spare */
+}
+
+/* a touch landscape has no keyboard to hint at; a short desktop window does */
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
   .ff-battle-hint { display: none; }
 }
