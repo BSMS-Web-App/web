@@ -50,7 +50,7 @@
         <div class="ff-ann-art" role="img" aria-label="A Christmas Tale: The Star That Went Out"><span class="ff-ann-logo"><small>A CHRISTMAS</small><b>TALE</b><i></i><em>THE STAR THAT WENT OUT</em></span></div>
         <p class="ff-ann-eyebrow">BSMS WEB · LIMITED-TIME 3D EVENT</p>
         <h2 id="ff-ann-title">A CHRISTMAS TALE IS NOW ON</h2>
-        <p class="ff-ann-copy">Five chapters, a low-poly Roadtown, and a star that went out. Play the new 3D adventure and bring the light back before January 4.</p>
+        <p class="ff-ann-copy">Ten waves, a low-poly frozen road, and a star that went out. Build the lantern towers, hold the line, and keep the light burning before January 4.</p>
         <div class="ff-ann-actions">
           <button type="button" class="ff-ann-play" data-action="play">PLAY THE EVENT</button>
           <button type="button" class="ff-ann-dismiss" data-action="dismiss">GOT IT</button>

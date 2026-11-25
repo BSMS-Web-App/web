@@ -3,298 +3,130 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="A Christmas Tale: a five-chapter 3D holiday adventure event from BSMS Web.">
+<meta name="description" content="Frostfall: Hold the Line — a low-poly 3D tower defense event from BSMS Web. Build lantern towers, chill the Hollow King's horde, and keep the last light burning.">
 <meta name="theme-color" content="#190f33">
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex,nofollow">
-<title>A Christmas Tale — The Star That Went Out</title>
+<title>Frostfall: Hold the Line — A BSMS Web Event</title>
 <link rel="icon" href="/img/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/frostfall.css?v=49">
+<link rel="stylesheet" href="/css/frostfall.css?v=53">
 </head>
 <body class="ff-body">
-<div id="ff-app" data-theme="day">
+<div id="ff-app">
   <div id="ff-stage" class="ff-stage">
-    <canvas id="ff-canvas" aria-label="A Christmas Tale low-poly 3D world"></canvas>
-    <canvas id="ff-snow" aria-hidden="true"></canvas>
+    <canvas id="ff-canvas" aria-label="Frostfall tower defense battlefield"></canvas>
+    <canvas id="ff-fx" class="ff-fx" aria-hidden="true"></canvas>
     <div class="ff-vignette" aria-hidden="true"></div>
-    <div id="ff-slash" class="ff-slash" aria-hidden="true" hidden></div>
-    <div id="ff-flash" class="ff-flash" aria-hidden="true" hidden></div>
+    <div id="ff-flash" class="ff-flash" aria-hidden="true"></div>
+    <div id="ff-banner" class="ff-banner" role="status" aria-live="polite" hidden>
+      <b id="ff-banner-title"></b><span id="ff-banner-sub"></span>
+    </div>
   </div>
 
   <header id="ff-hud" class="ff-hud" hidden>
-    <div class="ff-hud-hero">
-      <div class="ff-hud-face" id="ff-hud-face" aria-hidden="true"></div>
-      <div class="ff-hud-id">
-        <b id="ff-hud-name">NICO</b>
-        <span>LV <em id="ff-hud-level">1</em> · <i id="ff-hud-chapter">CHAPTER 1</i></span>
+    <div class="ff-hud-left">
+      <div class="ff-stat lantern">
+        <span class="ff-lantern-ico" aria-hidden="true"></span>
+        <div><small>LANTERN</small><b><em id="ff-lives">12</em><span>/12</span></b></div>
+      </div>
+      <div id="ff-pips" class="ff-pips" aria-hidden="true"></div>
+      <div class="ff-stat gold">
+        <span class="ff-coin" aria-hidden="true"></span>
+        <div><small>GOLD</small><b id="ff-gold">140</b></div>
       </div>
     </div>
-    <div class="ff-hud-bars">
-      <div class="ff-hud-bar hp" id="ff-hud-hp-row"><span>HP</span><div><i id="ff-hud-hp"></i></div><b id="ff-hud-hp-text">30/30</b></div>
-      <div class="ff-hud-bar sp"><span>SP</span><div><i id="ff-hud-sp"></i></div><b id="ff-hud-sp-text">10/10</b></div>
-    </div>
-    <div class="ff-hud-side">
-      <button id="ff-sound" class="ff-icon-button ff-icon-sound" type="button" aria-label="Toggle sound"><span class="ff-note" aria-hidden="true">♪</span><span class="ff-note-off" aria-hidden="true"></span></button>
-      <button id="ff-menu-button" class="ff-icon-button" type="button" aria-label="Open pause menu">MENU</button>
-      <span class="ff-chip bp">BP <b id="ff-hud-bp">4</b></span>
-      <span class="ff-chip shard">RELICS <b id="ff-hud-shards">0</b>/5</span>
+    <div class="ff-hud-right">
+      <span class="ff-wave-chip">WAVE <b id="ff-wave">0</b><span>/10</span></span>
+      <button id="ff-speed" class="ff-icon-button" type="button" aria-label="Toggle game speed">1×</button>
+      <button id="ff-pause" class="ff-icon-button" type="button" aria-label="Pause the game">II</button>
     </div>
   </header>
 
-  <div id="ff-objective" class="ff-objective" hidden><b>OBJECTIVE</b><span id="ff-objective-text">Talk to Mayor Bram</span></div>
-  <div id="ff-toast" class="ff-toast" role="status" aria-live="polite" hidden></div>
-  <div id="ff-prompt" class="ff-prompt" hidden><kbd>E</kbd><span id="ff-prompt-text">TALK</span></div>
-
-  <div id="ff-dialogue" class="ff-dialogue" role="dialog" aria-modal="false" aria-labelledby="ff-speaker" hidden>
-    <div class="ff-dialogue-head"><span id="ff-speaker">MAYOR BRAM</span><span class="ff-dialogue-tip">E / CLICK</span></div>
-    <p id="ff-dialogue-text" aria-live="polite"></p>
-    <button id="ff-dialogue-next" type="button" aria-label="Continue dialogue">▶</button>
+  <div id="ff-boss" class="ff-boss" hidden>
+    <span class="ff-boss-name">THE HOLLOW KING</span>
+    <div class="ff-boss-track"><i id="ff-boss-fill"></i></div>
   </div>
 
-  <div id="ff-touch" class="ff-touch" hidden>
-    <div id="ff-joystick" class="ff-joystick" role="application" aria-label="Movement joystick"><div id="ff-stick" class="ff-stick"></div></div>
-    <button id="ff-action" class="ff-action" type="button"><span class="ff-action-icon" aria-hidden="true"></span><small>ACT</small></button>
-  </div>
+  <div id="ff-hint" class="ff-hint" hidden><span id="ff-hint-text">CLICK A STONE PAD TO BUILD</span></div>
 
-  <div id="ff-loading" class="ff-screen ff-loading">
-    <div class="ff-loading-in">
-      <p class="ff-eyebrow">A BSMS WEB HOLIDAY EVENT</p>
-      <h1 class="ff-logo"><small>A CHRISTMAS</small><span>TALE</span></h1>
-      <p class="ff-loading-sub">The star that went out</p>
-      <div class="ff-load-track"><i id="ff-load-fill"></i></div>
-      <p class="ff-loading-note" id="ff-loading-note">LIGHTING THE LANTERN...</p>
+  <div id="ff-shop" class="ff-shop" hidden>
+    <button id="ff-shop-close" class="ff-shop-close" type="button" aria-label="Close build menu">×</button>
+    <div class="ff-shop-head">
+      <b id="ff-shop-title">BUILD TOWER</b>
+      <span id="ff-shop-sub">PAD 1 · 140 GOLD</span>
+    </div>
+    <div id="ff-shop-cards" class="ff-shop-cards"></div>
+    <div id="ff-shop-actions" class="ff-shop-actions" hidden>
+      <button id="ff-upgrade" class="ff-button gold" type="button">UPGRADE</button>
+      <button id="ff-sell" class="ff-button ghost" type="button">SELL</button>
     </div>
   </div>
 
-  <div id="ff-title" class="ff-screen ff-title" hidden>
-    <div class="ff-title-stage">
-      <div class="ff-title-emblem" aria-hidden="true">
-        <svg class="ff-emblem-svg" viewBox="0 0 120 116" shape-rendering="crispEdges">
-          <polygon points="60,2 73,40 113,40 81,63 93,104 60,80 27,104 39,63 7,40 47,40"
-                   fill="#8fdcff" stroke="#0d0718" stroke-width="9" stroke-linejoin="miter"/>
-          <polygon points="60,20 68,46 98,46 74,63 82,90 60,74 38,90 46,63 22,46 52,46"
-                   fill="#e9fbff"/>
-        </svg>
-      </div>
-      <h1 class="ff-title-word" aria-label="Frostfall"><span class="ff-word-a">FROST</span><span class="ff-word-b">FALL</span></h1>
-      <p class="ff-title-tag">THE STAR THAT WENT OUT</p>
-    </div>
-    <button id="ff-start-prompt" class="ff-start-prompt" type="button">PRESS START</button>
-    <div id="ff-file-select" class="ff-file-select" hidden>
-      <p class="ff-file-title">SELECT FILE</p>
-      <div id="ff-file-grid" class="ff-file-grid"></div>
-      <button id="ff-file-back" class="ff-file-back" type="button">BACK</button>
+  <button id="ff-send" class="ff-send" type="button" hidden>
+    <small id="ff-send-kicker">READY</small>
+    <b id="ff-send-label">SEND WAVE 1</b>
+  </button>
+
+  <div id="ff-title" class="ff-screen ff-title">
+    <div class="ff-title-in">
+      <svg class="ff-title-star" viewBox="0 0 120 116" shape-rendering="crispEdges" aria-hidden="true">
+        <polygon points="60,2 73,40 113,40 81,63 93,104 60,80 27,104 39,63 7,40 47,40"
+                 fill="#8fdcff" stroke="#0d0718" stroke-width="8" stroke-linejoin="miter"/>
+        <polygon points="60,20 68,46 98,46 74,63 82,90 60,74 38,90 46,63 22,46 52,46" fill="#e9fbff"/>
+      </svg>
+      <p class="ff-eyebrow">BSMS WEB · LIMITED-TIME WINTER EVENT</p>
+      <h1 class="ff-logo" aria-label="Frostfall"><span>FROST</span><span class="alt">FALL</span></h1>
+      <p class="ff-logo-sub">HOLD THE LINE</p>
+      <p class="ff-title-copy">The star has gone out and the Hollow King is marching down the mountain. Build lantern towers on the stone pads, chill the horde, and keep the last light burning through ten waves.</p>
+      <ul class="ff-title-points">
+        <li><b>1</b><span><strong>BUILD</strong> on any stone pad. Three towers, three levels each.</span></li>
+        <li><b>2</b><span><strong>HOLD</strong> the winding path. Every enemy that reaches the lantern costs light.</span></li>
+        <li><b>3</b><span><strong>SPEND</strong> your gold. Send each wave when you are ready.</span></li>
+      </ul>
+      <button id="ff-start" class="ff-button gold ff-start" type="button">HOLD THE LINE</button>
+      <p class="ff-title-keys">CLICK A PAD · 1/2/3 BUILD · U UPGRADE · X SELL · SPACE SENDS A WAVE · P PAUSES</p>
     </div>
   </div>
 
-  <div id="ff-cutscene" class="ff-cutscene" hidden>
-    <div class="ff-cut-bar top"></div>
-    <p class="ff-cut-brand">A CHRISTMAS TALE</p>
-    <div class="ff-cut-panel">
-      <div class="ff-cut-body">
-        <div id="ff-cut-face" class="ff-cut-face narrator" aria-hidden="true"></div>
-        <div class="ff-cut-lines">
-          <p id="ff-cut-speaker" class="ff-cut-speaker">NARRATOR</p>
-          <p id="ff-cut-text" class="ff-cut-text"></p>
-        </div>
-      </div>
-      <p id="ff-cut-score" class="ff-cut-score" hidden></p>
-      <div class="ff-cut-actions">
-        <button id="ff-cut-next" class="ff-button gold" type="button">CONTINUE</button>
-        <button id="ff-cut-skip" class="ff-cut-skip" type="button">SKIP CUTSCENE</button>
-      </div>
-    </div>
-    <div class="ff-cut-bar bottom"></div>
-  </div>
-
-  <div id="ff-name-screen" class="ff-screen" hidden>
+  <div id="ff-pause-screen" class="ff-screen" hidden>
     <div class="ff-panel">
-      <p class="ff-eyebrow">CHAPTER ZERO · THE NIGHT THE STAR FELL</p>
-      <h2 class="ff-panel-title">WHO IS GOING?</h2>
-      <p class="ff-panel-copy">The portal is still smoking behind you. Write your name in the snow so Roadtown knows who just fell out of the sky.</p>
-      <label class="ff-field" for="ff-name-input">YOUR NAME</label>
-      <input id="ff-name-input" class="ff-input" maxlength="12" autocomplete="off" spellcheck="false" placeholder="NICO">
-      <button id="ff-name-start" class="ff-button gold" type="button">STEP INTO THE SNOW</button>
-    </div>
-  </div>
-
-  <div id="ff-chapter-screen" class="ff-screen" hidden>
-    <div class="ff-chapter-card">
-      <p class="ff-eyebrow" id="ff-chapter-eyebrow">CHAPTER ONE</p>
-      <h2 id="ff-chapter-title">ROADTOWN IN THE SNOW</h2>
-      <p id="ff-chapter-sub" class="ff-chapter-sub">Where the star fell first</p>
-      <div id="ff-chapter-lines" class="ff-chapter-lines"></div>
-      <button id="ff-chapter-begin" class="ff-button gold" type="button">BEGIN CHAPTER</button>
-      <p class="ff-chapter-note">PROGRESS SAVES AUTOMATICALLY ON THIS DEVICE</p>
-    </div>
-  </div>
-
-  <div id="ff-battle" class="ff-battle" hidden>
-    <div class="ff-battle-top">
-      <!-- === NEW: the plate row and the log row; display:contents keeps them
-           flat in the phone layout, short landscape pairs the chip with the log === -->
-      <div class="ff-battle-row">
-        <div id="ff-enemy-plate" class="ff-enemy-plate">
-          <span id="ff-enemy-name">FROST MITE</span>
-          <div class="ff-battle-bar"><i id="ff-enemy-hp"></i></div>
-          <small id="ff-enemy-hp-text">24 / 24</small>
-          <em id="ff-gimmick" class="ff-gimmick" hidden>ECHO CHARGE</em>
-        </div>
-        <!-- === NEW: pause / quit a fight === -->
-        <button id="ff-battle-pause-button" class="ff-icon-button ff-battle-pause-open" type="button" aria-label="Pause battle">PAUSE</button>
-      </div>
-      <div class="ff-battle-row">
-        <!-- === NEW: log and windup chip stack under the plate instead of over it === -->
-        <p id="ff-battle-log" class="ff-battle-log" aria-live="polite">A FROST MITE BLOCKS THE PATH!</p>
-        <p id="ff-telegraph" class="ff-telegraph" hidden>ATTACK INCOMING</p>
-      </div>
-    </div>
-    <div id="ff-rating" class="ff-rating" aria-hidden="true" hidden>PERFECT!</div>
-    <div id="ff-fx" class="ff-fx" aria-hidden="true"></div>
-    <div id="ff-timing" class="ff-timing" hidden>
-      <p id="ff-timing-label">PRESS ON THE BEAT</p>
-      <div class="ff-timing-track"><span id="ff-timing-zone"></span><i id="ff-timing-marker"></i></div>
-      <button id="ff-timing-button" class="ff-timing-button" type="button">STRIKE</button>
-      <small id="ff-timing-note">SPACE / E / TAP · GOLD ZONE = PERFECT</small>
-    </div>
-    <div class="ff-battle-bottom">
-      <div class="ff-battle-player">
-        <div class="ff-battler-plate">
-          <div class="ff-battler-top">
-            <div class="ff-battler-face" id="ff-battle-face" aria-hidden="true"></div>
-            <div class="ff-battler-head"><span>BATTLER</span><b>LV <i id="ff-battle-level">1</i></b></div>
-          </div>
-          <div class="ff-gauge hp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-hp-bar"></i></div><b id="ff-battle-hp">30/30</b></div>
-          <div class="ff-gauge sp"><span class="ff-gauge-icon" aria-hidden="true"></span><div class="ff-gauge-track"><i id="ff-battle-sp-bar"></i></div><b id="ff-battle-sp">10/10</b></div>
-          <div class="ff-battle-badges"><span class="ff-badge bp">BP <b id="ff-battle-bp">4</b></span></div>
-        </div>
-      </div>
-      <div id="ff-actions" class="ff-actions">
-        <button class="ff-action-btn act-attack" type="button" data-act="attack" data-index="0"><b>SWORD</b><span class="ff-act-icon" aria-hidden="true"></span><small>ATTACK</small><span class="ff-key" aria-hidden="true">1</span></button>
-        <button class="ff-action-btn act-skill" type="button" data-act="skill" data-index="1"><b>MOVES</b><span class="ff-act-icon" aria-hidden="true"></span><small>SP</small><span class="ff-key" aria-hidden="true">2</span></button>
-        <button class="ff-action-btn act-guard" type="button" data-act="guard" data-index="2"><b>GUARD</b><span class="ff-act-icon" aria-hidden="true"></span><small>+2 SP</small><span class="ff-key" aria-hidden="true">3</span></button>
-        <button class="ff-action-btn act-item" type="button" data-act="item" data-index="3"><b>COCOA</b><span class="ff-act-icon" aria-hidden="true"></span><small>&times;<span id="ff-cocoa-count">2</span></small><span class="ff-key" aria-hidden="true">4</span></button>
-        <button class="ff-action-btn act-run" type="button" data-act="run" data-index="4"><b>RUN</b><span class="ff-act-icon" aria-hidden="true"></span><small>AWAY</small><span class="ff-key" aria-hidden="true">5</span></button>
-      </div>
-      <div id="ff-skills" class="ff-skills" hidden></div>
-      <p id="ff-battle-hint" class="ff-battle-hint">ARROWS SELECT &middot; E CONFIRM</p>
-    </div>
-
-    <!-- === NEW: the pause panel for a battle === -->
-    <div id="ff-battle-pause" class="ff-battle-pause" role="dialog" aria-modal="true" aria-labelledby="ff-battle-pause-title" hidden>
-      <div class="ff-panel ff-battle-pause-panel">
-        <div class="ff-menu-head"><h2 id="ff-battle-pause-title">PAUSED</h2></div>
-        <p class="ff-panel-copy" id="ff-battle-pause-copy">The snow holds still mid-swing.</p>
-        <div class="ff-menu-actions">
-          <button id="ff-battle-pause-resume" class="ff-button gold" type="button">RESUME</button>
-          <button id="ff-battle-pause-quit" class="ff-button danger" type="button">QUIT BATTLE</button>
-        </div>
+      <p class="ff-eyebrow">FROSTFALL</p>
+      <h2 class="ff-panel-title">PAUSED</h2>
+      <p class="ff-panel-copy">The horde is waiting at the tree line.</p>
+      <div class="ff-panel-actions">
+        <button id="ff-resume" class="ff-button gold" type="button">RESUME</button>
+        <button id="ff-pause-restart" class="ff-button ghost" type="button">RESTART</button>
+        <button id="ff-pause-title" class="ff-button ghost" type="button">QUIT TO TITLE</button>
       </div>
     </div>
   </div>
 
-  <div id="ff-levelup" class="ff-screen" hidden>
-    <div class="ff-level-card">
-      <h2>LEVEL UP!</h2>
-      <p id="ff-level-sub">LEVEL 2</p>
-      <div class="ff-level-options">
-        <button class="ff-level-option hp" type="button" data-stat="hp"><span class="ff-level-icon" aria-hidden="true"></span><b>HP</b><em id="ff-lv-hp">26 → 31</em></button>
-        <button class="ff-level-option sp" type="button" data-stat="sp"><span class="ff-level-icon" aria-hidden="true"></span><b>SP</b><em id="ff-lv-sp">10 → 15</em></button>
-        <button class="ff-level-option bp" type="button" data-stat="bp"><span class="ff-level-icon" aria-hidden="true"></span><b>BP</b><em id="ff-lv-bp">4 → 9</em></button>
-      </div>
-      <p class="ff-level-hint">SELECT ONE TO UPGRADE!</p>
-      <p class="ff-level-note">HP is health. SP fuels skills. BP is badge points — spend it on cards in the pause menu.</p>
-    </div>
-  </div>
-
-  <div id="ff-menu" class="ff-screen" hidden>
-    <div class="ff-panel ff-menu-panel">
-      <div class="ff-menu-head"><h2>PAUSE</h2><button id="ff-menu-close" class="ff-icon-button" type="button" aria-label="Resume">✕</button></div>
-      <div class="ff-menu-stats">
-        <div><span>NAME</span><b id="ff-menu-name">NICO</b></div>
-        <div><span>LEVEL</span><b id="ff-menu-level">1</b></div>
-        <div><span>HP</span><b id="ff-menu-hp">26 / 26</b></div>
-        <div><span>SP</span><b id="ff-menu-sp">10 / 10</b></div>
-        <div><span>BP</span><b id="ff-menu-bp">4</b></div>
-        <div><span>RELICS</span><b id="ff-menu-shards">0 / 5</b></div>
-      </div>
-      <div class="ff-menu-objective"><b>OBJECTIVE</b><span id="ff-menu-objective">Talk to Mayor Bram</span></div>
-      <div class="ff-cards-wrap">
-        <div class="ff-cards-head"><b>CARDS</b><span id="ff-card-budget">BP 0 / 4</span></div>
-        <div id="ff-cards" class="ff-cards"></div>
-        <p class="ff-cards-note">BP is badge points. Equip cards to change how you fight.</p>
-      </div>
-      <p class="ff-menu-controls">WASD / ARROWS move · drag to look · E talk, fight and confirm · M menu</p>
-      <div class="ff-menu-actions">
-        <button id="ff-menu-resume" class="ff-button gold" type="button">RESUME</button>
-        <button id="ff-menu-restart" class="ff-button" type="button">RESTART CHAPTER</button>
-        <button id="ff-menu-reset" class="ff-button danger" type="button">ERASE SAVE</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="ff-ending" class="ff-screen" hidden>
-    <div class="ff-ending-in">
-      <p class="ff-eyebrow">A CHRISTMAS TALE · THE END</p>
-      <h2>THE STAR IS BACK</h2>
-      <div class="ff-ending-star" aria-hidden="true">✦</div>
-      <div id="ff-ending-lines" class="ff-ending-lines"></div>
-      <p class="ff-ending-stats" id="ff-ending-stats"></p>
-      <div class="ff-title-actions">
-        <button id="ff-ending-again" class="ff-button gold" type="button">PLAY AGAIN</button>
+  <div id="ff-end" class="ff-screen" hidden>
+    <div class="ff-panel ff-end-panel">
+      <p class="ff-eyebrow" id="ff-end-eyebrow">THE LANTERN HOLDS</p>
+      <h2 class="ff-panel-title" id="ff-end-title">VICTORY</h2>
+      <p class="ff-panel-copy" id="ff-end-copy"></p>
+      <div id="ff-end-stats" class="ff-end-stats"></div>
+      <div class="ff-panel-actions">
+        <button id="ff-again" class="ff-button gold" type="button">PLAY AGAIN</button>
         <a class="ff-button ghost" href="/events">BACK TO EVENTS</a>
       </div>
     </div>
   </div>
 
-  <!-- === NEW: the ended screen doubles as a record of the run === -->
-  <div id="ff-ended" class="ff-screen" hidden>
-    <div class="ff-panel">
-      <p class="ff-eyebrow">BSMS WEB · WINTER EVENT</p>
-      <h2 class="ff-panel-title" id="ff-ended-title">A CHRISTMAS TALE HAS ENDED</h2>
-      <p class="ff-panel-copy" id="ff-ended-copy">The Long Night has been pushed back, and the star is still burning. A Christmas Tale ran from November 19, 2026 to January 4, 2027.</p>
-      <div id="ff-ended-record" class="ff-ended-record" hidden></div>
-      <div class="ff-title-actions">
-        <button id="ff-ended-resume" class="ff-button gold" type="button" hidden>CONTINUE YOUR RUN</button>
-        <!-- === NEW: a finished file opened from the file list can be left, or started over on purpose === -->
-        <button id="ff-ended-renew" class="ff-button danger" type="button" hidden>START A NEW STORY</button>
-        <!-- === NEW: back out of a record opened from the list, or into the finished files after the event === -->
-        <button id="ff-ended-files" class="ff-button ghost" type="button" hidden>FINISHED FILES</button>
-        <a class="ff-button ghost" href="/events">SEE WHAT'S NEXT</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- === NEW: SPRITE-SLICE DEBUG (?debugSprites=1) === -->
-  <div id="ff-sheet-debug" class="ff-sheet-debug" hidden>
-    <b>SPRITE SLICE DEBUG</b>
-    <canvas id="ff-sheet-debug-canvas" width="620" height="440"></canvas>
-    <p id="ff-sheet-debug-note">animations.jpg</p>
-  </div>
-
-  <!-- === NEW: GAME OVER === losing to JJ the Hand Smasher ends the whole run -->
-  <div id="ff-gameover" class="ff-gameover" role="dialog" aria-modal="true" aria-labelledby="ff-gameover-title" hidden>
-    <div class="ff-gameover-in">
-      <p class="ff-eyebrow">THE HANDS COME DOWN</p>
-      <h2 id="ff-gameover-title">GAME OVER</h2>
-      <p class="ff-gameover-copy">JJ THE HAND SMASHER gave you four turns. You needed one more. Your save file has been erased.</p>
-      <button id="ff-gameover-start" class="ff-button gold" type="button">START A NEW RUN</button>
-    </div>
-  </div>
-
   <div id="ff-fallback" class="ff-screen" hidden>
     <div class="ff-panel">
-      <p class="ff-eyebrow">A CHRISTMAS TALE</p>
+      <p class="ff-eyebrow">FROSTFALL</p>
       <h2 class="ff-panel-title">3D ISN'T AVAILABLE HERE</h2>
       <p class="ff-panel-copy">This browser could not start WebGL. Try a current version of Chrome, Edge, Firefox or Safari with hardware acceleration enabled.</p>
-      <a class="ff-button" href="/events">BACK TO EVENTS</a>
+      <a class="ff-button ghost" href="/events">BACK TO EVENTS</a>
     </div>
   </div>
 </div>
 <script src="/js/frostfall-engine.js?v=7"></script>
-<script src="/js/frostfall.js?v=136"></script>
+<script src="/js/frostfall.js?v=148"></script>
 </body>
 </html>
